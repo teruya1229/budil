@@ -294,23 +294,111 @@
   }
 
   // ── 需要サーチ ──
+  function getDemandInputText() {
+    const notes = Storage.getDemandNotes();
+    return [
+      document.getElementById('demand-trends').value,
+      document.getElementById('demand-ads').value,
+      document.getElementById('demand-gsc').value,
+      document.getElementById('demand-field').value,
+      document.getElementById('demand-instagram').value,
+      notes.ga4 || ''
+    ].join('\n');
+  }
+
+  function saveDemandNotesFromForm() {
+    const notes = Storage.getDemandNotes();
+    Storage.saveDemandNotes({
+      ...notes,
+      trends: document.getElementById('demand-trends').value,
+      ads: document.getElementById('demand-ads').value,
+      gsc: document.getElementById('demand-gsc').value,
+      instagram: document.getElementById('demand-instagram').value,
+      fieldNotes: document.getElementById('demand-field').value
+    });
+  }
+
+  function syncTodayDemandFromLog() {
+    const today = TODAY();
+    const log = Storage.getDailyDemandLog(today);
+    if (!log || !log.analysis) return;
+
+    const posts = Storage.getGeneratedPosts();
+    if (!posts || !posts.analyzedAt || (log.analyzedAt && log.analyzedAt >= posts.analyzedAt)) {
+      Storage.saveGeneratedPosts(log.analysis);
+    }
+  }
+
+  function appendDemandChip(targetId, text) {
+    const el = document.getElementById(targetId);
+    if (!el) return;
+    const cur = el.value.trim();
+    el.value = cur ? cur + '、' + text : text;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function renderDemandLogHistory() {
+    const el = document.getElementById('demand-log-history');
+    if (!el) return;
+
+    const logs = Storage.getRecentDemandLogs(7);
+    if (!logs.length) {
+      el.innerHTML = '<p class="empty-state">分析を実行すると、日別の需要ログがここに表示されます</p>';
+      return;
+    }
+
+    el.innerHTML = logs.map(log => {
+      const keywords = (log.keywords && log.keywords.length)
+        ? log.keywords.slice(0, 5).join('・')
+        : '—';
+      const service = log.recommendedService
+        || (log.analysis && log.analysis.recommendedServices && log.analysis.recommendedServices[0]
+          && log.analysis.recommendedServices[0].name)
+        || '—';
+      const move = log.todayMove
+        || (log.analysis && log.analysis.todayMove);
+      const moveText = move
+        ? esc(move.service) + ' — ' + esc(move.action || move.reason || '')
+        : '—';
+
+      return `
+        <div class="demand-log-item">
+          <div class="demand-log-header">
+            <strong>${esc(log.date)}</strong>
+            ${log.analyzedAt ? `<small>${esc(log.analyzedAt.slice(0, 16).replace('T', ' '))}</small>` : ''}
+          </div>
+          <p><span class="label-muted">主要キーワード:</span> ${keywords}</p>
+          <p><span class="label-muted">推奨サービス:</span> ${esc(service)}</p>
+          <p><span class="label-muted">今日の一手:</span> ${moveText}</p>
+        </div>`;
+    }).join('');
+  }
+
   function initDemandSearch() {
-    const fields = ['demand-trends', 'demand-ads', 'demand-gsc', 'demand-ga4', 'demand-instagram'];
+    syncTodayDemandFromLog();
+
     const data = Storage.getDemandNotes();
-    const map = { trends: 'demand-trends', ads: 'demand-ads', gsc: 'demand-gsc', ga4: 'demand-ga4', instagram: 'demand-instagram' };
+    const dateEl = document.getElementById('demand-date');
+    dateEl.value = TODAY();
+
+    const map = {
+      trends: 'demand-trends',
+      ads: 'demand-ads',
+      gsc: 'demand-gsc',
+      instagram: 'demand-instagram',
+      fieldNotes: 'demand-field'
+    };
 
     Object.entries(map).forEach(([key, id]) => {
       const el = document.getElementById(id);
       el.value = data[key] || '';
-      el.addEventListener('input', debounce(() => {
-        Storage.saveDemandNotes({
-          trends: document.getElementById('demand-trends').value,
-          ads: document.getElementById('demand-ads').value,
-          gsc: document.getElementById('demand-gsc').value,
-          ga4: document.getElementById('demand-ga4').value,
-          instagram: document.getElementById('demand-instagram').value
-        });
-      }, 500));
+      el.addEventListener('input', debounce(saveDemandNotesFromForm, 500));
+    });
+
+    document.querySelectorAll('#demand-quick-chips .memo-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        appendDemandChip(chip.dataset.target, chip.textContent.trim());
+      });
     });
 
     document.getElementById('btn-analyze-demand').addEventListener('click', analyzeDemand);
@@ -318,11 +406,13 @@
     const saved = Storage.getGeneratedPosts();
     if (saved) renderDemandOutput(saved);
     renderDemandInsights();
+    renderDemandLogHistory();
   }
 
   function analyzeDemand() {
-    const text = ['demand-trends', 'demand-ads', 'demand-gsc', 'demand-ga4', 'demand-instagram']
-      .map(id => document.getElementById(id).value).join('\n');
+    saveDemandNotesFromForm();
+    const text = getDemandInputText();
+    const logDate = document.getElementById('demand-date').value || TODAY();
 
     const keywords = extractKeywords(text);
     const brain = DemandBrain.analyze(text, keywords);
@@ -343,6 +433,7 @@
       : keywords.slice(0, 5).map(k => `「${k}」の検索需要増加をフックに、関連サービスの提案`);
     if (!brain.salesThemes.length) salesIdeas.push('沖縄の現場業向けに作った仕組みの事例紹介を配信');
 
+    const analyzedAt = new Date().toISOString();
     const output = {
       keywords,
       keywordScores: brain.keywordScores,
@@ -356,11 +447,29 @@
       stories,
       adKeywords,
       salesIdeas,
-      analyzedAt: new Date().toISOString()
+      analyzedAt,
+      demandLogDate: logDate
     };
+
     Storage.saveGeneratedPosts(output);
+    Storage.saveDailyDemandLog(logDate, {
+      input: {
+        ads: document.getElementById('demand-ads').value,
+        gsc: document.getElementById('demand-gsc').value,
+        trends: document.getElementById('demand-trends').value,
+        instagram: document.getElementById('demand-instagram').value,
+        fieldNotes: document.getElementById('demand-field').value
+      },
+      keywords: keywords.slice(0, 5),
+      recommendedService: brain.recommendedServices[0] && brain.recommendedServices[0].name,
+      todayMove: brain.todayMove,
+      analysis: output,
+      analyzedAt
+    });
+
     renderDemandOutput(output);
     renderDemandInsights();
+    renderDemandLogHistory();
 
     const settings = Storage.getSettings();
     const themeText = brain.postThemes[0] || (themes[0] ? themes[0].replace(/「|」/g, '') : '');
@@ -391,7 +500,7 @@
           <p class="today-move-service">${esc(DemandBrain.SAMPLE.todayMove.service)}</p>
           <p class="today-move-reason">${esc(DemandBrain.SAMPLE.todayMove.reason)}</p>
           <p class="today-move-action">${esc(DemandBrain.SAMPLE.todayMove.action)}</p>
-          <p class="placeholder-text">需要サーチ番頭で「分析する」を実行すると、実データに切り替わります</p>
+          <p class="placeholder-text">需要サーチ番頭で「今日の需要を分析」を実行すると、実データに切り替わります</p>
         </div>`;
       return;
     }
@@ -1061,6 +1170,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    syncTodayDemandFromLog();
     initNavigation();
     initDashboard();
     initDemandSearch();

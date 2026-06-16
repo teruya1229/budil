@@ -1369,6 +1369,63 @@ body {
   }
 }
 
+/* v1.2 朝の需要チェック */
+.morning-demand-card h2 {
+  margin-bottom: 4px;
+}
+
+.morning-demand-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.morning-demand-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+}
+
+.morning-demand-card .btn-primary {
+  margin-top: 8px;
+}
+
+.demand-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.demand-log-item {
+  padding: 12px 14px;
+  background: var(--bg-input);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.demand-log-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.demand-log-item p {
+  margin: 4px 0;
+  font-size: 0.88rem;
+}
+
+.demand-layout {
+  margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .morning-demand-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .dashboard-grid,

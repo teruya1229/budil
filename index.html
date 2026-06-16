@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v1.1</small>
+          <small>AI経営脳みそ v1.2</small>
         </div>
       </div>
       <nav class="nav">
@@ -34,7 +34,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v1.1</small>
+        <small>Budil v1.2</small>
       </div>
     </aside>
 
@@ -139,34 +139,66 @@
       <section id="view-demand" class="view">
         <header class="view-header">
           <h1>需要サーチ番頭</h1>
-          <p class="view-subtitle">検索データから投稿・営業ネタを抽出</p>
+          <p class="view-subtitle">朝の需要チェック入力 → 分析 → 朝レポートへ反映</p>
         </header>
 
-        <div class="demand-layout">
-          <div class="card">
-            <h2>入力データ（貼り付け）</h2>
+        <div class="card card-wide morning-demand-card">
+          <h2>🌅 朝の需要チェック</h2>
+          <p class="morning-demand-hint">データを貼り付け、チップで補足してから分析してください</p>
+          <div class="form-group">
+            <label for="demand-date">今日の日付</label>
+            <input type="date" id="demand-date">
+          </div>
+          <div class="morning-demand-grid">
             <div class="form-group">
-              <label for="demand-trends">Googleトレンド結果</label>
-              <textarea id="demand-trends" rows="4" placeholder="トレンドキーワードを貼り付け..."></textarea>
+              <label for="demand-ads">Google広告 検索語句メモ</label>
+              <textarea id="demand-ads" rows="3" placeholder="検索語句レポートを貼り付け..."></textarea>
             </div>
             <div class="form-group">
-              <label for="demand-ads">Google広告 検索語句</label>
-              <textarea id="demand-ads" rows="4" placeholder="検索語句レポートを貼り付け..."></textarea>
+              <label for="demand-gsc">Search Console クエリメモ</label>
+              <textarea id="demand-gsc" rows="3" placeholder="クエリデータを貼り付け..."></textarea>
             </div>
             <div class="form-group">
-              <label for="demand-gsc">Search Console クエリ</label>
-              <textarea id="demand-gsc" rows="4" placeholder="クエリデータを貼り付け..."></textarea>
-            </div>
-            <div class="form-group">
-              <label for="demand-ga4">GA4メモ</label>
-              <textarea id="demand-ga4" rows="3" placeholder="アクセス傾向・コンバージョンメモ..."></textarea>
+              <label for="demand-trends">Googleトレンド メモ</label>
+              <textarea id="demand-trends" rows="3" placeholder="トレンドキーワードを貼り付け..."></textarea>
             </div>
             <div class="form-group">
               <label for="demand-instagram">Instagram反応メモ</label>
               <textarea id="demand-instagram" rows="3" placeholder="反応の良かった投稿・コメント..."></textarea>
             </div>
-            <button id="btn-analyze-demand" class="btn btn-primary">分析する</button>
+            <div class="form-group form-group-wide">
+              <label for="demand-field">現場感メモ</label>
+              <textarea id="demand-field" rows="3" placeholder="現場で感じた需要・相談内容・気づき..."></textarea>
+            </div>
           </div>
+          <div class="form-group">
+            <label>クイック入力チップ</label>
+            <div class="memo-chips" id="demand-quick-chips">
+              <button type="button" class="memo-chip" data-target="demand-field">エアコン</button>
+              <button type="button" class="memo-chip" data-target="demand-field">完全分解</button>
+              <button type="button" class="memo-chip" data-target="demand-field">洗濯機</button>
+              <button type="button" class="memo-chip" data-target="demand-field">ドラム式</button>
+              <button type="button" class="memo-chip" data-target="demand-field">カビ臭い</button>
+              <button type="button" class="memo-chip" data-target="demand-field">乾燥不良</button>
+              <button type="button" class="memo-chip" data-target="demand-field">レンジフード</button>
+              <button type="button" class="memo-chip" data-target="demand-field">浴室</button>
+              <button type="button" class="memo-chip" data-target="demand-field">AI帳票</button>
+              <button type="button" class="memo-chip" data-target="demand-field">広告</button>
+              <button type="button" class="memo-chip" data-target="demand-ads">問い合わせ増加</button>
+              <button type="button" class="memo-chip" data-target="demand-ads">クリック増加</button>
+              <button type="button" class="memo-chip" data-target="demand-ads">表示増加</button>
+              <button type="button" class="memo-chip" data-target="demand-ads">需要上昇</button>
+            </div>
+          </div>
+          <button id="btn-analyze-demand" class="btn btn-primary">今日の需要を分析</button>
+        </div>
+
+        <div class="card card-wide">
+          <h2>過去の需要ログ（直近7日）</h2>
+          <div id="demand-log-history" class="demand-log-list"></div>
+        </div>
+
+        <div class="demand-layout">
 
           <div class="card">
             <h2>分析結果</h2>

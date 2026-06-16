@@ -10,7 +10,8 @@ const Storage = {
     GENERATED_MESSAGES: 'budil_generatedMessages',
     FOLLOWUPS: 'budil_followups',
     SETTINGS: 'budil_settings',
-    CARD_DRAFT: 'budil_card_draft'
+    CARD_DRAFT: 'budil_card_draft',
+    DAILY_DEMAND_LOGS: 'budil_daily_demand_logs'
   },
 
   get(key, defaultValue = null) {
@@ -93,9 +94,11 @@ const Storage = {
   },
 
   getDemandNotes() {
-    return this.get(this.KEYS.DEMAND_NOTES, {
-      trends: '', ads: '', gsc: '', ga4: '', instagram: ''
+    const notes = this.get(this.KEYS.DEMAND_NOTES, {
+      trends: '', ads: '', gsc: '', ga4: '', instagram: '', fieldNotes: ''
     });
+    if (!notes.fieldNotes && notes.ga4) notes.fieldNotes = notes.ga4;
+    return notes;
   },
 
   saveDemandNotes(data) {
@@ -188,6 +191,31 @@ const Storage = {
 
   clearCardDraft() {
     localStorage.removeItem(this.KEYS.CARD_DRAFT);
+  },
+
+  getDailyDemandLogs() {
+    return this.get(this.KEYS.DAILY_DEMAND_LOGS, {});
+  },
+
+  getDailyDemandLog(date) {
+    return this.getDailyDemandLogs()[date] || null;
+  },
+
+  saveDailyDemandLog(date, entry) {
+    const logs = this.getDailyDemandLogs();
+    logs[date] = {
+      ...entry,
+      date,
+      updatedAt: new Date().toISOString()
+    };
+    this.set(this.KEYS.DAILY_DEMAND_LOGS, logs);
+  },
+
+  getRecentDemandLogs(days = 7) {
+    return Object.keys(this.getDailyDemandLogs())
+      .sort((a, b) => b.localeCompare(a))
+      .slice(0, days)
+      .map(d => this.getDailyDemandLogs()[d]);
   }
 };
 
