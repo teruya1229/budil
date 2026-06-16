@@ -1579,9 +1579,84 @@ body {
 @media (max-width: 1024px) {
   .radar-layout,
   .radar-memo-grid,
-  .radar-trend-grid {
+  .radar-trend-grid,
+  .data-mgmt-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* v1.4 データ管理 */
+.backup-status-line {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: -4px 0 12px;
+}
+
+.backup-status-line.backup-status-warn,
+.backup-last-date.backup-status-warn {
+  color: #f59e0b;
+}
+
+.backup-last-date {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.backup-recommend {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.data-summary-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.data-summary-list li {
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.data-mgmt-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.data-mgmt-desc {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.data-mgmt-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.import-preview-meta {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.card-danger-zone {
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.card-danger-zone h2 {
+  color: #ef4444;
 }
 
 /* Responsive */

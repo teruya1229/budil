@@ -6,6 +6,7 @@
 
   let currentFollowupFilter = 'all';
   let currentMessageLeadId = null;
+  let pendingImport = null;
 
   const TODAY = () => new Date().toISOString().slice(0, 10);
   const CLOSED_STATUSES = ['成約', '見送り', 'NG'];
@@ -22,6 +23,7 @@
         document.getElementById('view-' + view).classList.add('active');
         if (view === 'dashboard') renderDashboard();
         if (view === 'radar') renderDemandRadar();
+        if (view === 'data') renderDataManagement();
       });
     });
   }
@@ -55,10 +57,217 @@
   }
 
   function renderDashboard() {
+    renderBackupStatus();
     renderMorningReport();
     renderDemandInsights();
     renderSalesInsights();
     renderDashboardLists();
+  }
+
+  function renderBackupStatus() {
+    const settings = Storage.getSettings();
+    const label = DataBackup.formatBackupDate(settings.lastBackupAt);
+    const warn = !settings.lastBackupAt;
+    const html = warn
+      ? '⚠ 最終バックアップ: <strong>未バックアップ</strong> — データ管理からエクスポートを推奨'
+      : '💾 最終バックアップ: <strong>' + esc(label) + '</strong>';
+
+    const dashEl = document.getElementById('dash-backup-status');
+    if (dashEl) {
+      dashEl.innerHTML = html;
+      dashEl.classList.toggle('backup-status-warn', warn);
+    }
+
+    const dataEl = document.getElementById('data-last-backup');
+    if (dataEl) {
+      dataEl.textContent = '最終バックアップ: ' + label;
+      dataEl.classList.toggle('backup-status-warn', warn);
+    }
+  }
+
+  function buildDataSummaryItems(summary) {
+    const items = [
+      '営業先 ' + summary.leads + '件',
+      '追客 ' + summary.followups + '件',
+      '需要ログ ' + summary.demandLogs + '日分',
+      'レーダーキーワード ' + summary.radarKw + '件',
+      '営業文面 ' + summary.messages + '件'
+    ];
+    if (summary.hasPosts) items.push('需要分析結果 あり');
+    if (summary.hasCardDraft) items.push('名刺ドラフト あり');
+    if (summary.hasDemandNotes) items.push('需要メモ あり');
+    if (summary.hasSettings) items.push('設定 あり');
+    return items;
+  }
+
+  function renderDataManagement() {
+    renderBackupStatus();
+    const summary = DataBackup.getCurrentSummary();
+    const listEl = document.getElementById('data-summary-list');
+    if (listEl) {
+      listEl.innerHTML = buildDataSummaryItems(summary)
+        .map(t => '<li>' + esc(t) + '</li>').join('');
+    }
+  }
+
+  function hideImportPreview() {
+    pendingImport = null;
+    const preview = document.getElementById('import-preview');
+    if (preview) preview.classList.add('hidden');
+    const input = document.getElementById('import-file-input');
+    if (input) input.value = '';
+  }
+
+  function showImportPreview(result) {
+    const summary = DataBackup.getSummaryFromData(result.data);
+    const meta = document.getElementById('import-preview-meta');
+    const list = document.getElementById('import-preview-list');
+    const preview = document.getElementById('import-preview');
+
+    if (meta) {
+      const exported = result.exportedAt
+        ? 'エクスポート日時: ' + DataBackup.formatBackupDate(result.exportedAt)
+        : 'エクスポート日時: 不明';
+      meta.textContent = exported + ' / 復元キー: ' + result.keys.length + '件';
+    }
+    if (list) {
+      list.innerHTML = buildDataSummaryItems(summary)
+        .map(t => '<li>' + esc(t) + '</li>').join('');
+    }
+    if (preview) preview.classList.remove('hidden');
+  }
+
+  function exportBudilData() {
+    const payload = DataBackup.exportPayload();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = DataBackup.filename();
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    DataBackup.recordBackupTime();
+    renderBackupStatus();
+    renderDataManagement();
+  }
+
+  function reloadFormsFromStorage() {
+    const settings = Storage.getSettings();
+    const dashPriority = document.getElementById('dash-priority');
+    if (dashPriority) {
+      dashPriority.value = settings.priority || '';
+      document.getElementById('dash-post-theme').value = settings.postTheme || '';
+      document.getElementById('dash-memo').value = settings.memo || '';
+    }
+
+    const notes = Storage.getDemandNotes();
+    const demandMap = {
+      trends: 'demand-trends', ads: 'demand-ads', gsc: 'demand-gsc',
+      instagram: 'demand-instagram', fieldNotes: 'demand-field'
+    };
+    Object.entries(demandMap).forEach(([key, id]) => {
+      const el = document.getElementById(id);
+      if (el) el.value = notes[key] || '';
+    });
+
+    const dateEl = document.getElementById('demand-date');
+    if (dateEl) dateEl.value = TODAY();
+
+    const radar = Storage.getDemandRadar();
+    const memos = radar.marketMemos || {};
+    const radarMemoIds = {
+      news: 'radar-memo-news',
+      voices: 'radar-memo-voices',
+      competitor: 'radar-memo-competitor',
+      field: 'radar-memo-field'
+    };
+    Object.entries(radarMemoIds).forEach(([key, id]) => {
+      const el = document.getElementById(id);
+      if (el) el.value = memos[key] || '';
+    });
+    if (typeof renderRadarKeywordList === 'function') renderRadarKeywordList();
+  }
+
+  function refreshAllViews() {
+    syncTodayDemandFromLog();
+    reloadFormsFromStorage();
+    renderDashboard();
+    renderDemandRadar();
+    const saved = Storage.getGeneratedPosts();
+    if (saved) renderDemandOutput(saved);
+    renderDemandInsights();
+    renderDemandLogHistory();
+    renderLeadsTable();
+    renderFollowupTable();
+    renderFollowupOverdue();
+    renderDataManagement();
+  }
+
+  function initDataManagement() {
+    document.getElementById('btn-export-data').addEventListener('click', exportBudilData);
+
+    const fileInput = document.getElementById('import-file-input');
+    document.getElementById('btn-import-select').addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const payload = JSON.parse(reader.result);
+          const result = DataBackup.validatePayload(payload);
+          if (!result.valid) {
+            alert('インポートできません: ' + result.error);
+            hideImportPreview();
+            return;
+          }
+          pendingImport = result;
+          showImportPreview(result);
+        } catch {
+          alert('JSONファイルの読み込みに失敗しました');
+          hideImportPreview();
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    document.getElementById('btn-import-cancel').addEventListener('click', hideImportPreview);
+
+    document.getElementById('btn-import-confirm').addEventListener('click', () => {
+      if (!pendingImport) return;
+      const ok = confirm('バックアップデータで現在のBudilデータを上書き復元します。よろしいですか？');
+      if (!ok) return;
+
+      DataBackup.importData(pendingImport.data, pendingImport.keys);
+      hideImportPreview();
+      refreshAllViews();
+      alert('データを復元しました');
+    });
+
+    const resetInput = document.getElementById('reset-confirm-input');
+    const resetBtn = document.getElementById('btn-reset-all');
+    resetInput.addEventListener('input', () => {
+      resetBtn.disabled = resetInput.value.trim() !== 'BUDIL DELETE';
+    });
+
+    resetBtn.addEventListener('click', () => {
+      if (resetInput.value.trim() !== 'BUDIL DELETE') return;
+      const ok = confirm('全Budilデータを削除します。この操作は取り消せません。本当に実行しますか？');
+      if (!ok) return;
+
+      DataBackup.clearAllData();
+      resetInput.value = '';
+      resetBtn.disabled = true;
+      hideImportPreview();
+      refreshAllViews();
+      alert('全データを初期化しました');
+    });
+
+    renderDataManagement();
   }
 
   function getRadarSnapshot() {
@@ -1324,5 +1533,6 @@
     initLeads();
     initCardParser();
     initFollowup();
+    initDataManagement();
   });
 })();

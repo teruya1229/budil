@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v1.3</small>
+          <small>AI経営脳みそ v1.4</small>
         </div>
       </div>
       <nav class="nav">
@@ -35,9 +35,12 @@
         <button class="nav-item" data-view="followup">
           <span class="nav-icon">📨</span>追客管理
         </button>
+        <button class="nav-item" data-view="data">
+          <span class="nav-icon">💾</span>データ管理
+        </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v1.3</small>
+        <small>Budil v1.4</small>
       </div>
     </aside>
 
@@ -53,6 +56,7 @@
 
         <div id="morning-report" class="card card-morning card-wide">
           <h2>🌅 朝レポート</h2>
+          <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid">
             <div class="morning-section morning-section-hero">
               <h3>今日の経営判断</h3>
@@ -714,6 +718,61 @@
           </div>
         </div>
       </section>
+
+      <!-- データ管理 -->
+      <section id="view-data" class="view">
+        <header class="view-header">
+          <h1>データ管理</h1>
+          <p class="view-subtitle">Budilデータのバックアップ・復元・初期化</p>
+        </header>
+
+        <div class="card card-wide backup-status-card">
+          <h2>バックアップ状況</h2>
+          <p id="data-last-backup" class="backup-last-date">—</p>
+          <p class="backup-recommend">定期的にエクスポートして、JSONファイルを安全な場所に保管してください。</p>
+        </div>
+
+        <div class="card card-wide">
+          <h2>データ概要</h2>
+          <ul id="data-summary-list" class="data-summary-list"></ul>
+        </div>
+
+        <div class="data-mgmt-grid">
+          <div class="card">
+            <h2>エクスポート</h2>
+            <p class="data-mgmt-desc">全BudilデータをJSONファイルとしてダウンロードします。</p>
+            <button type="button" id="btn-export-data" class="btn btn-primary">JSONをエクスポート</button>
+          </div>
+
+          <div class="card">
+            <h2>インポート</h2>
+            <p class="data-mgmt-desc">バックアップJSONを選択して内容を確認し、復元します。</p>
+            <input type="file" id="import-file-input" accept=".json,application/json" hidden>
+            <button type="button" id="btn-import-select" class="btn btn-secondary">JSONファイルを選択</button>
+          </div>
+        </div>
+
+        <div id="import-preview" class="card card-wide hidden">
+          <h2>インポート内容の確認</h2>
+          <p id="import-preview-meta" class="import-preview-meta"></p>
+          <ul id="import-preview-list" class="data-summary-list"></ul>
+          <p class="notice notice-warning">現在のデータは上書きされます。復元前にエクスポートを推奨します。</p>
+          <div class="data-mgmt-actions">
+            <button type="button" id="btn-import-cancel" class="btn btn-secondary">キャンセル</button>
+            <button type="button" id="btn-import-confirm" class="btn btn-primary">復元する</button>
+          </div>
+        </div>
+
+        <div class="card card-wide card-danger-zone">
+          <h2>危険操作</h2>
+          <p class="data-mgmt-desc">全Budilデータを削除します。この操作は取り消せません。</p>
+          <div class="form-group">
+            <label for="reset-confirm-input">確認のため「BUDIL DELETE」と入力</label>
+            <input type="text" id="reset-confirm-input" placeholder="BUDIL DELETE" autocomplete="off">
+          </div>
+          <button type="button" id="btn-reset-all" class="btn btn-danger" disabled>全データ初期化</button>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -724,6 +783,7 @@
   <script src="js/sales-brain.js"></script>
   <script src="js/management-brain.js"></script>
   <script src="js/card-ocr.js"></script>
+  <script src="js/data-backup.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
