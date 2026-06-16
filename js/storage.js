@@ -82,7 +82,9 @@ const Storage = {
   },
 
   getSettings() {
-    return this.get(this.KEYS.SETTINGS, { priority: '', postTheme: '', memo: '' });
+    return this.get(this.KEYS.SETTINGS, {
+      priority: '', postTheme: '', memo: '', aiPriorityEnabled: true
+    });
   },
 
   saveSettings(data) {

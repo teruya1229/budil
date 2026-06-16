@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v0.1</small>
+          <small>AI経営脳みそ v1.0</small>
         </div>
       </div>
       <nav class="nav">
@@ -34,7 +34,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil MVP v0.1</small>
+        <small>Budil v1.0</small>
       </div>
     </aside>
 
@@ -42,13 +42,67 @@
       <!-- ダッシュボード -->
       <section id="view-dashboard" class="view active">
         <header class="view-header">
-          <h1>ダッシュボード</h1>
-          <p class="view-subtitle">今日やるべきことを3つに絞る</p>
+          <h1>経営番頭</h1>
+          <p class="view-subtitle">朝Budilを開いて、今日やるべきことを把握する</p>
         </header>
 
-        <div id="dash-alerts" class="alert-bar"></div>
+        <div id="budil-greeting" class="card card-budil card-wide"></div>
 
-        <div class="dashboard-grid">
+        <div id="morning-report" class="card card-morning card-wide">
+          <h2>🌅 朝レポート</h2>
+          <div class="morning-grid">
+            <div class="morning-section morning-section-hero">
+              <h3>今日の経営判断</h3>
+              <ol id="mgmt-decisions" class="mgmt-decisions-list"></ol>
+            </div>
+            <div class="morning-section">
+              <h3>今日やること3つ</h3>
+              <ol id="mgmt-tasks" class="top3-list"></ol>
+            </div>
+            <div class="morning-section">
+              <h3>今日の投稿</h3>
+              <div id="mgmt-post" class="mgmt-copy-block"></div>
+            </div>
+            <div class="morning-section">
+              <h3>今日の営業</h3>
+              <div id="mgmt-sales" class="mgmt-copy-block"></div>
+            </div>
+            <div class="morning-section">
+              <h3>今日の注意点</h3>
+              <ul id="mgmt-cautions" class="caution-list"></ul>
+            </div>
+            <div class="morning-section">
+              <h3>今日やらないこと</h3>
+              <ul id="mgmt-skip" class="skip-list"></ul>
+            </div>
+          </div>
+        </div>
+
+        <div id="dash-alerts" class="alert-bar hidden"></div>
+        <div id="dash-sales-warnings" class="alert-bar hidden"></div>
+
+        <div id="dash-today-move" class="card card-move card-wide"></div>
+
+        <div class="card card-mission card-wide">
+          <h2>今日の営業ミッション</h2>
+          <ul id="dash-sales-missions" class="mission-list"></ul>
+        </div>
+
+        <div class="dashboard-grid dashboard-grid-v2">
+          <div class="card">
+            <h2>今日売るべきサービス</h2>
+            <div id="dash-recommended-services" class="service-rank-list"></div>
+          </div>
+
+          <div class="card">
+            <h2>今日の投稿テーマ（分析）</h2>
+            <ul id="dash-post-themes" class="output-list"></ul>
+          </div>
+
+          <div class="card">
+            <h2>今日の営業テーマ（分析）</h2>
+            <ul id="dash-sales-themes" class="output-list"></ul>
+          </div>
           <div class="card card-highlight card-hero">
             <h2>今日の最優先アクション</h2>
             <textarea id="dash-priority" class="card-input" rows="3" placeholder="今日最も重要なアクションを記入..."></textarea>
@@ -64,9 +118,9 @@
             <ol id="dash-top3" class="top3-list"></ol>
           </div>
 
-          <div class="card">
+          <div class="card card-wide card-sales-targets">
             <h2>今日営業すべき会社</h2>
-            <div id="dash-sales-targets" class="dash-list"></div>
+            <div id="dash-sales-targets" class="sales-target-list"></div>
           </div>
 
           <div class="card">
@@ -116,16 +170,32 @@
 
           <div class="card">
             <h2>分析結果</h2>
+            <div class="output-section output-highlight">
+              <h3>今日の一手</h3>
+              <div id="output-today-move" class="today-move-box"></div>
+            </div>
             <div class="output-section">
-              <h3>今熱いキーワード</h3>
-              <div id="output-keywords" class="tag-list"></div>
+              <h3>今熱いキーワード（需要スコア付き）</h3>
+              <div id="output-keywords" class="keyword-score-list"></div>
+            </div>
+            <div class="output-section">
+              <h3>今日売るべきサービス</h3>
+              <div id="output-recommended-services" class="service-rank-list"></div>
+            </div>
+            <div class="output-section">
+              <h3>今日の投稿テーマ</h3>
+              <ul id="output-post-themes" class="output-list"></ul>
+            </div>
+            <div class="output-section">
+              <h3>今日の営業テーマ</h3>
+              <ul id="output-sales-themes" class="output-list"></ul>
             </div>
             <div class="output-section">
               <h3>伸びているサービス</h3>
               <ul id="output-services" class="output-list"></ul>
             </div>
             <div class="output-section">
-              <h3>今日の投稿テーマ</h3>
+              <h3>投稿テーマ案（汎用）</h3>
               <ul id="output-themes" class="output-list"></ul>
             </div>
             <div class="output-section">
@@ -158,7 +228,13 @@
         <div class="card">
           <div class="card-header-row">
             <h2>営業先一覧</h2>
-            <button id="btn-add-lead" class="btn btn-primary btn-sm">+ 新規追加</button>
+            <div class="header-actions">
+              <label class="ai-toggle">
+                <input type="checkbox" id="ai-priority-toggle" checked>
+                AI優先度判定
+              </label>
+              <button id="btn-add-lead" class="btn btn-primary btn-sm">+ 新規追加</button>
+            </div>
           </div>
           <div class="table-wrap">
             <table class="data-table" id="leads-table">
@@ -166,10 +242,10 @@
                 <tr>
                   <th>優先度</th>
                   <th>会社名</th>
+                  <th>推奨商品</th>
+                  <th>次の行動</th>
                   <th>地域</th>
                   <th>業種</th>
-                  <th>担当者</th>
-                  <th>提案サービス</th>
                   <th>ステータス</th>
                   <th>次回連絡</th>
                   <th>操作</th>
@@ -235,12 +311,13 @@
                   <input type="text" id="lead-service" placeholder="例: Web集客・広告運用">
                 </div>
                 <div class="form-group">
-                  <label for="lead-priority">優先度</label>
+                  <label for="lead-priority">優先度（手動）</label>
                   <select id="lead-priority">
-                    <option value="A">A — 最優先</option>
-                    <option value="B" selected>B — 通常</option>
-                    <option value="C">C — 低優先</option>
+                    <option value="A">A — 今すぐ営業</option>
+                    <option value="B" selected>B — 今週営業</option>
+                    <option value="C">C — 保留</option>
                   </select>
+                  <small class="field-hint">変更すると手動優先度が有効になります</small>
                 </div>
                 <div class="form-group">
                   <label for="lead-status">ステータス</label>
@@ -492,6 +569,9 @@
 
   <script src="js/storage.js"></script>
   <script src="js/messages.js"></script>
+  <script src="js/demand-brain.js"></script>
+  <script src="js/sales-brain.js"></script>
+  <script src="js/management-brain.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
