@@ -99,8 +99,96 @@
     setIfExists('lead-last-contact', '');
 
     if (preset.nextContactOffsetDays !== undefined && preset.nextContactOffsetDays !== null) {
-      setIfExists('lead-next-contact', addDaysFromToday(preset.nextContactOffsetDays));
+      const nextDate = addDaysFromToday(preset.nextContactOffsetDays);
+      setIfExists('lead-next-contact', nextDate);
     }
+  }
+
+  function migrateV17Leads() {
+    Storage.migrateV17();
+  }
+
+  function salesStatusClass(status) {
+    const map = {
+      '未営業': 'not-started',
+      '初回連絡済み': 'contacted',
+      '興味あり': 'interested',
+      '見積り・提案中': 'proposal',
+      '日程調整中': 'scheduling',
+      '成約': 'won',
+      '見送り': 'lost'
+    };
+    return map[status] || 'not-started';
+  }
+
+  function renderSalesMgmtPreview(lead) {
+    const enriched = SalesBrain.enrichLead(lead, Storage.getGeneratedPosts(), Storage.getSettings(), TODAY());
+    const priEl = document.getElementById('sales-mgmt-priority');
+    const reasonEl = document.getElementById('sales-mgmt-priority-reason');
+    if (priEl) {
+      priEl.textContent = enriched.priorityLabel || '—';
+      priEl.className = 'sales-priority-label priority-' + (enriched.priorityLevel || 'low');
+    }
+    if (reasonEl) {
+      reasonEl.textContent = enriched.priorityReason || '';
+      reasonEl.classList.toggle('sales-priority-warning', !lead.nextAction && !enriched.nextAction);
+    }
+    const detailPri = document.getElementById('sales-detail-priority');
+    const detailReason = document.getElementById('sales-detail-reason');
+    if (detailPri) {
+      detailPri.textContent = enriched.priorityLabel || '—';
+      detailPri.className = 'sales-priority-label priority-' + (enriched.priorityLevel || 'low');
+    }
+    if (detailReason) {
+      detailReason.textContent = enriched.priorityReason || '—';
+    }
+  }
+
+  function populateSalesMgmtForm(lead) {
+    const statusEl = document.getElementById('sales-mgmt-status');
+    const nextDateEl = document.getElementById('sales-mgmt-next-date');
+    const nextActionEl = document.getElementById('sales-mgmt-next-action');
+    const lastContactEl = document.getElementById('sales-mgmt-last-contact');
+    const normalized = SalesBrain.normalizeLead(lead);
+    if (statusEl) statusEl.value = normalized.salesStatus;
+    if (nextDateEl) nextDateEl.value = normalized.nextActionDate || '';
+    if (nextActionEl) nextActionEl.value = normalized.nextAction || '';
+    if (lastContactEl) lastContactEl.value = normalized.lastContactAt || '';
+    renderSalesMgmtPreview(normalized);
+  }
+
+  function saveSalesMgmt() {
+    if (!currentMessageLeadId) return;
+    const salesStatus = document.getElementById('sales-mgmt-status').value;
+    const nextActionDate = document.getElementById('sales-mgmt-next-date').value;
+    const nextAction = document.getElementById('sales-mgmt-next-action').value.trim();
+    const lastContactAt = document.getElementById('sales-mgmt-last-contact').value;
+    const lead = Storage.getLeads().find(l => l.id === currentMessageLeadId);
+    if (!lead) return;
+    const draft = SalesBrain.normalizeLead({
+      ...lead,
+      salesStatus,
+      nextAction,
+      nextActionDate,
+      lastContactAt,
+      nextContact: nextActionDate || lead.nextContact,
+      lastContact: lastContactAt || lead.lastContact
+    });
+    const pri = SalesBrain.computeSalesPriority(draft, TODAY());
+    Storage.updateLead(currentMessageLeadId, {
+      salesStatus,
+      nextAction,
+      nextActionDate,
+      lastContactAt,
+      nextContact: nextActionDate,
+      lastContact: lastContactAt,
+      priorityScore: pri.score,
+      priorityReason: pri.reasons.join('、')
+    });
+    populateSalesMgmtForm(draft);
+    renderLeadsTable();
+    renderDashboard();
+    alert('営業管理情報を保存しました');
   }
 
   const TODAY = () => new Date().toISOString().slice(0, 10);
@@ -417,10 +505,18 @@
     const salesOpenBtn = topTarget
       ? `<button type="button" class="btn btn-sm btn-primary mgmt-sales-open" data-open-lead="${esc(topTarget.id)}">営業文面を開く</button>`
       : '';
+    const ts = report.todaySales;
+    const priClass = topTarget ? 'priority-' + (topTarget.priorityLevel || 'low') : 'priority-low';
     salesEl.innerHTML = `
-      <p class="mgmt-highlight"><strong>${esc(report.todaySales.company)}</strong></p>
-      <p class="mgmt-meta">${esc(report.todaySales.product)} — ${esc(report.todaySales.action)}</p>
-      <textarea class="mgmt-copy-text" id="mgmt-sales-text" readonly rows="3">${esc(report.todaySales.copyText)}</textarea>
+      <p class="mgmt-highlight">
+        <span class="sales-priority-label ${priClass}">優先度${esc(ts.priorityLabel || '—')}</span>：
+        <strong>${esc(ts.company)}</strong>
+      </p>
+      <p class="mgmt-meta">理由：${esc(ts.priorityReason || '—')}</p>
+      <p class="mgmt-meta">次アクション：${esc(ts.nextAction || ts.action || '—')}</p>
+      ${ts.presetLabel ? `<p class="mgmt-meta">プリセット：${esc(ts.presetLabel)}</p>` : ''}
+      ${ts.salesStatus ? `<p class="mgmt-meta">営業ステータス：${esc(ts.salesStatus)}</p>` : ''}
+      <textarea class="mgmt-copy-text" id="mgmt-sales-text" readonly rows="4">${esc(ts.copyText)}</textarea>
       <div class="mgmt-sales-actions">
         <button class="btn btn-sm btn-copy" data-copy-target="mgmt-sales-text">コピー</button>
         ${salesOpenBtn}
@@ -493,17 +589,24 @@
     if (!targets.length) {
       targetsEl.innerHTML = '<p class="empty-state">営業先を登録すると、今日営業すべき会社が表示されます</p>';
     } else {
-      targetsEl.innerHTML = targets.map(l => `
+      targetsEl.innerHTML = targets.map(l => {
+        const nextActionWarn = !l.nextAction ? '<span class="sales-priority-warning">次アクション未設定</span>' : '';
+        return `
         <div class="sales-target-card sales-target-clickable" data-open-lead="${esc(l.id)}" role="button" tabindex="0">
           <div class="sales-target-header">
             <strong class="sales-target-company">${esc(l.company)}</strong>
-            <span class="priority-badge priority-${l.effectivePriority}">${l.effectivePriority}ランク</span>
+            <span class="sales-priority-label priority-${l.priorityLevel || 'low'}">${esc(l.priorityLabel || '低')}</span>
           </div>
+          <p class="sales-target-meta">
+            <span class="sales-status-badge sales-status-${salesStatusClass(l.salesStatus)}">${esc(l.salesStatus)}</span>
+            ${l.nextActionDate ? `<span class="sales-target-date">次アクション日: ${esc(l.nextActionDate)}</span>` : ''}
+          </p>
           <p class="sales-target-product">${esc(l.productLabel)}</p>
-          <p class="sales-target-reason"><span>理由：</span>${esc(l.displayReason)}</p>
-          <p class="sales-target-action">次の行動: <strong>${esc(l.suggestedAction)}</strong></p>
+          <p class="sales-target-reason"><span>理由：</span>${esc(l.priorityReason || l.displayReason)}</p>
+          <p class="sales-target-action">次アクション: <strong>${esc(l.nextAction || l.suggestedAction || '—')}</strong> ${nextActionWarn}</p>
           <p class="sales-target-open-hint">タップして営業文面を表示 →</p>
-        </div>`).join('');
+        </div>`;
+      }).join('');
 
       targetsEl.querySelectorAll('[data-open-lead]').forEach(card => {
         card.addEventListener('click', () => openSalesDetail(card.dataset.openLead, { navigate: true }));
@@ -1114,6 +1217,33 @@
     document.getElementById('btn-lead-cancel').addEventListener('click', closeLeadModal);
     document.getElementById('lead-form').addEventListener('submit', handleLeadSubmit);
     document.getElementById('btn-close-sales-detail').addEventListener('click', closeSalesDetail);
+    document.getElementById('btn-save-sales-mgmt').addEventListener('click', saveSalesMgmt);
+
+    ['sales-mgmt-status', 'sales-mgmt-next-date', 'sales-mgmt-next-action', 'sales-mgmt-last-contact'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', () => {
+        if (!currentMessageLeadId) return;
+        const lead = Storage.getLeads().find(l => l.id === currentMessageLeadId);
+        if (!lead) return;
+        const draft = SalesBrain.normalizeLead({
+          ...lead,
+          salesStatus: document.getElementById('sales-mgmt-status').value,
+          nextActionDate: document.getElementById('sales-mgmt-next-date').value,
+          nextAction: document.getElementById('sales-mgmt-next-action').value.trim(),
+          lastContactAt: document.getElementById('sales-mgmt-last-contact').value
+        });
+        renderSalesMgmtPreview(draft);
+      });
+      if (el && el.tagName === 'TEXTAREA') {
+        el.addEventListener('input', () => {
+          if (!currentMessageLeadId) return;
+          const lead = Storage.getLeads().find(l => l.id === currentMessageLeadId);
+          if (!lead) return;
+          const draft = { ...lead, nextAction: el.value.trim() };
+          renderSalesMgmtPreview(SalesBrain.normalizeLead(draft));
+        });
+      }
+    });
 
     document.querySelectorAll('.sales-tab').forEach(tab => {
       tab.addEventListener('click', () => switchSalesTab(tab.dataset.tab));
@@ -1190,34 +1320,39 @@
   function renderLeadsTable() {
     const tbody = document.getElementById('leads-tbody');
     const { enriched, settings } = getSalesContext();
-    const list = enriched.slice().sort((a, b) => priorityOrder(a.effectivePriority) - priorityOrder(b.effectivePriority));
+    const order = { high: 0, mid: 1, low: 2 };
+    const list = enriched.slice().sort((a, b) => {
+      const pl = (order[a.priorityLevel] ?? 2) - (order[b.priorityLevel] ?? 2);
+      if (pl !== 0) return pl;
+      return (b.priorityScore || 0) - (a.priorityScore || 0);
+    });
 
     if (!list.length && !Storage.getLeads().length) {
-      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">営業先が登録されていません</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">営業先が登録されていません</td></tr>';
       return;
     }
 
     const allLeads = Storage.getLeads();
-    const closed = allLeads.filter(l => ['NG', '見送り', '成約'].includes(l.status));
-    const displayList = [...list, ...closed.map(l => SalesBrain.enrichLead(l, Storage.getGeneratedPosts(), settings, TODAY()))];
+    const closed = allLeads.filter(l => {
+      const ss = l.salesStatus || SalesBrain.mapLegacyStatus(l.status);
+      return ['NG', '見送り', '成約'].includes(l.status) || SalesBrain.CLOSED_SALES_STATUSES.includes(ss);
+    });
+    const closedIds = new Set(closed.map(l => l.id));
+    const activeList = list.filter(l => !closedIds.has(l.id));
+    const displayList = [...activeList, ...closed.map(l => SalesBrain.enrichLead(l, Storage.getGeneratedPosts(), settings, TODAY()))];
 
     const today = TODAY();
     tbody.innerHTML = displayList.map(l => {
-      const aiBadge = settings.aiPriorityEnabled !== false && !l.priorityManual && l.aiPriority !== l.priority
-        ? `<span class="ai-badge" title="AI判定">AI</span>` : '';
+      const overdue = l.nextActionDate && l.nextActionDate < today && !l.salesPriorityExcluded;
+      const nextActionNote = !l.nextAction ? ' <small class="sales-priority-warning">未設定</small>' : '';
       return `
-      <tr class="${l.nextContact && l.nextContact < today && !CLOSED_STATUSES.includes(l.status) ? 'row-overdue' : ''}">
-        <td>
-          <span class="priority-badge priority-${l.effectivePriority}">${l.effectivePriority}</span>
-          ${aiBadge}
-        </td>
+      <tr class="${overdue ? 'row-overdue' : ''}">
+        <td><span class="sales-priority-label priority-${l.priorityLevel || 'low'}">${esc(l.priorityLabel || '低')}</span></td>
         <td><button type="button" class="lead-company-link" data-open-lead="${esc(l.id)}">${esc(l.company)}</button></td>
+        <td><span class="sales-status-badge sales-status-${salesStatusClass(l.salesStatus)}">${esc(l.salesStatus)}</span></td>
+        <td>${esc(l.nextActionDate || '—')}</td>
         <td>${esc(l.recommendedProduct || '—')}</td>
-        <td>${esc(l.suggestedAction || '—')}</td>
-        <td>${esc(l.region || '—')}</td>
-        <td>${esc(l.industry || '—')}</td>
-        <td><span class="status-badge status-${esc(l.status)}">${esc(l.status)}</span></td>
-        <td>${esc(l.nextContact || '—')}</td>
+        <td>${esc(l.nextAction || l.suggestedAction || '—')}${nextActionNote}</td>
         <td class="actions">
           <button class="btn-edit" data-edit-lead="${l.id}">編集</button>
           <button class="btn-edit" data-open-lead="${l.id}">営業準備</button>
@@ -1300,8 +1435,36 @@
       priorityManual: priorityTouched || (!id && document.getElementById('lead-priority').value !== 'B')
     };
 
-    if (id) Storage.updateLead(id, data);
-    else Storage.addLead(data);
+    if (id) {
+      const normalized = SalesBrain.normalizeLead({
+        ...data,
+        salesStatus: SalesBrain.mapLegacyStatus(data.status),
+        nextActionDate: data.nextContact,
+        lastContactAt: data.lastContact
+      });
+      const pri = SalesBrain.computeSalesPriority(normalized, TODAY());
+      Storage.updateLead(id, {
+        ...data,
+        salesStatus: normalized.salesStatus,
+        nextActionDate: normalized.nextActionDate,
+        lastContactAt: normalized.lastContactAt,
+        priorityScore: pri.score,
+        priorityReason: pri.reasons.join('、')
+      });
+    } else {
+      const normalized = SalesBrain.normalizeLead({
+        ...data,
+        salesStatus: SalesBrain.mapLegacyStatus(data.status),
+        nextActionDate: data.nextContact,
+        lastContactAt: data.lastContact
+      });
+      const pri = SalesBrain.computeSalesPriority(normalized, TODAY());
+      Storage.addLead({
+        ...normalized,
+        priorityScore: pri.score,
+        priorityReason: pri.reasons.join('、')
+      });
+    }
 
     closeLeadModal();
     renderLeadsTable();
@@ -1362,14 +1525,19 @@
     if (!currentMessageLeadId) return;
     Storage.addSalesHistory(currentMessageLeadId, { type });
     const lead = Storage.getLeads().find(l => l.id === currentMessageLeadId);
-    if (lead && lead.status === '未接触' && type !== '電話') {
-      Storage.updateLead(currentMessageLeadId, { status: 'アプローチ中', lastContact: TODAY() });
-      renderLeadsTable();
-    } else if (lead && type === '電話') {
-      Storage.updateLead(currentMessageLeadId, { lastContact: TODAY() });
-      renderLeadsTable();
+    if (!lead) return;
+    const today = TODAY();
+    const updates = { lastContactAt: today, lastContact: today };
+    const normalized = SalesBrain.normalizeLead(lead);
+    if (normalized.salesStatus === '未営業') {
+      updates.salesStatus = '初回連絡済み';
+      if (lead.status === '未接触') updates.status = 'アプローチ中';
     }
+    Storage.updateLead(currentMessageLeadId, updates);
+    renderLeadsTable();
     renderSalesHistory(currentMessageLeadId);
+    const updated = Storage.getLeads().find(l => l.id === currentMessageLeadId);
+    if (updated) populateSalesMgmtForm(updated);
     renderDashboard();
   }
 
@@ -1392,9 +1560,13 @@
       presetEl.textContent = MessageTemplates.getPresetLabel(presetKey) || '—';
     }
     const priEl = document.getElementById('sales-detail-priority');
-    priEl.textContent = enriched.effectivePriority + 'ランク';
-    priEl.className = 'priority-badge priority-' + enriched.effectivePriority;
-    document.getElementById('sales-detail-reason').textContent = enriched.displayReason || '—';
+    if (priEl) {
+      priEl.textContent = enriched.priorityLabel || '—';
+      priEl.className = 'sales-priority-label priority-' + (enriched.priorityLevel || 'low');
+    }
+    document.getElementById('sales-detail-reason').textContent = enriched.priorityReason || enriched.displayReason || '—';
+
+    populateSalesMgmtForm(lead);
 
     const contactParts = [];
     if (lead.contact) contactParts.push(lead.contact);
@@ -1788,6 +1960,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    migrateV17Leads();
     syncTodayDemandFromLog();
     initNavigation();
     initDashboard();

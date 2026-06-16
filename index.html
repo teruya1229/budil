@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v1.6</small>
+          <small>AI経営脳みそ v1.7</small>
         </div>
       </div>
       <nav class="nav">
@@ -40,7 +40,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v1.6</small>
+        <small>Budil v1.7</small>
       </div>
     </aside>
 
@@ -369,12 +369,10 @@
                 <tr>
                   <th>優先度</th>
                   <th>会社名</th>
+                  <th>営業ステータス</th>
+                  <th>次アクション日</th>
                   <th>推奨商品</th>
                   <th>次の行動</th>
-                  <th>地域</th>
-                  <th>業種</th>
-                  <th>ステータス</th>
-                  <th>次回連絡</th>
                   <th>操作</th>
                 </tr>
               </thead>
@@ -495,7 +493,7 @@
             <div class="sales-detail-meta">
               <p><span class="label-muted">推奨商品</span> <strong id="sales-detail-product">—</strong></p>
               <p><span class="label-muted">使用中プリセット</span> <strong id="sales-detail-preset">—</strong></p>
-              <p><span class="label-muted">優先度</span> <span id="sales-detail-priority" class="priority-badge">—</span></p>
+              <p><span class="label-muted">優先度</span> <span id="sales-detail-priority" class="sales-priority-label">—</span></p>
               <p><span class="label-muted">理由</span> <span id="sales-detail-reason">—</span></p>
             </div>
             <div class="sales-detail-info">
@@ -503,6 +501,44 @@
               <p id="sales-detail-links"></p>
               <p id="sales-detail-memo" class="sales-detail-memo"></p>
             </div>
+          </div>
+
+          <div class="sales-mgmt-section">
+            <h3>営業管理</h3>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="sales-mgmt-status">営業ステータス</label>
+                <select id="sales-mgmt-status">
+                  <option value="未営業">未営業</option>
+                  <option value="初回連絡済み">初回連絡済み</option>
+                  <option value="興味あり">興味あり</option>
+                  <option value="見積り・提案中">見積り・提案中</option>
+                  <option value="日程調整中">日程調整中</option>
+                  <option value="成約">成約</option>
+                  <option value="見送り">見送り</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="sales-mgmt-next-date">次アクション日</label>
+                <input type="date" id="sales-mgmt-next-date">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="sales-mgmt-next-action">次アクションメモ</label>
+              <textarea id="sales-mgmt-next-action" rows="2" placeholder="例: LINEで再提案"></textarea>
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="sales-mgmt-last-contact">最終連絡日</label>
+                <input type="date" id="sales-mgmt-last-contact">
+              </div>
+              <div class="form-group">
+                <label>優先度（自動）</label>
+                <p id="sales-mgmt-priority" class="sales-priority-label">—</p>
+                <small id="sales-mgmt-priority-reason" class="label-muted"></small>
+              </div>
+            </div>
+            <button type="button" id="btn-save-sales-mgmt" class="btn btn-primary btn-sm">営業管理を保存</button>
           </div>
 
           <p class="notice notice-info">相手を評価・指摘しない敬意ある提案型文面です。コピーして調整してください。</p>

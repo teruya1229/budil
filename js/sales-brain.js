@@ -1,7 +1,14 @@
 /**
  * Budil v0.3 - 営業番頭分析エンジン
+ * v1.7 - 営業ステータス・次アクション・優先度管理
  */
 const SalesBrain = {
+  SALES_STATUSES: [
+    '未営業', '初回連絡済み', '興味あり', '見積り・提案中', '日程調整中', '成約', '見送り'
+  ],
+
+  CLOSED_SALES_STATUSES: ['成約', '見送り'],
+
   PRODUCTS: {
     'AI帳票番頭': ['建設', '工務', '現場', '土木', '帳票', '経理', '請求', '伝票', '工事', '施工'],
     '広告番頭': ['飲食', '美容', 'サロン', '小売', '店舗', '集客', 'MEO', 'SEO', '広告', 'ホテル', '民宿'],
@@ -21,6 +28,95 @@ const SalesBrain = {
   daysSince(dateStr, today) {
     if (!dateStr) return null;
     return Math.floor((new Date(today) - new Date(dateStr)) / 86400000);
+  },
+
+  mapLegacyStatus(status) {
+    const map = {
+      '未接触': '未営業',
+      'アプローチ中': '初回連絡済み',
+      '商談中': '見積り・提案中',
+      '成約': '成約',
+      '見送り': '見送り',
+      'NG': '見送り'
+    };
+    return map[status] || status || '未営業';
+  },
+
+  normalizeLead(lead) {
+    const salesStatus = lead.salesStatus || this.mapLegacyStatus(lead.status);
+    const lastContactAt = lead.lastContactAt || lead.lastContact || '';
+    const nextActionDate = lead.nextActionDate || lead.nextContact || '';
+    const nextAction = lead.nextAction || lead.suggestedAction || '';
+    return {
+      ...lead,
+      salesStatus: this.SALES_STATUSES.includes(salesStatus) ? salesStatus : '未営業',
+      lastContactAt,
+      nextActionDate,
+      nextAction,
+      lastContact: lastContactAt || lead.lastContact || '',
+      nextContact: nextActionDate || lead.nextContact || ''
+    };
+  },
+
+  computeSalesPriority(lead, today) {
+    const normalized = this.normalizeLead(lead);
+    const salesStatus = normalized.salesStatus;
+    const reasons = [];
+    let score = 0;
+
+    if (this.CLOSED_SALES_STATUSES.includes(salesStatus) || lead.status === 'NG') {
+      return {
+        score: 0,
+        label: '低',
+        level: 'low',
+        reasons: ['対象外（' + salesStatus + '）'],
+        excluded: true
+      };
+    }
+
+    if (!normalized.nextAction && !normalized.nextActionDate) {
+      score += 8;
+      reasons.push('次アクション未設定');
+    }
+
+    if (normalized.nextActionDate && normalized.nextActionDate <= today) {
+      score += 50;
+      reasons.push('次アクション日が今日以前（' + normalized.nextActionDate + '）');
+    }
+
+    if (['興味あり', '見積り・提案中', '日程調整中'].includes(salesStatus)) {
+      score += 40;
+      if (!reasons.some(r => r.indexOf('次アクション日') === 0)) {
+        reasons.push('ステータスが' + salesStatus);
+      }
+    }
+
+    if (salesStatus === '未営業') {
+      score += 20;
+      if (reasons.length <= 1) reasons.push('ステータスが未営業');
+    }
+
+    if (salesStatus === '初回連絡済み') {
+      score += 25;
+      reasons.push('ステータスが初回連絡済み');
+    }
+
+    if (lead.salesPreset) {
+      score += 10;
+      reasons.push('営業プリセット設定済み');
+    }
+
+    let label = '低';
+    if (score >= 40) label = '高';
+    else if (score >= 15) label = '中';
+
+    return {
+      score,
+      label,
+      level: label === '高' ? 'high' : label === '中' ? 'mid' : 'low',
+      reasons: reasons.length ? reasons : ['通常フォロー対象'],
+      excluded: false
+    };
   },
 
   recommendProduct(lead, demand) {
@@ -146,15 +242,17 @@ const SalesBrain = {
   },
 
   enrichLead(lead, demand, settings, today) {
-    const ai = this.computePriority(lead, today);
-    const manual = lead.priorityManual === true;
+    const normalized = this.normalizeLead(lead);
+    const ai = this.computePriority(normalized, today);
+    const salesPri = this.computeSalesPriority(normalized, today);
+    const manual = normalized.priorityManual === true;
     const useAi = settings.aiPriorityEnabled !== false && !manual;
-    const effectivePriority = useAi ? ai.level : (lead.priority || 'B');
-    const recommendedProduct = this.recommendProduct(lead, demand);
-    const suggestedAction = this.suggestAction(lead);
+    const effectivePriority = useAi ? ai.level : (normalized.priority || 'B');
+    const recommendedProduct = this.recommendProduct(normalized, demand);
+    const suggestedAction = normalized.nextAction || this.suggestAction(normalized);
 
     return {
-      ...lead,
+      ...normalized,
       aiPriority: ai.level,
       aiPriorityScore: ai.score,
       aiPriorityReasons: ai.reasons,
@@ -162,25 +260,34 @@ const SalesBrain = {
       priorityManual: manual,
       recommendedProduct,
       suggestedAction,
-      displayReason: ai.reasons[0] || '通常フォロー対象',
-      productLabel: recommendedProduct + '向き'
+      displayReason: salesPri.reasons[0] || ai.reasons[0] || '通常フォロー対象',
+      productLabel: recommendedProduct + '向き',
+      priorityScore: salesPri.score,
+      priorityLabel: salesPri.label,
+      priorityLevel: salesPri.level,
+      priorityReason: salesPri.reasons.join('、'),
+      salesPriorityExcluded: salesPri.excluded
     };
   },
 
   enrichLeads(leads, demand, settings, today) {
     return leads
       .map(l => this.enrichLead(l, demand, settings, today))
-      .filter(l => !['NG', '見送り', '成約'].includes(l.status));
+      .filter(l => !l.salesPriorityExcluded && !['NG'].includes(l.status));
   },
 
   getTodayTargets(enriched) {
-    const order = { A: 0, B: 1, C: 2 };
+    const order = { high: 0, mid: 1, low: 2 };
     return enriched
+      .filter(l => !l.salesPriorityExcluded)
       .slice()
       .sort((a, b) => {
-        const pd = (order[a.effectivePriority] ?? 1) - (order[b.effectivePriority] ?? 1);
-        if (pd !== 0) return pd;
-        return (b.aiPriorityScore || 0) - (a.aiPriorityScore || 0);
+        const pl = (order[a.priorityLevel] ?? 2) - (order[b.priorityLevel] ?? 2);
+        if (pl !== 0) return pl;
+        if ((b.priorityScore || 0) !== (a.priorityScore || 0)) {
+          return (b.priorityScore || 0) - (a.priorityScore || 0);
+        }
+        return (a.nextActionDate || '9999').localeCompare(b.nextActionDate || '9999');
       })
       .slice(0, 5);
   },

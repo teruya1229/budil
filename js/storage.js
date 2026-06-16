@@ -84,6 +84,26 @@ const Storage = {
     localStorage.setItem('budil_migrated_v2', '1');
   },
 
+  migrateV17() {
+    if (localStorage.getItem('budil_migrated_v17')) return;
+    if (typeof SalesBrain === 'undefined') return;
+    const leads = this.getLeads();
+    if (leads.length) {
+      const today = new Date().toISOString().slice(0, 10);
+      const normalized = leads.map(l => {
+        const n = SalesBrain.normalizeLead(l);
+        const pri = SalesBrain.computeSalesPriority(n, today);
+        return {
+          ...n,
+          priorityScore: pri.score,
+          priorityReason: pri.reasons.join('、')
+        };
+      });
+      this.saveLeads(normalized);
+    }
+    localStorage.setItem('budil_migrated_v17', '1');
+  },
+
   getSettings() {
     return this.get(this.KEYS.SETTINGS, {
       priority: '', postTheme: '', memo: '', aiPriorityEnabled: true, lastBackupAt: null

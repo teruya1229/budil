@@ -178,6 +178,12 @@ const ManagementBrain = {
         company: '（営業先未登録）',
         product: '—',
         action: '営業先を追加してください',
+        priorityLabel: '—',
+        priorityReason: '',
+        salesStatus: '',
+        nextAction: '',
+        nextActionDate: '',
+        presetLabel: '',
         copyText: ''
       };
     }
@@ -185,18 +191,27 @@ const ManagementBrain = {
       ? (MessageTemplates.getPresetLabel(top.salesPreset) || '')
       : '';
     const productText = presetLabel ? `本日は「${presetLabel}」で営業` : top.recommendedProduct;
+    const nextActionText = top.nextAction || top.suggestedAction || '（未設定）';
     const copyText = [
       `【本日の営業先】${top.company}`,
-      `推奨商品: ${top.recommendedProduct}`,
-      presetLabel ? `営業プリセット: ${presetLabel}` : '',
-      `次の行動: ${top.suggestedAction}`,
-      `理由: ${top.displayReason}`
+      `優先度${top.priorityLabel}：${top.company}`,
+      `理由：${top.priorityReason}`,
+      `次アクション：${nextActionText}`,
+      presetLabel ? `プリセット：${presetLabel}` : '',
+      `営業ステータス：${top.salesStatus}`,
+      `推奨商品: ${top.recommendedProduct}`
     ].filter(Boolean).join('\n');
 
     return {
       company: top.company,
       product: productText,
-      action: top.suggestedAction,
+      action: nextActionText,
+      priorityLabel: top.priorityLabel,
+      priorityReason: top.priorityReason,
+      salesStatus: top.salesStatus,
+      nextAction: top.nextAction || top.suggestedAction || '',
+      nextActionDate: top.nextActionDate || '',
+      presetLabel,
       copyText
     };
   },
