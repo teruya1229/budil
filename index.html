@@ -349,6 +349,17 @@
                 <input type="checkbox" id="ai-priority-toggle" checked>
                 AI優先度判定
               </label>
+              <div class="sales-preset-select-wrap">
+                <label for="sales-preset-select" class="sales-preset-label">営業プリセット</label>
+                <select id="sales-preset-select" class="sales-preset-select">
+                  <option value="ai_docs">AI帳票番頭を売る</option>
+                  <option value="ads">広告番頭を売る</option>
+                  <option value="ai_consult">AI導入コンサルを売る</option>
+                  <option value="bc_clean">BCサービス清掃営業</option>
+                  <option value="washer">洗濯機クリーニング営業</option>
+                  <option value="ac_corp">エアコンクリーニング法人営業</option>
+                </select>
+              </div>
               <button id="btn-add-lead" class="btn btn-primary btn-sm">+ 新規追加</button>
             </div>
           </div>
@@ -377,6 +388,7 @@
             <h2 id="lead-modal-title">営業先を追加</h2>
             <form id="lead-form">
               <input type="hidden" id="lead-edit-id">
+              <input type="hidden" id="lead-sales-preset" value="">
               <div class="form-row form-row-3">
                 <div class="form-group">
                   <label for="lead-company">会社名 *</label>
@@ -482,6 +494,7 @@
           <div class="sales-detail-summary">
             <div class="sales-detail-meta">
               <p><span class="label-muted">推奨商品</span> <strong id="sales-detail-product">—</strong></p>
+              <p><span class="label-muted">使用中プリセット</span> <strong id="sales-detail-preset">—</strong></p>
               <p><span class="label-muted">優先度</span> <span id="sales-detail-priority" class="priority-badge">—</span></p>
               <p><span class="label-muted">理由</span> <span id="sales-detail-reason">—</span></p>
             </div>

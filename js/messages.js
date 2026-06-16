@@ -5,6 +5,63 @@
 const MessageTemplates = {
   PRODUCTS: ['AI帳票番頭', '広告番頭', 'AI導入コンサル', 'BCサービス'],
 
+  PRESETS: {
+    ai_docs: {
+      label: 'AI帳票番頭を売る',
+      product: 'AI帳票番頭',
+      copyOverride: {
+        hook: '現場業の受付・請求・帳票作業を減らす提案',
+        benefit: '受付〜請求〜帳票まわりで起きがちな転記・確認の手間を軽くし、必要な情報が届く状態へ',
+        offer: '御社の運用に合わせた導入イメージを、15分ほどオンラインでお伝え'
+      }
+    },
+    ads: {
+      label: '広告番頭を売る',
+      product: '広告番頭',
+      copyOverride: {
+        hook: 'Google広告やLP改善の判断を助ける提案',
+        benefit: '検索やMEOなどから問い合わせにつながる導線を整え、成果に近づく動きを整理',
+        offer: '現状の集客の整理と、取り組みやすい第一歩を一緒に考えるお時間'
+      }
+    },
+    ai_consult: {
+      label: 'AI導入コンサルを売る',
+      product: 'AI導入コンサル',
+      copyOverride: {
+        hook: '現場業の業務に合わせたAI活用の整理と設計',
+        benefit: 'いきなり導入ではなく、何から始めるかを明確にして無理のない形へ',
+        offer: '業務の棚卸しから入って、無理のないAI導入の進め方を提案'
+      }
+    },
+    bc_clean: {
+      label: 'BCサービス清掃営業',
+      product: 'BCサービス',
+      copyOverride: {
+        hook: '店舗・施設・管理会社向けに清掃品質を安定させる仕組み',
+        benefit: '現場目線で定期対応・品質維持・再発予防を支援',
+        offer: '物件や現場の状況に合わせた清掃メニューのご案内'
+      }
+    },
+    washer: {
+      label: '洗濯機クリーニング営業',
+      product: 'BCサービス',
+      copyOverride: {
+        hook: '洗濯機クリーニングで「カビ臭い・乾燥不良」を減らす提案',
+        benefit: '現場で多い「洗濯機のにおい・状態」を起点に、再発しにくい運用へ',
+        offer: '洗濯機の状況に合わせた対応手順を15分ほどご一緒にお伝え'
+      }
+    },
+    ac_corp: {
+      label: 'エアコンクリーニング法人営業',
+      product: 'BCサービス',
+      copyOverride: {
+        hook: '法人向けにエアコン臭・黒カビを減らす提案',
+        benefit: '現場の運用に合わせて、定期対応で品質を守り続ける仕組みへ',
+        offer: '法人様の運用に合わせた清掃メニューのご提案をお送りします'
+      }
+    }
+  },
+
   PRODUCT_COPY: {
     'AI帳票番頭': {
       label: 'AI帳票番頭',
@@ -41,15 +98,33 @@ const MessageTemplates = {
     return 'AI帳票番頭';
   },
 
-  generateAll(lead, product) {
+  getPresetLabel(presetKey) {
+    return (presetKey && this.PRESETS[presetKey] && this.PRESETS[presetKey].label) || null;
+  },
+
+  resolveProductWithPreset(product, presetKey, lead) {
+    const preset = presetKey ? this.PRESETS[presetKey] : null;
+    if (preset && preset.product && this.PRODUCT_COPY[preset.product]) return preset.product;
+    return this.resolveProduct(product || (lead ? lead.service : null));
+  },
+
+  getCopyFor(productKey, presetKey) {
+    const base = this.PRODUCT_COPY[productKey] || this.PRODUCT_COPY['AI帳票番頭'];
+    const preset = presetKey ? this.PRESETS[presetKey] : null;
+    if (!preset || !preset.copyOverride) return base;
+    return { ...base, ...preset.copyOverride, label: base.label };
+  },
+
+  generateAll(lead, product, presetKey) {
     const company = lead.company || '御社';
     const contact = lead.contact ? lead.contact + '様' : 'ご担当者様';
     const region = lead.region ? lead.region + 'の' : '沖縄の';
-    const productKey = this.resolveProduct(product || lead.service);
-    const copy = this.PRODUCT_COPY[productKey];
+    const productKey = this.resolveProductWithPreset(product, presetKey, lead);
+    const copy = this.getCopyFor(productKey, presetKey);
 
     return {
       product: productKey,
+      preset: presetKey,
       email: this.email(company, contact, region, copy),
       form: this.contactForm(company, contact, region, copy),
       dm: this.dm(company, contact, copy),

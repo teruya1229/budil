@@ -1273,6 +1273,29 @@ body {
   margin-top: 4px;
 }
 
+/* v1.6 営業プリセット */
+.sales-preset-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sales-preset-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.sales-preset-select {
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+
 /* v1.1 名刺登録 */
 .card-layout-register {
   align-items: start;

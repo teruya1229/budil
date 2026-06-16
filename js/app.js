@@ -13,6 +13,96 @@
   const SALES_TAB_FIELDS = { email: 'msg-email', form: 'msg-form', dm: 'msg-dm', phone: 'msg-phone' };
   const SALES_TAB_LOG = { email: 'メール送信', form: 'フォーム送信', dm: 'DM', phone: '電話' };
 
+  // ── 営業プリセット（v1.6）──
+  // 目的: 営業先登録の最初に「何を売るか」を選ぶだけで、入力/提案/文面生成を揃える
+  let currentSalesPreset = 'ai_docs';
+
+  const SALES_PRESETS = {
+    ai_docs: {
+      label: 'AI帳票番頭を売る',
+      service: 'AI帳票番頭',
+      priority: 'A',
+      status: '未接触',
+      nextContactOffsetDays: 3,
+      memoTemplate: '【AI帳票番頭を売る】\n・受付〜請求〜帳票の手間を減らす\n・まず現状ヒアリングから提案'
+    },
+    ads: {
+      label: '広告番頭を売る',
+      service: '広告番頭',
+      priority: 'B',
+      status: '未接触',
+      nextContactOffsetDays: 5,
+      memoTemplate: '【広告番頭を売る】\n・問い合わせ導線の整理\n・最初の一歩から相談'
+    },
+    ai_consult: {
+      label: 'AI導入コンサルを売る',
+      service: 'AI導入コンサル',
+      priority: 'B',
+      status: '未接触',
+      nextContactOffsetDays: 7,
+      memoTemplate: '【AI導入コンサルを売る】\n・業務棚卸しから無理のないAI導入\n・何から始めるかを一緒に整理'
+    },
+    bc_clean: {
+      label: 'BCサービス清掃営業',
+      service: 'BCサービス',
+      priority: 'B',
+      status: '未接触',
+      nextContactOffsetDays: 7,
+      memoTemplate: '【BCサービス清掃営業】\n・店舗/施設の品質を安定維持\n・定期対応の提案'
+    },
+    washer: {
+      label: '洗濯機クリーニング営業',
+      service: '洗濯機クリーニング',
+      priority: 'B',
+      status: '未接触',
+      nextContactOffsetDays: 5,
+      memoTemplate: '【洗濯機クリーニング営業】\n・カビ臭い/乾燥不良の改善\n・まず現場の状況を確認して提案'
+    },
+    ac_corp: {
+      label: 'エアコンクリーニング法人営業',
+      service: 'エアコンクリーニング',
+      priority: 'A',
+      status: '未接触',
+      nextContactOffsetDays: 3,
+      memoTemplate: '【エアコンクリーニング法人営業】\n・法人向けに定期対応で品質維持\n・運用に合わせた清掃提案'
+    }
+  };
+
+  function toISODateLocal(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function addDaysFromToday(offsetDays) {
+    const d = new Date();
+    d.setDate(d.getDate() + Number(offsetDays || 0));
+    return toISODateLocal(d);
+  }
+
+  function applySalesPresetToLeadForm(presetKey) {
+    const preset = SALES_PRESETS[presetKey] || SALES_PRESETS.ai_docs;
+
+    const hidden = document.getElementById('lead-sales-preset');
+    if (hidden) hidden.value = presetKey;
+
+    const setIfExists = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.value = value;
+    };
+
+    setIfExists('lead-service', preset.service);
+    setIfExists('lead-priority', preset.priority);
+    setIfExists('lead-status', preset.status);
+    setIfExists('lead-memo', preset.memoTemplate);
+    setIfExists('lead-last-contact', '');
+
+    if (preset.nextContactOffsetDays !== undefined && preset.nextContactOffsetDays !== null) {
+      setIfExists('lead-next-contact', addDaysFromToday(preset.nextContactOffsetDays));
+    }
+  }
+
   const TODAY = () => new Date().toISOString().slice(0, 10);
   const CLOSED_STATUSES = ['成約', '見送り', 'NG'];
   const ACTIVE_LEAD_STATUSES = ['未接触', 'アプローチ中', '商談中'];
@@ -1056,6 +1146,19 @@
       renderDashboard();
     });
 
+    const presetSelect = document.getElementById('sales-preset-select');
+    if (presetSelect) {
+      currentSalesPreset = presetSelect.value || currentSalesPreset;
+      presetSelect.addEventListener('change', () => {
+        currentSalesPreset = presetSelect.value || currentSalesPreset;
+        const leadModal = document.getElementById('lead-modal');
+        const isOpen = leadModal && !leadModal.classList.contains('hidden');
+        const editingId = document.getElementById('lead-edit-id').value;
+        // 編集（既存）中は上書きしない。追加（新規）中だけプリセットを反映する。
+        if (isOpen && !editingId) applySalesPresetToLeadForm(currentSalesPreset);
+      });
+    }
+
     document.getElementById('lead-priority').addEventListener('change', () => {
       document.getElementById('lead-edit-id').dataset.priorityTouched = '1';
     });
@@ -1149,6 +1252,9 @@
       document.getElementById('lead-modal-title').textContent = '営業先を編集';
       document.getElementById('lead-edit-id').value = id;
       if (item.priorityManual) document.getElementById('lead-edit-id').dataset.priorityTouched = '1';
+      const presetValue = item.salesPreset || currentSalesPreset;
+      const hiddenPreset = document.getElementById('lead-sales-preset');
+      if (hiddenPreset) hiddenPreset.value = presetValue;
       const fields = ['company', 'region', 'industry', 'url', 'contact', 'email', 'phone',
         'contactForm', 'sns', 'service', 'priority', 'status', 'lastContact', 'nextContact', 'ngReason', 'memo'];
       fields.forEach(f => {
@@ -1158,6 +1264,9 @@
       toggleNgReason();
     } else {
       document.getElementById('lead-modal-title').textContent = '営業先を追加';
+      const hiddenPreset = document.getElementById('lead-sales-preset');
+      if (hiddenPreset) hiddenPreset.value = currentSalesPreset;
+      applySalesPresetToLeadForm(currentSalesPreset);
     }
     document.getElementById('lead-modal').classList.remove('hidden');
   }
@@ -1187,6 +1296,7 @@
       nextContact: document.getElementById('lead-next-contact').value,
       ngReason: document.getElementById('lead-ng-reason').value,
       memo: document.getElementById('lead-memo').value,
+      salesPreset: document.getElementById('lead-sales-preset').value,
       priorityManual: priorityTouched || (!id && document.getElementById('lead-priority').value !== 'B')
     };
 
@@ -1268,14 +1378,19 @@
     const lead = Storage.getLeads().find(l => l.id === leadId);
     if (!lead) return;
 
+    const presetKey = lead.salesPreset || currentSalesPreset;
     const enriched = getEnrichedLead(leadId);
     const product = enriched.recommendedProduct || SalesBrain.recommendProduct(lead, Storage.getGeneratedPosts());
-    const msgs = MessageTemplates.generateAll(lead, product);
+    const msgs = MessageTemplates.generateAll(lead, product, presetKey);
     currentMessageLeadId = leadId;
     currentSalesMessages = msgs;
 
     document.getElementById('sales-detail-company').textContent = lead.company;
-    document.getElementById('sales-detail-product').textContent = product;
+    document.getElementById('sales-detail-product').textContent = msgs.product;
+    const presetEl = document.getElementById('sales-detail-preset');
+    if (presetEl) {
+      presetEl.textContent = MessageTemplates.getPresetLabel(presetKey) || '—';
+    }
     const priEl = document.getElementById('sales-detail-priority');
     priEl.textContent = enriched.effectivePriority + 'ランク';
     priEl.className = 'priority-badge priority-' + enriched.effectivePriority;

@@ -181,16 +181,21 @@ const ManagementBrain = {
         copyText: ''
       };
     }
+    const presetLabel = top.salesPreset && typeof MessageTemplates !== 'undefined' && MessageTemplates.getPresetLabel
+      ? (MessageTemplates.getPresetLabel(top.salesPreset) || '')
+      : '';
+    const productText = presetLabel ? `本日は「${presetLabel}」で営業` : top.recommendedProduct;
     const copyText = [
       `【本日の営業先】${top.company}`,
       `推奨商品: ${top.recommendedProduct}`,
+      presetLabel ? `営業プリセット: ${presetLabel}` : '',
       `次の行動: ${top.suggestedAction}`,
       `理由: ${top.displayReason}`
-    ].join('\n');
+    ].filter(Boolean).join('\n');
 
     return {
       company: top.company,
-      product: top.recommendedProduct,
+      product: productText,
       action: top.suggestedAction,
       copyText
     };
