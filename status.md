@@ -6,8 +6,8 @@
 
 - 公開URL: https://teruya1229.github.io/budil/
 - 現在バージョン: v1.7.1
-- 最新commit: 67dddfb
-- push済み（`2a90c90..67dddfb main -> main`）
+- 最新commit: 1ac8ab9
+- push済み（`67dddfb..1ac8ab9 main -> main`）
 - GitHub Pages公開済み
 
 ## v1.7 実装内容
