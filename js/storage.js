@@ -148,6 +148,20 @@ const Storage = {
     }
   },
 
+  addSalesHistory(leadId, entry) {
+    const list = this.getLeads();
+    const idx = list.findIndex(l => l.id === leadId);
+    if (idx === -1) return;
+    if (!list[idx].salesHistory) list[idx].salesHistory = [];
+    list[idx].salesHistory.unshift({
+      id: this.generateId(),
+      type: entry.type,
+      at: new Date().toISOString(),
+      note: entry.note || ''
+    });
+    this.saveLeads(list);
+  },
+
   deleteLead(id) {
     this.saveLeads(this.getLeads().filter(l => l.id !== id));
   },

@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v1.4</small>
+          <small>AI経営脳みそ v1.5</small>
         </div>
       </div>
       <nav class="nav">
@@ -40,7 +40,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v1.4</small>
+        <small>Budil v1.5</small>
       </div>
     </aside>
 
@@ -473,33 +473,56 @@
           </div>
         </div>
 
-        <div id="messages-panel" class="card hidden">
+        <div id="sales-detail-panel" class="card sales-detail-panel hidden">
           <div class="card-header-row">
-            <h2>営業文面 — <span id="messages-company-name"></span></h2>
-            <button id="btn-close-messages" class="btn btn-secondary btn-sm">閉じる</button>
+            <h2>営業準備 — <span id="sales-detail-company"></span></h2>
+            <button type="button" id="btn-close-sales-detail" class="btn btn-secondary btn-sm">閉じる</button>
           </div>
-          <p class="notice notice-info">相手を評価・指摘しない敬意ある文面です。コピーして調整してください。</p>
-          <div class="messages-grid">
-            <div class="message-block">
-              <h3>営業メール文</h3>
-              <textarea id="msg-email" class="message-text" rows="10" readonly></textarea>
-              <button class="btn btn-sm btn-copy" data-copy="msg-email">コピー</button>
+
+          <div class="sales-detail-summary">
+            <div class="sales-detail-meta">
+              <p><span class="label-muted">推奨商品</span> <strong id="sales-detail-product">—</strong></p>
+              <p><span class="label-muted">優先度</span> <span id="sales-detail-priority" class="priority-badge">—</span></p>
+              <p><span class="label-muted">理由</span> <span id="sales-detail-reason">—</span></p>
             </div>
-            <div class="message-block">
-              <h3>問い合わせフォーム文</h3>
-              <textarea id="msg-form" class="message-text" rows="8" readonly></textarea>
-              <button class="btn btn-sm btn-copy" data-copy="msg-form">コピー</button>
+            <div class="sales-detail-info">
+              <p id="sales-detail-contact"></p>
+              <p id="sales-detail-links"></p>
+              <p id="sales-detail-memo" class="sales-detail-memo"></p>
             </div>
-            <div class="message-block">
-              <h3>DM文</h3>
-              <textarea id="msg-dm" class="message-text" rows="6" readonly></textarea>
-              <button class="btn btn-sm btn-copy" data-copy="msg-dm">コピー</button>
+          </div>
+
+          <p class="notice notice-info">相手を評価・指摘しない敬意ある提案型文面です。コピーして調整してください。</p>
+
+          <div class="sales-detail-tabs" role="tablist">
+            <button type="button" class="sales-tab active" data-tab="email">メール</button>
+            <button type="button" class="sales-tab" data-tab="form">問い合わせフォーム</button>
+            <button type="button" class="sales-tab" data-tab="dm">DM</button>
+            <button type="button" class="sales-tab" data-tab="phone">電話トーク</button>
+          </div>
+
+          <div class="sales-tab-body">
+            <textarea id="sales-tab-content" class="message-text sales-tab-textarea" rows="12" readonly></textarea>
+            <div class="sales-tab-actions">
+              <button type="button" id="sales-tab-copy" class="btn btn-primary btn-sm">コピー</button>
+              <button type="button" id="sales-tab-log" class="btn btn-secondary btn-sm">送信を記録</button>
             </div>
-            <div class="message-block">
-              <h3>電話トーク</h3>
-              <textarea id="msg-phone" class="message-text" rows="10" readonly></textarea>
-              <button class="btn btn-sm btn-copy" data-copy="msg-phone">コピー</button>
+          </div>
+
+          <textarea id="msg-email" class="hidden" readonly></textarea>
+          <textarea id="msg-form" class="hidden" readonly></textarea>
+          <textarea id="msg-dm" class="hidden" readonly></textarea>
+          <textarea id="msg-phone" class="hidden" readonly></textarea>
+
+          <div class="sales-history-section">
+            <h3>営業履歴</h3>
+            <div class="sales-history-actions">
+              <button type="button" class="btn btn-sm btn-secondary sales-log-btn" data-log-type="メール送信">メール送信</button>
+              <button type="button" class="btn btn-sm btn-secondary sales-log-btn" data-log-type="フォーム送信">フォーム送信</button>
+              <button type="button" class="btn btn-sm btn-secondary sales-log-btn" data-log-type="DM">DM</button>
+              <button type="button" class="btn btn-sm btn-secondary sales-log-btn" data-log-type="電話">電話</button>
             </div>
+            <ul id="sales-history-list" class="sales-history-list"></ul>
           </div>
         </div>
       </section>

@@ -7,6 +7,11 @@
   let currentFollowupFilter = 'all';
   let currentMessageLeadId = null;
   let pendingImport = null;
+  let currentSalesTab = 'email';
+  let currentSalesMessages = null;
+
+  const SALES_TAB_FIELDS = { email: 'msg-email', form: 'msg-form', dm: 'msg-dm', phone: 'msg-phone' };
+  const SALES_TAB_LOG = { email: 'メール送信', form: 'フォーム送信', dm: 'DM', phone: '電話' };
 
   const TODAY = () => new Date().toISOString().slice(0, 10);
   const CLOSED_STATUSES = ['成約', '見送り', 'NG'];
@@ -318,11 +323,18 @@
       <button class="btn btn-sm btn-copy" data-copy-target="mgmt-post-text">コピー</button>`;
 
     const salesEl = document.getElementById('mgmt-sales');
+    const topTarget = SalesBrain.getTodayTargets(getSalesContext().enriched)[0];
+    const salesOpenBtn = topTarget
+      ? `<button type="button" class="btn btn-sm btn-primary mgmt-sales-open" data-open-lead="${esc(topTarget.id)}">営業文面を開く</button>`
+      : '';
     salesEl.innerHTML = `
       <p class="mgmt-highlight"><strong>${esc(report.todaySales.company)}</strong></p>
       <p class="mgmt-meta">${esc(report.todaySales.product)} — ${esc(report.todaySales.action)}</p>
       <textarea class="mgmt-copy-text" id="mgmt-sales-text" readonly rows="3">${esc(report.todaySales.copyText)}</textarea>
-      <button class="btn btn-sm btn-copy" data-copy-target="mgmt-sales-text">コピー</button>`;
+      <div class="mgmt-sales-actions">
+        <button class="btn btn-sm btn-copy" data-copy-target="mgmt-sales-text">コピー</button>
+        ${salesOpenBtn}
+      </div>`;
 
     document.getElementById('mgmt-cautions').innerHTML = report.cautions.map(c =>
       `<li class="caution-item">⚠ ${esc(c)}</li>`).join('');
@@ -332,6 +344,10 @@
 
     postEl.querySelector('[data-copy-target]').addEventListener('click', handleMgmtCopy);
     salesEl.querySelector('[data-copy-target]').addEventListener('click', handleMgmtCopy);
+    const mgmtOpen = salesEl.querySelector('.mgmt-sales-open');
+    if (mgmtOpen) {
+      mgmtOpen.addEventListener('click', () => openSalesDetail(mgmtOpen.dataset.openLead, { navigate: true }));
+    }
 
     const top3Legacy = document.getElementById('dash-top3');
     if (top3Legacy) {
@@ -388,7 +404,7 @@
       targetsEl.innerHTML = '<p class="empty-state">営業先を登録すると、今日営業すべき会社が表示されます</p>';
     } else {
       targetsEl.innerHTML = targets.map(l => `
-        <div class="sales-target-card">
+        <div class="sales-target-card sales-target-clickable" data-open-lead="${esc(l.id)}" role="button" tabindex="0">
           <div class="sales-target-header">
             <strong class="sales-target-company">${esc(l.company)}</strong>
             <span class="priority-badge priority-${l.effectivePriority}">${l.effectivePriority}ランク</span>
@@ -396,7 +412,18 @@
           <p class="sales-target-product">${esc(l.productLabel)}</p>
           <p class="sales-target-reason"><span>理由：</span>${esc(l.displayReason)}</p>
           <p class="sales-target-action">次の行動: <strong>${esc(l.suggestedAction)}</strong></p>
+          <p class="sales-target-open-hint">タップして営業文面を表示 →</p>
         </div>`).join('');
+
+      targetsEl.querySelectorAll('[data-open-lead]').forEach(card => {
+        card.addEventListener('click', () => openSalesDetail(card.dataset.openLead, { navigate: true }));
+        card.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openSalesDetail(card.dataset.openLead, { navigate: true });
+          }
+        });
+      });
     }
 
     const missionsEl = document.getElementById('dash-sales-missions');
@@ -996,8 +1023,26 @@
     document.getElementById('btn-add-lead').addEventListener('click', () => openLeadModal());
     document.getElementById('btn-lead-cancel').addEventListener('click', closeLeadModal);
     document.getElementById('lead-form').addEventListener('submit', handleLeadSubmit);
-    document.getElementById('btn-close-messages').addEventListener('click', () => {
-      document.getElementById('messages-panel').classList.add('hidden');
+    document.getElementById('btn-close-sales-detail').addEventListener('click', closeSalesDetail);
+
+    document.querySelectorAll('.sales-tab').forEach(tab => {
+      tab.addEventListener('click', () => switchSalesTab(tab.dataset.tab));
+    });
+
+    document.getElementById('sales-tab-copy').addEventListener('click', e => {
+      const text = document.getElementById('sales-tab-content').value;
+      copyText(text).then(() => {
+        e.currentTarget.textContent = 'コピー済み';
+        setTimeout(() => { e.currentTarget.textContent = 'コピー'; }, 1500);
+      }).catch(() => alert('コピーに失敗しました'));
+    });
+
+    document.getElementById('sales-tab-log').addEventListener('click', () => {
+      recordSalesActivity(SALES_TAB_LOG[currentSalesTab]);
+    });
+
+    document.querySelectorAll('.sales-log-btn').forEach(btn => {
+      btn.addEventListener('click', () => recordSalesActivity(btn.dataset.logType));
     });
 
     const aiToggle = document.getElementById('ai-priority-toggle');
@@ -1016,15 +1061,6 @@
     });
 
     document.getElementById('lead-status').addEventListener('change', toggleNgReason);
-    document.querySelectorAll('.btn-copy').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const ta = document.getElementById(btn.dataset.copy);
-        copyText(ta.value).then(() => {
-          btn.textContent = 'コピー済み';
-          setTimeout(() => { btn.textContent = 'コピー'; }, 1500);
-        }).catch(() => alert('コピーに失敗しました。テキストを手動で選択してください。'));
-      });
-    });
 
     initModals();
     renderLeadsTable();
@@ -1072,7 +1108,7 @@
           <span class="priority-badge priority-${l.effectivePriority}">${l.effectivePriority}</span>
           ${aiBadge}
         </td>
-        <td><strong>${esc(l.company)}</strong></td>
+        <td><button type="button" class="lead-company-link" data-open-lead="${esc(l.id)}">${esc(l.company)}</button></td>
         <td>${esc(l.recommendedProduct || '—')}</td>
         <td>${esc(l.suggestedAction || '—')}</td>
         <td>${esc(l.region || '—')}</td>
@@ -1081,7 +1117,7 @@
         <td>${esc(l.nextContact || '—')}</td>
         <td class="actions">
           <button class="btn-edit" data-edit-lead="${l.id}">編集</button>
-          <button class="btn-edit" data-msg-lead="${l.id}">文面</button>
+          <button class="btn-edit" data-open-lead="${l.id}">営業準備</button>
           <button class="btn-danger" data-delete-lead="${l.id}">削除</button>
         </td>
       </tr>`;
@@ -1089,8 +1125,8 @@
 
     tbody.querySelectorAll('[data-edit-lead]').forEach(b =>
       b.addEventListener('click', () => openLeadModal(b.dataset.editLead)));
-    tbody.querySelectorAll('[data-msg-lead]').forEach(b =>
-      b.addEventListener('click', () => showMessages(b.dataset.msgLead)));
+    tbody.querySelectorAll('[data-open-lead]').forEach(b =>
+      b.addEventListener('click', () => openSalesDetail(b.dataset.openLead)));
     tbody.querySelectorAll('[data-delete-lead]').forEach(b =>
       b.addEventListener('click', () => {
         if (confirm('この営業先を削除しますか？')) {
@@ -1162,13 +1198,111 @@
     renderDashboard();
   }
 
-  function showMessages(leadId) {
+  function navigateToView(viewName) {
+    document.querySelectorAll('.nav-item').forEach(n => {
+      n.classList.toggle('active', n.dataset.view === viewName);
+    });
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + viewName).classList.add('active');
+    if (viewName === 'dashboard') renderDashboard();
+    if (viewName === 'radar') renderDemandRadar();
+    if (viewName === 'data') renderDataManagement();
+  }
+
+  function getEnrichedLead(leadId) {
+    const { enriched, settings, demand, today } = getSalesContext();
+    let item = enriched.find(l => l.id === leadId);
+    if (!item) {
+      const lead = Storage.getLeads().find(l => l.id === leadId);
+      if (!lead) return null;
+      item = SalesBrain.enrichLead(lead, demand, settings, today);
+    }
+    return item;
+  }
+
+  function switchSalesTab(tab) {
+    currentSalesTab = tab;
+    document.querySelectorAll('.sales-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    const fieldId = SALES_TAB_FIELDS[tab];
+    const content = document.getElementById('sales-tab-content');
+    const hidden = document.getElementById(fieldId);
+    if (content && hidden) content.value = hidden.value;
+    const logBtn = document.getElementById('sales-tab-log');
+    if (logBtn) logBtn.textContent = SALES_TAB_LOG[tab] + 'を記録';
+  }
+
+  function renderSalesHistory(leadId) {
+    const listEl = document.getElementById('sales-history-list');
+    if (!listEl) return;
+    const lead = Storage.getLeads().find(l => l.id === leadId);
+    const history = (lead && lead.salesHistory) || [];
+    if (!history.length) {
+      listEl.innerHTML = '<li class="placeholder-text">営業履歴はまだありません</li>';
+      return;
+    }
+    listEl.innerHTML = history.slice(0, 20).map(h => {
+      const when = h.at ? h.at.slice(0, 16).replace('T', ' ') : '';
+      return `<li><strong>${esc(h.type)}</strong><span>${esc(when)}</span>${h.note ? '<small>' + esc(h.note) + '</small>' : ''}</li>`;
+    }).join('');
+  }
+
+  function recordSalesActivity(type) {
+    if (!currentMessageLeadId) return;
+    Storage.addSalesHistory(currentMessageLeadId, { type });
+    const lead = Storage.getLeads().find(l => l.id === currentMessageLeadId);
+    if (lead && lead.status === '未接触' && type !== '電話') {
+      Storage.updateLead(currentMessageLeadId, { status: 'アプローチ中', lastContact: TODAY() });
+      renderLeadsTable();
+    } else if (lead && type === '電話') {
+      Storage.updateLead(currentMessageLeadId, { lastContact: TODAY() });
+      renderLeadsTable();
+    }
+    renderSalesHistory(currentMessageLeadId);
+    renderDashboard();
+  }
+
+  function openSalesDetail(leadId, options) {
+    const opts = options || {};
     const lead = Storage.getLeads().find(l => l.id === leadId);
     if (!lead) return;
-    currentMessageLeadId = leadId;
 
-    const msgs = MessageTemplates.generateAll(lead);
-    document.getElementById('messages-company-name').textContent = lead.company;
+    const enriched = getEnrichedLead(leadId);
+    const product = enriched.recommendedProduct || SalesBrain.recommendProduct(lead, Storage.getGeneratedPosts());
+    const msgs = MessageTemplates.generateAll(lead, product);
+    currentMessageLeadId = leadId;
+    currentSalesMessages = msgs;
+
+    document.getElementById('sales-detail-company').textContent = lead.company;
+    document.getElementById('sales-detail-product').textContent = product;
+    const priEl = document.getElementById('sales-detail-priority');
+    priEl.textContent = enriched.effectivePriority + 'ランク';
+    priEl.className = 'priority-badge priority-' + enriched.effectivePriority;
+    document.getElementById('sales-detail-reason').textContent = enriched.displayReason || '—';
+
+    const contactParts = [];
+    if (lead.contact) contactParts.push(lead.contact);
+    if (lead.email) contactParts.push(lead.email);
+    if (lead.phone) contactParts.push(lead.phone);
+    document.getElementById('sales-detail-contact').textContent = contactParts.length
+      ? contactParts.join(' / ') : '連絡先未登録';
+
+    const links = [];
+    if (lead.url) links.push('URL: ' + lead.url);
+    if (lead.region) links.push('地域: ' + lead.region);
+    if (lead.industry) links.push('業種: ' + lead.industry);
+    document.getElementById('sales-detail-links').textContent = links.join(' ｜ ');
+
+    const memoEl = document.getElementById('sales-detail-memo');
+    if (lead.memo) {
+      memoEl.textContent = 'メモ: ' + lead.memo;
+      memoEl.classList.remove('hidden');
+    } else {
+      memoEl.textContent = '';
+      memoEl.classList.add('hidden');
+    }
+
     document.getElementById('msg-email').value = msgs.email;
     document.getElementById('msg-form').value = msgs.form;
     document.getElementById('msg-dm').value = msgs.dm;
@@ -1178,8 +1312,22 @@
     allMsgs[leadId] = msgs;
     Storage.saveGeneratedMessages(allMsgs);
 
-    document.getElementById('messages-panel').classList.remove('hidden');
-    document.getElementById('messages-panel').scrollIntoView({ behavior: 'smooth' });
+    switchSalesTab(currentSalesTab || 'email');
+    renderSalesHistory(leadId);
+
+    if (opts.navigate) navigateToView('sales');
+    document.getElementById('sales-detail-panel').classList.remove('hidden');
+    document.getElementById('sales-detail-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function closeSalesDetail() {
+    document.getElementById('sales-detail-panel').classList.add('hidden');
+    currentMessageLeadId = null;
+    currentSalesMessages = null;
+  }
+
+  function showMessages(leadId) {
+    openSalesDetail(leadId);
   }
 
   // ── 名刺登録 ──
