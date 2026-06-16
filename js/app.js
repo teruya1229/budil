@@ -1630,6 +1630,8 @@
     const form = document.getElementById('card-register-form');
 
     uploadArea.addEventListener('click', e => {
+      const labelTap = e.target && e.target.closest && e.target.closest('label[for="card-file-input"]');
+      if (labelTap) return;
       if (e.target.id !== 'card-preview') fileInput.click();
     });
     uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
@@ -1639,7 +1641,13 @@
       uploadArea.classList.remove('dragover');
       if (e.dataTransfer.files[0]?.type.startsWith('image/')) handleCardImage(e.dataTransfer.files[0]);
     });
-    fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleCardImage(fileInput.files[0]); });
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+      handleCardImage(file);
+      // Allow selecting the same file again.
+      fileInput.value = '';
+    });
 
     form.addEventListener('submit', e => { e.preventDefault(); addCardToLeads(); });
 
@@ -1695,10 +1703,17 @@
 
   function saveCardDraftFromForm() {
     const preview = document.getElementById('card-preview');
-    Storage.saveCardDraft({
-      fields: getCardFormFields(),
-      imageData: preview.classList.contains('hidden') ? '' : preview.src
-    });
+    try {
+      Storage.saveCardDraft({
+        fields: getCardFormFields(),
+        imageData: preview.classList.contains('hidden') ? '' : preview.src
+      });
+    } catch (e) {
+      const statusEl = document.getElementById('card-ocr-status');
+      if (statusEl) {
+        statusEl.textContent = '保存に失敗しました（画像が大きすぎる可能性があります）';
+      }
+    }
   }
 
   function loadCardDraft() {
@@ -1716,18 +1731,63 @@
   }
 
   async function handleCardImage(file) {
-    const reader = new FileReader();
-    reader.onload = async e => {
-      const preview = document.getElementById('card-preview');
-      preview.src = e.target.result;
+    const preview = document.getElementById('card-preview');
+    const statusEl = document.getElementById('card-ocr-status');
+    if (statusEl) statusEl.textContent = '名刺画像を読み込み中...';
+
+    const readFileAsDataURL = (f) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('FileReader failed'));
+      reader.readAsDataURL(f);
+    });
+
+    const compressImageDataUrl = async (dataUrl) => {
+      const MAX_WIDTH = 1200;
+      const QUALITY = 0.82;
+
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const w = img.naturalWidth || img.width;
+            const h = img.naturalHeight || img.height;
+            if (!w || !h) return resolve(dataUrl);
+
+            const scale = Math.min(1, MAX_WIDTH / w);
+            const shouldReencode = dataUrl.length > 1000000; // おおよそ1MB目安（base64長）
+            if (scale === 1 && !shouldReencode) return resolve(dataUrl);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(w * scale));
+            canvas.height = Math.max(1, Math.round(h * scale));
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return resolve(dataUrl);
+
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', QUALITY));
+          } catch (e) {
+            resolve(dataUrl);
+          }
+        };
+        img.onerror = () => resolve(dataUrl); // HEIC等でデコードできない場合は元のデータで続行
+        img.src = dataUrl;
+      });
+    };
+
+    try {
+      const originalDataUrl = await readFileAsDataURL(file);
+      const compressedDataUrl = await compressImageDataUrl(originalDataUrl);
+
+      preview.src = compressedDataUrl || originalDataUrl;
       preview.classList.remove('hidden');
-      document.querySelector('#card-upload-area .upload-placeholder').style.display = 'none';
 
-      const statusEl = document.getElementById('card-ocr-status');
-      statusEl.textContent = '名刺画像を読み込み中...';
+      const placeholder = document.querySelector('#card-upload-area .upload-placeholder');
+      if (placeholder) placeholder.style.display = 'none';
 
+      if (statusEl) statusEl.textContent = '名刺画像を読み込み中...';
       const result = await CardOCR.extractFromImage(file);
-      statusEl.textContent = result.message;
+      if (statusEl) statusEl.textContent = result.message;
 
       if (result.fields) {
         const current = getCardFormFields();
@@ -1741,8 +1801,11 @@
       document.getElementById('btn-add-to-leads').disabled = !getCardFormFields().company.trim();
       updateCardProductSuggest();
       saveCardDraftFromForm();
-    };
-    reader.readAsDataURL(file);
+    } catch (e) {
+      if (statusEl) {
+        statusEl.textContent = '画像の読み込みに失敗しました。スクリーンショットまたはJPEGで再選択してください。';
+      }
+    }
   }
 
   function updateCardProductSuggest() {

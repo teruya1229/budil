@@ -746,6 +746,17 @@ body {
   position: relative;
 }
 
+/* mobile file picker reliability:
+   - input[type=file] must not be display:none/hidden, otherwise iOS/Android can block it
+   - label[for] triggers the picker reliably even when input is visually hidden */
+.card-file-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 .upload-area:hover,
 .upload-area.dragover {
   border-color: var(--primary);

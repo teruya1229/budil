@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v1.7</small>
+          <small>AI経営脳みそ v1.7.1</small>
         </div>
       </div>
       <nav class="nav">
@@ -40,7 +40,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v1.7</small>
+        <small>Budil v1.7.1</small>
       </div>
     </aside>
 
@@ -592,12 +592,12 @@
           <div class="card">
             <h2>名刺画像</h2>
             <div class="upload-area" id="card-upload-area">
-              <input type="file" id="card-file-input" accept="image/*" capture="environment" hidden>
-              <div class="upload-placeholder">
+              <input type="file" id="card-file-input" accept="image/*" class="card-file-input" aria-label="名刺画像を選択">
+              <label class="upload-placeholder" for="card-file-input">
                 <span class="upload-icon">📷</span>
                 <p>クリックまたはドラッグ＆ドロップ</p>
                 <small>スマホではカメラ撮影も可能</small>
-              </div>
+              </label>
               <img id="card-preview" class="card-preview hidden" alt="名刺プレビュー">
             </div>
             <p id="card-ocr-status" class="notice notice-info">画像をアップロードして登録を開始してください</p>
