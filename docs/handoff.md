@@ -1,5 +1,8 @@
 # Budil 公開準備メモ
 
+> **【旧情報】** 本ファイルは MVP v0.1 時代のメモです。  
+> 正本ドキュメントはリポジトリルートの [README.md](../README.md) / [status.md](../status.md) / [rules.md](../rules.md) / [handoff.md](../handoff.md) を参照してください。
+
 最終更新: 2026-06-16  
 対象: Budil MVP v0.1
 
