@@ -5,9 +5,9 @@
 ## 現在の公開状態
 
 - 公開URL: https://teruya1229.github.io/budil/
-- 現在バージョン: v1.7
-- 最新commit: 1ce1259
-- push済み（`8eb2c9f..1ce1259 main -> main`）
+- 現在バージョン: v1.7.1
+- 最新commit: 67dddfb
+- push済み（`2a90c90..67dddfb main -> main`）
 - GitHub Pages公開済み
 
 ## v1.7 実装内容
@@ -71,6 +71,26 @@
 - 文面生成維持
 - 朝レポート維持
 - 詳細パネル維持
+
+## v1.7.1 修正内容（スマホ写真アップロード）
+
+### 変更ファイル
+
+- `index.html`
+- `css/style.css`
+- `js/app.js`
+
+### 実装内容（要点）
+
+- 名刺登録UIの `input[type=file]` を `hidden`（display:none相当）から解除し、`label[for="card-file-input"]` 方式に切替（スマホで選択ダイアログを開きやすくする）
+- 画像読み込み時にダウンサンプル/圧縮（JPEGへ変換・最大幅1200px程度）して、localStorage保存の失敗（容量過多）を減らす
+- 画像読み込み・保存失敗を `#card-ocr-status` に表示し、無言で止まらないようにする
+- 同一ファイルを再選択できるように `input.value` をリセットする
+
+### 互換確認
+
+- 既存の `budil_card_draft`（画像のdataURL）形式は維持
+- localStorageキーを破壊的に変更しない
 
 ## 動作確認
 

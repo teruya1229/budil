@@ -11,10 +11,10 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
-
-- Budil v1.7 公開済み
+- Budil v1.7.1 公開済み
 - 営業プリセット v1.6 実装済み
 - 営業ステータス / 次アクション / 優先度判定 v1.7 実装済み
+- スマホ写真アップロード修正（名刺登録UI）
 - Budilの判断ロジック正本（brain/playbooks/KPI/検証ログ）整備済み
 - localStorage互換維持
 - GitHub Pages運用
@@ -63,6 +63,12 @@
 - AI優先度判定（ルールベース）
 - 今日営業すべき会社への反映
 - 朝レポートへの営業ステータス・次アクション・優先理由表示
+
+## v1.7.1で入ったもの
+
+- 名刺登録の `card-file-input` を `hidden`（display:none相当）から解除し、`label[for="card-file-input"]` 方式に切り替えてスマホでのファイル選択を安定化
+- 画像の読み込み〜プレビュー時にダウンサンプル/圧縮して、localStorage保存の失敗（容量不足）を減らす
+- 画像読み込み・保存失敗を `#card-ocr-status` に表示して無言で止まらないようにした
 
 ## localStorageキー（主要）
 
