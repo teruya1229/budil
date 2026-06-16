@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Budil - AI経営脳みそ</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="logo">
+        <span class="logo-icon">B</span>
+        <div class="logo-text">
+          <strong>Budil</strong>
+          <small>AI経営脳みそ v0.1</small>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="dashboard">
+          <span class="nav-icon">📊</span>ダッシュボード
+        </button>
+        <button class="nav-item" data-view="demand">
+          <span class="nav-icon">🔍</span>需要サーチ番頭
+        </button>
+        <button class="nav-item" data-view="sales">
+          <span class="nav-icon">📋</span>営業番頭
+        </button>
+        <button class="nav-item" data-view="card">
+          <span class="nav-icon">🪪</span>名刺解析
+        </button>
+        <button class="nav-item" data-view="followup">
+          <span class="nav-icon">📨</span>追客管理
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <small>Budil MVP v0.1</small>
+      </div>
+    </aside>
+
+    <main class="main">
+      <!-- ダッシュボード -->
+      <section id="view-dashboard" class="view active">
+        <header class="view-header">
+          <h1>ダッシュボード</h1>
+          <p class="view-subtitle">今日やるべきことを3つに絞る</p>
+        </header>
+
+        <div id="dash-alerts" class="alert-bar"></div>
+
+        <div class="dashboard-grid">
+          <div class="card card-highlight card-hero">
+            <h2>今日の最優先アクション</h2>
+            <textarea id="dash-priority" class="card-input" rows="3" placeholder="今日最も重要なアクションを記入..."></textarea>
+          </div>
+
+          <div class="card">
+            <h2>今日の投稿テーマ</h2>
+            <textarea id="dash-post-theme" class="card-input" rows="3" placeholder="SNS投稿のテーマ..."></textarea>
+          </div>
+
+          <div class="card">
+            <h2>今日の3アクション</h2>
+            <ol id="dash-top3" class="top3-list"></ol>
+          </div>
+
+          <div class="card">
+            <h2>今日営業すべき会社</h2>
+            <div id="dash-sales-targets" class="dash-list"></div>
+          </div>
+
+          <div class="card">
+            <h2>再連絡すべき案件</h2>
+            <div id="dash-followups" class="dash-list"></div>
+          </div>
+
+          <div class="card card-wide">
+            <h2>メモ</h2>
+            <textarea id="dash-memo" class="card-input" rows="4" placeholder="自由メモ..."></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- 需要サーチ番頭 -->
+      <section id="view-demand" class="view">
+        <header class="view-header">
+          <h1>需要サーチ番頭</h1>
+          <p class="view-subtitle">検索データから投稿・営業ネタを抽出</p>
+        </header>
+
+        <div class="demand-layout">
+          <div class="card">
+            <h2>入力データ（貼り付け）</h2>
+            <div class="form-group">
+              <label for="demand-trends">Googleトレンド結果</label>
+              <textarea id="demand-trends" rows="4" placeholder="トレンドキーワードを貼り付け..."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="demand-ads">Google広告 検索語句</label>
+              <textarea id="demand-ads" rows="4" placeholder="検索語句レポートを貼り付け..."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="demand-gsc">Search Console クエリ</label>
+              <textarea id="demand-gsc" rows="4" placeholder="クエリデータを貼り付け..."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="demand-ga4">GA4メモ</label>
+              <textarea id="demand-ga4" rows="3" placeholder="アクセス傾向・コンバージョンメモ..."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="demand-instagram">Instagram反応メモ</label>
+              <textarea id="demand-instagram" rows="3" placeholder="反応の良かった投稿・コメント..."></textarea>
+            </div>
+            <button id="btn-analyze-demand" class="btn btn-primary">分析する</button>
+          </div>
+
+          <div class="card">
+            <h2>分析結果</h2>
+            <div class="output-section">
+              <h3>今熱いキーワード</h3>
+              <div id="output-keywords" class="tag-list"></div>
+            </div>
+            <div class="output-section">
+              <h3>伸びているサービス</h3>
+              <ul id="output-services" class="output-list"></ul>
+            </div>
+            <div class="output-section">
+              <h3>今日の投稿テーマ</h3>
+              <ul id="output-themes" class="output-list"></ul>
+            </div>
+            <div class="output-section">
+              <h3>Instagram投稿案</h3>
+              <ul id="output-instagram" class="output-list"></ul>
+            </div>
+            <div class="output-section">
+              <h3>ストーリー案</h3>
+              <ul id="output-stories" class="output-list"></ul>
+            </div>
+            <div class="output-section">
+              <h3>広告キーワード案</h3>
+              <div id="output-ad-keywords" class="tag-list"></div>
+            </div>
+            <div class="output-section">
+              <h3>営業ネタ案</h3>
+              <ul id="output-sales-ideas" class="output-list"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 営業番頭 -->
+      <section id="view-sales" class="view">
+        <header class="view-header">
+          <h1>営業番頭</h1>
+          <p class="view-subtitle">営業先の管理と文面生成</p>
+        </header>
+
+        <div class="card">
+          <div class="card-header-row">
+            <h2>営業先一覧</h2>
+            <button id="btn-add-lead" class="btn btn-primary btn-sm">+ 新規追加</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="leads-table">
+              <thead>
+                <tr>
+                  <th>優先度</th>
+                  <th>会社名</th>
+                  <th>地域</th>
+                  <th>業種</th>
+                  <th>担当者</th>
+                  <th>提案サービス</th>
+                  <th>ステータス</th>
+                  <th>次回連絡</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="leads-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="lead-modal" class="modal hidden">
+          <div class="modal-content modal-lg">
+            <h2 id="lead-modal-title">営業先を追加</h2>
+            <form id="lead-form">
+              <input type="hidden" id="lead-edit-id">
+              <div class="form-row form-row-3">
+                <div class="form-group">
+                  <label for="lead-company">会社名 *</label>
+                  <input type="text" id="lead-company" required>
+                </div>
+                <div class="form-group">
+                  <label for="lead-region">地域</label>
+                  <input type="text" id="lead-region" placeholder="例: 沖縄県那覇市">
+                </div>
+                <div class="form-group">
+                  <label for="lead-industry">業種</label>
+                  <input type="text" id="lead-industry" placeholder="例: 建設業">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="lead-url">URL</label>
+                  <input type="url" id="lead-url" placeholder="https://">
+                </div>
+                <div class="form-group">
+                  <label for="lead-contact">担当者</label>
+                  <input type="text" id="lead-contact">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="lead-email">メール</label>
+                  <input type="email" id="lead-email">
+                </div>
+                <div class="form-group">
+                  <label for="lead-phone">電話</label>
+                  <input type="tel" id="lead-phone">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="lead-contact-form">問い合わせフォームURL</label>
+                  <input type="url" id="lead-contact-form" placeholder="https://">
+                </div>
+                <div class="form-group">
+                  <label for="lead-sns">SNS</label>
+                  <input type="text" id="lead-sns" placeholder="@account または URL">
+                </div>
+              </div>
+              <div class="form-row form-row-3">
+                <div class="form-group">
+                  <label for="lead-service">提案サービス</label>
+                  <input type="text" id="lead-service" placeholder="例: Web集客・広告運用">
+                </div>
+                <div class="form-group">
+                  <label for="lead-priority">優先度</label>
+                  <select id="lead-priority">
+                    <option value="A">A — 最優先</option>
+                    <option value="B" selected>B — 通常</option>
+                    <option value="C">C — 低優先</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="lead-status">ステータス</label>
+                  <select id="lead-status">
+                    <option value="未接触">未接触</option>
+                    <option value="アプローチ中">アプローチ中</option>
+                    <option value="商談中">商談中</option>
+                    <option value="成約">成約</option>
+                    <option value="見送り">見送り</option>
+                    <option value="NG">NG</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="lead-last-contact">最終連絡日</label>
+                  <input type="date" id="lead-last-contact">
+                </div>
+                <div class="form-group">
+                  <label for="lead-next-contact">次回連絡日</label>
+                  <input type="date" id="lead-next-contact">
+                </div>
+              </div>
+              <div class="form-group" id="lead-ng-reason-group" style="display:none">
+                <label for="lead-ng-reason">NG理由</label>
+                <input type="text" id="lead-ng-reason" placeholder="見送り・NGの理由">
+              </div>
+              <div class="form-group">
+                <label for="lead-memo">メモ</label>
+                <textarea id="lead-memo" rows="2"></textarea>
+              </div>
+              <div class="modal-actions">
+                <button type="button" id="btn-lead-cancel" class="btn btn-secondary">キャンセル</button>
+                <button type="submit" class="btn btn-primary">保存</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div id="messages-panel" class="card hidden">
+          <div class="card-header-row">
+            <h2>営業文面 — <span id="messages-company-name"></span></h2>
+            <button id="btn-close-messages" class="btn btn-secondary btn-sm">閉じる</button>
+          </div>
+          <p class="notice notice-info">相手を評価・指摘しない敬意ある文面です。コピーして調整してください。</p>
+          <div class="messages-grid">
+            <div class="message-block">
+              <h3>営業メール文</h3>
+              <textarea id="msg-email" class="message-text" rows="10" readonly></textarea>
+              <button class="btn btn-sm btn-copy" data-copy="msg-email">コピー</button>
+            </div>
+            <div class="message-block">
+              <h3>問い合わせフォーム文</h3>
+              <textarea id="msg-form" class="message-text" rows="8" readonly></textarea>
+              <button class="btn btn-sm btn-copy" data-copy="msg-form">コピー</button>
+            </div>
+            <div class="message-block">
+              <h3>DM文</h3>
+              <textarea id="msg-dm" class="message-text" rows="6" readonly></textarea>
+              <button class="btn btn-sm btn-copy" data-copy="msg-dm">コピー</button>
+            </div>
+            <div class="message-block">
+              <h3>電話トーク</h3>
+              <textarea id="msg-phone" class="message-text" rows="10" readonly></textarea>
+              <button class="btn btn-sm btn-copy" data-copy="msg-phone">コピー</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 名刺解析 -->
+      <section id="view-card" class="view">
+        <header class="view-header">
+          <h1>名刺解析モード</h1>
+          <p class="view-subtitle">名刺画像から情報を抽出（OCR連携は将来実装予定）</p>
+        </header>
+
+        <div class="card-layout">
+          <div class="card">
+            <h2>名刺画像アップロード</h2>
+            <div class="upload-area" id="card-upload-area">
+              <input type="file" id="card-file-input" accept="image/*" hidden>
+              <div class="upload-placeholder">
+                <span class="upload-icon">📷</span>
+                <p>クリックまたはドラッグ＆ドロップで画像を選択</p>
+                <small>対応形式: JPG, PNG, WebP</small>
+              </div>
+              <img id="card-preview" class="card-preview hidden" alt="名刺プレビュー">
+            </div>
+            <p class="notice">※ OCR/API接続は後回し。今回はUIのみです。</p>
+          </div>
+
+          <div class="card">
+            <h2>抽出結果</h2>
+            <div class="extract-result">
+              <div class="form-group">
+                <label>会社名</label>
+                <input type="text" id="extract-company" readonly placeholder="—">
+              </div>
+              <div class="form-group">
+                <label>担当者名</label>
+                <input type="text" id="extract-name" readonly placeholder="—">
+              </div>
+              <div class="form-group">
+                <label>役職</label>
+                <input type="text" id="extract-title" readonly placeholder="—">
+              </div>
+              <div class="form-group">
+                <label>メール</label>
+                <input type="email" id="extract-email" readonly placeholder="—">
+              </div>
+              <div class="form-group">
+                <label>電話</label>
+                <input type="tel" id="extract-phone" readonly placeholder="—">
+              </div>
+              <div class="form-group">
+                <label>URL</label>
+                <input type="url" id="extract-url" readonly placeholder="—">
+              </div>
+              <div class="form-group">
+                <label>メモ</label>
+                <input type="text" id="extract-memo" readonly placeholder="—">
+              </div>
+              <button id="btn-add-to-leads" class="btn btn-primary" disabled>営業リストへ追加</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 追客管理 -->
+      <section id="view-followup" class="view">
+        <header class="view-header">
+          <h1>追客管理</h1>
+          <p class="view-subtitle">フォローアップの進捗管理</p>
+        </header>
+
+        <div id="followup-overdue" class="alert-bar"></div>
+
+        <div class="card">
+          <div class="card-header-row">
+            <h2>追客一覧</h2>
+            <button id="btn-add-followup" class="btn btn-primary btn-sm">+ 新規追加</button>
+          </div>
+
+          <div class="status-filter" id="followup-filters">
+            <button class="filter-btn active" data-status="all">すべて</button>
+            <button class="filter-btn" data-status="未送信">未送信</button>
+            <button class="filter-btn" data-status="送信済み">送信済み</button>
+            <button class="filter-btn" data-status="返信あり">返信あり</button>
+            <button class="filter-btn" data-status="電話済み">電話済み</button>
+            <button class="filter-btn" data-status="商談中">商談中</button>
+            <button class="filter-btn" data-status="成約">成約</button>
+            <button class="filter-btn" data-status="見送り">見送り</button>
+            <button class="filter-btn" data-status="NG">NG</button>
+            <button class="filter-btn filter-ng" data-status="ng-list">NGリスト</button>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table" id="followup-table">
+              <thead>
+                <tr>
+                  <th>会社名</th>
+                  <th>担当者</th>
+                  <th>連絡先</th>
+                  <th>ステータス</th>
+                  <th>最終連絡日</th>
+                  <th>次回連絡日</th>
+                  <th>次回アクション</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="followup-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="followup-modal" class="modal hidden">
+          <div class="modal-content">
+            <h2 id="followup-modal-title">追客を追加</h2>
+            <form id="followup-form">
+              <input type="hidden" id="followup-edit-id">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="followup-company">会社名 *</label>
+                  <input type="text" id="followup-company" required>
+                </div>
+                <div class="form-group">
+                  <label for="followup-contact">担当者</label>
+                  <input type="text" id="followup-contact">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="followup-email">メール</label>
+                  <input type="email" id="followup-email">
+                </div>
+                <div class="form-group">
+                  <label for="followup-phone">電話</label>
+                  <input type="tel" id="followup-phone">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="followup-status">ステータス</label>
+                  <select id="followup-status">
+                    <option value="未送信">未送信</option>
+                    <option value="送信済み">送信済み</option>
+                    <option value="返信あり">返信あり</option>
+                    <option value="電話済み">電話済み</option>
+                    <option value="商談中">商談中</option>
+                    <option value="成約">成約</option>
+                    <option value="見送り">見送り</option>
+                    <option value="NG">NG</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="followup-last-contact">最終連絡日</label>
+                  <input type="date" id="followup-last-contact">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="followup-next-contact">次回連絡日</label>
+                  <input type="date" id="followup-next-contact">
+                </div>
+                <div class="form-group">
+                  <label for="followup-next-action">次回アクション</label>
+                  <input type="text" id="followup-next-action" placeholder="例: フォローメール送信">
+                </div>
+              </div>
+              <div class="form-group" id="followup-ng-reason-group" style="display:none">
+                <label for="followup-ng-reason">NG理由</label>
+                <input type="text" id="followup-ng-reason">
+              </div>
+              <div class="form-group">
+                <label for="followup-memo">メモ</label>
+                <textarea id="followup-memo" rows="3"></textarea>
+              </div>
+              <div class="modal-actions">
+                <button type="button" id="btn-followup-cancel" class="btn btn-secondary">キャンセル</button>
+                <button type="submit" class="btn btn-primary">保存</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/messages.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
