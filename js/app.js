@@ -718,12 +718,21 @@
     document.getElementById('messages-panel').scrollIntoView({ behavior: 'smooth' });
   }
 
-  // ── 名刺解析 ──
+  // ── 名刺登録 ──
+  const CARD_FIELD_IDS = [
+    'card-company', 'card-contact', 'card-title', 'card-email',
+    'card-phone', 'card-url', 'card-address', 'card-exchange-memo',
+    'card-memo', 'card-next-contact'
+  ];
+
   function initCardParser() {
     const uploadArea = document.getElementById('card-upload-area');
     const fileInput = document.getElementById('card-file-input');
+    const form = document.getElementById('card-register-form');
 
-    uploadArea.addEventListener('click', () => fileInput.click());
+    uploadArea.addEventListener('click', e => {
+      if (e.target.id !== 'card-preview') fileInput.click();
+    });
     uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
     uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
     uploadArea.addEventListener('drop', e => {
@@ -732,45 +741,145 @@
       if (e.dataTransfer.files[0]?.type.startsWith('image/')) handleCardImage(e.dataTransfer.files[0]);
     });
     fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleCardImage(fileInput.files[0]); });
-    document.getElementById('btn-add-to-leads').addEventListener('click', addCardToLeads);
+
+    form.addEventListener('submit', e => { e.preventDefault(); addCardToLeads(); });
+
+    CARD_FIELD_IDS.forEach(id => {
+      document.getElementById(id).addEventListener('input', debounce(() => {
+        updateCardProductSuggest();
+        saveCardDraftFromForm();
+        document.getElementById('btn-add-to-leads').disabled = !getCardFormFields().company.trim();
+      }, 300));
+    });
+
+    document.querySelectorAll('#card-memo-chips .memo-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const ta = document.getElementById('card-exchange-memo');
+        const text = chip.dataset.chip;
+        ta.value = ta.value ? ta.value + '、' + text : text;
+        updateCardProductSuggest();
+        saveCardDraftFromForm();
+        document.getElementById('btn-add-to-leads').disabled = !getCardFormFields().company.trim();
+      });
+    });
+
+    loadCardDraft();
   }
 
-  function handleCardImage(file) {
+  function getCardFormFields() {
+    return {
+      company: document.getElementById('card-company').value,
+      contact: document.getElementById('card-contact').value,
+      title: document.getElementById('card-title').value,
+      email: document.getElementById('card-email').value,
+      phone: document.getElementById('card-phone').value,
+      url: document.getElementById('card-url').value,
+      address: document.getElementById('card-address').value,
+      exchangeMemo: document.getElementById('card-exchange-memo').value,
+      memo: document.getElementById('card-memo').value,
+      nextContact: document.getElementById('card-next-contact').value
+    };
+  }
+
+  function setCardFormFields(fields) {
+    const map = {
+      company: 'card-company', contact: 'card-contact', title: 'card-title',
+      email: 'card-email', phone: 'card-phone', url: 'card-url',
+      address: 'card-address', exchangeMemo: 'card-exchange-memo',
+      memo: 'card-memo', nextContact: 'card-next-contact'
+    };
+    Object.entries(map).forEach(([key, id]) => {
+      const el = document.getElementById(id);
+      if (el) el.value = fields[key] || '';
+    });
+  }
+
+  function saveCardDraftFromForm() {
+    const preview = document.getElementById('card-preview');
+    Storage.saveCardDraft({
+      fields: getCardFormFields(),
+      imageData: preview.classList.contains('hidden') ? '' : preview.src
+    });
+  }
+
+  function loadCardDraft() {
+    const draft = Storage.getCardDraft();
+    if (!draft || !draft.fields) return;
+    setCardFormFields(draft.fields);
+    if (draft.imageData) {
+      const preview = document.getElementById('card-preview');
+      preview.src = draft.imageData;
+      preview.classList.remove('hidden');
+      document.querySelector('#card-upload-area .upload-placeholder').style.display = 'none';
+      document.getElementById('btn-add-to-leads').disabled = !draft.fields.company?.trim();
+    }
+    updateCardProductSuggest();
+  }
+
+  async function handleCardImage(file) {
     const reader = new FileReader();
-    reader.onload = e => {
+    reader.onload = async e => {
       const preview = document.getElementById('card-preview');
       preview.src = e.target.result;
       preview.classList.remove('hidden');
-      document.querySelector('.upload-placeholder').style.display = 'none';
-      showCardPlaceholder();
+      document.querySelector('#card-upload-area .upload-placeholder').style.display = 'none';
+
+      const statusEl = document.getElementById('card-ocr-status');
+      statusEl.textContent = '名刺画像を読み込み中...';
+
+      const result = await CardOCR.extractFromImage(file);
+      statusEl.textContent = result.message;
+
+      if (result.fields) {
+        const current = getCardFormFields();
+        const merged = { ...CardOCR.emptyFields(), ...current };
+        Object.keys(result.fields).forEach(k => {
+          if (result.fields[k] && !merged[k]) merged[k] = result.fields[k];
+        });
+        setCardFormFields(merged);
+      }
+
+      document.getElementById('btn-add-to-leads').disabled = !getCardFormFields().company.trim();
+      updateCardProductSuggest();
+      saveCardDraftFromForm();
     };
     reader.readAsDataURL(file);
   }
 
-  function showCardPlaceholder() {
-    const placeholder = '（OCR連携後に自動入力）';
-    ['extract-company', 'extract-name', 'extract-title', 'extract-email',
-      'extract-phone', 'extract-url', 'extract-memo'].forEach(id => {
-      document.getElementById(id).value = placeholder;
-    });
-    document.getElementById('btn-add-to-leads').disabled = true;
+  function updateCardProductSuggest() {
+    const fields = getCardFormFields();
+    const draftLead = {
+      company: fields.company,
+      contact: fields.contact,
+      memo: [fields.exchangeMemo, fields.memo, fields.title, fields.address].filter(Boolean).join(' '),
+      url: fields.url,
+      industry: '',
+      region: fields.address ? fields.address.slice(0, 10) : '',
+      service: ''
+    };
+    const demand = Storage.getGeneratedPosts();
+    const product = SalesBrain.recommendProduct(draftLead, demand);
+    document.getElementById('card-recommended-product').textContent = product;
   }
 
   function addCardToLeads() {
-    const company = document.getElementById('extract-company').value;
-    if (!company || company.includes('OCR')) return;
-    Storage.addLead({
-      company,
-      contact: document.getElementById('extract-name').value,
-      url: document.getElementById('extract-url').value,
-      email: document.getElementById('extract-email').value,
-      phone: document.getElementById('extract-phone').value,
-      service: '',
-      priority: 'B',
-      status: '未接触',
-      memo: '名刺解析から追加（役職: ' + document.getElementById('extract-title').value + '）'
-    });
-    alert('営業リストに追加しました。');
+    const fields = getCardFormFields();
+    const validation = CardOCR.validate(fields);
+    if (!validation.valid) {
+      alert(validation.errors.join('\n'));
+      return;
+    }
+
+    const product = document.getElementById('card-recommended-product').textContent;
+    const payload = CardOCR.toLeadPayload(fields, product === '—' ? '' : product);
+    Storage.addLead(payload);
+    Storage.clearCardDraft();
+
+    const successEl = document.getElementById('card-register-success');
+    successEl.classList.remove('hidden');
+    successEl.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => successEl.classList.add('hidden'), 5000);
+
     renderLeadsTable();
     renderDashboard();
   }

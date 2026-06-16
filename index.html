@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v1.0</small>
+          <small>AI経営脳みそ v1.1</small>
         </div>
       </div>
       <nav class="nav">
@@ -34,7 +34,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v1.0</small>
+        <small>Budil v1.1</small>
       </div>
     </aside>
 
@@ -391,58 +391,96 @@
       <!-- 名刺解析 -->
       <section id="view-card" class="view">
         <header class="view-header">
-          <h1>名刺解析モード</h1>
-          <p class="view-subtitle">名刺画像から情報を抽出（OCR連携は将来実装予定）</p>
+          <h1>名刺登録モード</h1>
+          <p class="view-subtitle">名刺を撮影 → 確認 → 営業番頭へ登録（OCR APIは将来接続）</p>
         </header>
 
-        <div class="card-layout">
+        <div id="card-register-success" class="card card-success card-wide hidden">
+          <p>✓ 営業番頭へ登録しました</p>
+          <small>今日営業すべき会社・朝レポートに反映されます</small>
+        </div>
+
+        <div class="card-layout card-layout-register">
           <div class="card">
-            <h2>名刺画像アップロード</h2>
+            <h2>名刺画像</h2>
             <div class="upload-area" id="card-upload-area">
-              <input type="file" id="card-file-input" accept="image/*" hidden>
+              <input type="file" id="card-file-input" accept="image/*" capture="environment" hidden>
               <div class="upload-placeholder">
                 <span class="upload-icon">📷</span>
-                <p>クリックまたはドラッグ＆ドロップで画像を選択</p>
-                <small>対応形式: JPG, PNG, WebP</small>
+                <p>クリックまたはドラッグ＆ドロップ</p>
+                <small>スマホではカメラ撮影も可能</small>
               </div>
               <img id="card-preview" class="card-preview hidden" alt="名刺プレビュー">
             </div>
-            <p class="notice">※ OCR/API接続は後回し。今回はUIのみです。</p>
+            <p id="card-ocr-status" class="notice notice-info">画像をアップロードして登録を開始してください</p>
           </div>
 
           <div class="card">
-            <h2>抽出結果</h2>
-            <div class="extract-result">
-              <div class="form-group">
-                <label>会社名</label>
-                <input type="text" id="extract-company" readonly placeholder="—">
+            <h2>名刺登録フォーム</h2>
+            <form id="card-register-form" class="card-register-form">
+              <div class="ocr-result-grid">
+                <div class="form-group">
+                  <label for="card-company">会社名 *</label>
+                  <input type="text" id="card-company" placeholder="例: ○○工務店" required>
+                </div>
+                <div class="form-group">
+                  <label for="card-contact">担当者名</label>
+                  <input type="text" id="card-contact" placeholder="例: 照屋 太郎">
+                </div>
+                <div class="form-group">
+                  <label for="card-title">役職</label>
+                  <input type="text" id="card-title" placeholder="例: 代表取締役">
+                </div>
+                <div class="form-group">
+                  <label for="card-email">メール</label>
+                  <input type="email" id="card-email" placeholder="example@company.co.jp">
+                </div>
+                <div class="form-group">
+                  <label for="card-phone">電話</label>
+                  <input type="tel" id="card-phone" placeholder="098-000-0000">
+                </div>
+                <div class="form-group">
+                  <label for="card-url">URL</label>
+                  <input type="url" id="card-url" placeholder="https://">
+                </div>
+                <div class="form-group form-group-wide">
+                  <label for="card-address">住所</label>
+                  <input type="text" id="card-address" placeholder="沖縄県那覇市...">
+                </div>
               </div>
+
               <div class="form-group">
-                <label>担当者名</label>
-                <input type="text" id="extract-name" readonly placeholder="—">
+                <label>名刺交換メモ</label>
+                <div class="memo-chips" id="card-memo-chips">
+                  <button type="button" class="memo-chip" data-chip="興味あり">興味あり</button>
+                  <button type="button" class="memo-chip" data-chip="7月再連絡">7月再連絡</button>
+                  <button type="button" class="memo-chip" data-chip="エアコン相談あり">エアコン相談あり</button>
+                  <button type="button" class="memo-chip" data-chip="AI帳票に関心">AI帳票に関心</button>
+                  <button type="button" class="memo-chip" data-chip="広告相談あり">広告相談あり</button>
+                </div>
+                <textarea id="card-exchange-memo" rows="2" placeholder="名刺交換時の印象・約束など"></textarea>
               </div>
-              <div class="form-group">
-                <label>役職</label>
-                <input type="text" id="extract-title" readonly placeholder="—">
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="card-next-contact">次回連絡日</label>
+                  <input type="date" id="card-next-contact">
+                </div>
+                <div class="form-group">
+                  <label for="card-memo">メモ</label>
+                  <input type="text" id="card-memo" placeholder="補足メモ">
+                </div>
               </div>
-              <div class="form-group">
-                <label>メール</label>
-                <input type="email" id="extract-email" readonly placeholder="—">
+
+              <div class="card-product-suggest">
+                <span class="label-muted">推奨提案商品</span>
+                <span id="card-recommended-product" class="product-suggest-badge">—</span>
               </div>
-              <div class="form-group">
-                <label>電話</label>
-                <input type="tel" id="extract-phone" readonly placeholder="—">
+
+              <div class="card-form-actions">
+                <button type="submit" id="btn-add-to-leads" class="btn btn-primary" disabled>営業番頭へ登録</button>
               </div>
-              <div class="form-group">
-                <label>URL</label>
-                <input type="url" id="extract-url" readonly placeholder="—">
-              </div>
-              <div class="form-group">
-                <label>メモ</label>
-                <input type="text" id="extract-memo" readonly placeholder="—">
-              </div>
-              <button id="btn-add-to-leads" class="btn btn-primary" disabled>営業リストへ追加</button>
-            </div>
+            </form>
           </div>
         </div>
       </section>
@@ -572,6 +610,7 @@
   <script src="js/demand-brain.js"></script>
   <script src="js/sales-brain.js"></script>
   <script src="js/management-brain.js"></script>
+  <script src="js/card-ocr.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

@@ -1273,6 +1273,102 @@ body {
   margin-top: 4px;
 }
 
+/* v1.1 名刺登録 */
+.card-layout-register {
+  align-items: start;
+}
+
+.card-success {
+  border-color: var(--accent);
+  background: rgba(16, 185, 129, 0.12);
+  margin-bottom: 20px;
+  text-align: center;
+  padding: 16px;
+}
+
+.card-success p {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.card-success small {
+  color: var(--text-muted);
+}
+
+.ocr-result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-group-wide {
+  grid-column: 1 / -1;
+}
+
+.card-register-form .form-group {
+  margin-bottom: 12px;
+}
+
+.memo-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.memo-chip {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-muted);
+  border-radius: 14px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.memo-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.card-product-suggest {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: var(--bg-input);
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.label-muted {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.product-suggest-badge {
+  padding: 4px 12px;
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--primary);
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.card-form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 1024px) {
+  .ocr-result-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .dashboard-grid,

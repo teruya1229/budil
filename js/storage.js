@@ -9,7 +9,8 @@ const Storage = {
     GENERATED_POSTS: 'budil_generatedPosts',
     GENERATED_MESSAGES: 'budil_generatedMessages',
     FOLLOWUPS: 'budil_followups',
-    SETTINGS: 'budil_settings'
+    SETTINGS: 'budil_settings',
+    CARD_DRAFT: 'budil_card_draft'
   },
 
   get(key, defaultValue = null) {
@@ -175,6 +176,18 @@ const Storage = {
 
   deleteFollowup(id) {
     this.saveFollowups(this.getFollowups().filter(f => f.id !== id));
+  },
+
+  getCardDraft() {
+    return this.get(this.KEYS.CARD_DRAFT, null);
+  },
+
+  saveCardDraft(data) {
+    this.set(this.KEYS.CARD_DRAFT, data);
+  },
+
+  clearCardDraft() {
+    localStorage.removeItem(this.KEYS.CARD_DRAFT);
   }
 };
 
