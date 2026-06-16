@@ -102,3 +102,12 @@
 - [status.md](status.md) — 現在の公開状態
 - [rules.md](rules.md) — 本ファイル
 - [handoff.md](handoff.md) — 引継ぎ情報
+
+## 判断ロジックの正本
+
+- 判断ロジックの設計・更新は `brain.md` を正本とする
+- 状況別の行動は `playbooks.md` に整理する
+- 数値基準の更新は `kpi-rules.md` を正本とする
+- 重要判断は `decision-log.md` に残す
+- 仮説検証は `experiments.md` に記録する
+

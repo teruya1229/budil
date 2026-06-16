@@ -90,6 +90,14 @@
 - 今日の営業ミッションの精度向上
 - status.md / rules.md / README.md / handoff.md を正本として継続更新
 
+## v1.7後のドキュメント整備
+
+- brain.md 作成（Budilの判断設計）
+- playbooks.md 作成（状況別の行動パターン）
+- kpi-rules.md 作成（数字の判断基準）
+- decision-log.md 作成（判断履歴）
+- experiments.md 作成（仮説検証ログ）
+
 ## バージョン履歴（概要）
 
 | バージョン | commit | 主な内容 |

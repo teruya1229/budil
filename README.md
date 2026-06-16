@@ -60,6 +60,16 @@ v1.7
 | [rules.md](rules.md) | 開発ルール・禁止事項 |
 | [handoff.md](handoff.md) | 次回以降の引継ぎ情報 |
 
+## Budilの脳みそドキュメント
+
+今後のv1.8以降で、Budilを「判断して動かす経営番頭」に進化させるための正本です。
+
+- [brain.md](brain.md) — Budilの判断設計（脳みそ設計書）
+- [playbooks.md](playbooks.md) — 状況別の行動パターン（プレイブック）
+- [kpi-rules.md](kpi-rules.md) — 数値判断基準（KPIルール）
+- [decision-log.md](decision-log.md) — 判断履歴（当たり外れ検証用）
+- [experiments.md](experiments.md) — 仮説検証ログ（実験管理）
+
 ## ファイル構成
 
 ```

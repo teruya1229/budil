@@ -15,6 +15,7 @@
 - Budil v1.7 公開済み
 - 営業プリセット v1.6 実装済み
 - 営業ステータス / 次アクション / 優先度判定 v1.7 実装済み
+- Budilの判断ロジック正本（brain/playbooks/KPI/検証ログ）整備済み
 - localStorage互換維持
 - GitHub Pages運用
 
@@ -29,6 +30,14 @@
 | `js/sales-brain.js` | 営業分析・優先度・ステータス正規化 |
 | `js/messages.js` | 営業文面テンプレート・プリセット |
 | `js/management-brain.js` | 朝レポート・今日の営業生成 |
+
+## 脳みそドキュメント（v1.8以降の判断正本）
+
+- `brain.md` — Budilが何を見てどう判断するか（脳みそ設計書）
+- `playbooks.md` — 状況別の行動パターン（プレイブック）
+- `kpi-rules.md` — 数値判断基準
+- `decision-log.md` — 判断履歴（いつ・なぜ・結果）
+- `experiments.md` — 仮説検証ログ（改善の根拠）
 
 ## v1.6で入ったもの
 
@@ -77,6 +86,7 @@
 - 営業先のCSVインポート
 - 名刺登録から営業ステータス初期値を自動設定
 - 営業結果の振り返りレポート
+- brain/playbooks/KPI/検証ログを使って「今日の最優先行動」を精度改善する
 
 ## 注意点
 
