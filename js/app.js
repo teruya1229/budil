@@ -21,6 +21,7 @@
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById('view-' + view).classList.add('active');
         if (view === 'dashboard') renderDashboard();
+        if (view === 'radar') renderDemandRadar();
       });
     });
   }
@@ -60,11 +61,19 @@
     renderDashboardLists();
   }
 
+  function getRadarSnapshot() {
+    const radarData = Storage.getDemandRadar();
+    const dailyLogs = Storage.getRecentDemandLogs(7);
+    const demand = Storage.getGeneratedPosts();
+    return DemandRadar.analyze(radarData, dailyLogs, demand);
+  }
+
   function getManagementContext() {
     const salesCtx = getSalesContext();
     const warnings = SalesBrain.collectWarnings(salesCtx.leads, salesCtx.followups, salesCtx.today);
-    const report = ManagementBrain.generate({ ...salesCtx, warnings });
-    return { ...salesCtx, warnings, report };
+    const radar = getRadarSnapshot();
+    const report = ManagementBrain.generate({ ...salesCtx, warnings, radar });
+    return { ...salesCtx, warnings, radar, report };
   }
 
   function renderMorningReport() {
@@ -293,6 +302,140 @@
       : '<p class="empty-state">再連絡すべき案件がありません</p>';
   }
 
+  // ── 需要レーダー ──
+  function saveRadarFromForm() {
+    const data = Storage.getDemandRadar();
+    Storage.saveDemandRadar({
+      ...data,
+      marketMemos: {
+        news: document.getElementById('radar-memo-news').value,
+        voices: document.getElementById('radar-memo-voices').value,
+        competitor: document.getElementById('radar-memo-competitor').value,
+        field: document.getElementById('radar-memo-field').value
+      }
+    });
+  }
+
+  function addRadarKeyword(text) {
+    const kw = (text || '').trim();
+    if (!kw) return;
+    const data = Storage.getDemandRadar();
+    if (!data.watchedKeywords) data.watchedKeywords = [];
+    if (data.watchedKeywords.includes(kw)) return;
+    data.watchedKeywords.push(kw);
+    Storage.saveDemandRadar(data);
+    renderRadarKeywordList();
+    renderDemandRadar();
+  }
+
+  function removeRadarKeyword(kw) {
+    const data = Storage.getDemandRadar();
+    data.watchedKeywords = (data.watchedKeywords || []).filter(k => k !== kw);
+    Storage.saveDemandRadar(data);
+    renderRadarKeywordList();
+    renderDemandRadar();
+  }
+
+  function renderRadarKeywordList() {
+    const el = document.getElementById('radar-keyword-list');
+    if (!el) return;
+    const keywords = Storage.getDemandRadar().watchedKeywords || [];
+    if (!keywords.length) {
+      el.innerHTML = '<li class="placeholder-text">キーワードを追加してください</li>';
+      return;
+    }
+    el.innerHTML = keywords.map(kw => `
+      <li class="radar-keyword-item">
+        <span>${esc(kw)}</span>
+        <button type="button" class="btn btn-sm btn-danger radar-kw-remove" data-kw="${esc(kw)}">削除</button>
+      </li>`).join('');
+    el.querySelectorAll('.radar-kw-remove').forEach(btn => {
+      btn.addEventListener('click', () => removeRadarKeyword(btn.dataset.kw));
+    });
+  }
+
+  function renderDemandRadar() {
+    saveRadarFromForm();
+    const snapshot = getRadarSnapshot();
+
+    const focusEl = document.getElementById('radar-weekly-focus');
+    if (focusEl) focusEl.textContent = snapshot.weeklyFocus || '—';
+
+    const servicesEl = document.getElementById('radar-services');
+    if (servicesEl) {
+      const maxScore = snapshot.serviceScores[0] && snapshot.serviceScores[0].score || 1;
+      servicesEl.innerHTML = snapshot.serviceScores.map(svc => {
+        const active = svc.score > 0;
+        const pct = maxScore > 0 ? Math.round((svc.score / maxScore) * 100) : 0;
+        return `
+          <div class="radar-service-item ${active ? 'radar-service-active' : ''}">
+            <strong>${esc(svc.name)}</strong>
+            <div class="radar-service-bar"><span style="width:${pct}%"></span></div>
+            ${svc.matched.length ? `<small>${esc(svc.matched.slice(0, 2).join('・'))}</small>` : '<small class="label-muted">—</small>'}
+          </div>`;
+      }).join('');
+    }
+
+    const upEl = document.getElementById('radar-trend-up');
+    const downEl = document.getElementById('radar-trend-down');
+    if (upEl) {
+      upEl.innerHTML = snapshot.increasingTrends.length
+        ? snapshot.increasingTrends.map(t =>
+          `<li><strong>${esc(t.label)}</strong> <span class="trend-badge trend-up">${esc(t.change)}</span></li>`
+        ).join('')
+        : '<li class="placeholder-text">増加傾向はまだありません</li>';
+    }
+    if (downEl) {
+      downEl.innerHTML = snapshot.decreasingTrends.length
+        ? snapshot.decreasingTrends.map(t =>
+          `<li><strong>${esc(t.label)}</strong> <span class="trend-badge trend-down">${esc(t.change)}</span></li>`
+        ).join('')
+        : '<li class="placeholder-text">減少傾向はまだありません</li>';
+    }
+  }
+
+  function initDemandRadar() {
+    const data = Storage.getDemandRadar();
+    const memos = data.marketMemos || {};
+    document.getElementById('radar-memo-news').value = memos.news || '';
+    document.getElementById('radar-memo-voices').value = memos.voices || '';
+    document.getElementById('radar-memo-competitor').value = memos.competitor || '';
+    document.getElementById('radar-memo-field').value = memos.field || '';
+
+    ['radar-memo-news', 'radar-memo-voices', 'radar-memo-competitor', 'radar-memo-field'].forEach(id => {
+      document.getElementById(id).addEventListener('input', debounce(() => {
+        saveRadarFromForm();
+        renderDemandRadar();
+      }, 500));
+    });
+
+    document.getElementById('btn-radar-add-keyword').addEventListener('click', () => {
+      addRadarKeyword(document.getElementById('radar-keyword-input').value);
+      document.getElementById('radar-keyword-input').value = '';
+    });
+
+    document.getElementById('radar-keyword-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addRadarKeyword(e.target.value);
+        e.target.value = '';
+      }
+    });
+
+    document.querySelectorAll('.radar-suggest-chip').forEach(chip => {
+      chip.addEventListener('click', () => addRadarKeyword(chip.textContent.trim()));
+    });
+
+    document.getElementById('btn-radar-refresh').addEventListener('click', () => {
+      saveRadarFromForm();
+      renderDemandRadar();
+      renderDashboard();
+    });
+
+    renderRadarKeywordList();
+    renderDemandRadar();
+  }
+
   // ── 需要サーチ ──
   function getDemandInputText() {
     const notes = Storage.getDemandNotes();
@@ -479,6 +622,9 @@
       document.getElementById('dash-post-theme').value = settings.postTheme;
     }
     renderDashboard();
+    if (document.getElementById('view-radar').classList.contains('active')) {
+      renderDemandRadar();
+    }
   }
 
   function renderDemandInsights() {
@@ -1173,6 +1319,7 @@
     syncTodayDemandFromLog();
     initNavigation();
     initDashboard();
+    initDemandRadar();
     initDemandSearch();
     initLeads();
     initCardParser();

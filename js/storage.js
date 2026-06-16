@@ -11,7 +11,8 @@ const Storage = {
     FOLLOWUPS: 'budil_followups',
     SETTINGS: 'budil_settings',
     CARD_DRAFT: 'budil_card_draft',
-    DAILY_DEMAND_LOGS: 'budil_daily_demand_logs'
+    DAILY_DEMAND_LOGS: 'budil_daily_demand_logs',
+    DEMAND_RADAR: 'budil_demand_radar'
   },
 
   get(key, defaultValue = null) {
@@ -216,6 +217,21 @@ const Storage = {
       .sort((a, b) => b.localeCompare(a))
       .slice(0, days)
       .map(d => this.getDailyDemandLogs()[d]);
+  },
+
+  getDemandRadar() {
+    return this.get(this.KEYS.DEMAND_RADAR, {
+      watchedKeywords: [],
+      marketMemos: { news: '', voices: '', competitor: '', field: '' },
+      updatedAt: null
+    });
+  },
+
+  saveDemandRadar(data) {
+    this.set(this.KEYS.DEMAND_RADAR, {
+      ...data,
+      updatedAt: new Date().toISOString()
+    });
   }
 };
 

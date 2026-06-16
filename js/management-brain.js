@@ -3,14 +3,14 @@
  */
 const ManagementBrain = {
   generate(ctx) {
-    const { today, demand, enriched, followups, leads, warnings } = ctx;
-    const decisions = this.buildDecisions(demand, enriched, followups);
-    const tasks = this.buildTasks(demand, enriched, followups, today);
-    const todayPost = this.buildTodayPost(demand);
+    const { today, demand, enriched, followups, leads, warnings, radar } = ctx;
+    const decisions = this.buildDecisions(demand, enriched, followups, radar);
+    const tasks = this.buildTasks(demand, enriched, followups, today, radar);
+    const todayPost = this.buildTodayPost(demand, radar);
     const todaySales = this.buildTodaySales(enriched);
     const cautions = this.buildCautions(warnings, leads, followups, today);
-    const skipList = this.buildSkipList(demand, enriched, leads);
-    const budilMessage = this.buildGreeting(demand, enriched, decisions);
+    const skipList = this.buildSkipList(demand, enriched, leads, radar);
+    const budilMessage = this.buildGreeting(demand, enriched, decisions, radar);
 
     return {
       decisions: decisions.slice(0, 5),
@@ -24,9 +24,18 @@ const ManagementBrain = {
     };
   },
 
-  buildDecisions(demand, enriched, followups) {
+  buildDecisions(demand, enriched, followups, radar) {
     const decisions = [];
     let rank = 1;
+
+    if (radar && radar.weeklyFocus && radar.topService && radar.topService.score > 0) {
+      decisions.push({
+        rank: rank++,
+        title: '需要レーダー: ' + radar.weeklyFocus,
+        action: radar.topService.name + '優先',
+        detail: '外部需要メモ・過去ログからの週次判断'
+      });
+    }
 
     if (demand && demand.todayMove) {
       const m = demand.todayMove;
@@ -107,8 +116,12 @@ const ManagementBrain = {
     return decisions.map((d, i) => ({ ...d, rank: i + 1 }));
   },
 
-  buildTasks(demand, enriched, followups, today) {
+  buildTasks(demand, enriched, followups, today, radar) {
     const tasks = [];
+
+    if (radar && radar.weeklyFocus && radar.topService && radar.topService.score > 0) {
+      tasks.push(radar.weeklyFocus.replace(/^今週は/, '') + 'に注力');
+    }
 
     const postTheme = (demand && demand.postThemes && demand.postThemes[0])
       || (demand && demand.todayMove && demand.todayMove.action)
@@ -144,8 +157,9 @@ const ManagementBrain = {
     return tasks.slice(0, 3);
   },
 
-  buildTodayPost(demand) {
+  buildTodayPost(demand, radar) {
     const theme = (demand && demand.postThemes && demand.postThemes[0])
+      || (radar && radar.topService && radar.topService.score > 0 && radar.topService.name + 'の需要チェック')
       || (demand && demand.todayMove && demand.todayMove.action && demand.todayMove.action.replace(/今日は「|」投稿を優先してください。/g, ''))
       || (demand && demand.themes && demand.themes[0] && demand.themes[0].replace(/「|」/g, ''))
       || '需要サーチでテーマを分析してください';
@@ -212,8 +226,14 @@ const ManagementBrain = {
     return cautions.slice(0, 8);
   },
 
-  buildSkipList(demand, enriched, leads) {
+  buildSkipList(demand, enriched, leads, radar) {
     const skip = [];
+
+    if (radar && radar.decreasingTrends && radar.decreasingTrends.length) {
+      radar.decreasingTrends.slice(0, 2).forEach(t => {
+        skip.push({ item: '「' + t.label + '」関連の強化施策', reason: '需要トレンドが減少傾向' });
+      });
+    }
 
     const hasDemand = demand && demand.keywords && demand.keywords.length;
     const acDemand = demand && demand.recommendedServices &&
@@ -250,9 +270,13 @@ const ManagementBrain = {
     return skip.slice(0, 5);
   },
 
-  buildGreeting(demand, enriched, decisions) {
+  buildGreeting(demand, enriched, decisions, radar) {
     const lines = ['おはようございます。'];
     const topDecision = decisions[0];
+
+    if (radar && radar.weeklyFocus && radar.topService && radar.topService.score > 0) {
+      lines.push('需要レーダーでは「' + radar.weeklyFocus + '」が今週の狙いです。');
+    }
 
     if (demand && demand.todayMove) {
       const svc = demand.todayMove.service;

@@ -13,12 +13,15 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v1.2</small>
+          <small>AI経営脳みそ v1.3</small>
         </div>
       </div>
       <nav class="nav">
         <button class="nav-item active" data-view="dashboard">
           <span class="nav-icon">📊</span>ダッシュボード
+        </button>
+        <button class="nav-item" data-view="radar">
+          <span class="nav-icon">📡</span>需要レーダー
         </button>
         <button class="nav-item" data-view="demand">
           <span class="nav-icon">🔍</span>需要サーチ番頭
@@ -34,7 +37,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v1.2</small>
+        <small>Budil v1.3</small>
       </div>
     </aside>
 
@@ -131,6 +134,83 @@
           <div class="card card-wide">
             <h2>メモ</h2>
             <textarea id="dash-memo" class="card-input" rows="4" placeholder="自由メモ..."></textarea>
+          </div>
+        </div>
+      </section>
+
+      </section>
+
+      <!-- 需要レーダー -->
+      <section id="view-radar" class="view">
+        <header class="view-header">
+          <h1>需要レーダー</h1>
+          <p class="view-subtitle">外部需要を手入力で整理し、今週売るべきものを把握する</p>
+        </header>
+
+        <div class="card card-wide radar-focus-card">
+          <h2>🎯 今週の狙い</h2>
+          <p id="radar-weekly-focus" class="radar-weekly-focus">—</p>
+          <button type="button" id="btn-radar-refresh" class="btn btn-primary btn-sm">レーダーを更新</button>
+        </div>
+
+        <div class="radar-layout">
+          <div class="card">
+            <h2>今週の注目キーワード</h2>
+            <p class="radar-hint">手入力で複数登録できます</p>
+            <div class="radar-keyword-input-row">
+              <input type="text" id="radar-keyword-input" placeholder="例: 洗濯機クリーニング">
+              <button type="button" id="btn-radar-add-keyword" class="btn btn-secondary btn-sm">追加</button>
+            </div>
+            <div class="memo-chips radar-keyword-chips" id="radar-keyword-chips">
+              <button type="button" class="memo-chip radar-suggest-chip">洗濯機クリーニング</button>
+              <button type="button" class="memo-chip radar-suggest-chip">カビ臭い</button>
+              <button type="button" class="memo-chip radar-suggest-chip">エアコン臭い</button>
+              <button type="button" class="memo-chip radar-suggest-chip">ドラム式</button>
+              <button type="button" class="memo-chip radar-suggest-chip">完全分解</button>
+            </div>
+            <ul id="radar-keyword-list" class="radar-keyword-list"></ul>
+          </div>
+
+          <div class="card">
+            <h2>注目サービス</h2>
+            <div id="radar-services" class="radar-service-grid"></div>
+          </div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>市場メモ</h2>
+          <div class="radar-memo-grid">
+            <div class="form-group">
+              <label for="radar-memo-news">ニュース</label>
+              <textarea id="radar-memo-news" rows="3" placeholder="業界ニュース・季節要因・外部情報..."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="radar-memo-voices">お客様の声</label>
+              <textarea id="radar-memo-voices" rows="3" placeholder="相談内容・よく聞かれること..."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="radar-memo-competitor">競合情報</label>
+              <textarea id="radar-memo-competitor" rows="3" placeholder="競合の動き・価格・訴求..."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="radar-memo-field">現場感</label>
+              <textarea id="radar-memo-field" rows="3" placeholder="現場で感じた外部需要の変化..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>需要トレンド履歴</h2>
+          <p class="radar-hint">過去の需要ログから増減傾向を表示（直近ログ比較）</p>
+          <div class="radar-trend-grid">
+            <div class="radar-trend-col">
+              <h3 class="trend-up-title">📈 増加傾向</h3>
+              <ul id="radar-trend-up" class="radar-trend-list"></ul>
+            </div>
+            <div class="radar-trend-col">
+              <h3 class="trend-down-title">📉 減少傾向</h3>
+              <ul id="radar-trend-down" class="radar-trend-list"></ul>
+            </div>
           </div>
         </div>
       </section>
@@ -640,6 +720,7 @@
   <script src="js/storage.js"></script>
   <script src="js/messages.js"></script>
   <script src="js/demand-brain.js"></script>
+  <script src="js/demand-radar.js"></script>
   <script src="js/sales-brain.js"></script>
   <script src="js/management-brain.js"></script>
   <script src="js/card-ocr.js"></script>
