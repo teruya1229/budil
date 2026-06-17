@@ -5829,3 +5829,146 @@ body {
   margin: 0.5rem 0 0;
   padding-left: 1.2rem;
 }
+
+/* v3.8 利益番頭 */
+.card-profit-comment {
+  border-left: 4px solid #f59e0b;
+}
+
+.card-profit-hints {
+  border-left: 4px solid #eab308;
+}
+
+.profit-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.profit-summary-item {
+  padding: 0.65rem 0.75rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+}
+
+.profit-summary-item span {
+  display: block;
+  font-size: 0.78rem;
+  color: #92400e;
+  margin-bottom: 0.2rem;
+}
+
+.profit-summary-item strong {
+  font-size: 1rem;
+  color: #78350f;
+}
+
+.profit-table-wrap {
+  overflow-x: auto;
+}
+
+.profit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.profit-table th,
+.profit-table td {
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.profit-table th {
+  background: #f8fafc;
+  font-weight: 600;
+}
+
+.profit-work-order-card,
+.profit-area-card,
+.profit-source-card,
+.profit-hint-card {
+  padding: 0.75rem;
+  margin-bottom: 0.65rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.profit-work-order-header,
+.profit-area-header,
+.profit-source-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.profit-meta {
+  margin: 0.2rem 0;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.profit-comment {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+.profit-caution {
+  margin: 0.35rem 0;
+  font-size: 0.85rem;
+  color: #b45309;
+}
+
+.profit-distance-badge {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.profit-judgment {
+  font-size: 0.75rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+}
+
+.profit-judgment-増やす { background: #dcfce7; color: #166534; }
+.profit-judgment-続ける { background: #e0f2fe; color: #075985; }
+.profit-judgment-改善 { background: #fef3c7; color: #92400e; }
+.profit-judgment-注意 { background: #fee2e2; color: #991b1b; }
+
+.profit-label {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.profit-label-good { background: #dcfce7; color: #166534; }
+.profit-label-caution { background: #fef3c7; color: #92400e; }
+.profit-label-deficit { background: #fee2e2; color: #991b1b; }
+.profit-label-unlinked { background: #f1f5f9; color: #475569; }
+
+.mgmt-profit-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.mgmt-profit-label {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0 0 0.25rem;
+}
+
+.profit-expense-form .form-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}

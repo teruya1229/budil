@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v3.7',
+  BUDIL_VERSION: 'v3.8',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -20,7 +20,8 @@ const Storage = {
     DAILY_ACTION_TASKS: 'budil_daily_action_tasks',
     DEMAND_PICKUPS: 'budil_demand_pickups',
     RECEPTION_INTAKES: 'budil_reception_intakes',
-    WORK_ORDERS: 'budil_work_orders'
+    WORK_ORDERS: 'budil_work_orders',
+    EXPENSE_RECORDS: 'budil_expense_records'
   },
 
   get(key, defaultValue = null) {
@@ -509,7 +510,8 @@ const Storage = {
     'budil_daily_action_tasks',
     'budil_demand_pickups',
     'budil_reception_intakes',
-    'budil_work_orders'
+    'budil_work_orders',
+    'budil_expense_records'
   ],
 
   getWorkOrders() {
@@ -554,6 +556,53 @@ const Storage = {
 
   deleteDemoWorkOrders() {
     this.saveWorkOrders(this.getWorkOrders().filter(w => !this.isDemoOrTestFlag(w)));
+  },
+
+  getExpenseRecords() {
+    const raw = this.get(this.KEYS.EXPENSE_RECORDS, []);
+    return Array.isArray(raw) ? raw : [];
+  },
+
+  saveExpenseRecords(list) {
+    this.set(this.KEYS.EXPENSE_RECORDS, list);
+  },
+
+  addExpenseRecord(item) {
+    const list = this.getExpenseRecords();
+    const now = new Date().toISOString();
+    const normalized = typeof ProfitBrain !== 'undefined'
+      ? ProfitBrain.normalizeExpense(item)
+      : { ...item };
+    const record = {
+      ...normalized,
+      id: normalized.id || ('expense-' + this.generateId()),
+      createdAt: normalized.createdAt || now,
+      updatedAt: now
+    };
+    list.unshift(record);
+    this.saveExpenseRecords(list);
+    return record;
+  },
+
+  updateExpenseRecord(id, data) {
+    const list = this.getExpenseRecords();
+    const idx = list.findIndex(e => e.id === id);
+    if (idx === -1) return null;
+    const prev = list[idx];
+    const merged = typeof ProfitBrain !== 'undefined'
+      ? ProfitBrain.normalizeExpense({ ...prev, ...data, id: prev.id })
+      : { ...prev, ...data };
+    list[idx] = { ...merged, updatedAt: new Date().toISOString() };
+    this.saveExpenseRecords(list);
+    return list[idx];
+  },
+
+  deleteExpenseRecord(id) {
+    this.saveExpenseRecords(this.getExpenseRecords().filter(e => e.id !== id));
+  },
+
+  deleteDemoExpenseRecords() {
+    this.saveExpenseRecords(this.getExpenseRecords().filter(e => !this.isDemoOrTestFlag(e)));
   },
 
   getReceptionIntakes() {
@@ -644,6 +693,7 @@ const Storage = {
       pickups: 0,
       receptionIntakes: 0,
       workOrders: 0,
+      expenseRecords: 0,
       activityLogs: 0,
       performanceEntered: 0,
       dailyChecks: 0
@@ -1002,6 +1052,31 @@ const Storage = {
       if (fuDiag.badFollowUp) add('caution', `followUp形式不正 ${fuDiag.badFollowUp}件`);
     }
 
+    const expenseRaw = this._readRawKey(this.KEYS.EXPENSE_RECORDS);
+    let expenses = [];
+    if (!expenseRaw.parseOk) {
+      add('critical', '支出データ（budil_expense_records）を読み込めません');
+    } else if (expenseRaw.exists) {
+      expenses = Array.isArray(expenseRaw.parsed) ? expenseRaw.parsed : [];
+      if (!Array.isArray(expenseRaw.parsed)) add('review', '支出データが配列ではありません');
+      counts.expenseRecords = expenses.length;
+      add('ok', `支出 ${counts.expenseRecords}件`);
+
+      if (typeof ProfitBrain !== 'undefined') {
+        const expDiag = ProfitBrain.getDiagnosticsCounts(expenses, revenues, workOrders, leads);
+        if (expDiag.noId) add('review', `IDなしの支出 ${expDiag.noId}件`);
+        if (expDiag.noDate) add('caution', `日付なしの支出 ${expDiag.noDate}件`);
+        if (expDiag.badAmount) add('review', `支出金額が数値でない ${expDiag.badAmount}件`);
+        if (expDiag.noCategory) add('caution', `カテゴリなしの支出 ${expDiag.noCategory}件`);
+        if (expDiag.badRevRef) add('review', `存在しない売上を指すrelatedRevenueId ${expDiag.badRevRef}件`);
+        if (expDiag.badWoRef) add('review', `存在しない作業予定を指すrelatedWorkOrderId ${expDiag.badWoRef}件`);
+        if (expDiag.badLeadRef) add('review', `存在しない営業先を指すrelatedLeadId ${expDiag.badLeadRef}件`);
+        if (expDiag.unlinked) add('caution', `未紐付け支出 ${expDiag.unlinked}件`);
+      }
+    } else {
+      add('ok', '支出 0件');
+    }
+
     if (typeof MapBrain !== 'undefined') {
       const mapDiag = MapBrain.getDiagnosticsCounts(leads, intakes, revenues, workOrders);
       if (mapDiag.leadsNoAddress) add('caution', `住所未入力の営業先 ${mapDiag.leadsNoAddress}件`);
@@ -1048,6 +1123,7 @@ const Storage = {
     lines.push(`需要ピックアップ: ${c.pickups ?? '—'}件`);
     lines.push(`受付データ: ${c.receptionIntakes ?? '—'}件`);
     lines.push(`作業予定: ${c.workOrders ?? '—'}件`);
+    lines.push(`支出: ${c.expenseRecords ?? '—'}件`);
     lines.push(`活動履歴: ${c.activityLogs ?? '—'}件`);
     lines.push(`成果入力済み: ${c.performanceEntered ?? '—'}件`);
     lines.push(`dailyChecks: ${c.dailyChecks ?? '—'}件`);
@@ -1235,6 +1311,7 @@ const Storage = {
       || this.getDemandPickups().some(p => this.isDemoOrTestFlag(p))
       || this.getReceptionIntakes().some(i => this.isDemoOrTestFlag(i))
       || this.getWorkOrders().some(w => this.isDemoOrTestFlag(w))
+      || this.getExpenseRecords().some(e => this.isDemoOrTestFlag(e))
       || (store.manualTasks || []).some(t => this.isDemoOrTestFlag(t))
       || (store.states || []).some(t => this.isDemoOrTestFlag(t))
       || demoChecks;
@@ -1545,6 +1622,65 @@ const Storage = {
       });
     }
 
+    const demoRevenuesAll = this.getRevenueRecords().filter(r => this.isDemoOrTestFlag(r));
+    const demoWorkOrdersAll = this.getWorkOrders().filter(w => this.isDemoOrTestFlag(w));
+    const demoRevGoogle = demoRevenuesAll.find(r => (r.source || '').includes('LINE'));
+    const demoWoFar = demoWorkOrdersAll.find(w => (w.customerName || '').includes('佐藤'));
+
+    this.addExpenseRecord({
+      ...flag,
+      date: today,
+      category: '広告費',
+      amount: 3000,
+      vendor: 'Google広告',
+      paymentMethod: 'カード',
+      memo: '完全分解LP向け広告費',
+      source: 'manual'
+    });
+    this.addExpenseRecord({
+      ...flag,
+      date: today,
+      category: '薬剤・材料',
+      amount: 1200,
+      vendor: '薬剤店',
+      paymentMethod: '現金',
+      memo: 'エアコン洗浄剤',
+      relatedRevenueId: demoRevenuesAll[0] ? demoRevenuesAll[0].id : '',
+      source: 'manual'
+    });
+    this.addExpenseRecord({
+      ...flag,
+      date: today,
+      category: '交通・燃料',
+      amount: 800,
+      vendor: 'ガソリンスタンド',
+      paymentMethod: 'カード',
+      memo: '南部移動',
+      relatedWorkOrderId: demoWoFar ? demoWoFar.id : '',
+      source: 'manual'
+    });
+    this.addExpenseRecord({
+      ...flag,
+      date: today,
+      category: '手数料',
+      amount: 2000,
+      vendor: 'くらしのマーケット',
+      paymentMethod: '振込',
+      memo: 'くらしのマーケット手数料',
+      relatedRevenueId: demoRevGoogle ? demoRevGoogle.id : '',
+      source: 'manual'
+    });
+    this.addExpenseRecord({
+      ...flag,
+      date: today,
+      category: '工具・部品',
+      amount: 1500,
+      vendor: 'ホームセンター',
+      paymentMethod: 'カード',
+      memo: 'ブラシ・部品',
+      source: 'manual'
+    });
+
     return { ok: true, pickupIds, leadIds };
   },
 
@@ -1558,6 +1694,7 @@ const Storage = {
     this.saveDemandPickups(this.getDemandPickups().filter(p => !this.isDemoOrTestFlag(p)));
     this.deleteDemoReceptionIntakes();
     this.deleteDemoWorkOrders();
+    this.deleteDemoExpenseRecords();
 
     const store = this.getDailyActionTasksData();
     store.manualTasks = (store.manualTasks || []).filter(t => !this.isDemoOrTestFlag(t));

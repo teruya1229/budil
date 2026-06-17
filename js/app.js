@@ -396,6 +396,7 @@
         if (view === 'reception') renderReceptionView();
         if (view === 'work-order') renderWorkOrderView();
         if (view === 'follow-up') renderFollowUpView();
+        if (view === 'profit') renderProfitView();
         if (view === 'area') renderAreaView();
         if (view === 'revenue') renderRevenueView();
         if (view === 'data') renderDataManagement();
@@ -644,6 +645,8 @@
 
     FollowUpBrain.buildWarnings(getFollowUpContext().targets, today).forEach(w => warnings.push(w));
 
+    ProfitBrain.buildWarnings(getProfitContext()).forEach(w => warnings.push(w));
+
     const mapCtx = getMapContext();
     mapCtx.warnings.forEach(w => {
       if (w.type === 'far' && w.items && w.items[0]) {
@@ -682,6 +685,9 @@
 
     const followUpComment = FollowUpBrain.buildHomeComment(getFollowUpContext().targets);
     if (followUpComment) lines.push(followUpComment);
+
+    const profitComment = ProfitBrain.buildHomeComment(getProfitContext());
+    if (profitComment) lines.push(profitComment);
 
     const mapCtx = getMapContext();
     MapBrain.buildAreaHomeComment(mapCtx.summary, mapCtx.warnings).forEach(l => lines.push(l));
@@ -771,6 +777,8 @@
     const rev = getRevenueContext();
     const { summary, salesOutcome, comment } = rev;
     const forecast = WorkOrderBrain.getSalesForecast(Storage.getWorkOrders(), rev.records, TODAY());
+    const profitCtx = getProfitContext();
+    const ps = profitCtx.summary;
     const forecastComment = forecast.weekAmount > 0
       ? `今週の作業予定見込みは${WorkOrderBrain.formatYen(forecast.weekAmount)}です。作業完了後に売上登録して反映してください。`
       : '';
@@ -780,6 +788,10 @@
     return `
       <div class="exec-home-revenue-grid">
         <div><span>今月売上</span><strong>${esc(RevenueBrain.formatYen(summary.planned))}</strong></div>
+        <div><span>今月支出</span><strong>${esc(ProfitBrain.formatYen(ps.monthExpense))}</strong></div>
+        <div><span>概算粗利</span><strong>${esc(ProfitBrain.formatYen(ps.monthGrossProfit))}</strong></div>
+        <div><span>粗利率</span><strong>${esc(ProfitBrain.formatRate(ps.monthGrossRate))}</strong></div>
+        <div><span>見込み利益</span><strong>${esc(ProfitBrain.formatYen(ps.forecastProfit))}</strong></div>
         <div><span>月間目標</span><strong>${esc(RevenueBrain.formatYen(summary.monthlyTarget))}</strong></div>
         <div><span>達成率</span><strong>${summary.achievementRate}%</strong></div>
         <div><span>目標まで残り</span><strong>${esc(RevenueBrain.formatYen(summary.remainingToTarget))}</strong></div>
@@ -788,6 +800,7 @@
       </div>
       ${forecastComment ? `<p class="exec-home-revenue-comment">${esc(forecastComment)}</p>` : ''}
       ${outcomeComment ? `<p class="exec-home-revenue-comment">${esc(outcomeComment)}</p>` : ''}
+      <button type="button" class="btn btn-sm btn-secondary exec-home-profit-link">利益番頭を開く</button>
       <button type="button" class="btn btn-sm btn-secondary exec-home-revenue-link">売上番頭を開く</button>`;
   }
 
@@ -883,6 +896,7 @@
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="reception">受付番頭を開く</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="work-order">作業予定番頭を開く</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="follow-up">作業後フォロー</button>
+      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="profit">利益番頭</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="area">エリア番頭を開く</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="revenue">売上を登録</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="lead">営業先を登録</button>
@@ -899,6 +913,7 @@
     if (action === 'reception') return goToReception();
     if (action === 'work-order') return goToWorkOrder();
     if (action === 'follow-up') return goToFollowUp();
+    if (action === 'profit') return goToProfit();
     if (action === 'area') return goToAreaView();
     if (action === 'revenue') return goToAddRevenue();
     if (action === 'lead') return goToAddLead();
@@ -928,6 +943,11 @@
   function goToFollowUp() {
     navigateToView('follow-up');
     setTimeout(() => scrollToElement('#follow-up-targets-list'), 120);
+  }
+
+  function goToProfit() {
+    navigateToView('profit');
+    setTimeout(() => scrollToElement('#profit-summary'), 120);
   }
 
   function goToDataBackup() {
@@ -996,6 +1016,9 @@
 
     const revLink = root.querySelector('.exec-home-revenue-link');
     if (revLink) revLink.addEventListener('click', () => navigateToView('revenue'));
+
+    const profitLink = root.querySelector('.exec-home-profit-link');
+    if (profitLink) profitLink.addEventListener('click', goToProfit);
 
     const checkBtn = root.querySelector('#btn-exec-check-done');
     if (checkBtn) {
@@ -2281,6 +2304,7 @@
     if (summary.demandPickups) items.push('需要ピックアップ ' + summary.demandPickups + '件');
     if (summary.receptionIntakes) items.push('受付データ ' + summary.receptionIntakes + '件');
     if (summary.workOrders) items.push('作業予定 ' + summary.workOrders + '件');
+    if (summary.expenseRecords) items.push('支出記録 ' + summary.expenseRecords + '件');
     return items;
   }
 
@@ -2831,6 +2855,7 @@
       ['需要ピックアップ', counts.pickups],
       ['受付データ', counts.receptionIntakes],
       ['作業予定', counts.workOrders],
+      ['支出', counts.expenseRecords],
       ['活動履歴', counts.activityLogs],
       ['成果入力済み', counts.performanceEntered],
       ['dailyChecks', counts.dailyChecks]
@@ -3091,6 +3116,7 @@
     const paymentConcern = revCtx.records.filter(r =>
       r.status !== 'キャンセル' && RevenueBrain.recordHasPaymentConcern(r)
     );
+    const profitCtx = getProfitContext({ period: range });
 
     const context = {
       today,
@@ -3104,7 +3130,8 @@
         executedCount,
         growCount: growEntries.length,
         improveCount,
-        openTaskCount: tasks.open.length
+        openTaskCount: tasks.open.length,
+        profitGrossProfit: profitCtx.summary ? profitCtx.summary.monthGrossProfit : 0
       },
       execSummary,
       revCtx,
@@ -3127,6 +3154,7 @@
       nextLeads,
       revenueLeads,
       paymentConcern,
+      profitCtx,
       nextActions: []
     };
     context.nextActions = buildNextActionsFromReport(context);
@@ -3232,7 +3260,21 @@
     lines.push(`未紐付け売上：${c.revCtx.salesOutcome && c.revCtx.salesOutcome.unlinkedTotal > 0 ? RevenueBrain.formatYen(c.revCtx.salesOutcome.unlinkedTotal) : 'なし'}`);
     const holdNames = (c.revCtx.salesHoldCandidates || []).map(h => h.leadName).join('、');
     lines.push(`入金確認・保留：${holdNames || (c.paymentConcern.length ? `${c.paymentConcern.length}件` : 'なし')}`);
+    if (c.profitCtx && c.profitCtx.summary) {
+      const ps = c.profitCtx.summary;
+      lines.push(`期間内支出：${ProfitBrain.formatYen(ps.monthExpense)}`);
+      lines.push(`概算粗利：${ProfitBrain.formatYen(ps.monthGrossProfit)}`);
+      lines.push(`粗利率：${ProfitBrain.formatRate(ps.monthGrossRate)}`);
+    }
     lines.push('');
+
+    if (c.profitCtx) {
+      const profitSection = ProfitBrain.buildReportSection(c.profitCtx, periodLabel);
+      if (profitSection) {
+        lines.push(profitSection);
+        lines.push('');
+      }
+    }
 
     lines.push('■ 3. 営業状況');
     lines.push(`営業先件数：${c.activeLeads.length}件（全体${c.revCtx.leads.length}件）`);
@@ -3301,7 +3343,8 @@
     const profileBlock = Storage.formatBusinessProfileText(profile);
     const intro = [
       '以下はBudilの経営レポートです。',
-      `${areaIndustry}として、売上・営業・需要・投稿・広告の状況を見て、次の7日間で優先すべき行動を3〜5個に絞って提案してください。`
+      `${areaIndustry}として、売上・営業・需要・投稿・広告の状況を見て、次の7日間で優先すべき行動を3〜5個に絞って提案してください。`,
+      '売上だけでなく、粗利・支出・広告費・遠方案件も見て、次の7日間の優先行動を提案してください。'
     ];
     if (profileBlock) {
       intro.push('');
@@ -3439,7 +3482,8 @@
       { label: '実行済み施策数', value: s.executedCount ?? 0 },
       { label: '成果あり施策数', value: s.growCount ?? 0 },
       { label: '改善候補数', value: s.improveCount ?? 0 },
-      { label: '未完了タスク数', value: s.openTaskCount ?? 0 }
+      { label: '未完了タスク数', value: s.openTaskCount ?? 0 },
+      { label: '概算粗利', value: ProfitBrain.formatYen((s.profitGrossProfit != null ? s.profitGrossProfit : 0)) }
     ];
     return `<div class="business-report-summary-grid">${cards.map(c =>
       `<div class="business-report-summary-card"><span>${esc(c.label)}</span><strong>${esc(String(c.value))}</strong></div>`
@@ -3480,7 +3524,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v3.7</span>
+        <span class="business-report-version">v3.8</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -3799,6 +3843,15 @@
       followUpMorningEl.innerHTML = lines.length
         ? `<ul class="mgmt-follow-up-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
         : '<p class="placeholder-text">作業後フォローはありません。</p>';
+    }
+
+    const profitMorningEl = document.getElementById('mgmt-profit');
+    if (profitMorningEl) {
+      const profitCtx = getProfitContext();
+      const lines = ProfitBrain.buildMorningLines(profitCtx);
+      profitMorningEl.innerHTML = lines.length
+        ? `<p class="mgmt-profit-label">利益状況：</p><ul class="mgmt-profit-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '<p class="placeholder-text">支出を登録すると利益状況が表示されます。</p>';
     }
 
     const areaMorningEl = document.getElementById('mgmt-area-warnings');
@@ -6991,6 +7044,369 @@
     /* イベントは renderFollowUpView 内で都度バインド */
   }
 
+  // ── 利益番頭 ──
+  function getProfitContext(opts) {
+    const today = TODAY();
+    const revenues = Storage.getRevenueRecords();
+    const expenses = Storage.getExpenseRecords();
+    const workOrders = Storage.getWorkOrders();
+    const leads = Storage.getLeads();
+    const intakes = Storage.getReceptionIntakes();
+    let filteredRevenues = revenues;
+    let filteredExpenses = expenses;
+    const range = opts && opts.period;
+    if (range && range.startDate && range.endDate) {
+      filteredRevenues = revenues.filter(r =>
+        r && r.workDate && r.workDate >= range.startDate && r.workDate <= range.endDate
+      );
+      filteredExpenses = expenses.filter(e =>
+        e && e.date && e.date >= range.startDate && e.date <= range.endDate
+      );
+    }
+    return ProfitBrain.buildProfitContext({
+      today,
+      revenues: filteredRevenues,
+      expenses: filteredExpenses,
+      workOrders,
+      leads,
+      intakes
+    });
+  }
+
+  function renderProfitSummary(ctx) {
+    const el = document.getElementById('profit-summary');
+    if (!el) return;
+    const s = ctx.summary;
+    el.innerHTML = `
+      <div class="profit-summary-item"><span>今月売上</span><strong>${esc(ProfitBrain.formatYen(s.monthRevenue))}</strong></div>
+      <div class="profit-summary-item"><span>今月支出</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
+      <div class="profit-summary-item"><span>概算粗利</span><strong>${esc(ProfitBrain.formatYen(s.monthGrossProfit))}</strong></div>
+      <div class="profit-summary-item"><span>粗利率</span><strong>${esc(ProfitBrain.formatRate(s.monthGrossRate))}</strong></div>
+      <div class="profit-summary-item"><span>作業予定見込み売上</span><strong>${esc(ProfitBrain.formatYen(s.workOrderEstimate))}</strong></div>
+      <div class="profit-summary-item"><span>見込み利益</span><strong>${esc(ProfitBrain.formatYen(s.forecastProfit))}</strong></div>
+      <div class="profit-summary-item"><span>広告費</span><strong>${esc(ProfitBrain.formatYen(s.adExpense))}</strong></div>
+      <div class="profit-summary-item"><span>手数料</span><strong>${esc(ProfitBrain.formatYen(s.feeExpense))}</strong></div>
+      <div class="profit-summary-item"><span>外注費</span><strong>${esc(ProfitBrain.formatYen(s.outsourceExpense))}</strong></div>
+      <div class="profit-summary-item"><span>未紐付け支出</span><strong>${s.unlinkedCount}件（${esc(ProfitBrain.formatYen(s.unlinkedTotal))}）</strong></div>`;
+  }
+
+  function renderProfitExpenseList(ctx) {
+    const el = document.getElementById('profit-expense-list');
+    if (!el) return;
+    const list = (ctx.expenses || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    if (!list.length) {
+      el.innerHTML = '<p class="placeholder-text">支出はまだ登録されていません。</p>';
+      return;
+    }
+    el.innerHTML = `<table class="profit-table"><thead><tr>
+      <th>日付</th><th>カテゴリ</th><th>金額</th><th>支払先</th><th>紐付け</th><th></th>
+    </tr></thead><tbody>${list.map(e => {
+      const links = [
+        e.relatedRevenueId ? '売上' : '',
+        e.relatedWorkOrderId ? '作業' : '',
+        e.relatedLeadId ? '営業先' : ''
+      ].filter(Boolean).join('・') || '未紐付け';
+      return `<tr>
+        <td>${esc(e.date || '—')}</td>
+        <td>${esc(e.category || '—')}</td>
+        <td>${esc(ProfitBrain.formatYen(e.amount))}</td>
+        <td>${esc(e.vendor || '—')}</td>
+        <td>${esc(links)}</td>
+        <td><button type="button" class="btn btn-sm btn-secondary" data-profit-edit-expense="${esc(e.id)}">編集</button></td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+    el.querySelectorAll('[data-profit-edit-expense]').forEach(btn => {
+      btn.addEventListener('click', () => fillProfitExpenseForm(btn.dataset.profitEditExpense));
+    });
+  }
+
+  function renderProfitRevenueRows(ctx) {
+    const el = document.getElementById('profit-revenue-rows');
+    if (!el) return;
+    const rows = ctx.revenueRows || [];
+    if (!rows.length) {
+      el.innerHTML = '<p class="placeholder-text">売上データがありません。</p>';
+      return;
+    }
+    el.innerHTML = `<table class="profit-table"><thead><tr>
+      <th>売上日</th><th>顧客名</th><th>サービス</th><th>売上</th><th>支出</th><th>粗利</th><th>粗利率</th><th>注意</th>
+    </tr></thead><tbody>${rows.map(r => `<tr>
+      <td>${esc(r.workDate || '—')}</td>
+      <td>${esc(r.customerName || '—')}</td>
+      <td>${esc(r.service || '—')}</td>
+      <td>${esc(ProfitBrain.formatYen(r.revenueAmount))}</td>
+      <td>${esc(ProfitBrain.formatYen(r.expenseTotal))}</td>
+      <td>${esc(ProfitBrain.formatYen(r.grossProfit))}</td>
+      <td>${esc(ProfitBrain.formatRate(r.grossRate))}</td>
+      <td>${r.label ? `<span class="profit-label profit-label-${esc({ '粗利良好': 'good', '原価注意': 'caution', '赤字注意': 'deficit', '支出未紐付け': 'unlinked' }[r.label] || 'default')}">${esc(r.label)}</span>` : '—'}</td>
+    </tr>`).join('')}</tbody></table>`;
+  }
+
+  function renderProfitWorkOrderRows(ctx) {
+    const el = document.getElementById('profit-work-order-rows');
+    if (!el) return;
+    const rows = ctx.workOrderRows || [];
+    if (!rows.length) {
+      el.innerHTML = '<p class="placeholder-text">見込み利益のある作業予定はありません。</p>';
+      return;
+    }
+    el.innerHTML = rows.map(r => `
+      <div class="profit-work-order-card">
+        <div class="profit-work-order-header">
+          <strong>${esc(r.customerName || '—')}</strong>
+          <span>${esc(r.scheduledDate || '—')}</span>
+          ${r.distanceLabel ? `<span class="profit-distance-badge">${esc(r.distanceLabel)}</span>` : ''}
+        </div>
+        <p class="profit-meta">${esc(r.serviceText || '—')} / 見込み${esc(ProfitBrain.formatYen(r.estimate))} / 支出${esc(ProfitBrain.formatYen(r.expenseTotal))} / 利益${esc(ProfitBrain.formatYen(r.forecastProfit))}</p>
+        <p class="profit-meta">エリア：${esc(r.area || '—')}</p>
+        ${r.cautionText ? `<p class="profit-caution">${esc(r.cautionText)}</p>` : ''}
+        ${r.mapUrl ? `<a href="${esc(r.mapUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary">Googleマップで開く</a>` : ''}
+      </div>`).join('');
+  }
+
+  function renderProfitServiceRows(ctx) {
+    const el = document.getElementById('profit-service-rows');
+    if (!el) return;
+    const rows = ctx.serviceRows || [];
+    if (!rows.length) {
+      el.innerHTML = '<p class="placeholder-text">サービス別データがありません。</p>';
+      return;
+    }
+    el.innerHTML = `<table class="profit-table"><thead><tr>
+      <th>サービス</th><th>件数</th><th>売上合計</th><th>支出</th><th>粗利</th><th>粗利率</th><th>判断</th>
+    </tr></thead><tbody>${rows.map(r => `<tr>
+      <td>${esc(r.service)}</td>
+      <td>${r.revenueCount || 0}</td>
+      <td>${esc(ProfitBrain.formatYen(r.revenueTotal))}</td>
+      <td>${esc(ProfitBrain.formatYen(r.expenseTotal))}</td>
+      <td>${esc(ProfitBrain.formatYen(r.grossProfit))}</td>
+      <td>${esc(ProfitBrain.formatRate(r.grossRate))}</td>
+      <td><span class="profit-judgment profit-judgment-${esc(r.judgment)}">${esc(r.judgment)}</span></td>
+    </tr>`).join('')}</tbody></table>`;
+  }
+
+  function renderProfitAreaRows(ctx) {
+    const el = document.getElementById('profit-area-rows');
+    if (!el) return;
+    const rows = ctx.areaRows || [];
+    if (!rows.length) {
+      el.innerHTML = '<p class="placeholder-text">エリア別データがありません。</p>';
+      return;
+    }
+    el.innerHTML = rows.map(r => `
+      <div class="profit-area-card">
+        <div class="profit-area-header">
+          <strong>${esc(r.area)}</strong>
+          <span class="profit-judgment profit-judgment-${esc(r.judgment)}">${esc(r.judgment)}</span>
+          ${r.farCaution ? '<span class="profit-distance-badge">遠方注意</span>' : ''}
+        </div>
+        <p class="profit-meta">売上${esc(ProfitBrain.formatYen(r.revenueTotal))} / 支出${esc(ProfitBrain.formatYen(r.expenseTotal))} / 粗利${esc(ProfitBrain.formatYen(r.grossProfit))}</p>
+        <p class="profit-meta">作業予定見込み：${esc(ProfitBrain.formatYen(r.workOrderEstimate))}</p>
+        <p class="profit-comment">${esc(r.comment || '')}</p>
+      </div>`).join('');
+  }
+
+  function renderProfitSourceRows(ctx) {
+    const el = document.getElementById('profit-source-rows');
+    if (!el) return;
+    const rows = ctx.sourceRows || [];
+    if (!rows.length) {
+      el.innerHTML = '<p class="placeholder-text">集客経路別データがありません。</p>';
+      return;
+    }
+    el.innerHTML = rows.map(r => `
+      <div class="profit-source-card">
+        <div class="profit-source-header">
+          <strong>${esc(r.source)}</strong>
+          <span class="profit-judgment profit-judgment-${esc(r.judgment)}">${esc(r.judgment)}</span>
+        </div>
+        <p class="profit-meta">売上${esc(ProfitBrain.formatYen(r.revenueTotal))} / 支出${esc(ProfitBrain.formatYen(r.expenseTotal))} / 手数料・広告${esc(ProfitBrain.formatYen(r.adFeeTotal))} / 粗利${esc(ProfitBrain.formatYen(r.grossProfit))}</p>
+        <p class="profit-comment">${esc(r.comment || '')}</p>
+      </div>`).join('');
+  }
+
+  function renderProfitHints(ctx) {
+    const el = document.getElementById('profit-hints');
+    if (!el) return;
+    const hints = ctx.hints || [];
+    if (!hints.length) {
+      el.innerHTML = '<p class="placeholder-text">利益改善ヒントはありません。データが増えると提案が出ます。</p>';
+      return;
+    }
+    el.innerHTML = hints.map((h, i) => `
+      <div class="profit-hint-card">
+        <p><strong>${esc(h.title)}</strong></p>
+        ${h.detail ? `<p class="profit-meta">${esc(h.detail)}</p>` : ''}
+        <button type="button" class="btn btn-sm btn-secondary" data-profit-add-task="${i}">今日やることに追加</button>
+      </div>`).join('');
+    el.querySelectorAll('[data-profit-add-task]').forEach(btn => {
+      btn.addEventListener('click', () => addProfitHintTask(Number(btn.dataset.profitAddTask)));
+    });
+  }
+
+  function addProfitHintTask(index) {
+    const ctx = getProfitContext();
+    const hint = (ctx.hints || [])[index];
+    if (!hint) return;
+    const payload = ProfitBrain.createProfitTaskPayload(hint, TODAY());
+    const exists = Storage.getDailyActionTasksData().manualTasks.some(
+      t => t.pickupDedupeKey === payload.pickupDedupeKey
+    );
+    if (exists) {
+      alert('同じタスクは既に今日やることにあります。');
+      return;
+    }
+    Storage.addManualDailyTask({
+      id: 'manual_' + Storage.generateId(),
+      ...payload
+    });
+    renderDashboard();
+    alert('今日やることに追加しました。');
+  }
+
+  function populateProfitExpenseSelects() {
+    const catEl = document.getElementById('profit-expense-category');
+    if (catEl && !catEl.options.length) {
+      catEl.innerHTML = ProfitBrain.CATEGORIES.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    }
+    const payEl = document.getElementById('profit-expense-payment');
+    if (payEl && payEl.options.length <= 1) {
+      payEl.innerHTML = '<option value="">未選択</option>' + ProfitBrain.PAYMENT_METHODS.map(p =>
+        `<option value="${esc(p)}">${esc(p)}</option>`
+      ).join('');
+    }
+    const revEl = document.getElementById('profit-expense-revenue');
+    if (revEl) {
+      const cur = revEl.value;
+      const records = Storage.getRevenueRecords().slice().sort((a, b) => (b.workDate || '').localeCompare(a.workDate || ''));
+      revEl.innerHTML = '<option value="">未選択</option>' + records.map(r =>
+        `<option value="${esc(r.id)}">${esc((r.workDate || '') + ' ' + (r.customerName || '') + ' ' + ProfitBrain.formatYen(r.amount))}</option>`
+      ).join('');
+      revEl.value = cur;
+    }
+    const woEl = document.getElementById('profit-expense-work-order');
+    if (woEl) {
+      const cur = woEl.value;
+      const orders = Storage.getWorkOrders().slice().sort((a, b) => (b.scheduledDate || '').localeCompare(a.scheduledDate || ''));
+      woEl.innerHTML = '<option value="">未選択</option>' + orders.map(w =>
+        `<option value="${esc(w.id)}">${esc((w.scheduledDate || '') + ' ' + (w.customerName || '') + ' ' + (w.serviceText || ''))}</option>`
+      ).join('');
+      woEl.value = cur;
+    }
+    const leadEl = document.getElementById('profit-expense-lead');
+    if (leadEl) {
+      const cur = leadEl.value;
+      const leads = Storage.getLeads().slice().sort((a, b) => (a.company || '').localeCompare(b.company || ''));
+      leadEl.innerHTML = '<option value="">未選択</option>' + leads.map(l =>
+        `<option value="${esc(l.id)}">${esc(l.company || '—')}</option>`
+      ).join('');
+      leadEl.value = cur;
+    }
+  }
+
+  function clearProfitExpenseForm() {
+    const today = TODAY();
+    const dateEl = document.getElementById('profit-expense-date');
+    if (dateEl) dateEl.value = today;
+    const editId = document.getElementById('profit-expense-edit-id');
+    if (editId) editId.value = '';
+    const amountEl = document.getElementById('profit-expense-amount');
+    if (amountEl) amountEl.value = '';
+    const vendorEl = document.getElementById('profit-expense-vendor');
+    if (vendorEl) vendorEl.value = '';
+    const memoEl = document.getElementById('profit-expense-memo');
+    if (memoEl) memoEl.value = '';
+    const recurringEl = document.getElementById('profit-expense-recurring');
+    if (recurringEl) recurringEl.checked = false;
+    ['profit-expense-revenue', 'profit-expense-work-order', 'profit-expense-lead', 'profit-expense-payment'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    const catEl = document.getElementById('profit-expense-category');
+    if (catEl && catEl.options.length) catEl.selectedIndex = 0;
+  }
+
+  function fillProfitExpenseForm(id) {
+    const record = Storage.getExpenseRecords().find(e => e.id === id);
+    if (!record) return;
+    populateProfitExpenseSelects();
+    const editId = document.getElementById('profit-expense-edit-id');
+    if (editId) editId.value = record.id;
+    const set = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val || ''; };
+    set('profit-expense-date', record.date);
+    set('profit-expense-category', record.category);
+    set('profit-expense-amount', record.amount);
+    set('profit-expense-vendor', record.vendor);
+    set('profit-expense-payment', record.paymentMethod);
+    set('profit-expense-revenue', record.relatedRevenueId);
+    set('profit-expense-work-order', record.relatedWorkOrderId);
+    set('profit-expense-lead', record.relatedLeadId);
+    set('profit-expense-memo', record.memo);
+    const recurringEl = document.getElementById('profit-expense-recurring');
+    if (recurringEl) recurringEl.checked = !!record.isRecurring;
+    scrollToElement('#profit-expense-form');
+  }
+
+  function saveProfitExpenseFromForm(e) {
+    if (e) e.preventDefault();
+    const editId = document.getElementById('profit-expense-edit-id')?.value || '';
+    const payload = {
+      date: document.getElementById('profit-expense-date')?.value || TODAY(),
+      category: document.getElementById('profit-expense-category')?.value || 'その他',
+      amount: Number(document.getElementById('profit-expense-amount')?.value || 0),
+      vendor: document.getElementById('profit-expense-vendor')?.value.trim() || '',
+      paymentMethod: document.getElementById('profit-expense-payment')?.value || '',
+      relatedRevenueId: document.getElementById('profit-expense-revenue')?.value || '',
+      relatedWorkOrderId: document.getElementById('profit-expense-work-order')?.value || '',
+      relatedLeadId: document.getElementById('profit-expense-lead')?.value || '',
+      memo: document.getElementById('profit-expense-memo')?.value.trim() || '',
+      isRecurring: !!document.getElementById('profit-expense-recurring')?.checked,
+      source: 'manual'
+    };
+    if (!payload.amount || payload.amount <= 0) {
+      alert('金額を入力してください。');
+      return;
+    }
+    if (editId) Storage.updateExpenseRecord(editId, payload);
+    else Storage.addExpenseRecord(payload);
+    clearProfitExpenseForm();
+    renderProfitView();
+    renderDashboard();
+    alert('支出を保存しました。');
+  }
+
+  function renderProfitView() {
+    try {
+      populateProfitExpenseSelects();
+      const dateEl = document.getElementById('profit-expense-date');
+      if (dateEl && !dateEl.value) dateEl.value = TODAY();
+      const ctx = getProfitContext();
+      renderProfitSummary(ctx);
+      renderProfitExpenseList(ctx);
+      renderProfitRevenueRows(ctx);
+      renderProfitWorkOrderRows(ctx);
+      renderProfitServiceRows(ctx);
+      renderProfitAreaRows(ctx);
+      renderProfitSourceRows(ctx);
+      renderProfitHints(ctx);
+    } catch (err) {
+      console.error('[Budil] renderProfitView', err);
+    }
+  }
+
+  function initProfit() {
+    const form = document.getElementById('profit-expense-form');
+    if (form && !form.dataset.bound) {
+      form.dataset.bound = '1';
+      form.addEventListener('submit', saveProfitExpenseFromForm);
+    }
+    const clearBtn = document.getElementById('profit-expense-clear');
+    if (clearBtn && !clearBtn.dataset.bound) {
+      clearBtn.dataset.bound = '1';
+      clearBtn.addEventListener('click', clearProfitExpenseForm);
+    }
+  }
+
   // ── エリア番頭 ──
   function renderAreaTodaySummary() {
     const el = document.getElementById('area-today-summary');
@@ -8267,6 +8683,7 @@
     if (viewName === 'reception') renderReceptionView();
     if (viewName === 'work-order') renderWorkOrderView();
     if (viewName === 'follow-up') renderFollowUpView();
+    if (viewName === 'profit') renderProfitView();
     if (viewName === 'area') renderAreaView();
     if (viewName === 'revenue') renderRevenueView();
     if (viewName === 'data') renderDataManagement();
@@ -9416,6 +9833,7 @@
     initReception();
     initWorkOrder();
     initFollowUp();
+    initProfit();
     initDemandSearch();
     initLeads();
     initRevenue();
