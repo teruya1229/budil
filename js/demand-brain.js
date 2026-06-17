@@ -308,8 +308,21 @@ Budilの需要番頭に入力するため、今日の投稿・営業・広告ア
     executedAt: '',
     memo: '',
     resultMemo: '',
-    nextImproveMemo: ''
+    nextImproveMemo: '',
+    metrics: {
+      views: null,
+      reactions: null,
+      clicks: null,
+      lineInquiries: null,
+      reservations: null,
+      salesAmount: null,
+      updatedAt: ''
+    },
+    relatedLeadIds: [],
+    relatedRevenueIds: []
   },
+
+  METRICS_FIELDS: ['views', 'reactions', 'clicks', 'lineInquiries', 'reservations', 'salesAmount'],
 
   EXECUTION_META: {
     reel: {
@@ -393,9 +406,42 @@ Budilの需要番頭に入力するため、今日の投稿・営業・広告ア
     const existing = (pickup && pickup.executionStatus) || {};
     const result = {};
     this.EXECUTION_TYPES.forEach(type => {
-      result[type] = { ...this.EXECUTION_DEFAULT, ...(existing[type] || {}) };
+      const raw = { ...this.EXECUTION_DEFAULT, ...(existing[type] || {}) };
+      raw.metrics = this.normalizePerformanceMetrics(raw);
+      raw.relatedLeadIds = Array.isArray(raw.relatedLeadIds) ? raw.relatedLeadIds.filter(Boolean) : [];
+      raw.relatedRevenueIds = Array.isArray(raw.relatedRevenueIds) ? raw.relatedRevenueIds.filter(Boolean) : [];
+      result[type] = raw;
     });
     return result;
+  },
+
+  normalizePerformanceMetrics(execItem) {
+    const raw = (execItem && execItem.metrics) || {};
+    const num = v => {
+      if (v === '' || v === null || v === undefined) return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+    return {
+      views: num(raw.views),
+      reactions: num(raw.reactions),
+      clicks: num(raw.clicks),
+      lineInquiries: num(raw.lineInquiries),
+      reservations: num(raw.reservations),
+      salesAmount: num(raw.salesAmount),
+      updatedAt: raw.updatedAt || ''
+    };
+  },
+
+  hasPerformanceInput(execItem) {
+    if (!execItem) return false;
+    const metrics = this.normalizePerformanceMetrics(execItem);
+    if (this.METRICS_FIELDS.some(f => metrics[f] !== null && metrics[f] > 0)) return true;
+    if ((execItem.resultMemo || '').trim()) return true;
+    if ((execItem.nextImproveMemo || '').trim()) return true;
+    if (Array.isArray(execItem.relatedLeadIds) && execItem.relatedLeadIds.length) return true;
+    if (Array.isArray(execItem.relatedRevenueIds) && execItem.relatedRevenueIds.length) return true;
+    return false;
   },
 
   getExecutionStatusLabel(type, status) {
@@ -481,6 +527,17 @@ Budilの需要番頭に入力するため、今日の投稿・営業・広告ア
     if (hasLineDone) badges.push({ key: 'line-done', label: 'LINE済み', className: 'exec-badge-line' });
     if (hasAdDone) badges.push({ key: 'ad-done', label: '広告反映済み', className: 'exec-badge-ad' });
     if (hasResultMemo) badges.push({ key: 'result', label: '効果メモあり', className: 'exec-badge-result' });
+
+    this.EXECUTION_TYPES.forEach(type => {
+      const evalResult = this.evaluatePerformanceResult(pickup, type, [], []);
+      if (evalResult.judgment === 'has_result') {
+        badges.push({ key: 'perf-result-' + type, label: '成果あり', className: 'exec-badge-perf-result' });
+      } else if (evalResult.judgment === 'has_reaction') {
+        badges.push({ key: 'perf-reaction-' + type, label: '反応あり', className: 'exec-badge-perf-reaction' });
+      } else if (evalResult.judgment === 'needs_improvement') {
+        badges.push({ key: 'perf-needs-' + type, label: '改善必要', className: 'exec-badge-perf-needs' });
+      }
+    });
 
     const insightBadges = this.buildInsightSummary(pickup);
     insightBadges.forEach(b => {
@@ -1265,6 +1322,17 @@ ${ctx.postTitle ? '今月の注目：' + ctx.postTitle : ''}`;
       });
     });
 
+    filtered.forEach(raw => {
+      this.EXECUTION_TYPES.forEach(type => {
+        const evalResult = this.evaluatePerformanceResult(raw, type, [], []);
+        if (evalResult.judgment === 'has_result') {
+          (evalResult.relatedServices || []).forEach(svc => {
+            addScore(svc, 4, `「${evalResult.topic}」で成果あり`);
+          });
+        }
+      });
+    });
+
     return Object.entries(scores)
       .map(([service, score]) => ({
         service,
@@ -1317,6 +1385,14 @@ ${ctx.postTitle ? '今月の注目：' + ctx.postTitle : ''}`;
         addPlan(`${label}を${isReel ? 2 : 1}本`, isReel ? 2 : 1, w.topic, isReel ? 'reel' : 'instagram');
       });
 
+    this.getTopPerformanceRanking(filtered, [], [], 3)
+      .filter(e => e.judgment === 'has_result' && (e.type === 'reel' || e.type === 'instagram'))
+      .forEach(e => {
+        const isReel = e.type === 'reel';
+        const label = isReel ? `${e.topic}系の実写リール（成果あり）` : `${e.topic}の投稿（成果あり）`;
+        addPlan(`${label}を${isReel ? 2 : 1}本`, isReel ? 2 : 1, e.topic, isReel ? 'reel' : 'instagram');
+      });
+
     filtered.forEach(raw => {
       const p = this.normalizePickup(raw);
       if (p.status === 'ignored' || p.status === 'archived') return;
@@ -1358,6 +1434,12 @@ ${ctx.postTitle ? '今月の注目：' + ctx.postTitle : ''}`;
         } else {
           addPlan(`${c.topic}の広告文を見直す`, c.topic, 'ad-review');
         }
+      });
+
+    this.getPerformanceImprovementCandidates(filtered, [], [])
+      .filter(c => c.type === 'ad')
+      .forEach(c => {
+        addPlan(`${c.topic}の広告はCTAを確認（成果未達）`, c.topic, 'cta-check');
       });
 
     filtered.forEach(raw => {
@@ -1503,7 +1585,22 @@ ${ctx.postTitle ? '今月の注目：' + ctx.postTitle : ''}`;
       lines.push(salesText + (salesText.endsWith('。') ? '' : '。') + '次回連絡日のある営業先を優先してください。');
     }
 
-    return lines.slice(0, 3);
+    const perfSummary = strategy.performanceSummary;
+    if (perfSummary && perfSummary.hasData) {
+      if (perfSummary.highlights.length) {
+        lines.push(`成果が出た施策：${perfSummary.highlights[0]}を続けましょう。`);
+      }
+      if (perfSummary.salesAmount > 0) {
+        lines.push(`施策経由の売上 ${perfSummary.salesAmount.toLocaleString('ja-JP')}円。勝ちパターンを横展開しましょう。`);
+      }
+    }
+
+    const perfImprove = (strategy.performanceImprovements || [])[0];
+    if (perfImprove) {
+      lines.push(`${perfImprove.topic}の${perfImprove.type === 'ad' ? '広告' : '施策'}は改善候補です。`);
+    }
+
+    return lines.slice(0, 4);
   },
 
   buildMorningWeeklyLines(strategy, max) {
@@ -1531,6 +1628,7 @@ ${ctx.postTitle ? '今月の注目：' + ctx.postTitle : ''}`;
     const today = context.today || new Date().toISOString().slice(0, 10);
     const period = context.period || '7d';
     const pickups = context.pickups || [];
+    const records = context.records || [];
     const filtered = this.filterPickupsByPeriod(pickups, today, period);
 
     const serviceFocus = this.getWeeklyServiceFocus(pickups, today, period);
@@ -1539,6 +1637,10 @@ ${ctx.postTitle ? '今月の注目：' + ctx.postTitle : ''}`;
     const salesPlan = this.getWeeklySalesPlan(context);
     const winningPatterns = this.getWinningPatterns(filtered);
     const improvementCandidates = this.getImprovementCandidates(filtered);
+    const performanceRanking = this.getTopPerformanceRanking(filtered, records, context.leads || [], 5);
+    const revenueLinked = this.getRevenueLinkedActions(filtered, records, context.leads || []);
+    const performanceImprovements = this.getPerformanceImprovementCandidates(filtered, records, context.leads || []);
+    const performanceSummary = this.getWeeklyPerformanceSummary(pickups, today, records, context.leads || []);
 
     const strategy = {
       period,
@@ -1549,8 +1651,13 @@ ${ctx.postTitle ? '今月の注目：' + ctx.postTitle : ''}`;
       salesPlan,
       winningPatterns,
       improvementCandidates,
+      performanceRanking,
+      revenueLinked,
+      performanceImprovements,
+      performanceSummary,
       hasData: !!(serviceFocus.length || postPlan.length || adPlan.length ||
-        winningPatterns.length || improvementCandidates.length || filtered.length)
+        winningPatterns.length || improvementCandidates.length || filtered.length ||
+        performanceRanking.length || revenueLinked.length)
     };
 
     strategy.comment = this.buildWeeklyStrategyComment(strategy);
@@ -1790,5 +1897,285 @@ ${ctx.postTitle ? '今月の注目：' + ctx.postTitle : ''}`;
   buildTodayScheduleComment(items) {
     if (items && items.length) return '';
     return '今日の投稿・広告予定はありません。週間作戦から1件入れると、今日やることに反映できます。';
+  },
+
+  PERFORMANCE_CONVERSION_KEYWORDS: ['問い合わせ', '予約', '売上', 'LINE相談'],
+  PERFORMANCE_REACTION_KEYWORDS: ['反応あり', '保存', 'クリック'],
+  PERFORMANCE_BAD_KEYWORDS: ['反応なし', '問い合わせなし', 'クリックなし'],
+
+  evaluatePerformanceResult(pickup, type, revenues, leads) {
+    const p = this.normalizePickup(pickup);
+    const exec = this.normalizeExecutionStatus(pickup);
+    const item = exec[type] || this.EXECUTION_DEFAULT;
+    const meta = this.EXECUTION_META[type] || {};
+    const metrics = item.metrics || this.normalizePerformanceMetrics(item);
+    const resultMemo = (item.resultMemo || '').trim();
+    const nextImproveMemo = (item.nextImproveMemo || '').trim();
+    const relatedRevenueIds = item.relatedRevenueIds || [];
+    const relatedLeadIds = item.relatedLeadIds || [];
+    const revList = revenues || [];
+    const hasRelatedRevenue = relatedRevenueIds.some(id => revList.find(r => r.id === id));
+    const hasInput = this.hasPerformanceInput(item);
+    const isDone = this.isExecutionDone(type, item.status);
+
+    let totalSalesAmount = metrics.salesAmount || 0;
+    relatedRevenueIds.forEach(id => {
+      const rev = revList.find(r => r.id === id);
+      if (rev) totalSalesAmount += Number(rev.amount || 0);
+    });
+
+    const goodMemo = this.PERFORMANCE_CONVERSION_KEYWORDS.some(kw => resultMemo.includes(kw));
+    const reactionMemo = this.PERFORMANCE_REACTION_KEYWORDS.some(kw => resultMemo.includes(kw));
+    const badMemo = this.PERFORMANCE_BAD_KEYWORDS.some(kw => resultMemo.includes(kw));
+
+    const hasConversion = (metrics.lineInquiries || 0) >= 1 ||
+      (metrics.reservations || 0) >= 1 ||
+      (metrics.salesAmount || 0) > 0 ||
+      hasRelatedRevenue || goodMemo;
+
+    const hasReaction = (metrics.views || 0) > 0 ||
+      (metrics.reactions || 0) > 0 ||
+      (metrics.clicks || 0) > 0 || reactionMemo;
+
+    let judgment = 'not_entered';
+    let judgmentLabel = '成果未入力';
+    let recommendation = '実行後の反応をメモすると、次回の改善に使えます。';
+
+    if (hasConversion) {
+      judgment = 'has_result';
+      judgmentLabel = '成果あり';
+      recommendation = 'この施策は問い合わせ・売上につながった可能性があります。続編候補です。';
+    } else if (hasReaction && hasInput) {
+      judgment = 'has_reaction';
+      judgmentLabel = '反応あり';
+      recommendation = '反応はあります。次はLINE相談や予約につなげるCTAを強めましょう。';
+    } else if (isDone && (badMemo || (hasInput && !hasReaction && !hasConversion))) {
+      judgment = 'needs_improvement';
+      judgmentLabel = '改善必要';
+      recommendation = '冒頭・実写量・CTA・LP導線を見直しましょう。';
+    } else if (!hasInput && isDone) {
+      judgment = 'not_entered';
+    }
+
+    const nextAction = nextImproveMemo || recommendation;
+    return {
+      pickupId: p.id,
+      topic: p.topic,
+      relatedServices: p.relatedServices,
+      type,
+      channelLabel: meta.label || type,
+      shortLabel: meta.shortLabel || type,
+      executedAt: item.executedAt || '',
+      resultMemo,
+      nextImproveMemo,
+      metrics,
+      relatedLeadIds,
+      relatedRevenueIds,
+      totalSalesAmount,
+      judgment,
+      judgmentLabel,
+      recommendation,
+      nextAction,
+      isDone,
+      hasInput
+    };
+  },
+
+  _collectPerformanceEntries(pickups, revenues, leads, today) {
+    const t = today || new Date().toISOString().slice(0, 10);
+    const entries = [];
+    (pickups || []).forEach(raw => {
+      const exec = this.normalizeExecutionStatus(raw);
+      this.EXECUTION_TYPES.forEach(type => {
+        const item = exec[type];
+        const evalResult = this.evaluatePerformanceResult(raw, type, revenues, leads);
+        const scheduled = item.scheduledDate;
+        const isDone = this.isExecutionDone(type, item.status);
+        const scheduledPast = !!(scheduled && scheduled < t);
+        const hasResultMemo = !!(item.resultMemo && item.resultMemo.trim());
+        const hasPerfInput = this.hasPerformanceInput(item);
+        if (!isDone && !scheduledPast && !hasResultMemo && !hasPerfInput) return;
+        entries.push({
+          ...evalResult,
+          executedAt: item.executedAt || scheduled || '',
+          scheduledDate: scheduled
+        });
+      });
+    });
+    return entries.sort((a, b) => (b.executedAt || '').localeCompare(a.executedAt || ''));
+  },
+
+  getPerformanceInsights(pickups, revenues, leads, today) {
+    const entries = this._collectPerformanceEntries(pickups, revenues, leads, today);
+    let hasResultCount = 0;
+    let hasReactionCount = 0;
+    let needsImprovementCount = 0;
+    let notEnteredCount = 0;
+    entries.forEach(e => {
+      if (e.judgment === 'has_result') hasResultCount++;
+      else if (e.judgment === 'has_reaction') hasReactionCount++;
+      else if (e.judgment === 'needs_improvement') needsImprovementCount++;
+      else notEnteredCount++;
+    });
+    return {
+      entries,
+      hasResultCount,
+      hasReactionCount,
+      needsImprovementCount,
+      notEnteredCount,
+      total: entries.length
+    };
+  },
+
+  _scorePerformanceEntry(entry) {
+    const m = entry.metrics || {};
+    return (m.lineInquiries || 0) * 100 +
+      (m.reservations || 0) * 200 +
+      (entry.totalSalesAmount || m.salesAmount || 0);
+  },
+
+  getTopPerformanceRanking(pickups, revenues, leads, max) {
+    const limit = max || 5;
+    return this._collectPerformanceEntries(pickups, revenues, leads)
+      .filter(e => e.judgment === 'has_result' || e.judgment === 'has_reaction' || this._scorePerformanceEntry(e) > 0)
+      .sort((a, b) => this._scorePerformanceEntry(b) - this._scorePerformanceEntry(a))
+      .slice(0, limit)
+      .map(e => ({
+        ...e,
+        nextGrowPlan: e.nextImproveMemo || '同じテーマで実写多めの続編'
+      }));
+  },
+
+  getRevenueLinkedActions(pickups, revenues, leads) {
+    return this._collectPerformanceEntries(pickups, revenues, leads)
+      .filter(e => (e.totalSalesAmount || 0) > 0 || (e.relatedRevenueIds || []).length > 0)
+      .sort((a, b) => (b.totalSalesAmount || 0) - (a.totalSalesAmount || 0));
+  },
+
+  getPerformanceImprovementCandidates(pickups, revenues, leads) {
+    return this._collectPerformanceEntries(pickups, revenues, leads)
+      .filter(e => e.judgment === 'needs_improvement')
+      .map(e => {
+        const m = e.metrics || {};
+        let resultSummary = e.resultMemo || '';
+        if (!resultSummary) {
+          const parts = [];
+          if ((m.clicks || 0) > 0) parts.push('クリックあり');
+          if ((m.views || 0) > 0 || (m.reactions || 0) > 0) parts.push('反応あり');
+          parts.push('問い合わせなし');
+          resultSummary = parts.join(' / ');
+        }
+        return {
+          ...e,
+          resultSummary,
+          improvePlan: e.nextImproveMemo || e.recommendation
+        };
+      });
+  },
+
+  getWeeklyPerformanceSummary(pickups, today, revenues, leads) {
+    const t = today || new Date().toISOString().slice(0, 10);
+    const start = this._addDays(t, -6);
+    const entries = this._collectPerformanceEntries(pickups, revenues, leads, t)
+      .filter(e => {
+        const d = (e.executedAt || '').slice(0, 10);
+        return d && d >= start && d <= t && e.judgment !== 'not_entered';
+      });
+    let lineInquiries = 0;
+    let reservations = 0;
+    let salesAmount = 0;
+    const highlights = [];
+    entries.forEach(e => {
+      const m = e.metrics || {};
+      lineInquiries += m.lineInquiries || 0;
+      reservations += m.reservations || 0;
+      salesAmount += e.totalSalesAmount || m.salesAmount || 0;
+      if (e.judgment === 'has_result' && highlights.length < 3) {
+        highlights.push(`${e.topic} ${e.shortLabel}`);
+      }
+    });
+    return {
+      lineInquiries,
+      reservations,
+      salesAmount,
+      highlights,
+      hasData: entries.length > 0
+    };
+  },
+
+  buildPerformanceComment(pickups, revenues, leads) {
+    const summary = this.getWeeklyPerformanceSummary(pickups, undefined, revenues, leads);
+    if (!summary.hasData) return [];
+    const lines = [];
+    if (summary.lineInquiries) lines.push(`LINE相談 ${summary.lineInquiries}件`);
+    if (summary.reservations) lines.push(`予約 ${summary.reservations}件`);
+    if (summary.salesAmount) lines.push(`施策経由売上 ${summary.salesAmount.toLocaleString('ja-JP')}円`);
+    summary.highlights.slice(0, 2).forEach(h => lines.push(`成果あり：${h}`));
+    return lines;
+  },
+
+  buildMorningPerformanceLines(pickups, revenues, leads, max) {
+    const limit = max || 3;
+    const entries = this._collectPerformanceEntries(pickups, revenues, leads)
+      .filter(e => e.judgment !== 'not_entered')
+      .slice(0, limit * 2);
+    const lines = [];
+    entries.forEach(e => {
+      if (lines.length >= limit) return;
+      if (e.judgment === 'has_result') {
+        const m = e.metrics || {};
+        const detail = m.lineInquiries ? `LINE相談${m.lineInquiries}件` : '成果あり';
+        const suffix = e.type === 'reel' ? 'リール' : (e.type === 'ad' ? '広告' : e.shortLabel);
+        lines.push(`・${e.topic}${suffix}から${detail}`);
+      } else if (e.judgment === 'needs_improvement') {
+        const suffix = e.type === 'ad' ? '広告' : '';
+        lines.push(`・${e.topic}${suffix}は問い合わせなし。CTA改善候補`);
+      } else if (e.judgment === 'has_reaction') {
+        lines.push(`・${e.topic}：反応あり。CTA強化候補`);
+      }
+    });
+    return lines.slice(0, limit);
+  },
+
+  buildPerformanceTaskDedupeKey(date, topic, type, taskKind, title) {
+    return [date, topic, type, taskKind, title].join('|');
+  },
+
+  createPerformanceTaskPayload(pickup, type, judgment) {
+    const p = this.normalizePickup(pickup);
+    const meta = this.EXECUTION_META[type];
+    if (!meta) return null;
+    const short = meta.shortLabel || type;
+    if (judgment === 'has_result') {
+      return {
+        title: `続編を作る：${p.topic} ${short}`,
+        reason: '施策成果でLINE相談あり',
+        priority: '中',
+        taskKind: 'performance-sequel',
+        topic: p.topic,
+        type
+      };
+    }
+    const suffix = type === 'ad' ? '広告' : (type === 'reel' ? 'リール' : '');
+    return {
+      title: `改善する：${p.topic}${suffix}`,
+      reason: '施策成果で問い合わせなし',
+      priority: '中',
+      taskKind: 'performance-improve',
+      topic: p.topic,
+      type
+    };
+  },
+
+  formatPerformanceMetricsSummary(metrics) {
+    const m = metrics || {};
+    const parts = [];
+    if (m.views) parts.push(`表示${m.views}`);
+    if (m.reactions) parts.push(`反応${m.reactions}`);
+    if (m.clicks) parts.push(`クリック${m.clicks}`);
+    if (m.lineInquiries) parts.push(`LINE${m.lineInquiries}`);
+    if (m.reservations) parts.push(`予約${m.reservations}`);
+    if (m.salesAmount) parts.push(`${m.salesAmount.toLocaleString('ja-JP')}円`);
+    return parts.length ? parts.join(' / ') : '—';
   }
 };

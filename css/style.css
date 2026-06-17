@@ -4304,3 +4304,142 @@ body {
   font-size: 0.85rem;
   margin-top: 0.5rem;
 }
+
+/* v2.8 施策成果・売上連携 */
+.card-weekly-performance {
+  margin-bottom: 1rem;
+}
+
+.dash-weekly-performance-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.mgmt-performance-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0.25rem;
+  color: var(--text-muted, #555);
+}
+
+.mgmt-performance-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.pickup-exec-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.5rem;
+  grid-column: 1 / -1;
+}
+
+.pickup-exec-multiselect {
+  min-height: 72px;
+  width: 100%;
+}
+
+.pickup-performance-item,
+.pickup-performance-rank-item,
+.pickup-revenue-linked-item,
+.pickup-performance-improve-item {
+  border: 1px solid var(--border-light, #eee);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  background: #fafafa;
+}
+
+.pickup-performance-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.pickup-performance-channel {
+  font-size: 0.8rem;
+  color: var(--text-muted, #666);
+  background: #eee;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.pickup-performance-judgment {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.performance-judgment-result {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.performance-judgment-reaction {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.performance-judgment-needs {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.performance-judgment-empty {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.pickup-performance-meta,
+.pickup-performance-memo,
+.pickup-performance-comment,
+.pickup-performance-action,
+.pickup-performance-next {
+  font-size: 0.85rem;
+  margin: 0.25rem 0;
+  line-height: 1.5;
+}
+
+.pickup-performance-actions {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pickup-performance-rank-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.pickup-performance-rank-num {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--primary, #2563eb);
+  min-width: 1.5rem;
+}
+
+.exec-badge-perf-result {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.exec-badge-perf-reaction {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.exec-badge-perf-needs {
+  background: #fef3c7;
+  color: #92400e;
+}

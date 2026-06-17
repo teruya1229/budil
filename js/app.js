@@ -273,6 +273,7 @@
     renderManagementComments();
     renderDashTodayExecutionPlan();
     renderDashImprovementHints();
+    renderDashWeeklyPerformance();
     renderWeeklyStrategyBoard();
     renderActionCalendar();
     renderDailyActionTasks();
@@ -1807,6 +1808,15 @@
         : '';
     }
 
+    const perfTodayEl = document.getElementById('mgmt-performance-today');
+    if (perfTodayEl) {
+      const ctx = getPerformanceContext();
+      const perfLines = DemandBrain.buildMorningPerformanceLines(ctx.pickups, ctx.revenues, ctx.leads, 3);
+      perfTodayEl.innerHTML = perfLines.length
+        ? `<p class="mgmt-performance-label">施策成果：</p><ul class="mgmt-performance-list">${perfLines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '';
+    }
+
     const weeklyTodayEl = document.getElementById('mgmt-weekly-strategy');
     if (weeklyTodayEl) {
       const strategy = getWeeklyStrategy();
@@ -2830,12 +2840,72 @@
     alert('今日やることに追加しました。');
   }
 
+  function getPerformanceContext() {
+    return {
+      pickups: Storage.getDemandPickups(),
+      revenues: RevenueBrain.normalizeRevenueRecords(Storage.getRevenueRecords()),
+      leads: Storage.getLeads(),
+      today: TODAY()
+    };
+  }
+
+  function formatRevenueRecordLabel(record) {
+    if (!record) return '—';
+    return `${record.workDate || '—'} / ${RevenueBrain.formatYen(record.amount)} / ${record.service || '—'}`;
+  }
+
+  function formatRelatedLeadsText(ids, leads) {
+    if (!ids || !ids.length) return '未選択';
+    return ids.map(id => {
+      const lead = (leads || []).find(l => l.id === id);
+      return lead ? lead.company : '削除済み';
+    }).join('、');
+  }
+
+  function formatRelatedRevenuesText(ids, revenues) {
+    if (!ids || !ids.length) return '—';
+    return ids.map(id => {
+      const rev = (revenues || []).find(r => r.id === id);
+      return rev ? formatRevenueRecordLabel(rev) : '削除済み';
+    }).join(' / ');
+  }
+
+  function performanceJudgmentClassName(judgment) {
+    if (judgment === 'has_result') return 'performance-judgment-result';
+    if (judgment === 'has_reaction') return 'performance-judgment-reaction';
+    if (judgment === 'needs_improvement') return 'performance-judgment-needs';
+    return 'performance-judgment-empty';
+  }
+
+  function buildLeadSelectOptions(leads, selectedIds) {
+    const selected = new Set(selectedIds || []);
+    return (leads || []).map(lead =>
+      `<option value="${esc(lead.id)}"${selected.has(lead.id) ? ' selected' : ''}>${esc(lead.company)}</option>`
+    ).join('');
+  }
+
+  function buildRevenueSelectOptions(revenues, selectedIds) {
+    const selected = new Set(selectedIds || []);
+    return (revenues || []).slice().sort((a, b) => (b.workDate || '').localeCompare(a.workDate || '')).map(rev =>
+      `<option value="${esc(rev.id)}"${selected.has(rev.id) ? ' selected' : ''}>${esc(formatRevenueRecordLabel(rev))}</option>`
+    ).join('');
+  }
+
   function updatePickupExecution(id, type, patch) {
     const pickup = getPickupRawById(id);
     if (!pickup) return;
     const exec = DemandBrain.normalizeExecutionStatus(pickup);
     const prev = { ...exec[type] };
     const next = { ...prev, ...patch };
+    if (patch.metrics) {
+      next.metrics = {
+        ...DemandBrain.normalizePerformanceMetrics(prev),
+        ...patch.metrics,
+        updatedAt: new Date().toISOString()
+      };
+    }
+    if (patch.relatedLeadIds) next.relatedLeadIds = patch.relatedLeadIds;
+    if (patch.relatedRevenueIds) next.relatedRevenueIds = patch.relatedRevenueIds;
     exec[type] = next;
     const updates = { executionStatus: exec };
 
@@ -2853,6 +2923,7 @@
 
     Storage.updateDemandPickup(id, updates);
     renderPickupExecutionManagement();
+    renderPickupPerformanceSections();
     renderPickupInsightsSections();
     renderPickupSavedList();
     renderDashTodayExecutionPlan();
@@ -2873,6 +2944,16 @@
         ? `<p class="mgmt-improvement-label">今日の改善：</p><ul class="mgmt-improvement-list">${improveLines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
         : '';
     }
+    const perfTodayEl = document.getElementById('mgmt-performance-today');
+    if (perfTodayEl) {
+      const ctx = getPerformanceContext();
+      const perfLines = DemandBrain.buildMorningPerformanceLines(ctx.pickups, ctx.revenues, ctx.leads, 3);
+      perfTodayEl.innerHTML = perfLines.length
+        ? `<p class="mgmt-performance-label">施策成果：</p><ul class="mgmt-performance-list">${perfLines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '';
+    }
+    renderDashWeeklyPerformance();
+    renderWeeklyStrategyBoard();
   }
 
   function getInsightBadgesForPickup(pickup) {
@@ -2923,6 +3004,174 @@
     renderPickupInsightsSections();
     renderPickupSavedList();
     alert('今日やることに追加しました。');
+  }
+
+  function isPerformanceTaskDuplicate(date, topic, type, taskKind, title) {
+    const key = DemandBrain.buildPerformanceTaskDedupeKey(date, topic, type, taskKind, title);
+    return Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === key);
+  }
+
+  function addPerformanceTask(pickupId, type, judgment) {
+    const pickup = getPickupRawById(pickupId);
+    if (!pickup) return;
+    const task = DemandBrain.createPerformanceTaskPayload(pickup, type, judgment);
+    if (!task) return;
+    const date = TODAY();
+    const key = DemandBrain.buildPerformanceTaskDedupeKey(date, task.topic, type, task.taskKind, task.title);
+    if (isPerformanceTaskDuplicate(date, task.topic, type, task.taskKind, task.title)) {
+      alert('すでに今日やることに追加済みです');
+      return;
+    }
+    Storage.addManualDailyTask({
+      title: task.title,
+      targetName: '—',
+      priority: task.priority,
+      action: task.reason,
+      memo: task.reason,
+      dueDate: date,
+      status: 'open',
+      reason: task.reason,
+      pickupDedupeKey: key,
+      pickupTopic: task.topic,
+      pickupActionType: 'performance-' + task.taskKind + '-' + type
+    });
+    renderDailyActionTasks();
+    renderMorningDailyTasksBrief();
+    renderMorningReport();
+    renderDashWeeklyPerformance();
+    renderPickupPerformanceSections();
+    renderPickupSavedList();
+    alert('今日やることに追加しました。');
+  }
+
+  function bindPickupPerformanceEvents(container) {
+    if (!container) return;
+    container.querySelectorAll('[data-perf-sequel]').forEach(btn => {
+      btn.addEventListener('click', () => addPerformanceTask(btn.dataset.perfSequel, btn.dataset.perfType, 'has_result'));
+    });
+    container.querySelectorAll('[data-perf-improve]').forEach(btn => {
+      btn.addEventListener('click', () => addPerformanceTask(btn.dataset.perfImprove, btn.dataset.perfType, 'needs_improvement'));
+    });
+  }
+
+  function renderPickupPerformanceList() {
+    const el = document.getElementById('pickup-performance-list');
+    if (!el) return;
+    const ctx = getPerformanceContext();
+    const insights = DemandBrain.getPerformanceInsights(ctx.pickups, ctx.revenues, ctx.leads, ctx.today);
+    if (!insights.total) {
+      el.innerHTML = '<p class="placeholder-text">施策成果はまだありません。<br>投稿・LINE・広告を実行したあと、LINE相談数・予約数・売上金額を入れると、勝ちパターンが見えてきます。</p>';
+      return;
+    }
+    el.innerHTML = insights.entries.map(item => `
+      <div class="pickup-performance-item ${performanceJudgmentClassName(item.judgment)}">
+        <div class="pickup-performance-header">
+          <strong>${esc(item.topic)}</strong>
+          <span class="pickup-performance-channel">${esc(item.channelLabel)}</span>
+          <span class="pickup-performance-judgment ${performanceJudgmentClassName(item.judgment)}">${esc(item.judgmentLabel)}</span>
+        </div>
+        <p class="pickup-performance-meta">実行日：${esc((item.executedAt || '').slice(0, 10) || '—')}</p>
+        <p class="pickup-performance-meta">数値成果：${esc(DemandBrain.formatPerformanceMetricsSummary(item.metrics))}</p>
+        ${item.resultMemo ? `<p class="pickup-performance-memo"><span class="reflection-label">反応メモ</span>${esc(item.resultMemo)}</p>` : ''}
+        <p class="pickup-performance-meta">関連営業先：${esc(formatRelatedLeadsText(item.relatedLeadIds, ctx.leads))}</p>
+        <p class="pickup-performance-meta">関連売上：${esc(formatRelatedRevenuesText(item.relatedRevenueIds, ctx.revenues))}</p>
+        ${item.totalSalesAmount ? `<p class="pickup-performance-meta">売上合計：${esc(RevenueBrain.formatYen(item.totalSalesAmount))}</p>` : ''}
+        <p class="pickup-performance-comment">${esc(item.recommendation)}</p>
+        <p class="pickup-performance-action"><span class="reflection-label">次回アクション</span>${esc(item.nextAction)}</p>
+        <div class="pickup-performance-actions">
+          ${item.judgment === 'has_result' ? `<button type="button" class="btn btn-sm btn-primary" data-perf-sequel="${esc(item.pickupId)}" data-perf-type="${esc(item.type)}">続編タスクを追加</button>` : ''}
+          ${item.judgment === 'needs_improvement' ? `<button type="button" class="btn btn-sm btn-secondary" data-perf-improve="${esc(item.pickupId)}" data-perf-type="${esc(item.type)}">改善タスクを追加</button>` : ''}
+        </div>
+      </div>`).join('');
+    bindPickupPerformanceEvents(el);
+  }
+
+  function renderPickupPerformanceRanking() {
+    const el = document.getElementById('pickup-performance-ranking');
+    if (!el) return;
+    const ctx = getPerformanceContext();
+    const ranking = DemandBrain.getTopPerformanceRanking(ctx.pickups, ctx.revenues, ctx.leads, 5);
+    if (!ranking.length) {
+      el.innerHTML = '<p class="placeholder-text">成果が出た施策はまだありません。実行後に数値成果を入力してください。</p>';
+      return;
+    }
+    el.innerHTML = ranking.map((item, i) => `
+      <div class="pickup-performance-rank-item">
+        <span class="pickup-performance-rank-num">${i + 1}</span>
+        <div class="pickup-performance-rank-body">
+          <strong>${esc(item.topic)}</strong>
+          <span class="pickup-performance-channel">${esc(item.channelLabel)}</span>
+          <p class="pickup-performance-meta">LINE相談：${esc(item.metrics?.lineInquiries ?? '—')} / 予約：${esc(item.metrics?.reservations ?? '—')} / 売上：${esc(item.totalSalesAmount ? RevenueBrain.formatYen(item.totalSalesAmount) : (item.metrics?.salesAmount ? RevenueBrain.formatYen(item.metrics.salesAmount) : '—'))}</p>
+          <p class="pickup-performance-meta">関連営業先：${esc(formatRelatedLeadsText(item.relatedLeadIds, ctx.leads))}</p>
+          <p class="pickup-performance-meta">関連売上：${esc(formatRelatedRevenuesText(item.relatedRevenueIds, ctx.revenues))}</p>
+          <p class="pickup-performance-next">次に増やす案：${esc(item.nextGrowPlan)}</p>
+        </div>
+      </div>`).join('');
+  }
+
+  function renderPickupRevenueLinked() {
+    const el = document.getElementById('pickup-revenue-linked');
+    if (!el) return;
+    const ctx = getPerformanceContext();
+    const linked = DemandBrain.getRevenueLinkedActions(ctx.pickups, ctx.revenues, ctx.leads);
+    if (!linked.length) {
+      el.innerHTML = '<p class="placeholder-text">売上につながった施策はまだありません。売上金額または関連売上を紐付けると表示されます。</p>';
+      return;
+    }
+    el.innerHTML = linked.map(item => {
+      const revText = formatRelatedRevenuesText(item.relatedRevenueIds, ctx.revenues);
+      const revLine = revText !== '—' ? revText.split(' / ')[0] : '';
+      return `
+      <div class="pickup-revenue-linked-item">
+        <strong>${esc(item.topic)} ${esc(item.shortLabel)}</strong>
+        <p class="pickup-performance-meta">売上：${esc(RevenueBrain.formatYen(item.totalSalesAmount || 0))}</p>
+        ${revLine ? `<p class="pickup-performance-meta">関連売上：${esc(revLine)}</p>` : ''}
+        <p class="pickup-performance-next">次：${esc(item.nextAction)}</p>
+      </div>`;
+    }).join('');
+  }
+
+  function renderPickupPerformanceImprove() {
+    const el = document.getElementById('pickup-performance-improve');
+    if (!el) return;
+    const ctx = getPerformanceContext();
+    const candidates = DemandBrain.getPerformanceImprovementCandidates(ctx.pickups, ctx.revenues, ctx.leads);
+    if (!candidates.length) {
+      el.innerHTML = '<p class="placeholder-text">改善が必要な施策はまだありません。実行後の成果を入力すると判定されます。</p>';
+      return;
+    }
+    el.innerHTML = candidates.map(c => `
+      <div class="pickup-performance-improve-item">
+        <strong>${esc(c.topic)} ${c.type === 'ad' ? esc(c.channelLabel) : esc(c.shortLabel)}</strong>
+        <p class="pickup-performance-meta">結果：${esc(c.resultSummary)}</p>
+        <p class="pickup-performance-next">改善：${esc(c.improvePlan)}</p>
+        <button type="button" class="btn btn-sm btn-primary" data-perf-improve="${esc(c.pickupId)}" data-perf-type="${esc(c.type)}">改善タスクを追加</button>
+      </div>`).join('');
+    bindPickupPerformanceEvents(el);
+  }
+
+  function renderPickupPerformanceSections() {
+    renderPickupPerformanceList();
+    renderPickupPerformanceRanking();
+    renderPickupRevenueLinked();
+    renderPickupPerformanceImprove();
+  }
+
+  function renderDashWeeklyPerformance() {
+    const el = document.getElementById('dash-weekly-performance');
+    if (!el) return;
+    const ctx = getPerformanceContext();
+    const summary = DemandBrain.getWeeklyPerformanceSummary(ctx.pickups, ctx.today, ctx.revenues, ctx.leads);
+    if (!summary.hasData) {
+      el.innerHTML = '<p class="placeholder-text">投稿・広告の成果を入れると、ここに今週の反応が出ます。</p>';
+      return;
+    }
+    const lines = [];
+    if (summary.lineInquiries) lines.push(`LINE相談 ${summary.lineInquiries}件`);
+    if (summary.reservations) lines.push(`予約 ${summary.reservations}件`);
+    if (summary.salesAmount) lines.push(`施策経由売上 ${summary.salesAmount.toLocaleString('ja-JP')}円`);
+    summary.highlights.forEach(h => lines.push(`成果あり：${h}`));
+    el.innerHTML = `<ul class="dash-weekly-performance-list">${lines.map(l => `<li>・${esc(l)}</li>`).join('')}</ul>`;
   }
 
   function judgmentClassName(judgment) {
@@ -3169,21 +3418,31 @@
         </div>`
       : '';
 
-    const winningHtml = (strategy.winningPatterns || []).length
+    const winningHtml = (strategy.winningPatterns || []).length || (strategy.revenueLinked || []).length
       ? `<div class="weekly-strategy-block weekly-strategy-sub">
           <h3>勝ちパターン候補</h3>
-          <ul class="weekly-strategy-bullets">${strategy.winningPatterns.slice(0, 3).map(w =>
-            `<li>・${esc(w.topic)}（${esc(w.channelLabel)}）— ${esc(w.resultMemo || '反応あり')}</li>`
-          ).join('')}</ul>
+          <ul class="weekly-strategy-bullets">${[
+            ...(strategy.winningPatterns || []).slice(0, 2).map(w =>
+              `<li>・${esc(w.topic)}（${esc(w.channelLabel)}）— ${esc(w.resultMemo || '反応あり')}</li>`
+            ),
+            ...(strategy.revenueLinked || []).slice(0, 2).map(r =>
+              `<li>・${esc(r.topic)}（${esc(r.shortLabel)}）— 売上${esc(RevenueBrain.formatYen(r.totalSalesAmount || 0))}</li>`
+            )
+          ].join('')}</ul>
         </div>`
       : '';
 
-    const improveHtml = (strategy.improvementCandidates || []).length
+    const improveHtml = (strategy.improvementCandidates || []).length || (strategy.performanceImprovements || []).length
       ? `<div class="weekly-strategy-block weekly-strategy-sub">
           <h3>改善が必要なもの</h3>
-          <ul class="weekly-strategy-bullets">${strategy.improvementCandidates.slice(0, 3).map(c =>
-            `<li>・${esc(c.topic)}（${esc(c.channelLabel)}）— ${esc(c.resultMemo || '改善必要')}</li>`
-          ).join('')}</ul>
+          <ul class="weekly-strategy-bullets">${[
+            ...(strategy.improvementCandidates || []).slice(0, 2).map(c =>
+              `<li>・${esc(c.topic)}（${esc(c.channelLabel)}）— ${esc(c.resultMemo || '改善必要')}</li>`
+            ),
+            ...(strategy.performanceImprovements || []).slice(0, 2).map(c =>
+              `<li>・${esc(c.topic)}（${esc(c.shortLabel)}）— ${esc(c.resultSummary || '改善必要')}</li>`
+            )
+          ].join('')}</ul>
         </div>`
       : '';
 
@@ -3249,6 +3508,7 @@
 
   function renderPickupExecutionRow(pickupId, type, pickup, execItem) {
     const meta = DemandBrain.EXECUTION_META[type];
+    const ctx = getPerformanceContext();
     const hasOutput = DemandBrain.hasGeneratedOutput(pickup, type);
     const statusLabel = DemandBrain.getExecutionStatusLabel(type, execItem.status);
     const statusOptions = meta.statuses.map(s =>
@@ -3258,6 +3518,14 @@
       ? '<span class="exec-row-has-output">文案あり</span>'
       : '<span class="exec-row-no-output">文案未生成</span>';
     const showResultFields = DemandBrain.isExecutionDone(type, execItem.status);
+    const metrics = DemandBrain.normalizePerformanceMetrics(execItem);
+    const metricField = (key, label, placeholder) => `
+      <div class="pickup-exec-field">
+        <label>${esc(label)}</label>
+        <input type="number" min="0" data-exec-metric="${key}" value="${metrics[key] !== null ? metrics[key] : ''}" placeholder="${esc(placeholder)}">
+      </div>`;
+    const leadOptions = buildLeadSelectOptions(ctx.leads, execItem.relatedLeadIds);
+    const revenueOptions = buildRevenueSelectOptions(ctx.revenues, execItem.relatedRevenueIds);
 
     return `
       <div class="pickup-exec-row" data-exec-pickup="${esc(pickupId)}" data-exec-type="${type}">
@@ -3279,13 +3547,29 @@
             <input type="text" data-exec-field="memo" value="${esc(execItem.memo || '')}" placeholder="例：午前中に投稿予定">
           </div>
           ${showResultFields ? `
+          <div class="pickup-exec-metrics-grid">
+            ${metricField('views', '表示数 / 再生数', '1200')}
+            ${metricField('reactions', 'いいね / 保存 / 反応数', '25')}
+            ${metricField('clicks', 'クリック数', '8')}
+            ${metricField('lineInquiries', 'LINE相談数', '1')}
+            ${metricField('reservations', '予約数', '1')}
+            ${metricField('salesAmount', '売上金額', '14000')}
+          </div>
           <div class="pickup-exec-field pickup-exec-field-wide">
-            <label>効果メモ</label>
+            <label>成果メモ</label>
             <input type="text" data-exec-field="resultMemo" value="${esc(execItem.resultMemo || '')}" placeholder="例：反応あり、LINE相談1件">
           </div>
           <div class="pickup-exec-field pickup-exec-field-wide">
-            <label>次回改善</label>
+            <label>次回改善メモ</label>
             <input type="text" data-exec-field="nextImproveMemo" value="${esc(execItem.nextImproveMemo || '')}" placeholder="例：次回は実写多め">
+          </div>
+          <div class="pickup-exec-field pickup-exec-field-wide">
+            <label>関連営業先（Ctrl+クリックで複数選択）</label>
+            <select multiple data-exec-field="relatedLeadIds" class="pickup-exec-multiselect">${leadOptions || '<option disabled>営業先未登録</option>'}</select>
+          </div>
+          <div class="pickup-exec-field pickup-exec-field-wide">
+            <label>関連売上（Ctrl+クリックで複数選択）</label>
+            <select multiple data-exec-field="relatedRevenueIds" class="pickup-exec-multiselect">${revenueOptions || '<option disabled>売上未登録</option>'}</select>
           </div>` : ''}
         </div>
         <div class="pickup-exec-row-actions">
@@ -3308,6 +3592,13 @@
       };
       row.querySelectorAll('[data-exec-field]').forEach(input => {
         const field = input.dataset.execField;
+        if (field === 'relatedLeadIds' || field === 'relatedRevenueIds') {
+          input.addEventListener('change', () => {
+            const values = Array.from(input.selectedOptions).map(o => o.value).filter(Boolean);
+            saveField(field, values);
+          });
+          return;
+        }
         const eventName = input.tagName === 'SELECT' ? 'change' : 'change';
         input.addEventListener(eventName, () => {
           saveField(field, input.value);
@@ -3315,9 +3606,21 @@
             renderPickupExecutionManagement();
           }
         });
-        if (input.tagName === 'INPUT' && input.type === 'text') {
+        if (input.tagName === 'INPUT' && (input.type === 'text' || input.type === 'date')) {
           input.addEventListener('blur', () => saveField(field, input.value));
         }
+      });
+      row.querySelectorAll('[data-exec-metric]').forEach(input => {
+        const metricKey = input.dataset.execMetric;
+        const saveMetric = () => {
+          const raw = input.value.trim();
+          const val = raw === '' ? null : Number(raw);
+          updatePickupExecution(pickupId, type, {
+            metrics: { [metricKey]: Number.isFinite(val) ? val : null }
+          });
+        };
+        input.addEventListener('change', saveMetric);
+        input.addEventListener('blur', saveMetric);
       });
       const taskBtn = row.querySelector('[data-exec-add-task]');
       if (taskBtn) {
@@ -3800,6 +4103,7 @@
 
   function renderDemandPickup() {
     renderPickupTodaySummary();
+    renderPickupPerformanceSections();
     renderPickupInsightsSections();
     renderPickupMorningTop3();
     renderPickupUsedToday();

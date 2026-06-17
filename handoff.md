@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v2.8 公開済み（施策成果・売上連携MVP）
 - Budil v2.7 公開済み（投稿・広告カレンダーMVP）
 - Budil v2.6 公開済み（週間作戦ボード）
 - Budil v2.5 公開済み（効果メモから改善・勝ちパターン化）
@@ -47,9 +48,20 @@
 | `js/sales-brain.js` | 営業分析・優先度・ステータス正規化 |
 | `js/messages.js` | 営業文面テンプレート・プリセット |
 | `js/management-brain.js` | 朝レポート・今日の営業生成 |
-| `js/demand-brain.js` | 需要分析・需要ピックアップパース・トップ3 |
+| `js/demand-brain.js` | 需要分析・需要ピックアップパース・トップ3・施策成果判定 |
 | `js/demand-radar.js` | 需要レーダー分析 |
 | `js/data-backup.js` | バックアップ・復元 |
+
+## v2.8で入ったもの
+
+- 需要番頭「施策成果」「成果が出た施策」「売上につながった施策」「改善が必要な施策」
+- `DemandBrain.evaluatePerformanceResult` — 数値・メモ・売上紐付けのルールベース判定
+- `normalizePerformanceMetrics` / `getPerformanceInsights` / `getTopPerformanceRanking`
+- `getRevenueLinkedActions` / `getWeeklyPerformanceSummary` / `createPerformanceTaskPayload`
+- 実行アクションへの metrics・relatedLeadIds・relatedRevenueIds（`executionStatus` 内）
+- ダッシュボード「今週の施策成果」・朝レポート `mgmt-performance-today`
+- 週間作戦への成果ありテーマ・改善広告・売上連携の反映
+- 新規 localStorage キーなし
 
 ## v2.7で入ったもの
 
