@@ -206,6 +206,7 @@
         document.getElementById('view-' + view).classList.add('active');
         if (view === 'dashboard') renderDashboard();
         if (view === 'radar') renderDemandRadar();
+        if (view === 'revenue') renderRevenueView();
         if (view === 'data') renderDataManagement();
       });
     });
@@ -245,6 +246,52 @@
     renderDemandInsights();
     renderSalesInsights();
     renderDashboardLists();
+    renderDashRevenueSummary();
+  }
+
+  function getRevenueContext() {
+    const today = TODAY();
+    const records = Storage.getRevenueRecords();
+    const settings = Storage.getRevenueSettings();
+    const monthKey = RevenueBrain.currentMonthKey(today);
+    const summary = RevenueBrain.summarize(records, settings, monthKey);
+    const comment = RevenueBrain.buildBantouComment(summary);
+    return { today, records, settings, monthKey, summary, comment };
+  }
+
+  function renderRevenueSummaryHtml(summary, comment, options) {
+    const opts = options || {};
+    const lines = [
+      `<p class="revenue-summary-line">売上予定：<strong>${esc(RevenueBrain.formatYen(summary.planned))}</strong></p>`,
+      `<p class="revenue-summary-line">入金済み：${esc(RevenueBrain.formatYen(summary.paid))}</p>`,
+      `<p class="revenue-summary-line">未入金：${esc(RevenueBrain.formatYen(summary.unpaid))}</p>`,
+      `<p class="revenue-summary-line">月間目標：${esc(RevenueBrain.formatYen(summary.monthlyTarget))}</p>`,
+      `<p class="revenue-summary-line">目標まで残り：${esc(RevenueBrain.formatYen(summary.remainingToTarget))}</p>`,
+      `<p class="revenue-summary-line">達成率：${summary.achievementRate}%</p>`
+    ];
+    if (opts.showExtra) {
+      lines.push(
+        `<p class="revenue-summary-line">確定：${esc(RevenueBrain.formatYen(summary.confirmed))}</p>`,
+        `<p class="revenue-summary-line">完了：${esc(RevenueBrain.formatYen(summary.completed))}</p>`,
+        `<p class="revenue-summary-line">残り日数：${summary.daysLeft}日 / 1日あたり必要：${esc(RevenueBrain.formatYen(summary.dailyNeeded))}</p>`
+      );
+    }
+    if (comment) {
+      lines.push(`<p class="revenue-bantou-comment">${esc(comment)}</p>`);
+    }
+    if (opts.showLink) {
+      lines.push('<button type="button" class="btn btn-sm btn-secondary" id="btn-go-revenue">売上番頭を開く</button>');
+    }
+    return lines.join('');
+  }
+
+  function renderDashRevenueSummary() {
+    const el = document.getElementById('dash-revenue-summary');
+    if (!el) return;
+    const { summary, comment } = getRevenueContext();
+    el.innerHTML = renderRevenueSummaryHtml(summary, comment, { showLink: true });
+    const btn = el.querySelector('#btn-go-revenue');
+    if (btn) btn.addEventListener('click', () => navigateToView('revenue'));
   }
 
   function renderBackupStatus() {
@@ -280,6 +327,8 @@
     if (summary.hasCardDraft) items.push('名刺ドラフト あり');
     if (summary.hasDemandNotes) items.push('需要メモ あり');
     if (summary.hasSettings) items.push('設定 あり');
+    if (summary.revenueRecords) items.push('売上記録 ' + summary.revenueRecords + '件');
+    if (summary.hasRevenueSettings) items.push('売上目標 あり');
     return items;
   }
 
@@ -385,6 +434,7 @@
     renderLeadsTable();
     renderFollowupTable();
     renderFollowupOverdue();
+    renderRevenueView();
     renderDataManagement();
   }
 
@@ -533,6 +583,12 @@
     const mgmtOpen = salesEl.querySelector('.mgmt-sales-open');
     if (mgmtOpen) {
       mgmtOpen.addEventListener('click', () => openSalesDetail(mgmtOpen.dataset.openLead, { navigate: true }));
+    }
+
+    const revenueEl = document.getElementById('mgmt-revenue');
+    if (revenueEl) {
+      const rev = getRevenueContext();
+      revenueEl.innerHTML = renderRevenueSummaryHtml(rev.summary, rev.comment);
     }
 
     const top3Legacy = document.getElementById('dash-top3');
@@ -1479,6 +1535,7 @@
     document.getElementById('view-' + viewName).classList.add('active');
     if (viewName === 'dashboard') renderDashboard();
     if (viewName === 'radar') renderDemandRadar();
+    if (viewName === 'revenue') renderRevenueView();
     if (viewName === 'data') renderDataManagement();
   }
 
@@ -1846,6 +1903,207 @@
     renderDashboard();
   }
 
+  // ── 売上番頭 ──
+  function fillRevenueSelects() {
+    const serviceEl = document.getElementById('revenue-service');
+    const sourceEl = document.getElementById('revenue-source');
+    if (serviceEl && !serviceEl.options.length) {
+      serviceEl.innerHTML = RevenueBrain.SERVICES.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    }
+    if (sourceEl && !sourceEl.options.length) {
+      sourceEl.innerHTML = RevenueBrain.SOURCES.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    }
+  }
+
+  function resetRevenueForm() {
+    document.getElementById('revenue-edit-id').value = '';
+    document.getElementById('revenue-form').reset();
+    document.getElementById('revenue-work-date').value = TODAY();
+    document.getElementById('revenue-status').value = '予定';
+    document.getElementById('revenue-payment').value = '未入金';
+    document.getElementById('revenue-form-title').textContent = '売上登録';
+    document.getElementById('btn-revenue-cancel').classList.add('hidden');
+  }
+
+  function openRevenueEdit(id) {
+    const record = Storage.getRevenueRecords().find(r => r.id === id);
+    if (!record) return;
+    document.getElementById('revenue-edit-id').value = id;
+    document.getElementById('revenue-work-date').value = record.workDate || '';
+    document.getElementById('revenue-customer').value = record.customerName || '';
+    document.getElementById('revenue-service').value = record.service || RevenueBrain.SERVICES[0];
+    document.getElementById('revenue-source').value = record.source || RevenueBrain.SOURCES[0];
+    document.getElementById('revenue-amount').value = record.amount || '';
+    document.getElementById('revenue-status').value = record.status || '予定';
+    document.getElementById('revenue-payment').value = record.paymentStatus || '未入金';
+    document.getElementById('revenue-memo').value = record.memo || '';
+    document.getElementById('revenue-form-title').textContent = '売上編集';
+    document.getElementById('btn-revenue-cancel').classList.remove('hidden');
+    document.getElementById('revenue-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function getRevenueFormData() {
+    return {
+      workDate: document.getElementById('revenue-work-date').value,
+      customerName: document.getElementById('revenue-customer').value.trim(),
+      service: document.getElementById('revenue-service').value,
+      source: document.getElementById('revenue-source').value,
+      amount: Number(document.getElementById('revenue-amount').value) || 0,
+      status: document.getElementById('revenue-status').value,
+      paymentStatus: document.getElementById('revenue-payment').value,
+      memo: document.getElementById('revenue-memo').value.trim()
+    };
+  }
+
+  function renderRevenueBreakdown(id, items) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!items.length) {
+      el.innerHTML = '<li class="placeholder-text">今月のデータがありません</li>';
+      return;
+    }
+    el.innerHTML = items.map(item =>
+      `<li><span>${esc(item.name)}</span><strong>${esc(RevenueBrain.formatYen(item.amount))}</strong></li>`
+    ).join('');
+  }
+
+  function renderRevenueRowActions(id) {
+    return `
+      <button type="button" class="btn-edit" data-edit-revenue="${esc(id)}">編集</button>
+      <button type="button" class="btn-danger" data-delete-revenue="${esc(id)}">削除</button>`;
+  }
+
+  function renderRevenueList() {
+    const { monthKey } = getRevenueContext();
+    const records = Storage.getRevenueRecords()
+      .filter(r => r.workDate && r.workDate.startsWith(monthKey))
+      .slice()
+      .sort((a, b) => (b.workDate || '').localeCompare(a.workDate || ''));
+
+    const tbody = document.getElementById('revenue-tbody');
+    const cardList = document.getElementById('revenue-card-list');
+
+    if (!records.length) {
+      const empty = '<tr><td colspan="8" class="empty-state">今月の売上がありません</td></tr>';
+      if (tbody) tbody.innerHTML = empty;
+      if (cardList) cardList.innerHTML = '<p class="empty-state">今月の売上がありません</p>';
+      return;
+    }
+
+    if (tbody) {
+      tbody.innerHTML = records.map(r => `
+        <tr>
+          <td>${esc(r.workDate)}</td>
+          <td>${esc(r.customerName)}</td>
+          <td>${esc(r.service)}</td>
+          <td>${esc(r.source)}</td>
+          <td>${esc(RevenueBrain.formatYen(r.amount))}</td>
+          <td><span class="revenue-status-badge revenue-status-${esc(r.status)}">${esc(r.status)}</span></td>
+          <td><span class="revenue-status-badge revenue-payment-${esc(r.paymentStatus)}">${esc(r.paymentStatus)}</span></td>
+          <td class="actions">${renderRevenueRowActions(r.id)}</td>
+        </tr>`).join('');
+    }
+
+    if (cardList) {
+      cardList.innerHTML = records.map(r => `
+        <div class="revenue-card">
+          <div class="revenue-card-header">
+            <strong>${esc(r.customerName)}</strong>
+            <span class="revenue-card-amount">${esc(RevenueBrain.formatYen(r.amount))}</span>
+          </div>
+          <p class="revenue-card-meta">${esc(r.workDate)} ｜ ${esc(r.service)} ｜ ${esc(r.source)}</p>
+          <p class="revenue-card-meta">
+            <span class="revenue-status-badge revenue-status-${esc(r.status)}">${esc(r.status)}</span>
+            <span class="revenue-status-badge revenue-payment-${esc(r.paymentStatus)}">${esc(r.paymentStatus)}</span>
+          </p>
+          ${r.memo ? `<p class="revenue-card-meta">${esc(r.memo)}</p>` : ''}
+          <div class="revenue-card-actions">${renderRevenueRowActions(r.id)}</div>
+        </div>`).join('');
+    }
+
+    document.querySelectorAll('[data-edit-revenue]').forEach(btn => {
+      btn.addEventListener('click', () => openRevenueEdit(btn.dataset.editRevenue));
+    });
+    document.querySelectorAll('[data-delete-revenue]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (confirm('この売上記録を削除しますか？')) {
+          Storage.deleteRevenueRecord(btn.dataset.deleteRevenue);
+          renderRevenueView();
+          renderDashboard();
+        }
+      });
+    });
+  }
+
+  function renderRevenueSummaryPanel() {
+    const { summary, comment, settings } = getRevenueContext();
+    const summaryEl = document.getElementById('revenue-summary');
+    const commentEl = document.getElementById('revenue-bantou-comment');
+    const targetEl = document.getElementById('revenue-monthly-target');
+
+    if (summaryEl) {
+      summaryEl.innerHTML = [
+        { label: '売上予定', value: RevenueBrain.formatYen(summary.planned) },
+        { label: '確定', value: RevenueBrain.formatYen(summary.confirmed) },
+        { label: '完了', value: RevenueBrain.formatYen(summary.completed) },
+        { label: '入金済み', value: RevenueBrain.formatYen(summary.paid) },
+        { label: '未入金', value: RevenueBrain.formatYen(summary.unpaid) },
+        { label: '月間目標', value: RevenueBrain.formatYen(summary.monthlyTarget) },
+        { label: '目標まで残り', value: RevenueBrain.formatYen(summary.remainingToTarget) },
+        { label: '達成率', value: summary.achievementRate + '%' },
+        { label: '残り日数', value: summary.daysLeft + '日' },
+        { label: '1日あたり必要', value: RevenueBrain.formatYen(summary.dailyNeeded) }
+      ].map(item => `
+        <div class="revenue-summary-item">
+          <span>${esc(item.label)}</span>
+          <strong>${esc(item.value)}</strong>
+        </div>`).join('');
+    }
+    if (commentEl) commentEl.textContent = comment;
+    if (targetEl) targetEl.value = settings.monthlyTarget || '';
+    renderRevenueBreakdown('revenue-by-service', summary.byService);
+    renderRevenueBreakdown('revenue-by-source', summary.bySource);
+  }
+
+  function renderRevenueView() {
+    fillRevenueSelects();
+    renderRevenueSummaryPanel();
+    renderRevenueList();
+  }
+
+  function handleRevenueSubmit(e) {
+    e.preventDefault();
+    const data = getRevenueFormData();
+    if (!data.customerName) {
+      alert('顧客名は必須です');
+      return;
+    }
+    const id = document.getElementById('revenue-edit-id').value;
+    if (id) Storage.updateRevenueRecord(id, data);
+    else Storage.addRevenueRecord(data);
+    resetRevenueForm();
+    renderRevenueView();
+    renderDashboard();
+  }
+
+  function initRevenue() {
+    fillRevenueSelects();
+    document.getElementById('revenue-form').addEventListener('submit', handleRevenueSubmit);
+    document.getElementById('btn-revenue-cancel').addEventListener('click', resetRevenueForm);
+    document.getElementById('btn-revenue-new').addEventListener('click', () => {
+      resetRevenueForm();
+      document.getElementById('revenue-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    document.getElementById('btn-save-revenue-target').addEventListener('click', () => {
+      const monthlyTarget = Number(document.getElementById('revenue-monthly-target').value) || 0;
+      Storage.saveRevenueSettings({ monthlyTarget });
+      renderRevenueView();
+      renderDashboard();
+    });
+    resetRevenueForm();
+    renderRevenueView();
+  }
+
   // ── 追客管理 ──
   function initFollowup() {
     document.getElementById('btn-add-followup').addEventListener('click', () => openFollowupModal());
@@ -2030,6 +2288,7 @@
     initDemandRadar();
     initDemandSearch();
     initLeads();
+    initRevenue();
     initCardParser();
     initFollowup();
     initDataManagement();

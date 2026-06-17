@@ -12,7 +12,9 @@ const Storage = {
     SETTINGS: 'budil_settings',
     CARD_DRAFT: 'budil_card_draft',
     DAILY_DEMAND_LOGS: 'budil_daily_demand_logs',
-    DEMAND_RADAR: 'budil_demand_radar'
+    DEMAND_RADAR: 'budil_demand_radar',
+    REVENUE_RECORDS: 'budil_revenue_records',
+    REVENUE_SETTINGS: 'budil_revenue_settings'
   },
 
   get(key, defaultValue = null) {
@@ -266,6 +268,48 @@ const Storage = {
       ...data,
       updatedAt: new Date().toISOString()
     });
+  },
+
+  getRevenueRecords() {
+    return this.get(this.KEYS.REVENUE_RECORDS, []);
+  },
+
+  saveRevenueRecords(list) {
+    this.set(this.KEYS.REVENUE_RECORDS, list);
+  },
+
+  getRevenueSettings() {
+    return this.get(this.KEYS.REVENUE_SETTINGS, { monthlyTarget: 0 });
+  },
+
+  saveRevenueSettings(data) {
+    this.set(this.KEYS.REVENUE_SETTINGS, data);
+  },
+
+  addRevenueRecord(item) {
+    const list = this.getRevenueRecords();
+    const record = {
+      ...item,
+      id: 'rev_' + this.generateId(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    list.push(record);
+    this.saveRevenueRecords(list);
+    return record;
+  },
+
+  updateRevenueRecord(id, data) {
+    const list = this.getRevenueRecords();
+    const idx = list.findIndex(r => r.id === id);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...data, updatedAt: new Date().toISOString() };
+      this.saveRevenueRecords(list);
+    }
+  },
+
+  deleteRevenueRecord(id) {
+    this.saveRevenueRecords(this.getRevenueRecords().filter(r => r.id !== id));
   }
 };
 

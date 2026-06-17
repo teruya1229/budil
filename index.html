@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v1.7.1</small>
+          <small>AI経営脳みそ v1.8</small>
         </div>
       </div>
       <nav class="nav">
@@ -29,6 +29,9 @@
         <button class="nav-item" data-view="sales">
           <span class="nav-icon">📋</span>営業番頭
         </button>
+        <button class="nav-item" data-view="revenue">
+          <span class="nav-icon">💰</span>売上番頭
+        </button>
         <button class="nav-item" data-view="card">
           <span class="nav-icon">🪪</span>名刺解析
         </button>
@@ -40,7 +43,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v1.7.1</small>
+        <small>Budil v1.8</small>
       </div>
     </aside>
 
@@ -75,6 +78,10 @@
               <div id="mgmt-sales" class="mgmt-copy-block"></div>
             </div>
             <div class="morning-section">
+              <h3>今月の売上</h3>
+              <div id="mgmt-revenue" class="mgmt-copy-block"></div>
+            </div>
+            <div class="morning-section">
               <h3>今日の注意点</h3>
               <ul id="mgmt-cautions" class="caution-list"></ul>
             </div>
@@ -89,6 +96,11 @@
         <div id="dash-sales-warnings" class="alert-bar hidden"></div>
 
         <div id="dash-today-move" class="card card-move card-wide"></div>
+
+        <div class="card card-wide card-revenue-summary">
+          <h2>今月の売上状況</h2>
+          <div id="dash-revenue-summary" class="revenue-summary-block"></div>
+        </div>
 
         <div class="card card-mission card-wide">
           <h2>今日の営業ミッション</h2>
@@ -673,6 +685,129 @@
         </div>
       </section>
 
+      <!-- 売上番頭 -->
+      <section id="view-revenue" class="view">
+        <header class="view-header">
+          <h1>売上番頭</h1>
+          <p class="view-subtitle">今月の売上・入金・目標差分を把握する</p>
+        </header>
+
+        <div class="card card-wide">
+          <h2>今月サマリー</h2>
+          <div id="revenue-summary" class="revenue-summary-grid"></div>
+          <p id="revenue-bantou-comment" class="revenue-bantou-comment"></p>
+        </div>
+
+        <div class="card card-wide">
+          <h2>月間目標設定</h2>
+          <div class="form-row form-row-2 revenue-target-row">
+            <div class="form-group">
+              <label for="revenue-monthly-target">月間目標（円）</label>
+              <input type="number" id="revenue-monthly-target" min="0" step="1000" placeholder="例: 600000">
+            </div>
+            <div class="form-group revenue-target-actions">
+              <button type="button" id="btn-save-revenue-target" class="btn btn-primary btn-sm">目標を保存</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="revenue-layout">
+          <div class="card">
+            <h2 id="revenue-form-title">売上登録</h2>
+            <form id="revenue-form">
+              <input type="hidden" id="revenue-edit-id">
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="revenue-work-date">作業日 *</label>
+                  <input type="date" id="revenue-work-date" required>
+                </div>
+                <div class="form-group">
+                  <label for="revenue-customer">顧客名 *</label>
+                  <input type="text" id="revenue-customer" required placeholder="例: 山田様">
+                </div>
+              </div>
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="revenue-service">サービス *</label>
+                  <select id="revenue-service" required></select>
+                </div>
+                <div class="form-group">
+                  <label for="revenue-source">依頼元 *</label>
+                  <select id="revenue-source" required></select>
+                </div>
+              </div>
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="revenue-amount">金額（円） *</label>
+                  <input type="number" id="revenue-amount" min="0" step="1" required placeholder="8000">
+                </div>
+                <div class="form-group">
+                  <label for="revenue-status">売上ステータス *</label>
+                  <select id="revenue-status" required>
+                    <option value="予定">予定</option>
+                    <option value="確定">確定</option>
+                    <option value="完了">完了</option>
+                    <option value="キャンセル">キャンセル</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="revenue-payment">入金状況 *</label>
+                  <select id="revenue-payment" required>
+                    <option value="未入金">未入金</option>
+                    <option value="入金済み">入金済み</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="revenue-memo">メモ</label>
+                  <input type="text" id="revenue-memo" placeholder="任意">
+                </div>
+              </div>
+              <div class="revenue-form-actions">
+                <button type="submit" class="btn btn-primary btn-sm">保存</button>
+                <button type="button" id="btn-revenue-cancel" class="btn btn-secondary btn-sm hidden">キャンセル</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="card">
+            <h2>サービス別売上（今月）</h2>
+            <ul id="revenue-by-service" class="revenue-breakdown-list"></ul>
+          </div>
+
+          <div class="card">
+            <h2>依頼元別売上（今月）</h2>
+            <ul id="revenue-by-source" class="revenue-breakdown-list"></ul>
+          </div>
+        </div>
+
+        <div class="card card-wide">
+          <div class="card-header-row">
+            <h2>売上一覧（今月）</h2>
+            <button type="button" id="btn-revenue-new" class="btn btn-primary btn-sm">+ 新規登録</button>
+          </div>
+          <div class="table-wrap revenue-table-wrap">
+            <table class="data-table revenue-table" id="revenue-table">
+              <thead>
+                <tr>
+                  <th>作業日</th>
+                  <th>顧客名</th>
+                  <th>サービス</th>
+                  <th>依頼元</th>
+                  <th>金額</th>
+                  <th>ステータス</th>
+                  <th>入金</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="revenue-tbody"></tbody>
+            </table>
+          </div>
+          <div id="revenue-card-list" class="revenue-card-list"></div>
+        </div>
+      </section>
+
       <!-- 追客管理 -->
       <section id="view-followup" class="view">
         <header class="view-header">
@@ -854,6 +989,7 @@
   <script src="js/demand-radar.js"></script>
   <script src="js/sales-brain.js"></script>
   <script src="js/management-brain.js"></script>
+  <script src="js/revenue-brain.js"></script>
   <script src="js/card-ocr.js"></script>
   <script src="js/data-backup.js"></script>
   <script src="js/app.js"></script>

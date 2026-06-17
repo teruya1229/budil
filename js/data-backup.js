@@ -13,7 +13,9 @@ const DataBackup = {
     'budil_settings',
     'budil_daily_demand_logs',
     'budil_demand_radar',
-    'budil_card_draft'
+    'budil_card_draft',
+    'budil_revenue_records',
+    'budil_revenue_settings'
   ],
 
   exportPayload() {
@@ -64,8 +66,10 @@ const DataBackup = {
     const hasCardDraft = !!(data.budil_card_draft);
     const hasDemandNotes = !!(data.budil_demandNotes);
     const hasSettings = !!(data.budil_settings);
+    const revenueRecords = Array.isArray(data.budil_revenue_records) ? data.budil_revenue_records.length : 0;
+    const hasRevenueSettings = !!(data.budil_revenue_settings);
 
-    return { leads, followups, demandLogs, radarKw, messages, hasPosts, hasCardDraft, hasDemandNotes, hasSettings };
+    return { leads, followups, demandLogs, radarKw, messages, hasPosts, hasCardDraft, hasDemandNotes, hasSettings, revenueRecords, hasRevenueSettings };
   },
 
   getCurrentSummary() {

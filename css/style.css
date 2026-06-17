@@ -1955,3 +1955,158 @@ body {
     padding: 20px 16px;
   }
 }
+
+/* v1.8 売上番頭 */
+.revenue-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.revenue-summary-item {
+  background: var(--bg-input);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+}
+
+.revenue-summary-item strong {
+  display: block;
+  font-size: 1.05rem;
+  margin-top: 4px;
+}
+
+.revenue-summary-item span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.revenue-bantou-comment {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: rgba(59, 130, 246, 0.08);
+  border-left: 3px solid var(--primary);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.revenue-summary-block .revenue-summary-line {
+  margin: 4px 0;
+  font-size: 0.9rem;
+}
+
+.revenue-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.revenue-breakdown-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.revenue-breakdown-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.revenue-breakdown-list li:last-child {
+  border-bottom: none;
+}
+
+.revenue-form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.revenue-target-row {
+  align-items: flex-end;
+}
+
+.revenue-target-actions {
+  display: flex;
+  align-items: flex-end;
+}
+
+.revenue-status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.revenue-status-予定 { background: rgba(139, 156, 179, 0.2); color: #8b9cb3; }
+.revenue-status-確定 { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.revenue-status-完了 { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+.revenue-status-キャンセル { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
+
+.revenue-payment-未入金 { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.revenue-payment-入金済み { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+
+.revenue-card-list {
+  display: none;
+}
+
+.revenue-card {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.revenue-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.revenue-card-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.revenue-card-amount {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.revenue-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+@media (max-width: 1024px) {
+  .revenue-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .revenue-table-wrap {
+    display: none;
+  }
+
+  .revenue-card-list {
+    display: block;
+  }
+
+  .revenue-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

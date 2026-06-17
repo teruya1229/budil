@@ -5,10 +5,19 @@
 ## 現在の公開状態
 
 - 公開URL: https://teruya1229.github.io/budil/
-- 現在バージョン: v1.7.1
-- 最新commit: c47b7bc
-- push済み（`1ac8ab9..c47b7bc main -> main`）
+- 現在バージョン: v1.8
+- 最新commit: （push後に更新）
 - GitHub Pages公開済み
+
+## v1.8 実装内容（売上番頭MVP）
+
+- 売上登録 / 一覧 / 編集 / 削除
+- 月間目標設定（`budil_revenue_settings`）
+- 今月の売上予定・入金済み・未入金・達成率を集計
+- サービス別 / 依頼元別売上
+- 朝レポート・ダッシュボードへ売上サマリー反映
+- 新規キー: `budil_revenue_records`, `budil_revenue_settings`
+- データエクスポート/インポート対象に追加
 
 ## v1.7 実装内容
 

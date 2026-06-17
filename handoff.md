@@ -11,7 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
-- Budil v1.7.1 公開済み
+- Budil v1.8 公開済み（売上番頭MVP）
 - 営業プリセット v1.6 実装済み
 - 営業ステータス / 次アクション / 優先度判定 v1.7 実装済み
 - スマホ写真アップロード修正（名刺登録UI）
@@ -30,6 +30,13 @@
 | `js/sales-brain.js` | 営業分析・優先度・ステータス正規化 |
 | `js/messages.js` | 営業文面テンプレート・プリセット |
 | `js/management-brain.js` | 朝レポート・今日の営業生成 |
+| `js/revenue-brain.js` | 売上集計・番頭コメント |
+
+## v1.8で入ったもの
+
+- 売上番頭画面（`#view-revenue`）
+- `budil_revenue_records` / `budil_revenue_settings`
+- 月次集計・サービス別/依頼元別・朝レポート反映
 
 ## 脳みそドキュメント（v1.8以降の判断正本）
 
@@ -80,6 +87,8 @@
 | `budil_generatedMessages` | 生成済み営業文面 |
 | `budil_followups` | 追客管理 |
 | `budil_migrated_v17` | v1.7マイグレーション済みフラグ |
+| `budil_revenue_records` | 売上記録 |
+| `budil_revenue_settings` | 月間目標など |
 
 ## 次にやると良いこと（v1.8候補）
 
