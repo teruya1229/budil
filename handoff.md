@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v3.5 公開済み（Googleマップ軽連携・エリア番頭MVP）
 - Budil v3.4 公開済み（AI番頭連携入口MVP）
 - Budil v3.3 公開済み（販売・デモ準備MVP）
 - Budil v3.2 公開済み（週次・月次レポート出力MVP）
@@ -58,6 +59,14 @@
 | `js/demand-radar.js` | 需要レーダー分析 |
 | `js/data-backup.js` | バックアップ・復元 |
 | `js/reception-brain.js` | AI番頭受付パース・営業/タスク/売上変換 |
+| `js/map-brain.js` | 地図URL・エリア推定・エリア別集計 |
+
+## v3.5で入ったもの
+
+- エリア番頭画面（エリア別サマリー・売上・営業先・受付）
+- Googleマップ検索リンク（API不使用）
+- 住所からのエリア推定と遠方/住所未入力注意
+- 営業先・受付の任意 `area` フィールド
 
 ## v3.4で入ったもの
 

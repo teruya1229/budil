@@ -5434,3 +5434,158 @@ body {
     min-width: 0;
   }
 }
+
+/* エリア番頭・地図リンク v3.5 */
+.app-toast {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(120%);
+  background: #1e293b;
+  color: #fff;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  z-index: 9999;
+  opacity: 0;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.app-toast.visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.map-actions-row,
+.map-actions-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  margin-top: 0.35rem;
+}
+
+.map-no-address {
+  font-size: 0.85rem;
+}
+
+.area-label-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #0369a1;
+  margin-right: 0.25rem;
+}
+
+.area-label-compact {
+  color: var(--text-muted, #64748b);
+}
+
+.area-distance-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  margin-left: 0.25rem;
+}
+
+.area-badge-caution { background: #fef3c7; color: #b45309; }
+.area-badge-far { background: #fee2e2; color: #b91c1c; }
+.area-badge-no-address { background: #f1f5f9; color: #64748b; }
+
+.lead-row-area,
+.lead-row-map {
+  margin-top: 0.25rem;
+}
+
+.sales-detail-map-area {
+  margin: 0.5rem 0;
+}
+
+.area-summary-list,
+.area-warnings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.area-summary-card,
+.area-group-block {
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.area-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.area-summary-meta,
+.area-warnings-meta,
+.revenue-area-brief-warn {
+  margin: 0.2rem 0;
+  font-size: 0.9rem;
+  color: var(--text-muted, #64748b);
+}
+
+.area-warnings-subtitle {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 0.95rem;
+}
+
+.area-warnings-items {
+  margin: 0 0 0.5rem;
+  padding-left: 1.1rem;
+}
+
+.area-group-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.area-group-list {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.area-group-list li {
+  padding: 0.35rem 0;
+  border-top: 1px solid #f1f5f9;
+}
+
+.area-group-map {
+  margin-top: 0.25rem;
+}
+
+.revenue-area-brief {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border, #e2e8f0);
+}
+
+.revenue-area-brief-list {
+  margin: 0.25rem 0;
+  padding-left: 1.1rem;
+}
+
+.mgmt-area-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.reception-saved-map,
+.reception-next-actions {
+  margin-top: 0.5rem;
+}
+
+.card-area-comment {
+  border-left: 4px solid #0ea5e9;
+}

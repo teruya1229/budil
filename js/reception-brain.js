@@ -37,12 +37,16 @@ const ReceptionBrain = {
       estimateAmount = Number.isNaN(parsed) ? 0 : parsed;
     }
     const status = this.STATUSES.includes(item.status) ? item.status : 'new';
+    const address = String(item.address || '').trim();
+    const area = String(item.area || '').trim()
+      || (typeof MapBrain !== 'undefined' ? MapBrain.detectAreaFromAddress(address) : '');
     return {
       id: item.id || '',
       source: String(item.source || '').trim(),
       customerName: String(item.customerName || '').trim(),
       phone: String(item.phone || '').trim(),
-      address: String(item.address || '').trim(),
+      address,
+      area,
       serviceText: String(item.serviceText || '').trim(),
       preferredDatesText: String(item.preferredDatesText || '').trim(),
       memo: String(item.memo || '').trim(),
@@ -141,6 +145,8 @@ const ReceptionBrain = {
       company: normalized.customerName || '（名前未入力）',
       phone: normalized.phone,
       address: normalized.address,
+      area: normalized.area || (typeof MapBrain !== 'undefined'
+        ? MapBrain.detectAreaFromAddress(normalized.address) : ''),
       region: normalized.address ? normalized.address.slice(0, 20) : '',
       source: normalized.source,
       memo: this.buildLeadMemo(normalized),

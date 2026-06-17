@@ -215,6 +215,111 @@
   }
 
   const TODAY = () => new Date().toISOString().slice(0, 10);
+
+  function showAppToast(message) {
+    const el = document.getElementById('app-toast');
+    if (!el) return;
+    el.textContent = message;
+    el.classList.add('visible');
+    setTimeout(() => el.classList.remove('visible'), 2200);
+  }
+
+  function fillAreaSelectOptions(selectEl, selected) {
+    if (!selectEl) return;
+    const areas = MapBrain.AREAS;
+    const cur = selected || '';
+    selectEl.innerHTML = '<option value="">住所から自動推定</option>'
+      + areas.map(a => `<option value="${esc(a)}"${a === cur ? ' selected' : ''}>${esc(a)}</option>`).join('');
+  }
+
+  function getCombinedAddress(address, region) {
+    const a = (address || '').trim();
+    const r = (region || '').trim();
+    if (a && r && a !== r) return a.length >= r.length ? a : r;
+    return a || r;
+  }
+
+  function renderAreaDistanceBadge(area, address) {
+    const dist = MapBrain.classifyAreaDistance(area, address);
+    const label = MapBrain.getDistanceLabel(dist);
+    if (!label) return '';
+    const cls = dist === 'far' ? 'area-badge-far' : (dist === 'no-address' ? 'area-badge-no-address' : 'area-badge-caution');
+    return `<span class="area-distance-badge ${cls}">${esc(label)}</span>`;
+  }
+
+  function renderMapActionsHtml(address, options) {
+    const opts = options || {};
+    const addr = (address || '').trim();
+    if (!addr) {
+      return opts.showNoAddress !== false
+        ? '<span class="map-no-address label-muted">住所未入力</span>'
+        : '';
+    }
+    const url = MapBrain.buildGoogleMapSearchUrl(addr);
+    const parts = [
+      `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary map-open-btn">Googleマップで開く</a>`,
+      `<button type="button" class="btn btn-sm btn-secondary map-copy-btn" data-copy-address="${esc(addr)}">住所コピー</button>`
+    ];
+    if (opts.area) {
+      parts.unshift(`<span class="area-label-badge">${esc(opts.area)}</span>`);
+      parts.unshift(renderAreaDistanceBadge(opts.area, addr));
+    }
+    return `<div class="map-actions-inline">${parts.join('')}</div>`;
+  }
+
+  function bindMapActionEvents(container) {
+    if (!container) return;
+    container.querySelectorAll('[data-copy-address]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        copyText(btn.dataset.copyAddress || '')
+          .then(() => showAppToast('住所をコピーしました'))
+          .catch(() => alert('コピーに失敗しました'));
+      });
+    });
+  }
+
+  function getMapContext() {
+    const today = TODAY();
+    const leads = Storage.getLeads();
+    const intakes = Storage.getReceptionIntakes();
+    const revenues = Storage.getRevenueRecords();
+    const summary = MapBrain.buildAreaSummary({ leads, intakes, revenues, today });
+    const warnings = MapBrain.getAreaWarnings({ leads, intakes, revenues, today });
+    return { today, leads, intakes, revenues, summary, warnings };
+  }
+
+  function goToAreaView() {
+    navigateToView('area');
+  }
+
+  function syncLeadAreaFromAddress() {
+    const address = getCombinedAddress(
+      document.getElementById('lead-address')?.value,
+      document.getElementById('lead-region')?.value
+    );
+    const areaEl = document.getElementById('lead-area');
+    if (!areaEl || areaEl.dataset.manual === '1') return;
+    const detected = MapBrain.detectAreaFromAddress(address);
+    fillAreaSelectOptions(areaEl, detected);
+    const mapEl = document.getElementById('lead-map-actions');
+    if (mapEl) {
+      mapEl.innerHTML = renderMapActionsHtml(address, { area: detected });
+      bindMapActionEvents(mapEl);
+    }
+  }
+
+  function syncReceptionAreaFromAddress() {
+    const address = (document.getElementById('reception-address')?.value || '').trim();
+    const areaEl = document.getElementById('reception-area');
+    if (!areaEl || areaEl.dataset.manual === '1') return;
+    const detected = MapBrain.detectAreaFromAddress(address);
+    fillAreaSelectOptions(areaEl, detected);
+    const mapEl = document.getElementById('reception-form-map-actions');
+    if (mapEl) {
+      mapEl.innerHTML = renderMapActionsHtml(address, { area: detected });
+      bindMapActionEvents(mapEl);
+    }
+  }
   const CLOSED_STATUSES = ['成約', '見送り', 'NG'];
   const ACTIVE_LEAD_STATUSES = ['未接触', 'アプローチ中', '商談中'];
 
@@ -231,6 +336,7 @@
         if (view === 'radar') renderDemandRadar();
         if (view === 'pickup') renderDemandPickup();
         if (view === 'reception') renderReceptionView();
+        if (view === 'area') renderAreaView();
         if (view === 'revenue') renderRevenueView();
         if (view === 'data') renderDataManagement();
       });
@@ -460,6 +566,17 @@
 
     ReceptionBrain.getReceptionWarnings(Storage.getReceptionIntakes()).forEach(w => warnings.push(w));
 
+    const mapCtx = getMapContext();
+    mapCtx.warnings.forEach(w => {
+      if (w.type === 'far' && w.items && w.items[0]) {
+        warnings.push(`遠方・移動注意：${w.items[0].area} ${w.items[0].name}`);
+      }
+      if (w.type === 'no-address' && w.items) {
+        const leadCount = w.items.filter(i => i.kind === 'lead').length;
+        if (leadCount) warnings.push(`住所未入力の営業先が${leadCount}件あります`);
+      }
+    });
+
     return warnings;
   }
 
@@ -481,6 +598,9 @@
     const lines = [];
     const intakeComment = ReceptionBrain.buildReceptionHomeCommentFromIntakes(Storage.getReceptionIntakes());
     if (intakeComment) lines.push(intakeComment);
+
+    const mapCtx = getMapContext();
+    MapBrain.buildAreaHomeComment(mapCtx.summary, mapCtx.warnings).forEach(l => lines.push(l));
 
     if (focusRecs.length) {
       const f = focusRecs[0];
@@ -625,16 +745,25 @@
     if (!actions.length) {
       return '<p class="placeholder-text">次に動く営業先はまだありません。売上を営業先に紐付けて登録すると、ここに提案が出ます。</p>';
     }
-    return actions.map(a => `
+    return actions.map(a => {
+      const lead = Storage.getLeads().find(l => l.id === a.leadId);
+      const addr = lead ? MapBrain.getLeadAddress(lead) : '';
+      const area = lead ? MapBrain.getLeadArea(lead) : '';
+      const mapHtml = addr ? renderMapActionsHtml(addr, { area, showNoAddress: false }) : '';
+      return `
       <div class="exec-home-sales-item">
         <strong>${esc(a.leadName)}</strong>
+        ${area ? `<span class="area-label-badge">${esc(area)}</span>` : ''}
+        ${lead ? renderAreaDistanceBadge(area, addr) : ''}
         <p class="exec-home-sales-meta">次の一手：${esc(a.action)}</p>
         <p class="exec-home-sales-meta">理由：${esc(a.reason)}</p>
         <div class="exec-home-sales-actions">
+          ${mapHtml}
           <button type="button" class="btn btn-sm btn-secondary" data-outcome-open-lead="${esc(a.leadId)}">営業先詳細へ</button>
           <button type="button" class="btn btn-sm btn-primary" data-exec-sales-task="${esc(a.leadId)}">今日やることに追加</button>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
 
   function renderExecutiveHomeCheckHtml() {
@@ -663,6 +792,7 @@
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="kurokuro">クロクロ調査プロンプト</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="pickup">需要番頭を開く</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="reception">受付番頭を開く</button>
+      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="area">エリア番頭を開く</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="revenue">売上を登録</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="lead">営業先を登録</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="task">今日やること追加</button>
@@ -676,6 +806,7 @@
     if (action === 'kurokuro') return goToKurokuroPrompt();
     if (action === 'pickup') return goToDemandPickup();
     if (action === 'reception') return goToReception();
+    if (action === 'area') return goToAreaView();
     if (action === 'revenue') return goToAddRevenue();
     if (action === 'lead') return goToAddLead();
     if (action === 'task') return goToAddDailyTask();
@@ -780,6 +911,8 @@
         renderExecutiveHomeCheck();
       });
     }
+
+    bindMapActionEvents(root);
   }
 
   function renderExecutiveHomeCheck() {
@@ -2100,6 +2233,7 @@
     { title: '今日やることを整理', desc: '優先タスクを毎朝確認', action: 'task' },
     { title: '需要を拾う', desc: 'クロクロ調査結果を需要番頭に取り込み', action: 'pickup' },
     { title: '受付・予約をつなぐ', desc: 'AI番頭の受付結果を営業・タスク・売上へ', action: 'reception' },
+    { title: 'エリアで移動を判断', desc: 'エリア別サマリーとGoogleマップ導線', action: 'area' },
     { title: '投稿・広告文案を作る', desc: '需要から投稿・広告案を生成', action: 'pickup' },
     { title: '投稿・広告予定を管理', desc: 'カレンダーで今週の予定を把握', action: 'calendar' },
     { title: '施策成果を見る', desc: 'LINE相談・予約・売上を入力', action: 'pickup' },
@@ -2129,6 +2263,7 @@
     if (action === 'task') return goToAddDailyTask();
     if (action === 'pickup') return goToDemandPickup();
     if (action === 'reception') return goToReception();
+    if (action === 'area') return goToAreaView();
     if (action === 'calendar') {
       navigateToView('dashboard');
       setTimeout(() => {
@@ -3216,7 +3351,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v3.4</span>
+        <span class="business-report-version">v3.5</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -3515,6 +3650,15 @@
       receptionMorningEl.innerHTML = lines.length
         ? `<ul class="mgmt-reception-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
         : '<p class="placeholder-text">受付データはありません。受付・予約番頭でAI番頭結果を取り込んでください。</p>';
+    }
+
+    const areaMorningEl = document.getElementById('mgmt-area-warnings');
+    if (areaMorningEl) {
+      const mapCtx = getMapContext();
+      const lines = MapBrain.buildMorningAreaLines(mapCtx.warnings);
+      areaMorningEl.innerHTML = lines.length
+        ? `<ul class="mgmt-area-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '<p class="placeholder-text">エリア上の注意はありません。</p>';
     }
 
     const improveTodayEl = document.getElementById('mgmt-improvement-today');
@@ -6019,14 +6163,179 @@
     });
   }
 
+  // ── エリア番頭 ──
+  function renderAreaTodaySummary() {
+    const el = document.getElementById('area-today-summary');
+    if (!el) return;
+    const mapCtx = getMapContext();
+    const comments = MapBrain.buildAreaHomeComment(mapCtx.summary, mapCtx.warnings);
+    if (!mapCtx.summary.length) {
+      el.innerHTML = '<p class="placeholder-text">エリア別データはまだありません。営業先・受付に住所を登録すると集計されます。</p>';
+      return;
+    }
+    el.innerHTML = comments.length
+      ? comments.map(c => `<p>${esc(c)}</p>`).join('')
+      : `<p>エリア ${mapCtx.summary.length}件を管理中。営業先・受付・売上をエリア別に確認できます。</p>`;
+  }
+
+  function renderAreaWarningsList() {
+    const el = document.getElementById('area-warnings-list');
+    if (!el) return;
+    const mapCtx = getMapContext();
+    const parts = [];
+    mapCtx.warnings.forEach(w => {
+      if (w.type === 'far' && w.items) {
+        parts.push('<h3 class="area-warnings-subtitle">遠方案件・要確認</h3><ul class="area-warnings-items">');
+        w.items.forEach(item => {
+          parts.push(`<li><strong>${esc(item.area)} ${esc(item.name)}</strong>：${esc(item.message)}</li>`);
+        });
+        parts.push('</ul>');
+      }
+      if (w.type === 'no-address' && w.items) {
+        parts.push('<h3 class="area-warnings-subtitle">住所未入力</h3><ul class="area-warnings-items">');
+        w.items.forEach(item => {
+          const kind = item.kind === 'intake' ? '受付' : '営業先';
+          parts.push(`<li>${esc(kind)}：${esc(item.name)} — Googleマップ確認不可</li>`);
+        });
+        parts.push('</ul>');
+      }
+      if (w.type === 'revenue-unknown' && w.count) {
+        parts.push(`<p class="area-warnings-meta">エリア不明の紐付け売上：${w.count}件</p>`);
+      }
+    });
+    el.innerHTML = parts.length ? parts.join('') : '<p class="placeholder-text">遠方案件・住所未入力はありません。</p>';
+  }
+
+  function renderAreaSummaryList() {
+    const el = document.getElementById('area-summary-list');
+    if (!el) return;
+    const mapCtx = getMapContext();
+    if (!mapCtx.summary.length) {
+      el.innerHTML = '<p class="placeholder-text">エリア別サマリーはまだありません。</p>';
+      return;
+    }
+    el.innerHTML = mapCtx.summary.map(row => {
+      const areaUrl = MapBrain.buildAreaSearchUrl(row.area);
+      const nextParts = [];
+      if (row.openIntakes) nextParts.push(`未対応受付${row.openIntakes}件`);
+      if (row.nextContactLeads) nextParts.push(`次回連絡${row.nextContactLeads}件`);
+      return `
+      <div class="area-summary-card">
+        <div class="area-summary-header">
+          <strong>${esc(row.area)}</strong>
+          ${renderAreaDistanceBadge(row.area, row.area)}
+        </div>
+        <p class="area-summary-meta">営業先：${row.leadCount}件 / 受付：${row.intakeCount}件 / 売上：${esc(RevenueBrain.formatYen(row.revenueTotal))}</p>
+        <p class="area-summary-meta">次：${nextParts.length ? esc(nextParts.join('、')) : '—'}</p>
+        <div class="map-actions-inline">
+          ${areaUrl ? `<a href="${esc(areaUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary">Googleマップでエリア検索</a>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderAreaRevenueList() {
+    const el = document.getElementById('area-revenue-list');
+    if (!el) return;
+    const { summary } = getMapContext();
+    const rows = summary.filter(r => r.revenueCount > 0);
+    if (!rows.length) {
+      el.innerHTML = '<p class="placeholder-text">エリア別売上はまだありません。</p>';
+      return;
+    }
+    el.innerHTML = `<ul class="area-revenue-breakdown">${rows.map(r =>
+      `<li><strong>${esc(r.area)}</strong>：${r.revenueCount}件 / ${esc(RevenueBrain.formatYen(r.revenueTotal))}</li>`
+    ).join('')}</ul>`;
+  }
+
+  function renderAreaLeadsList() {
+    const el = document.getElementById('area-leads-list');
+    if (!el) return;
+    const { leads, today } = getMapContext();
+    const groups = {};
+    leads.forEach(lead => {
+      const area = MapBrain.getLeadArea(lead);
+      if (!groups[area]) groups[area] = [];
+      groups[area].push(lead);
+    });
+    const keys = Object.keys(groups).sort();
+    if (!keys.length) {
+      el.innerHTML = '<p class="placeholder-text">営業先がありません。</p>';
+      return;
+    }
+    el.innerHTML = keys.map(area => `
+      <div class="area-group-block">
+        <h3 class="area-group-title">${esc(area)}（${groups[area].length}件）</h3>
+        <ul class="area-group-list">${groups[area].slice(0, 8).map(lead => {
+          const addr = MapBrain.getLeadAddress(lead);
+          return `<li>
+            <button type="button" class="lead-company-link" data-open-lead="${esc(lead.id)}">${esc(lead.company)}</button>
+            ${renderAreaDistanceBadge(area, addr)}
+            <div class="area-group-map">${renderMapActionsHtml(addr, { area, showNoAddress: true })}</div>
+          </li>`;
+        }).join('')}</ul>
+      </div>`).join('');
+    el.querySelectorAll('[data-open-lead]').forEach(btn => {
+      btn.addEventListener('click', () => openSalesDetail(btn.dataset.openLead, { navigate: true }));
+    });
+    bindMapActionEvents(el);
+  }
+
+  function renderAreaIntakesList() {
+    const el = document.getElementById('area-intakes-list');
+    if (!el) return;
+    const { intakes } = getMapContext();
+    const active = intakes.filter(i => i.status !== 'archived' && i.status !== 'done');
+    const groups = {};
+    active.forEach(intake => {
+      const area = MapBrain.getIntakeArea(intake);
+      if (!groups[area]) groups[area] = [];
+      groups[area].push(intake);
+    });
+    const keys = Object.keys(groups).sort();
+    if (!keys.length) {
+      el.innerHTML = '<p class="placeholder-text">有効な受付データはありません。</p>';
+      return;
+    }
+    el.innerHTML = keys.map(area => `
+      <div class="area-group-block">
+        <h3 class="area-group-title">${esc(area)}（${groups[area].length}件）</h3>
+        <ul class="area-group-list">${groups[area].slice(0, 8).map(intake => {
+          const addr = (intake.address || '').trim();
+          return `<li>
+            <strong>${esc(intake.customerName || '—')}</strong>
+            ${renderAreaDistanceBadge(area, addr)}
+            <div class="area-group-map">${renderMapActionsHtml(addr, { area, showNoAddress: true })}</div>
+          </li>`;
+        }).join('')}</ul>
+      </div>`).join('');
+    bindMapActionEvents(el);
+  }
+
+  function renderAreaView() {
+    try {
+      safeRenderSection(null, () => renderAreaTodaySummary(), 'エリアサマリー');
+      safeRenderSection('area-warnings-list', () => renderAreaWarningsList(), 'エリア注意');
+      safeRenderSection('area-summary-list', () => renderAreaSummaryList(), 'エリア別サマリー');
+      safeRenderSection('area-revenue-list', () => renderAreaRevenueList(), 'エリア別売上');
+      safeRenderSection('area-leads-list', () => renderAreaLeadsList(), 'エリア別営業先');
+      safeRenderSection('area-intakes-list', () => renderAreaIntakesList(), 'エリア別受付');
+    } catch (err) {
+      console.error('[Budil] render error: エリア番頭', err);
+    }
+  }
+
   // ── 受付・予約番頭 ──
   function getReceptionFormData() {
+    const address = document.getElementById('reception-address').value;
+    const areaVal = document.getElementById('reception-area').value;
     return ReceptionBrain.normalizeIntake({
       id: document.getElementById('reception-edit-id').value || '',
       source: document.getElementById('reception-source').value,
       customerName: document.getElementById('reception-customer').value,
       phone: document.getElementById('reception-phone').value,
-      address: document.getElementById('reception-address').value,
+      address,
+      area: areaVal || MapBrain.detectAreaFromAddress(address),
       serviceText: document.getElementById('reception-service').value,
       preferredDatesText: document.getElementById('reception-dates').value,
       memo: document.getElementById('reception-memo').value,
@@ -6047,9 +6356,21 @@
     document.getElementById('reception-memo').value = item.memo || '';
     document.getElementById('reception-amount').value = item.estimateAmount || '';
     document.getElementById('reception-handling').value = item.handlingStatus || '';
+    const areaEl = document.getElementById('reception-area');
+    if (areaEl) {
+      fillAreaSelectOptions(areaEl, item.area || MapBrain.getIntakeArea(item));
+      if (item.area) areaEl.dataset.manual = '1';
+    }
+    syncReceptionAreaFromAddress();
+    if (item.area && areaEl) {
+      areaEl.value = item.area;
+      areaEl.dataset.manual = '1';
+    }
   }
 
   function clearReceptionForm() {
+    const areaEl = document.getElementById('reception-area');
+    if (areaEl) areaEl.dataset.manual = '';
     setReceptionFormData({});
   }
 
@@ -6057,6 +6378,7 @@
     const text = document.getElementById('reception-paste-area').value;
     const parsed = ReceptionBrain.parseAiBantouPaste(text);
     setReceptionFormData(parsed);
+    syncReceptionAreaFromAddress();
   }
 
   function saveReceptionFromForm() {
@@ -6113,12 +6435,26 @@
       el.innerHTML = '<p class="placeholder-text">次の一手はありません。新規受付を取り込むと提案が表示されます。</p>';
       return;
     }
-    el.innerHTML = actions.map(a => `
+    el.innerHTML = actions.map(a => {
+      let mapHtml = '';
+      if (a.intakeId) {
+        const intake = Storage.getReceptionIntakes().find(i => i.id === a.intakeId);
+        if (intake) {
+          const area = MapBrain.getIntakeArea(intake);
+          mapHtml = renderMapActionsHtml(intake.address, { area, showNoAddress: true });
+        }
+      }
+      return `
       <div class="reception-next-item">
         <strong>${esc(a.title)}</strong>
         <p class="reception-next-meta">理由：${esc(a.reason)}</p>
-        ${a.intakeId ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open="${esc(a.intakeId)}">受付を開く</button>` : ''}
-      </div>`).join('');
+        <div class="reception-next-actions">
+          ${mapHtml}
+          ${a.intakeId ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open="${esc(a.intakeId)}">受付を開く</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    bindMapActionEvents(el);
     el.querySelectorAll('[data-reception-open]').forEach(btn => {
       btn.addEventListener('click', () => {
         const intake = Storage.getReceptionIntakes().find(i => i.id === btn.dataset.receptionOpen);
@@ -6141,6 +6477,8 @@
       const lead = intake.relatedLeadId ? leads.find(l => l.id === intake.relatedLeadId) : null;
       const leadLabel = lead ? lead.company : (intake.relatedLeadId ? '（削除済み）' : '—');
       const revLabel = intake.relatedRevenueId ? 'あり' : (intake.status === 'revenue_candidate' ? '候補' : '—');
+      const area = MapBrain.getIntakeArea(intake);
+      const addr = (intake.address || '').trim();
       return `
       <div class="reception-saved-item" data-intake-id="${esc(intake.id)}">
         <div class="reception-saved-header">
@@ -6148,9 +6486,11 @@
           <span class="reception-status-badge reception-status-${esc(intake.status)}">${esc(formatReceptionStatus(intake.status))}</span>
         </div>
         <p class="reception-saved-title"><strong>${esc(intake.customerName || '（名前なし）')}</strong> / ${esc(intake.source || '—')}</p>
+        <p class="reception-saved-meta">エリア：${esc(area)} ${renderAreaDistanceBadge(area, addr)}</p>
         <p class="reception-saved-meta">作業：${esc(intake.serviceText || '—')}</p>
         <p class="reception-saved-meta">希望日：${esc(intake.preferredDatesText || '—')}</p>
         <p class="reception-saved-meta">関連営業先：${esc(leadLabel)} / 売上：${esc(revLabel)}</p>
+        <div class="reception-saved-map">${renderMapActionsHtml(addr, { area, showNoAddress: true })}</div>
         <div class="reception-saved-actions">
           <button type="button" class="btn btn-sm btn-primary" data-reception-create-lead="${esc(intake.id)}">営業先を作成</button>
           <button type="button" class="btn btn-sm btn-secondary" data-reception-add-task="${esc(intake.id)}">今日やることに追加</button>
@@ -6167,6 +6507,7 @@
 
   function bindReceptionListEvents(container) {
     if (!container) return;
+    bindMapActionEvents(container);
     container.querySelectorAll('[data-reception-create-lead]').forEach(btn => {
       btn.addEventListener('click', () => createLeadFromReceptionIntake(btn.dataset.receptionCreateLead));
     });
@@ -6685,6 +7026,31 @@
 
   // ── 営業番頭 ──
   function initLeads() {
+    fillAreaSelectOptions(document.getElementById('lead-area'), '');
+    fillAreaSelectOptions(document.getElementById('reception-area'), '');
+    ['lead-address', 'lead-region'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', debounce(syncLeadAreaFromAddress, 300));
+    });
+    const leadAreaEl = document.getElementById('lead-area');
+    if (leadAreaEl) {
+      leadAreaEl.addEventListener('change', () => {
+        leadAreaEl.dataset.manual = leadAreaEl.value ? '1' : '';
+        syncLeadAreaFromAddress();
+      });
+    }
+    ['reception-address'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', debounce(syncReceptionAreaFromAddress, 300));
+    });
+    const receptionAreaEl = document.getElementById('reception-area');
+    if (receptionAreaEl) {
+      receptionAreaEl.addEventListener('change', () => {
+        receptionAreaEl.dataset.manual = receptionAreaEl.value ? '1' : '';
+        syncReceptionAreaFromAddress();
+      });
+    }
+
     document.getElementById('btn-add-lead').addEventListener('click', () => openLeadModal());
     document.getElementById('btn-lead-cancel').addEventListener('click', closeLeadModal);
     document.getElementById('lead-form').addEventListener('submit', handleLeadSubmit);
@@ -6856,11 +7222,20 @@
       }
       const wonBadge = l.salesStatus === '成約'
         ? ' <span class="sales-status-badge sales-status-won">成約</span>' : '';
+      const leadAddr = MapBrain.getLeadAddress(l);
+      const leadArea = MapBrain.getLeadArea(l);
+      const areaBadge = `<span class="area-label-badge area-label-compact">${esc(leadArea)}</span>`
+        + renderAreaDistanceBadge(leadArea, leadAddr);
+      const mapMini = leadAddr
+        ? `<div class="lead-row-map">${renderMapActionsHtml(leadAddr, { area: leadArea, showNoAddress: false })}</div>`
+        : '<span class="map-no-address label-muted">住所未入力</span>';
       return `
       <tr class="${overdue ? 'row-overdue' : ''}">
         <td><span class="sales-priority-label priority-${l.priorityLevel || 'low'}">${esc(l.priorityLabel || '低')}</span></td>
         <td>
           <button type="button" class="lead-company-link" data-open-lead="${esc(l.id)}">${esc(l.company)}</button>${wonBadge}
+          <div class="lead-row-area">${areaBadge}</div>
+          ${mapMini}
           ${revenueHint}
         </td>
         <td><span class="sales-status-badge sales-status-${salesStatusClass(l.salesStatus)}">${esc(l.salesStatus)}</span></td>
@@ -6887,6 +7262,7 @@
           renderDashboard();
         }
       }));
+    bindMapActionEvents(tbody);
   }
 
   function openLeadModal(id) {
@@ -6904,18 +7280,30 @@
       const presetValue = item.salesPreset || currentSalesPreset;
       const hiddenPreset = document.getElementById('lead-sales-preset');
       if (hiddenPreset) hiddenPreset.value = presetValue;
-      const fields = ['company', 'region', 'industry', 'url', 'contact', 'email', 'phone',
+      const fields = ['company', 'region', 'address', 'area', 'industry', 'url', 'contact', 'email', 'phone',
         'contactForm', 'sns', 'service', 'priority', 'status', 'lastContact', 'nextContact', 'ngReason', 'memo'];
       fields.forEach(f => {
         const el = document.getElementById('lead-' + f.replace(/([A-Z])/g, '-$1').toLowerCase());
         if (el) el.value = item[f] || '';
       });
+      const areaEl = document.getElementById('lead-area');
+      if (areaEl) {
+        fillAreaSelectOptions(areaEl, item.area || MapBrain.getLeadArea(item));
+        areaEl.dataset.manual = item.area ? '1' : '';
+      }
+      syncLeadAreaFromAddress();
+      if (item.area && areaEl) {
+        areaEl.value = item.area;
+        areaEl.dataset.manual = '1';
+      }
       toggleNgReason();
     } else {
       document.getElementById('lead-modal-title').textContent = '営業先を追加';
       const hiddenPreset = document.getElementById('lead-sales-preset');
       if (hiddenPreset) hiddenPreset.value = currentSalesPreset;
+      fillAreaSelectOptions(document.getElementById('lead-area'), '');
       applySalesPresetToLeadForm(currentSalesPreset);
+      syncLeadAreaFromAddress();
     }
     document.getElementById('lead-modal').classList.remove('hidden');
   }
@@ -6931,6 +7319,12 @@
     const data = {
       company: document.getElementById('lead-company').value,
       region: document.getElementById('lead-region').value,
+      address: document.getElementById('lead-address').value,
+      area: document.getElementById('lead-area').value
+        || MapBrain.detectAreaFromAddress(getCombinedAddress(
+          document.getElementById('lead-address').value,
+          document.getElementById('lead-region').value
+        )),
       industry: document.getElementById('lead-industry').value,
       url: document.getElementById('lead-url').value,
       contact: document.getElementById('lead-contact').value,
@@ -6995,6 +7389,7 @@
     if (viewName === 'radar') renderDemandRadar();
     if (viewName === 'pickup') renderDemandPickup();
     if (viewName === 'reception') renderReceptionView();
+    if (viewName === 'area') renderAreaView();
     if (viewName === 'revenue') renderRevenueView();
     if (viewName === 'data') renderDataManagement();
   }
@@ -7094,9 +7489,19 @@
 
     const links = [];
     if (lead.url) links.push('URL: ' + lead.url);
-    if (lead.region) links.push('地域: ' + lead.region);
+    const leadAddr = MapBrain.getLeadAddress(lead);
+    const leadArea = MapBrain.getLeadArea(lead);
+    if (leadAddr) links.push('住所: ' + leadAddr);
+    if (leadArea) links.push('エリア: ' + leadArea);
     if (lead.industry) links.push('業種: ' + lead.industry);
     document.getElementById('sales-detail-links').textContent = links.join(' ｜ ');
+
+    const mapAreaEl = document.getElementById('sales-detail-map-area');
+    if (mapAreaEl) {
+      mapAreaEl.innerHTML = renderMapActionsHtml(leadAddr, { area: leadArea })
+        + (leadArea ? renderAreaDistanceBadge(leadArea, leadAddr) : '');
+      bindMapActionEvents(mapAreaEl);
+    }
 
     const memoEl = document.getElementById('sales-detail-memo');
     if (lead.memo) {
@@ -7711,18 +8116,21 @@
     }
 
     if (tbody) {
-      tbody.innerHTML = records.map(r => `
+      tbody.innerHTML = records.map(r => {
+        const area = MapBrain.getRevenueArea(r, leads);
+        return `
         <tr>
           <td>${esc(r.workDate)}</td>
           <td>${esc(r.customerName)}</td>
           <td class="revenue-lead-label">${renderRevenueLeadLinkHtml(r, leads)}</td>
-          <td>${esc(r.service)}</td>
+          <td>${esc(r.service)}<br><small class="area-label-compact">${esc(area)}</small></td>
           <td>${esc(r.source)}</td>
           <td>${esc(RevenueBrain.formatYen(r.amount))}</td>
           <td><span class="revenue-status-badge revenue-status-${esc(r.status)}">${esc(r.status)}</span></td>
           <td>${renderPaymentStatusBadge(r)}</td>
           <td class="actions">${renderRevenueRowActions(r.id)}</td>
-        </tr>`).join('');
+        </tr>`;
+      }).join('');
     }
 
     if (cardList) {
@@ -7737,13 +8145,14 @@
         } else {
           cardLeadHtml = `<span class="revenue-lead-deleted">${esc(RevenueBrain.resolveLeadLabel(r, leads))}</span>`;
         }
+        const area = MapBrain.getRevenueArea(r, leads);
         return `
         <div class="revenue-card">
           <div class="revenue-card-header">
             <strong>${esc(r.customerName)}</strong>
             <span class="revenue-card-amount">${esc(RevenueBrain.formatYen(r.amount))}</span>
           </div>
-          <p class="revenue-card-meta">${esc(r.workDate)} ｜ ${esc(r.service)} ｜ ${esc(r.source)}</p>
+          <p class="revenue-card-meta">${esc(r.workDate)} ｜ ${esc(r.service)} ｜ ${esc(r.source)} ｜ ${esc(area)}</p>
           <div class="revenue-card-meta revenue-card-lead-row">
             <span>紐付け:</span> ${cardLeadHtml}
           </div>
@@ -7771,6 +8180,38 @@
         }
       });
     });
+  }
+
+  function renderRevenueAreaBrief() {
+    const el = document.getElementById('revenue-area-brief');
+    if (!el) return;
+    const { leads, revenues } = getMapContext();
+    const monthKey = RevenueBrain.currentMonthKey(TODAY());
+    const monthRecords = revenues.filter(r => r.workDate && r.workDate.startsWith(monthKey) && r.status !== 'キャンセル');
+    let unknownCount = 0;
+    const byArea = {};
+    monthRecords.forEach(r => {
+      const area = MapBrain.getRevenueArea(r, leads);
+      if (area === '不明') unknownCount++;
+      if (!byArea[area]) byArea[area] = 0;
+      byArea[area] += Number(r.amount) || 0;
+    });
+    const topAreas = Object.entries(byArea)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+    if (!topAreas.length) {
+      el.innerHTML = '';
+      return;
+    }
+    el.innerHTML = `
+      <p class="revenue-area-brief-title">エリア別売上（今月）</p>
+      <ul class="revenue-area-brief-list">${topAreas.map(([area, total]) =>
+        `<li>${esc(area)}：${esc(RevenueBrain.formatYen(total))}</li>`
+      ).join('')}</ul>
+      ${unknownCount ? `<p class="revenue-area-brief-warn">エリア不明の売上：${unknownCount}件</p>` : ''}
+      <button type="button" class="btn btn-sm btn-secondary" id="btn-revenue-go-area">エリア番頭を開く</button>`;
+    const btn = el.querySelector('#btn-revenue-go-area');
+    if (btn) btn.addEventListener('click', goToAreaView);
   }
 
   function renderRevenueSummaryPanel() {
@@ -7827,6 +8268,7 @@
       fillRevenueLeadSelect(leadEl ? leadEl.value : '');
       toggleRevenueLeadOptions();
       safeRenderSection('revenue-summary', () => renderRevenueSummaryPanel(), '売上サマリー');
+      safeRenderSection(null, () => renderRevenueAreaBrief(), '売上エリア');
       safeRenderSection('revenue-tbody', () => renderRevenueList(), '売上一覧');
     } catch (err) {
       console.error('[Budil] render error: 売上番頭', err);

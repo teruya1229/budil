@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v3.4</small>
+          <small>AI経営脳みそ v3.5</small>
         </div>
       </div>
       <nav class="nav">
@@ -35,6 +35,9 @@
         <button class="nav-item" data-view="reception">
           <span class="nav-icon">📞</span>受付・予約番頭
         </button>
+        <button class="nav-item" data-view="area">
+          <span class="nav-icon">🗺️</span>エリア番頭
+        </button>
         <button class="nav-item" data-view="revenue">
           <span class="nav-icon">💰</span>売上番頭
         </button>
@@ -49,7 +52,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v3.4</small>
+        <small>Budil v3.5</small>
       </div>
     </aside>
 
@@ -64,7 +67,7 @@
         <div id="executive-home" class="card card-wide card-executive-home">
           <div class="exec-home-header">
             <h2>経営番頭ホーム</h2>
-            <span class="exec-home-version">v3.4</span>
+            <span class="exec-home-version">v3.5</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <div id="exec-home-quick-actions" class="exec-home-quick-actions"></div>
@@ -284,6 +287,10 @@
             <div class="morning-section">
               <h3>注意・保留</h3>
               <ul id="mgmt-exec-warnings" class="caution-list"></ul>
+            </div>
+            <div class="morning-section">
+              <h3>エリア注意</h3>
+              <div id="mgmt-area-warnings" class="mgmt-area-warnings-block"></div>
             </div>
             <div class="morning-section">
               <h3>受付・予約</h3>
@@ -849,18 +856,36 @@
             <form id="lead-form">
               <input type="hidden" id="lead-edit-id">
               <input type="hidden" id="lead-sales-preset" value="">
-              <div class="form-row form-row-3">
+              <div class="form-row form-row-2">
                 <div class="form-group">
                   <label for="lead-company">会社名 *</label>
                   <input type="text" id="lead-company" required>
                 </div>
                 <div class="form-group">
-                  <label for="lead-region">地域</label>
+                  <label for="lead-industry">業種</label>
+                  <input type="text" id="lead-industry" placeholder="例: 建設業">
+                </div>
+              </div>
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="lead-region">地域・住所</label>
                   <input type="text" id="lead-region" placeholder="例: 沖縄県那覇市">
                 </div>
                 <div class="form-group">
-                  <label for="lead-industry">業種</label>
-                  <input type="text" id="lead-industry" placeholder="例: 建設業">
+                  <label for="lead-address">住所（詳細）</label>
+                  <input type="text" id="lead-address" placeholder="例: 沖縄県南城市字〇〇">
+                </div>
+              </div>
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="lead-area">エリア</label>
+                  <select id="lead-area">
+                    <option value="">住所から自動推定</option>
+                  </select>
+                </div>
+                <div class="form-group form-group-map-actions">
+                  <label>地図</label>
+                  <div id="lead-map-actions" class="map-actions-row"></div>
                 </div>
               </div>
               <div class="form-row">
@@ -1054,6 +1079,7 @@
               <div class="sales-detail-info">
                 <p id="sales-detail-contact"></p>
                 <p id="sales-detail-links"></p>
+                <div id="sales-detail-map-area" class="sales-detail-map-area"></div>
                 <p id="sales-detail-memo" class="sales-detail-memo"></p>
               </div>
             </div>
@@ -1300,10 +1326,19 @@
               <label for="reception-memo">受付メモ</label>
               <textarea id="reception-memo" rows="2" placeholder="型番未確認など"></textarea>
             </div>
-            <div class="form-group">
-              <label for="reception-handling">対応状況</label>
-              <input type="text" id="reception-handling" placeholder="例：日程調整中">
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="reception-area">エリア</label>
+                <select id="reception-area">
+                  <option value="">住所から自動推定</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="reception-handling">対応状況</label>
+                <input type="text" id="reception-handling" placeholder="例：日程調整中">
+              </div>
             </div>
+            <div id="reception-form-map-actions" class="map-actions-row"></div>
             <div class="pickup-form-actions">
               <button type="submit" class="btn btn-primary">保存</button>
               <button type="button" id="btn-reception-clear" class="btn btn-secondary btn-sm">クリア</button>
@@ -1314,6 +1349,44 @@
         <div class="card card-wide">
           <h2>受付一覧</h2>
           <div id="reception-saved-list" class="reception-saved-list"></div>
+        </div>
+      </section>
+
+      <!-- エリア番頭 -->
+      <section id="view-area" class="view">
+        <header class="view-header">
+          <h1>エリア番頭</h1>
+          <p class="view-subtitle">エリア別の営業先・受付・売上を把握し、移動効率を確認する</p>
+        </header>
+
+        <div class="card card-wide card-area-comment">
+          <h2>エリア番頭コメント</h2>
+          <div id="area-today-summary" class="area-today-summary"></div>
+        </div>
+
+        <div class="card card-wide card-area-warnings">
+          <h2>遠方案件・住所未入力</h2>
+          <div id="area-warnings-list" class="area-warnings-list"></div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>エリア別サマリー</h2>
+          <div id="area-summary-list" class="area-summary-list"></div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>エリア別売上</h2>
+          <div id="area-revenue-list" class="area-revenue-list"></div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>エリア別営業先</h2>
+          <div id="area-leads-list" class="area-leads-list"></div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>エリア別受付</h2>
+          <div id="area-intakes-list" class="area-intakes-list"></div>
         </div>
       </section>
 
@@ -1338,6 +1411,7 @@
           <h2>今月サマリー</h2>
           <div id="revenue-summary" class="revenue-summary-grid"></div>
           <p id="revenue-bantou-comment" class="revenue-bantou-comment"></p>
+          <div id="revenue-area-brief" class="revenue-area-brief"></div>
         </div>
 
         <div class="card card-wide">
@@ -1936,6 +2010,8 @@
     </main>
   </div>
 
+  <div id="app-toast" class="app-toast" aria-live="polite"></div>
+
   <script src="js/storage.js"></script>
   <script src="js/messages.js"></script>
   <script src="js/demand-brain.js"></script>
@@ -1944,6 +2020,7 @@
   <script src="js/management-brain.js"></script>
   <script src="js/revenue-brain.js"></script>
   <script src="js/reception-brain.js"></script>
+  <script src="js/map-brain.js"></script>
   <script src="js/card-ocr.js"></script>
   <script src="js/data-backup.js"></script>
   <script src="js/app.js"></script>

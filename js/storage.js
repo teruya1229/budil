@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v3.4',
+  BUDIL_VERSION: 'v3.5',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -890,6 +890,17 @@ const Storage = {
       add('ok', '受付データ 0件');
     }
 
+    if (typeof MapBrain !== 'undefined') {
+      const mapDiag = MapBrain.getDiagnosticsCounts(leads, intakes, revenues);
+      if (mapDiag.leadsNoAddress) add('caution', `住所未入力の営業先 ${mapDiag.leadsNoAddress}件`);
+      if (mapDiag.intakesNoAddress) add('caution', `住所未入力の受付 ${mapDiag.intakesNoAddress}件`);
+      if (mapDiag.leadsUnknownArea) add('caution', `エリア不明の営業先 ${mapDiag.leadsUnknownArea}件`);
+      if (mapDiag.intakesUnknownArea) add('caution', `エリア不明の受付 ${mapDiag.intakesUnknownArea}件`);
+      if (mapDiag.revenueNoAreaWithLead) {
+        add('caution', `営業先紐付き売上で住所/エリアなし ${mapDiag.revenueNoAreaWithLead}件`);
+      }
+    }
+
     if (!levels.critical.length) {
       add('critical', '読み込みできないlocalStorageデータはありません');
     }
@@ -1127,11 +1138,20 @@ const Storage = {
       'demo_lead_' + this.generateId()
     ];
     const leadNames = ['デモ：南部マンション管理組合', 'デモ：読谷の飲食店', 'デモ：豊見城の個人宅'];
+    const leadAddresses = [
+      '沖縄県南城市玉城字某某',
+      '沖縄県読谷村座喜味',
+      '沖縄県沖縄市泡瀬'
+    ];
+    const leadAreas = ['南城市', '読谷村', '沖縄市'];
     const leads = this.getLeads();
     leadIds.forEach((id, i) => {
       leads.push({
         id,
         company: leadNames[i],
+        address: leadAddresses[i],
+        area: leadAreas[i],
+        region: leadAddresses[i],
         ...flag,
         createdAt: now,
         salesStatus: i === 0 ? '成約' : (i === 1 ? '見積り・提案中' : '初回連絡済み'),
@@ -1290,6 +1310,7 @@ const Storage = {
         customerName: 'デモ：山田様',
         phone: '090-0000-0000',
         address: '沖縄県南城市〇〇',
+        area: '南城市',
         serviceText: 'お掃除機能付きエアコン1台、完全分解希望',
         preferredDatesText: '6/20午前、6/22午後',
         memo: '型番未確認。写真をLINEでもらう必要あり。',
@@ -1301,7 +1322,8 @@ const Storage = {
         source: 'LINE',
         customerName: 'デモ：佐藤様',
         phone: '080-1111-2222',
-        address: '沖縄県豊見城市',
+        address: '沖縄県八重瀬町',
+        area: '八重瀬町',
         serviceText: '縦型洗濯機クリーニング',
         preferredDatesText: '来週平日午前',
         memo: 'デモ用受付データ',
