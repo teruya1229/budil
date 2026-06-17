@@ -274,6 +274,8 @@
     renderDashTodayExecutionPlan();
     renderDashImprovementHints();
     renderDashWeeklyPerformance();
+    renderDashWeeklyFocus();
+    renderDashStopImprove();
     renderWeeklyStrategyBoard();
     renderActionCalendar();
     renderDailyActionTasks();
@@ -1817,6 +1819,15 @@
         : '';
     }
 
+    const focusTodayEl = document.getElementById('mgmt-focus-today');
+    if (focusTodayEl) {
+      const ctx = getPerformanceContext();
+      const focusLines = DemandBrain.buildMorningFocusLines(ctx.pickups, ctx.revenues, ctx.leads, 3);
+      focusTodayEl.innerHTML = focusLines.length
+        ? `<p class="mgmt-focus-label">今週の集中先：</p><ul class="mgmt-focus-list">${focusLines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '';
+    }
+
     const weeklyTodayEl = document.getElementById('mgmt-weekly-strategy');
     if (weeklyTodayEl) {
       const strategy = getWeeklyStrategy();
@@ -2924,6 +2935,7 @@
     Storage.updateDemandPickup(id, updates);
     renderPickupExecutionManagement();
     renderPickupPerformanceSections();
+    renderPickupDecisionSections();
     renderPickupInsightsSections();
     renderPickupSavedList();
     renderDashTodayExecutionPlan();
@@ -2952,7 +2964,17 @@
         ? `<p class="mgmt-performance-label">施策成果：</p><ul class="mgmt-performance-list">${perfLines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
         : '';
     }
+    const focusTodayEl = document.getElementById('mgmt-focus-today');
+    if (focusTodayEl) {
+      const ctx = getPerformanceContext();
+      const focusLines = DemandBrain.buildMorningFocusLines(ctx.pickups, ctx.revenues, ctx.leads, 3);
+      focusTodayEl.innerHTML = focusLines.length
+        ? `<p class="mgmt-focus-label">今週の集中先：</p><ul class="mgmt-focus-list">${focusLines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '';
+    }
     renderDashWeeklyPerformance();
+    renderDashWeeklyFocus();
+    renderDashStopImprove();
     renderWeeklyStrategyBoard();
   }
 
@@ -3155,6 +3177,172 @@
     renderPickupPerformanceRanking();
     renderPickupRevenueLinked();
     renderPickupPerformanceImprove();
+  }
+
+  function decisionJudgmentClassName(decision) {
+    if (decision === 'grow') return 'decision-judgment-grow';
+    if (decision === 'continue') return 'decision-judgment-continue';
+    if (decision === 'improve') return 'decision-judgment-improve';
+    if (decision === 'stop') return 'decision-judgment-stop';
+    return 'decision-judgment-watch';
+  }
+
+  function formatDecisionSalesText(item) {
+    const total = item.totalSalesAmount || 0;
+    if (total > 0) return RevenueBrain.formatYen(total);
+    const m = item.metrics || {};
+    if (m.salesAmount) return RevenueBrain.formatYen(m.salesAmount);
+    return '—';
+  }
+
+  function isDecisionTaskDuplicate(date, topic, type, decisionLabel, title) {
+    const key = DemandBrain.buildDecisionTaskDedupeKey(date, topic, type, decisionLabel, title);
+    return Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === key);
+  }
+
+  function addDecisionTask(pickupId, type) {
+    const pickup = getPickupRawById(pickupId);
+    if (!pickup) return;
+    const ctx = getPerformanceContext();
+    const decision = DemandBrain.evaluateActionDecision(pickup, type, ctx.revenues, ctx.leads);
+    const task = DemandBrain.createDecisionTaskPayload(decision);
+    if (!task) {
+      alert('この判断からはタスクを作成できません');
+      return;
+    }
+    const date = TODAY();
+    const key = DemandBrain.buildDecisionTaskDedupeKey(date, task.topic, type, task.decisionLabel, task.title);
+    if (isDecisionTaskDuplicate(date, task.topic, type, task.decisionLabel, task.title)) {
+      alert('すでに今日やることに追加済みです');
+      return;
+    }
+    Storage.addManualDailyTask({
+      title: task.title,
+      targetName: '—',
+      priority: task.priority,
+      action: task.reason,
+      memo: task.reason,
+      dueDate: date,
+      status: 'open',
+      reason: task.reason,
+      pickupDedupeKey: key,
+      pickupTopic: task.topic,
+      pickupActionType: 'decision-' + decision.decision + '-' + type
+    });
+    renderDailyActionTasks();
+    renderMorningDailyTasksBrief();
+    renderMorningReport();
+    renderDashWeeklyFocus();
+    renderDashStopImprove();
+    renderPickupDecisionSections();
+    renderPickupSavedList();
+    alert('今日やることに追加しました。');
+  }
+
+  function bindPickupDecisionEvents(container) {
+    if (!container) return;
+    container.querySelectorAll('[data-decision-task]').forEach(btn => {
+      btn.addEventListener('click', () => addDecisionTask(btn.dataset.decisionTask, btn.dataset.decisionType));
+    });
+  }
+
+  function renderPickupDecisionList() {
+    const el = document.getElementById('pickup-decision-list');
+    if (!el) return;
+    const ctx = getPerformanceContext();
+    const insights = DemandBrain.getActionDecisionInsights(ctx.pickups, ctx.revenues, ctx.leads, ctx.today);
+    if (!insights.total) {
+      el.innerHTML = '<p class="placeholder-text">施策判断はまだありません。<br>投稿・LINE・広告の成果を入力すると、「増やす / 続ける / 改善 / 停止候補」が表示されます。</p>';
+      return;
+    }
+    el.innerHTML = insights.entries.map(item => `
+      <div class="pickup-decision-item ${decisionJudgmentClassName(item.decision)}">
+        <div class="pickup-decision-header">
+          <strong>${esc(item.topic)}</strong>
+          <span class="pickup-decision-channel">${esc(item.channelLabel)}</span>
+          <span class="pickup-decision-label ${decisionJudgmentClassName(item.decision)}">${esc(item.decisionLabel)}</span>
+          <span class="pickup-decision-score">スコア ${item.focusScore}</span>
+        </div>
+        <p class="pickup-decision-meta">関連サービス：${esc((item.relatedServices || []).join('、') || '—')}</p>
+        <p class="pickup-decision-meta">成果：${esc(item.performanceSummary)}</p>
+        <p class="pickup-decision-meta">売上：${esc(formatDecisionSalesText(item))}</p>
+        <p class="pickup-decision-reason"><span class="reflection-label">理由</span>${esc(item.reason)}</p>
+        <p class="pickup-decision-next"><span class="reflection-label">次の一手</span>${esc(item.nextStep)}</p>
+        ${['grow', 'improve', 'stop', 'continue'].includes(item.decision) ? `
+        <div class="pickup-decision-actions">
+          <button type="button" class="btn btn-sm btn-primary" data-decision-task="${esc(item.pickupId)}" data-decision-type="${esc(item.type)}">今日やることに追加</button>
+        </div>` : ''}
+      </div>`).join('');
+    bindPickupDecisionEvents(el);
+  }
+
+  function renderPickupServiceFocus() {
+    const el = document.getElementById('pickup-service-focus');
+    if (!el) return;
+    const ctx = getPerformanceContext();
+    const services = DemandBrain.getServiceFocusInsights(ctx.pickups, ctx.revenues, ctx.leads);
+    if (!services.length) {
+      el.innerHTML = '<p class="placeholder-text">サービス別の勝ち筋はまだありません。施策成果を入力すると集計されます。</p>';
+      return;
+    }
+    el.innerHTML = services.map(s => `
+      <div class="pickup-service-focus-item ${decisionJudgmentClassName(s.decision)}">
+        <strong class="pickup-service-focus-name">${esc(s.service)}</strong>
+        <span class="pickup-decision-label ${decisionJudgmentClassName(s.decision)}">${esc(s.decisionLabel)}</span>
+        <p class="pickup-decision-meta">施策数：${s.actionCount} / LINE相談：${s.lineInquiries}件 / 予約：${s.reservations}件</p>
+        <p class="pickup-decision-meta">売上：${esc(s.salesAmount ? RevenueBrain.formatYen(s.salesAmount) : '—')}</p>
+        <p class="pickup-decision-next">次：${esc(s.nextStep)}</p>
+      </div>`).join('');
+  }
+
+  function renderPickupDecisionSections() {
+    renderPickupDecisionList();
+    renderPickupServiceFocus();
+  }
+
+  function renderDashWeeklyFocus() {
+    const el = document.getElementById('dash-weekly-focus');
+    if (!el) return;
+    const ctx = getPerformanceContext();
+    const recs = DemandBrain.getFocusRecommendations(ctx.pickups, ctx.revenues, ctx.leads, 3, ctx.today);
+    if (!recs.length) {
+      el.innerHTML = '<p class="placeholder-text">投稿・広告の成果を入力すると、今週の集中先が表示されます。</p>';
+      return;
+    }
+    el.innerHTML = recs.map((item, i) => {
+      const svc = (item.relatedServices || [])[0] || '';
+      const svcPart = svc ? ` × ${svc}` : '';
+      return `
+      <div class="dash-focus-item">
+        <span class="dash-focus-rank">${i + 1}</span>
+        <div class="dash-focus-body">
+          <strong>${esc(item.topic)}${esc(svcPart)}</strong>
+          <p class="dash-focus-meta">判断：<span class="pickup-decision-label ${decisionJudgmentClassName(item.decision)}">${esc(item.decisionLabel)}</span> / スコア ${item.focusScore}</p>
+          <p class="dash-focus-meta">理由：${esc(item.reason)}</p>
+          <p class="dash-focus-next">次：${esc(item.nextStep)}</p>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderDashStopImprove() {
+    const el = document.getElementById('dash-stop-improve');
+    if (!el) return;
+    const ctx = getPerformanceContext();
+    const candidates = DemandBrain.getStopOrImproveCandidates(ctx.pickups, ctx.revenues, ctx.leads);
+    if (!candidates.length) {
+      el.innerHTML = '<p class="placeholder-text">改善・停止候補はまだありません。</p>';
+      return;
+    }
+    el.innerHTML = candidates.slice(0, 5).map(c => `
+      <div class="dash-stop-improve-item ${decisionJudgmentClassName(c.decision)}">
+        <strong>${esc(c.topic)} ${c.type === 'ad' ? esc(c.channelLabel) : esc(c.shortLabel)}</strong>
+        <p class="dash-focus-meta">判断：<span class="pickup-decision-label ${decisionJudgmentClassName(c.decision)}">${esc(c.decisionLabel)}</span></p>
+        <p class="dash-focus-meta">理由：${esc(c.reason)}</p>
+        <p class="dash-focus-next">次：${esc(c.nextStep)}</p>
+        <button type="button" class="btn btn-sm btn-secondary" data-decision-task="${esc(c.pickupId)}" data-decision-type="${esc(c.type)}">今日やることに追加</button>
+      </div>`).join('');
+    bindPickupDecisionEvents(el);
   }
 
   function renderDashWeeklyPerformance() {
@@ -3432,7 +3620,7 @@
         </div>`
       : '';
 
-    const improveHtml = (strategy.improvementCandidates || []).length || (strategy.performanceImprovements || []).length
+    const improveHtml = (strategy.improvementCandidates || []).length || (strategy.performanceImprovements || []).length || (strategy.stopOrImproveCandidates || []).length
       ? `<div class="weekly-strategy-block weekly-strategy-sub">
           <h3>改善が必要なもの</h3>
           <ul class="weekly-strategy-bullets">${[
@@ -3441,8 +3629,20 @@
             ),
             ...(strategy.performanceImprovements || []).slice(0, 2).map(c =>
               `<li>・${esc(c.topic)}（${esc(c.shortLabel)}）— ${esc(c.resultSummary || '改善必要')}</li>`
+            ),
+            ...(strategy.stopOrImproveCandidates || []).filter(c => c.decision === 'improve').slice(0, 2).map(c =>
+              `<li>・${esc(c.topic)}（${esc(c.shortLabel)}）— ${esc(c.decisionLabel)}：${esc(c.reason.split('。')[0])}</li>`
             )
           ].join('')}</ul>
+        </div>`
+      : '';
+
+    const skipHtml = (strategy.stopOrImproveCandidates || []).filter(c => c.decision === 'stop').length
+      ? `<div class="weekly-strategy-block weekly-strategy-sub">
+          <h3>今週やらない候補</h3>
+          <ul class="weekly-strategy-bullets">${strategy.stopOrImproveCandidates.filter(c => c.decision === 'stop').slice(0, 3).map(c =>
+            `<li>・${esc(c.topic)}（${esc(c.shortLabel)}）— ${esc(c.reason.split('。')[0])}</li>`
+          ).join('')}</ul>
         </div>`
       : '';
 
@@ -3474,6 +3674,7 @@
         ${salesHtml}
         ${winningHtml}
         ${improveHtml}
+        ${skipHtml}
       </div>
       ${tasksHtml}`;
 
@@ -4103,6 +4304,7 @@
 
   function renderDemandPickup() {
     renderPickupTodaySummary();
+    renderPickupDecisionSections();
     renderPickupPerformanceSections();
     renderPickupInsightsSections();
     renderPickupMorningTop3();

@@ -1324,10 +1324,14 @@ ${ctx.postTitle ? '今月の注目：' + ctx.postTitle : ''}`;
 
     filtered.forEach(raw => {
       this.EXECUTION_TYPES.forEach(type => {
-        const evalResult = this.evaluatePerformanceResult(raw, type, [], []);
-        if (evalResult.judgment === 'has_result') {
+        const evalResult = this.evaluateActionDecision(raw, type, [], []);
+        if (evalResult.decision === 'grow') {
           (evalResult.relatedServices || []).forEach(svc => {
-            addScore(svc, 4, `「${evalResult.topic}」で成果あり`);
+            addScore(svc, 5, `「${evalResult.topic}」で増やす判断`);
+          });
+        } else if (evalResult.decision === 'continue') {
+          (evalResult.relatedServices || []).forEach(svc => {
+            addScore(svc, 2, `「${evalResult.topic}」で継続判断`);
           });
         }
       });
@@ -1393,6 +1397,15 @@ ${ctx.postTitle ? '今月の注目：' + ctx.postTitle : ''}`;
         addPlan(`${label}を${isReel ? 2 : 1}本`, isReel ? 2 : 1, e.topic, isReel ? 'reel' : 'instagram');
       });
 
+    this.getFocusRecommendations(filtered, [], [], 5).forEach(f => {
+      if (f.decision === 'grow' && (f.type === 'reel' || f.type === 'instagram')) {
+        const isReel = f.type === 'reel';
+        addPlan(`${f.topic}の${isReel ? '続編リール' : '続編投稿'}を${isReel ? 2 : 1}本（増やす）`, isReel ? 2 : 1, f.topic, isReel ? 'reel' : 'instagram');
+      } else if (f.decision === 'continue' && (f.type === 'reel' || f.type === 'instagram')) {
+        addPlan(`${f.topic}の投稿を継続（続ける）`, 1, f.topic, f.type === 'reel' ? 'reel' : 'instagram');
+      }
+    });
+
     filtered.forEach(raw => {
       const p = this.normalizePickup(raw);
       if (p.status === 'ignored' || p.status === 'archived') return;
@@ -1440,6 +1453,18 @@ ${ctx.postTitle ? '今月の注目：' + ctx.postTitle : ''}`;
       .filter(c => c.type === 'ad')
       .forEach(c => {
         addPlan(`${c.topic}の広告はCTAを確認（成果未達）`, c.topic, 'cta-check');
+      });
+
+    this.getStopOrImproveCandidates(filtered, [], [])
+      .filter(c => c.type === 'ad' && c.decision === 'improve')
+      .forEach(c => {
+        addPlan(`${c.topic}の広告はCTA改善（施策判断）`, c.topic, 'cta-check');
+      });
+
+    this.getStopOrImproveCandidates(filtered, [], [])
+      .filter(c => c.decision === 'stop')
+      .forEach(c => {
+        addPlan(`【今週やらない】${c.topic}の${c.shortLabel}`, c.topic, 'skip');
       });
 
     filtered.forEach(raw => {
@@ -1600,7 +1625,22 @@ ${ctx.postTitle ? '今月の注目：' + ctx.postTitle : ''}`;
       lines.push(`${perfImprove.topic}の${perfImprove.type === 'ad' ? '広告' : '施策'}は改善候補です。`);
     }
 
-    return lines.slice(0, 4);
+    const topFocus = (strategy.focusRecommendations || [])[0];
+    if (topFocus) {
+      lines.push(`${topFocus.topic}は${topFocus.decisionLabel}判断。${topFocus.reason.split('。')[0]}。`);
+    }
+
+    const stopCand = (strategy.stopOrImproveCandidates || []).find(c => c.decision === 'stop');
+    if (stopCand) {
+      lines.push(`${stopCand.topic}は停止候補。今週は優先度を下げましょう。`);
+    }
+
+    const growServices = (strategy.serviceFocusInsights || []).filter(s => s.decision === 'grow');
+    if (growServices.length) {
+      lines.push(`${growServices[0].service}は勝ち筋。${growServices[0].nextStep}`);
+    }
+
+    return lines.slice(0, 5);
   },
 
   buildMorningWeeklyLines(strategy, max) {
@@ -1641,6 +1681,10 @@ ${ctx.postTitle ? '今月の注目：' + ctx.postTitle : ''}`;
     const revenueLinked = this.getRevenueLinkedActions(filtered, records, context.leads || []);
     const performanceImprovements = this.getPerformanceImprovementCandidates(filtered, records, context.leads || []);
     const performanceSummary = this.getWeeklyPerformanceSummary(pickups, today, records, context.leads || []);
+    const decisionInsights = this.getActionDecisionInsights(filtered, records, context.leads || [], today);
+    const focusRecommendations = this.getFocusRecommendations(filtered, records, context.leads || [], 3, today);
+    const stopOrImproveCandidates = this.getStopOrImproveCandidates(filtered, records, context.leads || []);
+    const serviceFocusInsights = this.getServiceFocusInsights(filtered, records, context.leads || []);
 
     const strategy = {
       period,
@@ -1655,9 +1699,13 @@ ${ctx.postTitle ? '今月の注目：' + ctx.postTitle : ''}`;
       revenueLinked,
       performanceImprovements,
       performanceSummary,
+      decisionInsights,
+      focusRecommendations,
+      stopOrImproveCandidates,
+      serviceFocusInsights,
       hasData: !!(serviceFocus.length || postPlan.length || adPlan.length ||
         winningPatterns.length || improvementCandidates.length || filtered.length ||
-        performanceRanking.length || revenueLinked.length)
+        performanceRanking.length || revenueLinked.length || decisionInsights.total)
     };
 
     strategy.comment = this.buildWeeklyStrategyComment(strategy);
@@ -2177,5 +2225,332 @@ ${ctx.postTitle ? '今月の注目：' + ctx.postTitle : ''}`;
     if (m.reservations) parts.push(`予約${m.reservations}`);
     if (m.salesAmount) parts.push(`${m.salesAmount.toLocaleString('ja-JP')}円`);
     return parts.length ? parts.join(' / ') : '—';
+  },
+
+  DECISION_GROW_KEYWORDS: ['予約', '売上', '問い合わせ複数', '反応良い'],
+  DECISION_CONTINUE_KEYWORDS: ['反応あり', '保存', 'クリック'],
+  DECISION_IMPROVE_KEYWORDS: ['問い合わせなし', '予約なし'],
+  DECISION_STOP_KEYWORDS: ['反応なし', 'クリックなし', '高い', 'CPA悪い', '反応薄い'],
+
+  calculateFocusScore(perf, decision) {
+    const m = (perf && perf.metrics) || {};
+    let score = 0;
+    const totalSales = perf.totalSalesAmount || m.salesAmount || 0;
+    if (totalSales > 0) score += 5;
+    if ((perf.relatedRevenueIds || []).length > 0) score += 5;
+    if ((m.reservations || 0) >= 1) score += 4;
+    if ((m.lineInquiries || 0) >= 1) score += 3;
+    if ((m.clicks || 0) >= 1) score += 1;
+    if ((m.reactions || 0) >= 1) score += 1;
+    if (perf.judgment === 'needs_improvement' || decision === 'improve') score -= 1;
+    if (decision === 'stop') score -= 3;
+    return score;
+  },
+
+  _buildGrowReason(perf) {
+    const m = perf.metrics || {};
+    const parts = [];
+    if ((m.lineInquiries || 0) >= 1) parts.push(`LINE相談${m.lineInquiries}件`);
+    if ((m.reservations || 0) >= 1) parts.push(`予約${m.reservations}件`);
+    if ((perf.totalSalesAmount || 0) > 0) parts.push(`売上${(perf.totalSalesAmount || 0).toLocaleString('ja-JP')}円`);
+    if ((perf.relatedRevenueIds || []).length > 0 && !parts.some(p => p.includes('売上'))) {
+      parts.push('関連売上あり');
+    }
+    const detail = parts.length ? parts.join('、') + 'につながっています。' : '成果が出ています。';
+    return `${detail}同じテーマで続編を作る価値があります。`;
+  },
+
+  _buildGrowNextStep(perf) {
+    if (perf.nextImproveMemo) return perf.nextImproveMemo;
+    if (perf.type === 'reel') return '実写多めの続編リールを作る';
+    if (perf.type === 'ad') return '同テーマの広告を横展開する';
+    return '同じテーマで続編を作る';
+  },
+
+  evaluateActionDecision(pickup, type, revenues, leads) {
+    const perf = this.evaluatePerformanceResult(pickup, type, revenues, leads);
+    const m = perf.metrics || {};
+    const resultMemo = perf.resultMemo || '';
+    const hasRelatedRevenue = (perf.relatedRevenueIds || []).length > 0;
+    const totalSales = perf.totalSalesAmount || 0;
+
+    let decision = 'watch';
+    let decisionLabel = '様子見';
+    let reason = 'まだ判断材料が少ないです。反応メモを追加してください。';
+    let nextStep = perf.nextImproveMemo || perf.nextAction || '反応メモを追加する';
+
+    const isGrow = (m.reservations || 0) >= 1 ||
+      totalSales > 0 ||
+      hasRelatedRevenue ||
+      (m.lineInquiries || 0) >= 2 ||
+      this.DECISION_GROW_KEYWORDS.some(kw => resultMemo.includes(kw));
+
+    const isContinue = !isGrow && (
+      (m.lineInquiries || 0) >= 1 ||
+      (m.clicks || 0) > 0 ||
+      (m.reactions || 0) > 0 ||
+      this.DECISION_CONTINUE_KEYWORDS.some(kw => resultMemo.includes(kw)) ||
+      perf.judgment === 'has_reaction'
+    );
+
+    const isImprove = !isGrow && !isContinue && (
+      (((m.clicks || 0) > 0 || (m.views || 0) > 0 || (m.reactions || 0) > 0) && (m.lineInquiries || 0) === 0) ||
+      this.DECISION_IMPROVE_KEYWORDS.some(kw => resultMemo.includes(kw)) ||
+      perf.judgment === 'needs_improvement'
+    );
+
+    const isStop = !isGrow && !isContinue && !isImprove && (
+      (type === 'ad' && perf.hasInput && (m.clicks || 0) === 0 && (m.lineInquiries || 0) === 0) ||
+      this.DECISION_STOP_KEYWORDS.some(kw => resultMemo.includes(kw)) ||
+      (perf.isDone && perf.hasInput && !((m.views || 0) + (m.reactions || 0) + (m.clicks || 0) + (m.lineInquiries || 0)))
+    );
+
+    if (isGrow) {
+      decision = 'grow';
+      decisionLabel = '増やす';
+      reason = this._buildGrowReason(perf);
+      nextStep = this._buildGrowNextStep(perf);
+    } else if (isContinue) {
+      decision = 'continue';
+      decisionLabel = '続ける';
+      reason = '反応があります。CTAを少し強めて継続しましょう。';
+      nextStep = perf.nextImproveMemo || '写真相談への導線を強める';
+    } else if (isImprove) {
+      decision = 'improve';
+      decisionLabel = '改善';
+      const hasClicks = (m.clicks || 0) > 0;
+      reason = hasClicks
+        ? '見られてはいますが相談につながっていません。冒頭・CTA・LINE導線を見直しましょう。'
+        : '反応はあるものの予約・相談につながっていません。訴求とCTAを見直しましょう。';
+      nextStep = perf.nextImproveMemo || (type === 'ad' ? 'LP冒頭とLINE CTAを見直す' : '冒頭・CTA・LINE導線を見直す');
+    } else if (isStop) {
+      decision = 'stop';
+      decisionLabel = '停止候補';
+      reason = '反応が弱いです。今週は優先度を下げて別テーマを試しましょう。';
+      nextStep = perf.nextImproveMemo || '今週は別テーマを優先する';
+    } else if (!perf.hasInput && perf.isDone) {
+      decision = 'watch';
+      decisionLabel = '様子見';
+      reason = 'まだ判断材料が少ないです。反応メモを追加してください。';
+      nextStep = '数値成果または反応メモを入力する';
+    }
+
+    const focusScore = this.calculateFocusScore(perf, decision);
+    const performanceSummary = this.formatPerformanceMetricsSummary(m);
+
+    return {
+      ...perf,
+      decision,
+      decisionLabel,
+      reason,
+      nextStep,
+      focusScore,
+      performanceSummary
+    };
+  },
+
+  _collectDecisionEntries(pickups, revenues, leads, today) {
+    const entries = [];
+    (pickups || []).forEach(raw => {
+      this.EXECUTION_TYPES.forEach(type => {
+        const item = this.evaluateActionDecision(raw, type, revenues, leads);
+        const include = item.hasInput ||
+          item.isDone ||
+          item.decision === 'grow' ||
+          item.decision === 'improve' ||
+          item.decision === 'stop' ||
+          item.judgment === 'needs_improvement' ||
+          (item.totalSalesAmount || 0) > 0;
+        if (!include) return;
+        entries.push(item);
+      });
+    });
+    return entries.sort((a, b) => b.focusScore - a.focusScore);
+  },
+
+  getActionDecisionInsights(pickups, revenues, leads, today) {
+    const entries = this._collectDecisionEntries(pickups, revenues, leads, today);
+    const counts = { grow: 0, continue: 0, improve: 0, stop: 0, watch: 0 };
+    entries.forEach(e => { counts[e.decision] = (counts[e.decision] || 0) + 1; });
+    return { entries, counts, total: entries.length };
+  },
+
+  getFocusRecommendations(pickups, revenues, leads, max, today) {
+    const limit = max || 3;
+    const t = today || new Date().toISOString().slice(0, 10);
+    const start = this._addDays(t, -6);
+    return this._collectDecisionEntries(pickups, revenues, leads, today)
+      .filter(e => {
+        const d = (e.executedAt || '').slice(0, 10);
+        if (!d) return e.decision === 'grow' || e.decision === 'continue';
+        return d >= start && d <= t;
+      })
+      .filter(e => e.decision === 'grow' || e.decision === 'continue' || e.focusScore > 0)
+      .sort((a, b) => {
+        const order = { grow: 4, continue: 3, improve: 2, watch: 1, stop: 0 };
+        const d = (order[b.decision] || 0) - (order[a.decision] || 0);
+        if (d !== 0) return d;
+        return b.focusScore - a.focusScore;
+      })
+      .slice(0, limit);
+  },
+
+  getStopOrImproveCandidates(pickups, revenues, leads) {
+    return this._collectDecisionEntries(pickups, revenues, leads)
+      .filter(e => e.decision === 'improve' || e.decision === 'stop')
+      .sort((a, b) => {
+        if (a.decision === 'stop' && b.decision !== 'stop') return -1;
+        if (b.decision === 'stop' && a.decision !== 'stop') return 1;
+        return a.focusScore - b.focusScore;
+      });
+  },
+
+  getServiceFocusInsights(pickups, revenues, leads) {
+    const entries = this._collectDecisionEntries(pickups, revenues, leads);
+    const byService = {};
+
+    entries.forEach(e => {
+      const services = (e.relatedServices && e.relatedServices.length) ? e.relatedServices : ['その他'];
+      services.forEach(svc => {
+        if (!byService[svc]) {
+          byService[svc] = {
+            service: svc,
+            actionCount: 0,
+            lineInquiries: 0,
+            reservations: 0,
+            salesAmount: 0,
+            focusScore: 0,
+            decisions: []
+          };
+        }
+        const g = byService[svc];
+        g.actionCount++;
+        g.lineInquiries += e.metrics?.lineInquiries || 0;
+        g.reservations += e.metrics?.reservations || 0;
+        g.salesAmount += e.totalSalesAmount || e.metrics?.salesAmount || 0;
+        g.focusScore += e.focusScore;
+        g.decisions.push(e.decision);
+      });
+    });
+
+    const decisionFromCounts = decisions => {
+      if (decisions.includes('grow')) return 'grow';
+      if (decisions.includes('continue')) return 'continue';
+      if (decisions.includes('improve')) return 'improve';
+      if (decisions.filter(d => d === 'stop').length >= 2) return 'stop';
+      return 'watch';
+    };
+
+    const labelMap = {
+      grow: '増やす',
+      continue: '続ける',
+      improve: '改善',
+      stop: '停止候補',
+      watch: '様子見'
+    };
+
+    const nextMap = {
+      grow: svc => `${svc}の実写ビフォーアフターを増やす`,
+      continue: svc => `${svc}の写真相談導線を強める`,
+      improve: svc => `${svc}のCTA・LP導線を見直す`,
+      stop: () => '今週は別サービスを優先',
+      watch: svc => `${svc}の成果メモを追加する`
+    };
+
+    return Object.values(byService)
+      .map(g => {
+        const decision = decisionFromCounts(g.decisions);
+        return {
+          ...g,
+          decision,
+          decisionLabel: labelMap[decision] || '様子見',
+          nextStep: typeof nextMap[decision] === 'function' ? nextMap[decision](g.service) : nextMap.watch(g.service)
+        };
+      })
+      .sort((a, b) => b.focusScore - a.focusScore);
+  },
+
+  buildFocusComment(pickups, revenues, leads) {
+    const recs = this.getFocusRecommendations(pickups, revenues, leads, 3);
+    const stops = this.getStopOrImproveCandidates(pickups, revenues, leads).slice(0, 2);
+    const lines = [];
+    recs.forEach(r => {
+      const svc = (r.relatedServices || [])[0] || '';
+      const svcPart = svc ? `×${svc}` : '';
+      lines.push(`${r.topic}${svcPart}は${r.decisionLabel}`);
+    });
+    stops.forEach(s => {
+      if (s.decision === 'improve' && s.type === 'ad') {
+        lines.push(`${s.topic}広告はCTA改善`);
+      } else if (s.decision === 'stop') {
+        lines.push(`${s.topic}は今週優先度を下げる`);
+      }
+    });
+    return lines.slice(0, 4);
+  },
+
+  buildMorningFocusLines(pickups, revenues, leads, max) {
+    const limit = max || 3;
+    const comments = this.buildFocusComment(pickups, revenues, leads);
+    if (!comments.length) return [];
+    return comments.slice(0, limit).map(c => `・${c}`);
+  },
+
+  buildDecisionTaskDedupeKey(date, topic, type, decisionLabel, title) {
+    return [date, topic, type, decisionLabel, title].join('|');
+  },
+
+  createDecisionTaskPayload(decision) {
+    if (!decision) return null;
+    const topic = decision.topic || '';
+    const type = decision.type || '';
+    const meta = this.EXECUTION_META[type];
+    const short = meta ? meta.shortLabel : type;
+
+    if (decision.decision === 'grow') {
+      const suffix = type === 'reel' ? 'の続編リール' : (type === 'ad' ? 'の横展開' : 'の続編');
+      return {
+        title: `増やす：${topic}${suffix}`,
+        reason: '施策判断で売上・相談につながったため',
+        priority: '高',
+        decisionLabel: decision.decisionLabel,
+        topic,
+        type
+      };
+    }
+    if (decision.decision === 'improve') {
+      const title = type === 'ad'
+        ? `改善する：${topic}LP広告のCTA`
+        : `改善する：${topic}のCTA`;
+      return {
+        title,
+        reason: 'クリックあり・問い合わせなし',
+        priority: '中',
+        decisionLabel: decision.decisionLabel,
+        topic,
+        type
+      };
+    }
+    if (decision.decision === 'stop') {
+      return {
+        title: `見直す：${topic}${short}の優先度`,
+        reason: '反応が弱いため今週は優先度低め',
+        priority: '低',
+        decisionLabel: decision.decisionLabel,
+        topic,
+        type
+      };
+    }
+    if (decision.decision === 'continue') {
+      return {
+        title: `続ける：${topic} ${short}`,
+        reason: '施策判断で反応あり。継続して様子を見る',
+        priority: '中',
+        decisionLabel: decision.decisionLabel,
+        topic,
+        type
+      };
+    }
+    return null;
   }
 };

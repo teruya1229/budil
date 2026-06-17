@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v2.8</small>
+          <small>AI経営脳みそ v2.9</small>
         </div>
       </div>
       <nav class="nav">
@@ -46,7 +46,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v2.8</small>
+        <small>Budil v2.9</small>
       </div>
     </aside>
 
@@ -184,6 +184,16 @@
           <div id="dash-weekly-performance" class="dash-weekly-performance-block"></div>
         </div>
 
+        <div class="card card-wide card-weekly-focus">
+          <h2>今週の集中先</h2>
+          <div id="dash-weekly-focus" class="dash-weekly-focus-block"></div>
+        </div>
+
+        <div class="card card-wide card-stop-improve">
+          <h2>改善・停止候補</h2>
+          <div id="dash-stop-improve" class="dash-stop-improve-block"></div>
+        </div>
+
         <div class="card card-wide card-weekly-strategy">
           <h2>週間作戦ボード</h2>
           <div id="dash-weekly-strategy" class="dash-weekly-strategy-block"></div>
@@ -204,6 +214,7 @@
               <div id="mgmt-execution-today" class="mgmt-execution-today-block"></div>
               <div id="mgmt-improvement-today" class="mgmt-improvement-today-block"></div>
               <div id="mgmt-performance-today" class="mgmt-performance-today-block"></div>
+              <div id="mgmt-focus-today" class="mgmt-focus-today-block"></div>
               <div id="mgmt-weekly-strategy" class="mgmt-weekly-strategy-block"></div>
             </div>
             <div class="morning-section morning-section-hero">
@@ -424,6 +435,17 @@
           <div id="pickup-content-outputs" class="pickup-content-outputs">
             <p class="placeholder-text">需要を選んで「リール案を作る」などを押すと、ここに生成文案が表示されます。</p>
           </div>
+        </div>
+
+        <div class="card card-wide card-pickup-decision">
+          <h2>施策判断</h2>
+          <p class="pickup-paste-hint">施策成果から「増やす / 続ける / 改善 / 停止候補 / 様子見」を判定します。集中先スコアで優先順位の目安になります。</p>
+          <div id="pickup-decision-list" class="pickup-decision-list"></div>
+        </div>
+
+        <div class="card card-wide card-pickup-service-focus">
+          <h2>サービス別の勝ち筋</h2>
+          <div id="pickup-service-focus" class="pickup-service-focus-list"></div>
         </div>
 
         <div class="card card-wide card-pickup-performance">
@@ -1483,6 +1505,24 @@
             <button type="button" id="btn-create-test-data" class="btn btn-secondary">テストデータを作成</button>
             <button type="button" id="btn-delete-test-data" class="btn btn-secondary">テストデータを削除</button>
           </div>
+        </div>
+
+        <div class="card card-wide card-mvp-checklist">
+          <h2>v2.9 動作確認チェックリスト</h2>
+          <p class="data-mgmt-desc">施策判断・集中先スコアと既存機能の連携を確認してください。</p>
+          <ul class="mvp-checklist">
+            <li>需要番頭に「施策判断」が表示される</li>
+            <li>増やす / 続ける / 改善 / 停止候補 / 様子見 が出る</li>
+            <li>集中先スコアが表示される</li>
+            <li>ダッシュボードに「今週の集中先」が出る</li>
+            <li>改善・停止候補が表示される</li>
+            <li>サービス別の勝ち筋が表示される</li>
+            <li>判断結果から今日やることへ追加できる</li>
+            <li>重複タスクが増えない</li>
+            <li>朝レポートに今週の集中先が出る</li>
+            <li>週間作戦ボードに施策判断が反映される</li>
+            <li>v2.8施策成果が壊れていない</li>
+          </ul>
         </div>
 
         <div class="card card-wide card-mvp-checklist">

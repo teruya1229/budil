@@ -4443,3 +4443,136 @@ body {
   background: #fef3c7;
   color: #92400e;
 }
+
+/* v2.9 施策判断・集中先スコア */
+.card-weekly-focus,
+.card-stop-improve {
+  margin-bottom: 1rem;
+}
+
+.dash-focus-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-light, #eee);
+}
+
+.dash-focus-item:last-child {
+  border-bottom: none;
+}
+
+.dash-focus-rank {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--primary, #2563eb);
+  min-width: 1.5rem;
+}
+
+.dash-focus-meta,
+.dash-focus-next {
+  font-size: 0.85rem;
+  margin: 0.2rem 0;
+  line-height: 1.5;
+}
+
+.dash-stop-improve-item {
+  border: 1px solid var(--border-light, #eee);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  background: #fafafa;
+}
+
+.mgmt-focus-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0.25rem;
+  color: var(--text-muted, #555);
+}
+
+.mgmt-focus-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.pickup-decision-item,
+.pickup-service-focus-item {
+  border: 1px solid var(--border-light, #eee);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  background: #fafafa;
+}
+
+.pickup-decision-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.pickup-decision-channel {
+  font-size: 0.8rem;
+  color: var(--text-muted, #666);
+  background: #eee;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.pickup-decision-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.pickup-decision-score {
+  font-size: 0.75rem;
+  color: var(--text-muted, #666);
+  margin-left: auto;
+}
+
+.decision-judgment-grow {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.decision-judgment-continue {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.decision-judgment-improve {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.decision-judgment-stop {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.decision-judgment-watch {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.pickup-decision-meta,
+.pickup-decision-reason,
+.pickup-decision-next {
+  font-size: 0.85rem;
+  margin: 0.25rem 0;
+  line-height: 1.5;
+}
+
+.pickup-decision-actions {
+  margin-top: 0.5rem;
+}
+
+.pickup-service-focus-name {
+  margin-right: 0.5rem;
+}

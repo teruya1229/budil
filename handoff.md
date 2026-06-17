@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v2.9 公開済み（施策判断・集中先スコアMVP）
 - Budil v2.8 公開済み（施策成果・売上連携MVP）
 - Budil v2.7 公開済み（投稿・広告カレンダーMVP）
 - Budil v2.6 公開済み（週間作戦ボード）
@@ -51,6 +52,17 @@
 | `js/demand-brain.js` | 需要分析・需要ピックアップパース・トップ3・施策成果判定 |
 | `js/demand-radar.js` | 需要レーダー分析 |
 | `js/data-backup.js` | バックアップ・復元 |
+
+## v2.9で入ったもの
+
+- 需要番頭「施策判断」「サービス別の勝ち筋」
+- `DemandBrain.evaluateActionDecision` — 増やす/続ける/改善/停止候補/様子見 + focusScore
+- `getFocusRecommendations` / `getServiceFocusInsights` / `getStopOrImproveCandidates`
+- ダッシュボード「今週の集中先」「改善・停止候補」
+- 判断タスクの今日やること連携（`createDecisionTaskPayload`）
+- 朝レポート `mgmt-focus-today`
+- 週間作戦への判断反映（grow加点・skip候補）
+- 新規 localStorage キーなし（毎回計算）
 
 ## v2.8で入ったもの
 
