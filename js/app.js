@@ -271,6 +271,7 @@
     renderDashRevenueSummary();
     renderManagementComments();
     renderDashTodayExecutionPlan();
+    renderDashImprovementHints();
     renderDailyActionTasks();
     renderMorningDailyTasksBrief();
   }
@@ -1794,6 +1795,14 @@
         : '';
     }
 
+    const improveTodayEl = document.getElementById('mgmt-improvement-today');
+    if (improveTodayEl) {
+      const improveLines = DemandBrain.buildMorningImprovementLines(Storage.getDemandPickups(), 2);
+      improveTodayEl.innerHTML = improveLines.length
+        ? `<p class="mgmt-improvement-label">今日の改善：</p><ul class="mgmt-improvement-list">${improveLines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '';
+    }
+
     const postEl = document.getElementById('mgmt-post');
     postEl.innerHTML = `
       <p class="mgmt-highlight">${esc(report.todayPost.theme)}</p>
@@ -2829,8 +2838,10 @@
 
     Storage.updateDemandPickup(id, updates);
     renderPickupExecutionManagement();
+    renderPickupInsightsSections();
     renderPickupSavedList();
     renderDashTodayExecutionPlan();
+    renderDashImprovementHints();
     const execTodayEl = document.getElementById('mgmt-execution-today');
     if (execTodayEl) {
       const execLines = DemandBrain.buildMorningExecutionLines(Storage.getDemandPickups(), TODAY());
@@ -2838,10 +2849,185 @@
         ? `<p class="mgmt-execution-label">今日の投稿・広告：</p><ol class="mgmt-execution-list">${execLines.map(l => `<li>${esc(l)}</li>`).join('')}</ol>`
         : '';
     }
+    const improveTodayEl = document.getElementById('mgmt-improvement-today');
+    if (improveTodayEl) {
+      const improveLines = DemandBrain.buildMorningImprovementLines(Storage.getDemandPickups(), 2);
+      improveTodayEl.innerHTML = improveLines.length
+        ? `<p class="mgmt-improvement-label">今日の改善：</p><ul class="mgmt-improvement-list">${improveLines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '';
+    }
+  }
+
+  function getInsightBadgesForPickup(pickup) {
+    const badges = DemandBrain.buildExecutionSummary(pickup);
+    const topic = DemandBrain.normalizePickup(pickup).topic;
+    const hasImproveTask = Storage.getDailyActionTasksData().manualTasks.some(t =>
+      t.pickupTopic === topic && t.pickupActionType && /^improve-/.test(t.pickupActionType)
+    );
+    if (hasImproveTask && !badges.some(b => b.key === 'improve-task')) {
+      badges.push({ key: 'improve-task', label: '改善タスクあり', className: 'insight-badge-improve-task' });
+    }
+    return badges;
+  }
+
+  function isImprovementTaskDuplicate(date, topic, type, taskKind, title) {
+    const key = DemandBrain.buildImprovementTaskDedupeKey(date, topic, type, taskKind, title);
+    return Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === key);
+  }
+
+  function addImprovementTask(pickupId, type, judgment) {
+    const pickup = getPickupRawById(pickupId);
+    if (!pickup) return;
+    const task = DemandBrain.createImprovementTaskPayload(pickup, type, judgment);
+    if (!task) return;
+    const date = TODAY();
+    const key = DemandBrain.buildImprovementTaskDedupeKey(date, task.topic, type, task.taskKind, task.title);
+    if (isImprovementTaskDuplicate(date, task.topic, type, task.taskKind, task.title)) {
+      alert('すでに今日やることに追加済みです');
+      return;
+    }
+    Storage.addManualDailyTask({
+      title: task.title,
+      targetName: '—',
+      priority: task.priority,
+      action: task.reason,
+      memo: task.reason,
+      dueDate: date,
+      status: 'open',
+      reason: task.reason,
+      pickupDedupeKey: key,
+      pickupTopic: task.topic,
+      pickupActionType: 'improve-' + task.taskKind + '-' + type
+    });
+    renderDailyActionTasks();
+    renderMorningDailyTasksBrief();
+    renderMorningReport();
+    renderDashImprovementHints();
+    renderPickupInsightsSections();
+    renderPickupSavedList();
+    alert('今日やることに追加しました。');
+  }
+
+  function judgmentClassName(judgment) {
+    if (judgment === 'good') return 'reflection-judgment-good';
+    if (judgment === 'needs_improvement') return 'reflection-judgment-needs';
+    return 'reflection-judgment-neutral';
+  }
+
+  function renderPickupInsightsSummary() {
+    const el = document.getElementById('pickup-insights-summary');
+    if (!el) return;
+    const pickups = Storage.getDemandPickups();
+    const insights = DemandBrain.getExecutionInsights(pickups);
+    if (!insights.total) {
+      el.innerHTML = '<p class="placeholder-text">効果メモや実行済み記録がまだありません。投稿・広告アクション管理で効果を記録すると、ここに集計が表示されます。</p>';
+      return;
+    }
+    el.innerHTML = `
+      <div class="pickup-insights-stats">
+        <span class="insight-stat insight-stat-good">良い反応 <strong>${insights.goodCount}</strong>件</span>
+        <span class="insight-stat insight-stat-needs">改善必要 <strong>${insights.needsImprovementCount}</strong>件</span>
+        <span class="insight-stat insight-stat-memo">効果メモあり <strong>${insights.hasResultMemoCount}</strong>件</span>
+      </div>`;
+  }
+
+  function renderPickupReflectionList() {
+    const el = document.getElementById('pickup-reflection-list');
+    if (!el) return;
+    const items = DemandBrain.getReflectionItems(Storage.getDemandPickups());
+    if (!items.length) {
+      el.innerHTML = '<p class="placeholder-text">ふり返り対象はまだありません。実行済みにして効果メモを入力してください。</p>';
+      return;
+    }
+    el.innerHTML = items.map(item => `
+      <div class="pickup-reflection-item ${judgmentClassName(item.judgment)}">
+        <div class="pickup-reflection-header">
+          <strong>${esc(item.topic)}</strong>
+          <span class="pickup-reflection-channel">${esc(item.channelLabel)}</span>
+          <span class="pickup-reflection-judgment ${judgmentClassName(item.judgment)}">${esc(item.judgmentLabel)}</span>
+        </div>
+        <p class="pickup-reflection-meta">実行日：${esc(item.executedAt || '—')}</p>
+        ${item.resultMemo ? `<p class="pickup-reflection-memo"><span class="reflection-label">効果メモ</span>${esc(item.resultMemo)}</p>` : ''}
+        ${item.nextImproveMemo ? `<p class="pickup-reflection-memo"><span class="reflection-label">次回改善</span>${esc(item.nextImproveMemo)}</p>` : ''}
+        <p class="pickup-reflection-action"><span class="reflection-label">次回アクション</span>${esc(item.nextAction)}</p>
+        <div class="pickup-reflection-actions">
+          ${item.judgment === 'good' ? `<button type="button" class="btn btn-sm btn-primary" data-reflection-sequel="${esc(item.pickupId)}" data-reflection-type="${esc(item.type)}">続編タスクを追加</button>` : ''}
+          ${item.judgment === 'needs_improvement' ? `<button type="button" class="btn btn-sm btn-secondary" data-reflection-improve="${esc(item.pickupId)}" data-reflection-type="${esc(item.type)}">改善タスクを追加</button>` : ''}
+        </div>
+      </div>`).join('');
+    bindPickupReflectionEvents(el);
+  }
+
+  function renderPickupWinningList() {
+    const el = document.getElementById('pickup-winning-list');
+    if (!el) return;
+    const patterns = DemandBrain.getWinningPatterns(Storage.getDemandPickups());
+    if (!patterns.length) {
+      el.innerHTML = '<p class="placeholder-text">勝ちパターン候補はまだありません。効果メモに「反応あり」などを記録すると表示されます。</p>';
+      return;
+    }
+    el.innerHTML = patterns.map(p => `
+      <div class="pickup-winning-item">
+        <strong class="pickup-winning-topic">${esc(p.topic)}</strong>
+        <p class="pickup-winning-meta">関連：${esc(p.relatedServices.join(' / ') || '—')}</p>
+        <p class="pickup-winning-meta">良かった：${esc(p.channelLabel)}</p>
+        <p class="pickup-winning-meta">効果：${esc(p.resultMemo || '—')}</p>
+        <p class="pickup-winning-next">次：${esc(p.nextGrowPlan)}</p>
+        <button type="button" class="btn btn-sm btn-primary" data-reflection-sequel="${esc(p.pickupId)}" data-reflection-type="${esc(p.type)}">続編タスクを追加</button>
+      </div>`).join('');
+    bindPickupReflectionEvents(el);
+  }
+
+  function renderPickupImprovementList() {
+    const el = document.getElementById('pickup-improvement-list');
+    if (!el) return;
+    const candidates = DemandBrain.getImprovementCandidates(Storage.getDemandPickups());
+    if (!candidates.length) {
+      el.innerHTML = '<p class="placeholder-text">改善が必要な投稿・広告はまだありません。効果メモに「反応薄い」などを記録すると表示されます。</p>';
+      return;
+    }
+    el.innerHTML = candidates.map(c => `
+      <div class="pickup-improvement-item">
+        <strong class="pickup-improvement-topic">${esc(c.topic)}${c.type === 'ad' ? ' ' + esc(c.channelLabel) : ''}</strong>
+        <p class="pickup-improvement-meta">チャネル：${esc(c.channelLabel)}</p>
+        <p class="pickup-improvement-meta">効果：${esc(c.resultMemo || '—')}</p>
+        ${c.nextImproveMemo ? `<p class="pickup-improvement-meta">次回改善：${esc(c.nextImproveMemo)}</p>` : ''}
+        <p class="pickup-improvement-plan">改善：${esc(c.improvePlan)}</p>
+        <button type="button" class="btn btn-sm btn-primary" data-reflection-improve="${esc(c.pickupId)}" data-reflection-type="${esc(c.type)}">改善タスクを追加</button>
+      </div>`).join('');
+    bindPickupReflectionEvents(el);
+  }
+
+  function bindPickupReflectionEvents(container) {
+    if (!container) return;
+    container.querySelectorAll('[data-reflection-sequel]').forEach(btn => {
+      btn.addEventListener('click', () => addImprovementTask(btn.dataset.reflectionSequel, btn.dataset.reflectionType, 'good'));
+    });
+    container.querySelectorAll('[data-reflection-improve]').forEach(btn => {
+      btn.addEventListener('click', () => addImprovementTask(btn.dataset.reflectionImprove, btn.dataset.reflectionType, 'needs_improvement'));
+    });
+  }
+
+  function renderPickupInsightsSections() {
+    renderPickupInsightsSummary();
+    renderPickupReflectionList();
+    renderPickupWinningList();
+    renderPickupImprovementList();
+  }
+
+  function renderDashImprovementHints() {
+    const el = document.getElementById('dash-improvement-hints');
+    if (!el) return;
+    const hints = DemandBrain.buildImprovementHints(Storage.getDemandPickups(), 2);
+    if (!hints.length) {
+      el.innerHTML = '<p class="placeholder-text">効果メモを入れると、ここに改善ヒントが出ます。</p>';
+      return;
+    }
+    el.innerHTML = `<ul class="dash-improvement-hints-list">${hints.map(h => `<li>${esc(h.text)}</li>`).join('')}</ul>`;
   }
 
   function renderExecutionBadgesHtml(pickup) {
-    const badges = DemandBrain.buildExecutionSummary(pickup);
+    const badges = getInsightBadgesForPickup(pickup);
     if (!badges.length) return '';
     return `<div class="pickup-exec-badges">${badges.map(b =>
       `<span class="pickup-exec-badge ${b.className}">${esc(b.label)}</span>`
@@ -3144,6 +3330,7 @@
 
   function renderDemandPickup() {
     renderPickupTodaySummary();
+    renderPickupInsightsSections();
     renderPickupMorningTop3();
     renderPickupUsedToday();
     renderPickupBulkPreview();

@@ -3867,3 +3867,149 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* v2.5 効果ふり返り・改善ヒント */
+.card-improvement-hints {
+  margin-bottom: 1rem;
+}
+
+.dash-improvement-hints-block {
+  font-size: 0.92rem;
+}
+
+.dash-improvement-hints-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dash-improvement-hints-list li {
+  padding: 4px 0;
+}
+
+.mgmt-improvement-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0.25rem;
+  color: var(--text-muted, #666);
+}
+
+.mgmt-improvement-list {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  font-size: 0.88rem;
+}
+
+.pickup-insights-summary {
+  margin-bottom: 1rem;
+}
+
+.pickup-insights-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.insight-stat {
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: #f5f5f5;
+}
+
+.insight-stat-good { background: #e8f5e9; color: #2e7d32; }
+.insight-stat-needs { background: #fff3e0; color: #e65100; }
+.insight-stat-memo { background: #e3f2fd; color: #1565c0; }
+
+.pickup-reflection-list,
+.pickup-winning-list,
+.pickup-improvement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pickup-reflection-item,
+.pickup-winning-item,
+.pickup-improvement-item {
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  background: #fff;
+}
+
+.pickup-reflection-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.pickup-reflection-channel {
+  font-size: 0.8rem;
+  color: var(--text-muted, #666);
+}
+
+.pickup-reflection-judgment {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.reflection-judgment-good {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.reflection-judgment-needs {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.reflection-judgment-neutral {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.pickup-reflection-meta,
+.pickup-reflection-memo,
+.pickup-reflection-action,
+.pickup-winning-meta,
+.pickup-improvement-meta,
+.pickup-improvement-plan,
+.pickup-winning-next {
+  font-size: 0.85rem;
+  margin: 0.25rem 0;
+}
+
+.reflection-label {
+  font-weight: 600;
+  margin-right: 0.35rem;
+  color: var(--text-muted, #666);
+}
+
+.pickup-reflection-actions {
+  margin-top: 0.5rem;
+}
+
+.pickup-winning-topic,
+.pickup-improvement-topic {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.insight-badge-good { background: #e8f5e9; color: #2e7d32; }
+.insight-badge-needs { background: #fff3e0; color: #e65100; }
+.insight-badge-memo { background: #e0f2f1; color: #00695c; }
+.insight-badge-winning { background: #c8e6c9; color: #1b5e20; }
+.insight-badge-improve-task { background: #ffe0b2; color: #e65100; }
+
+.card-pickup-insights,
+.card-pickup-winning,
+.card-pickup-improvement-needed {
+  margin-top: 1rem;
+}

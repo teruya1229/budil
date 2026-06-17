@@ -482,6 +482,11 @@ Budilの需要番頭に入力するため、今日の投稿・営業・広告ア
     if (hasAdDone) badges.push({ key: 'ad-done', label: '広告反映済み', className: 'exec-badge-ad' });
     if (hasResultMemo) badges.push({ key: 'result', label: '効果メモあり', className: 'exec-badge-result' });
 
+    const insightBadges = this.buildInsightSummary(pickup);
+    insightBadges.forEach(b => {
+      if (!badges.some(x => x.key === b.key)) badges.push(b);
+    });
+
     return badges;
   },
 
@@ -579,6 +584,212 @@ Budilの需要番頭に入力するため、今日の投稿・営業・広告ア
       memo: memo || (meta ? meta.doneLog : '実行済み'),
       createdAt: new Date().toISOString()
     };
+  },
+
+  RESULT_GOOD_KEYWORDS: [
+    '反応あり', '問い合わせ', 'LINE相談', '予約', '保存', 'クリック多い',
+    '伸びた', '良かった', '反応良い'
+  ],
+
+  RESULT_BAD_KEYWORDS: [
+    '反応薄い', '問い合わせなし', 'クリックなし', '保存少ない',
+    '伸びない', '反応なし', '高い', 'CPA悪い'
+  ],
+
+  evaluateExecutionResult(pickup, type) {
+    const p = this.normalizePickup(pickup);
+    const exec = this.normalizeExecutionStatus(pickup);
+    const item = exec[type] || this.EXECUTION_DEFAULT;
+    const meta = this.EXECUTION_META[type] || {};
+    const resultMemo = (item.resultMemo || '').trim();
+    const nextImproveMemo = (item.nextImproveMemo || '').trim();
+    const combined = resultMemo + nextImproveMemo;
+    let judgment = 'neutral';
+    let judgmentLabel = '様子見';
+    let recommendation = '次回の反応も見て判断';
+
+    if (this.RESULT_GOOD_KEYWORDS.some(kw => resultMemo.includes(kw) || combined.includes(kw))) {
+      judgment = 'good';
+      judgmentLabel = '良い反応';
+      recommendation = '同じテーマで実写多めの続編を作る';
+    } else if (this.RESULT_BAD_KEYWORDS.some(kw => resultMemo.includes(kw) || combined.includes(kw))) {
+      judgment = 'needs_improvement';
+      judgmentLabel = '改善必要';
+      recommendation = '訴求・冒頭・実写量・CTAを見直す';
+    }
+
+    const nextAction = nextImproveMemo || recommendation;
+    return {
+      pickupId: p.id,
+      topic: p.topic,
+      relatedServices: p.relatedServices,
+      type,
+      channelLabel: meta.label || type,
+      shortLabel: meta.shortLabel || type,
+      executedAt: item.executedAt || '',
+      resultMemo,
+      nextImproveMemo,
+      judgment,
+      judgmentLabel,
+      recommendation,
+      nextAction,
+      isDone: this.isExecutionDone(type, item.status)
+    };
+  },
+
+  _collectExecutionReflectionEntries(pickups) {
+    const entries = [];
+    (pickups || []).forEach(raw => {
+      const p = this.normalizePickup(raw);
+      const exec = this.normalizeExecutionStatus(raw);
+      const logs = Array.isArray(raw.executionLogs) ? raw.executionLogs : [];
+      const loggedTypes = new Set(logs.map(l => l.type));
+
+      this.EXECUTION_TYPES.forEach(type => {
+        const item = exec[type];
+        const hasResultMemo = !!(item.resultMemo && item.resultMemo.trim());
+        const hasNextImprove = !!(item.nextImproveMemo && item.nextImproveMemo.trim());
+        const isDone = this.isExecutionDone(type, item.status);
+        const hasLog = loggedTypes.has(type);
+        if (!isDone && !hasResultMemo && !hasNextImprove && !hasLog) return;
+
+        const evalResult = this.evaluateExecutionResult(raw, type);
+        const logForType = logs.find(l => l.type === type);
+        entries.push({
+          ...evalResult,
+          executedAt: item.executedAt || (logForType ? logForType.date : ''),
+          logMemo: logForType ? logForType.memo : ''
+        });
+      });
+    });
+    return entries.sort((a, b) => (b.executedAt || '').localeCompare(a.executedAt || ''));
+  },
+
+  getExecutionInsights(pickups) {
+    const entries = this._collectExecutionReflectionEntries(pickups);
+    let goodCount = 0;
+    let needsImprovementCount = 0;
+    let hasResultMemoCount = 0;
+    entries.forEach(e => {
+      if (e.resultMemo) hasResultMemoCount++;
+      if (e.judgment === 'good') goodCount++;
+      if (e.judgment === 'needs_improvement') needsImprovementCount++;
+    });
+    return { goodCount, needsImprovementCount, hasResultMemoCount, total: entries.length };
+  },
+
+  getReflectionItems(pickups) {
+    return this._collectExecutionReflectionEntries(pickups);
+  },
+
+  getWinningPatterns(pickups) {
+    return this._collectExecutionReflectionEntries(pickups)
+      .filter(e => e.judgment === 'good')
+      .map(e => ({
+        ...e,
+        nextGrowPlan: e.nextImproveMemo || '実写洗浄多めで続編を作る'
+      }));
+  },
+
+  getImprovementCandidates(pickups) {
+    return this._collectExecutionReflectionEntries(pickups)
+      .filter(e => e.judgment === 'needs_improvement')
+      .map(e => ({
+        ...e,
+        improvePlan: e.nextImproveMemo || e.recommendation
+      }));
+  },
+
+  buildImprovementHints(pickups, max) {
+    const limit = max || 2;
+    const hints = [];
+    this.getWinningPatterns(pickups).forEach(e => {
+      if (hints.length >= limit) return;
+      hints.push({
+        kind: 'good',
+        text: `${e.topic}の${e.shortLabel}は反応あり。今日は実写多めの続編を作るのがおすすめです。`,
+        shortText: `${e.topic}は反応あり。続編候補`,
+        pickupId: e.pickupId,
+        type: e.type
+      });
+    });
+    this.getImprovementCandidates(pickups).forEach(e => {
+      if (hints.length >= limit) return;
+      const label = e.type === 'ad' ? `${e.topic}広告` : `${e.topic}の${e.shortLabel}`;
+      const effect = e.resultMemo || '反応薄い';
+      const action = (e.improvePlan && e.improvePlan.includes('CTA'))
+        ? 'CTAを見直しましょう。'
+        : (e.improvePlan || '訴求・CTAを見直しましょう。');
+      hints.push({
+        kind: 'improve',
+        text: `${label}は${effect.replace(/。$/, '')}。${action.replace(/。$/, '')}。`,
+        shortText: e.type === 'ad' ? `${e.topic}広告はCTA見直し` : `${e.topic}は改善候補`,
+        pickupId: e.pickupId,
+        type: e.type
+      });
+    });
+    return hints.slice(0, limit);
+  },
+
+  buildImprovementComment(pickups, max) {
+    return this.buildImprovementHints(pickups, max).map(h => h.text);
+  },
+
+  buildMorningImprovementLines(pickups, max) {
+    return this.buildImprovementHints(pickups, max).map(h => `・${h.shortText}`);
+  },
+
+  buildImprovementTaskDedupeKey(date, topic, type, taskKind, title) {
+    return [date, topic, type, taskKind, title].join('|');
+  },
+
+  createImprovementTaskPayload(pickup, type, judgment) {
+    const p = this.normalizePickup(pickup);
+    const meta = this.EXECUTION_META[type];
+    if (!meta) return null;
+    if (judgment === 'good') {
+      return {
+        title: `続編を作る：${p.topic}`,
+        reason: '効果メモで反応あり。勝ちパターン候補',
+        priority: '中',
+        taskKind: 'sequel',
+        topic: p.topic,
+        type
+      };
+    }
+    const channelSuffix = type === 'ad' ? '広告' : '';
+    return {
+      title: `改善する：${p.topic}${channelSuffix}`,
+      reason: '効果メモで反応薄い。訴求・CTAを見直す',
+      priority: '中',
+      taskKind: 'improve',
+      topic: p.topic,
+      type
+    };
+  },
+
+  buildInsightSummary(pickup) {
+    const badges = [];
+    const entries = this._collectExecutionReflectionEntries([pickup]);
+    let hasGood = false;
+    let hasNeedsImprovement = false;
+    let hasResultMemo = false;
+    let hasWinning = false;
+    let hasImproveTask = false;
+
+    entries.forEach(e => {
+      if (e.resultMemo) hasResultMemo = true;
+      if (e.judgment === 'good') { hasGood = true; hasWinning = true; }
+      if (e.judgment === 'needs_improvement') hasNeedsImprovement = true;
+    });
+
+    if (hasGood) badges.push({ key: 'good', label: '良い反応', className: 'insight-badge-good' });
+    if (hasNeedsImprovement) badges.push({ key: 'needs', label: '改善必要', className: 'insight-badge-needs' });
+    if (hasResultMemo) badges.push({ key: 'memo', label: '効果メモあり', className: 'insight-badge-memo' });
+    if (hasWinning) badges.push({ key: 'winning', label: '勝ちパターン候補', className: 'insight-badge-winning' });
+    if (hasImproveTask) badges.push({ key: 'improve-task', label: '改善タスクあり', className: 'insight-badge-improve-task' });
+
+    return badges;
   },
 
   CONTENT_SERVICE_LP: {

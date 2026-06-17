@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v2.4</small>
+          <small>AI経営脳みそ v2.5</small>
         </div>
       </div>
       <nav class="nav">
@@ -46,7 +46,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v2.4</small>
+        <small>Budil v2.5</small>
       </div>
     </aside>
 
@@ -169,6 +169,11 @@
           <div id="dash-daily-action-tasks" class="daily-action-tasks-list"></div>
         </div>
 
+        <div class="card card-wide card-improvement-hints">
+          <h2>今日の改善ヒント</h2>
+          <div id="dash-improvement-hints" class="dash-improvement-hints-block"></div>
+        </div>
+
         <div class="card card-wide card-today-execution">
           <h2>今日の投稿・広告予定</h2>
           <div id="dash-today-execution" class="dash-today-execution-block"></div>
@@ -182,6 +187,7 @@
               <h3>今日の需要</h3>
               <div id="mgmt-demand-top" class="mgmt-demand-top-block"></div>
               <div id="mgmt-execution-today" class="mgmt-execution-today-block"></div>
+              <div id="mgmt-improvement-today" class="mgmt-improvement-today-block"></div>
             </div>
             <div class="morning-section morning-section-hero">
               <h3>今日の経営判断</h3>
@@ -401,6 +407,22 @@
           <div id="pickup-content-outputs" class="pickup-content-outputs">
             <p class="placeholder-text">需要を選んで「リール案を作る」などを押すと、ここに生成文案が表示されます。</p>
           </div>
+        </div>
+
+        <div class="card card-wide card-pickup-insights">
+          <h2>効果ふり返り</h2>
+          <div id="pickup-insights-summary" class="pickup-insights-summary"></div>
+          <div id="pickup-reflection-list" class="pickup-reflection-list"></div>
+        </div>
+
+        <div class="card card-wide card-pickup-winning">
+          <h2>勝ちパターン候補</h2>
+          <div id="pickup-winning-list" class="pickup-winning-list"></div>
+        </div>
+
+        <div class="card card-wide card-pickup-improvement-needed">
+          <h2>改善が必要な投稿・広告</h2>
+          <div id="pickup-improvement-list" class="pickup-improvement-list"></div>
         </div>
 
         <div class="card card-wide card-pickup-execution">
@@ -1423,6 +1445,23 @@
             <button type="button" id="btn-create-test-data" class="btn btn-secondary">テストデータを作成</button>
             <button type="button" id="btn-delete-test-data" class="btn btn-secondary">テストデータを削除</button>
           </div>
+        </div>
+
+        <div class="card card-wide card-mvp-checklist">
+          <h2>v2.5 動作確認チェックリスト</h2>
+          <p class="data-mgmt-desc">効果メモから改善判断・勝ちパターン化を確認してください。</p>
+          <ul class="mvp-checklist">
+            <li>需要番頭に「効果ふり返り」が表示される</li>
+            <li>効果メモから「良い反応」判定が出る</li>
+            <li>効果メモから「改善必要」判定が出る</li>
+            <li>勝ちパターン候補が表示される</li>
+            <li>改善が必要な投稿・広告が表示される</li>
+            <li>続編・改善タスクを今日やることへ追加できる</li>
+            <li>重複タスクが増えない</li>
+            <li>ダッシュボードに「今日の改善ヒント」が出る</li>
+            <li>朝レポートに改善ヒントが出る</li>
+            <li>保存済み需要メモに効果状態バッジが出る</li>
+          </ul>
         </div>
 
         <div class="card card-wide card-mvp-checklist">

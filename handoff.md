@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v2.5 公開済み（効果メモから改善・勝ちパターン化）
 - Budil v2.4 公開済み（投稿・広告アクションの実行管理）
 - Budil v2.3 公開済み（需要から投稿・広告文案生成MVP）
 - Budil v2.2 公開済み（クロクロ3件一括取り込み・毎朝運用強化）
@@ -47,6 +48,15 @@
 | `js/demand-brain.js` | 需要分析・需要ピックアップパース・トップ3 |
 | `js/demand-radar.js` | 需要レーダー分析 |
 | `js/data-backup.js` | バックアップ・復元 |
+
+## v2.5で入ったもの
+
+- 需要番頭「効果ふり返り」・「勝ちパターン候補」・「改善が必要な投稿・広告」
+- `DemandBrain.evaluateExecutionResult` — 効果メモのルールベース判定
+- `getWinningPatterns` / `getImprovementCandidates` / `buildImprovementHints`
+- 続編タスク（`sequel`）・改善タスク（`improve`）の今日やること連携
+- ダッシュボード「今日の改善ヒント」・朝レポート `mgmt-improvement-today`
+- 効果ふり返り集計バー・効果状態バッジ拡張
 
 ## v2.4で入ったもの
 
