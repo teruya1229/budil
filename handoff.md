@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v2.7 公開済み（投稿・広告カレンダーMVP）
 - Budil v2.6 公開済み（週間作戦ボード）
 - Budil v2.5 公開済み（効果メモから改善・勝ちパターン化）
 - Budil v2.4 公開済み（投稿・広告アクションの実行管理）
@@ -49,6 +50,14 @@
 | `js/demand-brain.js` | 需要分析・需要ピックアップパース・トップ3 |
 | `js/demand-radar.js` | 需要レーダー分析 |
 | `js/data-backup.js` | バックアップ・復元 |
+
+## v2.7で入ったもの
+
+- ダッシュボード「投稿・広告カレンダー」（7日間日別カード）
+- `DemandBrain.getActionCalendarItems` / `getSevenDayCalendar` / `getUnscheduledWeeklyCandidates`
+- 予定化：executionStatus.scheduledDate / manualTasks.dueDate / 週間候補のタスク化
+- 今日の予定ミニ表示・朝レポート統合（v2.4拡張）
+- 新規 localStorage キーなし
 
 ## v2.6で入ったもの
 

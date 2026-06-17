@@ -274,6 +274,7 @@
     renderDashTodayExecutionPlan();
     renderDashImprovementHints();
     renderWeeklyStrategyBoard();
+    renderActionCalendar();
     renderDailyActionTasks();
     renderMorningDailyTasksBrief();
   }
@@ -1791,7 +1792,8 @@
 
     const execTodayEl = document.getElementById('mgmt-execution-today');
     if (execTodayEl) {
-      const execLines = DemandBrain.buildMorningExecutionLines(Storage.getDemandPickups(), TODAY());
+      const scheduleItems = getTodayScheduleItems();
+      const execLines = DemandBrain.buildMorningScheduleLines(scheduleItems);
       execTodayEl.innerHTML = execLines.length
         ? `<p class="mgmt-execution-label">今日の投稿・広告：</p><ol class="mgmt-execution-list">${execLines.map(l => `<li>${esc(l)}</li>`).join('')}</ol>`
         : '';
@@ -2600,6 +2602,7 @@
     renderManagementComments();
     renderMorningReport();
     renderDashTodayExecutionPlan();
+    renderActionCalendar();
   }
 
   function pickupContentButtonsHtml(id) {
@@ -2823,6 +2826,7 @@
     renderMorningDailyTasksBrief();
     renderMorningReport();
     renderDashTodayExecutionPlan();
+    renderActionCalendar();
     alert('今日やることに追加しました。');
   }
 
@@ -2853,9 +2857,11 @@
     renderPickupSavedList();
     renderDashTodayExecutionPlan();
     renderDashImprovementHints();
+    renderActionCalendar();
     const execTodayEl = document.getElementById('mgmt-execution-today');
     if (execTodayEl) {
-      const execLines = DemandBrain.buildMorningExecutionLines(Storage.getDemandPickups(), TODAY());
+      const scheduleItems = getTodayScheduleItems();
+      const execLines = DemandBrain.buildMorningScheduleLines(scheduleItems);
       execTodayEl.innerHTML = execLines.length
         ? `<p class="mgmt-execution-label">今日の投稿・広告：</p><ol class="mgmt-execution-list">${execLines.map(l => `<li>${esc(l)}</li>`).join('')}</ol>`
         : '';
@@ -3089,6 +3095,7 @@
       renderDailyActionTasks();
       renderMorningDailyTasksBrief();
       renderWeeklyStrategyBoard();
+      renderActionCalendar();
       alert('今日やることに追加しました。');
     } else {
       alert('すでに今日やることに追加済みです');
@@ -3106,6 +3113,7 @@
     renderDailyActionTasks();
     renderMorningDailyTasksBrief();
     renderWeeklyStrategyBoard();
+    renderActionCalendar();
     alert(`追加：${added}件${skipped ? ` / スキップ（重複）：${skipped}件` : ''}`);
   }
 
@@ -3367,12 +3375,269 @@
   function renderDashTodayExecutionPlan() {
     const el = document.getElementById('dash-today-execution');
     if (!el) return;
-    const lines = DemandBrain.buildDashboardExecutionLines(Storage.getDemandPickups(), TODAY());
+    const items = getTodayScheduleItems();
+    const lines = DemandBrain.buildDashboardScheduleLines(items);
     if (!lines.length) {
-      el.innerHTML = '<p class="placeholder-text">今日の投稿・広告予定はありません。需要番頭で予定日を設定してください。</p>';
+      const msg = DemandBrain.buildTodayScheduleComment(items);
+      el.innerHTML = `<p class="placeholder-text">${esc(msg || '今日の投稿・広告予定はありません。需要番頭で予定日を設定してください。')}</p>`;
       return;
     }
     el.innerHTML = `<ul class="dash-today-execution-list">${lines.map(l => `<li>・${esc(l)}</li>`).join('')}</ul>`;
+  }
+
+  function getCalendarData() {
+    const today = TODAY();
+    const pickups = Storage.getDemandPickups();
+    const store = Storage.getDailyActionTasksData();
+    const manualTasks = store.manualTasks || [];
+    const taskStates = store.states || [];
+    const strategy = getWeeklyStrategy();
+    const days = DemandBrain.getSevenDayCalendar(today);
+    const items = DemandBrain.getActionCalendarItems(pickups, manualTasks, taskStates, today);
+    const dailyTaskKeys = new Set(manualTasks.filter(mt => mt.pickupDedupeKey).map(mt => mt.pickupDedupeKey));
+    const byDay = DemandBrain.groupCalendarItemsByDay(items, days, pickups, today, dailyTaskKeys);
+    const unscheduled = DemandBrain.getUnscheduledWeeklyCandidates(strategy, manualTasks, pickups, today);
+    return { today, days, items, byDay, unscheduled, pickups, manualTasks, taskStates, strategy };
+  }
+
+  function getTodayScheduleItems() {
+    const { pickups, manualTasks, taskStates, today } = getCalendarData();
+    return DemandBrain.getTodayScheduleItems(pickups, manualTasks, taskStates, today);
+  }
+
+  function isCalendarTaskDuplicate(date, title, kind, topic) {
+    const key = DemandBrain.buildCalendarTaskDedupeKey(date, title, kind, topic || '');
+    return Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === key);
+  }
+
+  function addCalendarItemToDailyTasks(item) {
+    if (!item || item.completed) return false;
+    const date = TODAY();
+    const payload = DemandBrain.createCalendarTaskPayload(item);
+    const kind = item.kind === 'execution' ? 'execution-' + (item.execType || '') : item.kind;
+    const key = DemandBrain.buildCalendarTaskDedupeKey(date, item.title, kind, item.topic || '');
+    if (isCalendarTaskDuplicate(date, item.title, kind, item.topic || '')) return false;
+    Storage.addManualDailyTask({
+      title: item.title,
+      targetName: '—',
+      priority: payload.priority,
+      action: payload.reason,
+      memo: payload.reason,
+      dueDate: item.date || date,
+      status: 'open',
+      reason: payload.reason,
+      pickupDedupeKey: key,
+      pickupTopic: item.topic || '',
+      pickupActionType: 'calendar-' + kind
+    });
+    return true;
+  }
+
+  function addCalendarItemToDailyById(itemId) {
+    const data = getCalendarData();
+    let item = null;
+    Object.values(data.byDay).forEach(dayItems => {
+      dayItems.forEach(i => { if (i.id === itemId) item = i; });
+    });
+    if (!item) return;
+    if (addCalendarItemToDailyTasks(item)) {
+      renderDailyActionTasks();
+      renderMorningDailyTasksBrief();
+      renderActionCalendar();
+      renderDashTodayExecutionPlan();
+      renderMorningReport();
+      alert('今日やることに追加しました。');
+    } else {
+      alert('すでに今日やることに追加済みです');
+    }
+  }
+
+  function addAllTodayScheduleToDaily() {
+    const items = getTodayScheduleItems();
+    let added = 0;
+    let skipped = 0;
+    items.forEach(item => {
+      if (addCalendarItemToDailyTasks(item)) added++;
+      else skipped++;
+    });
+    renderDailyActionTasks();
+    renderMorningDailyTasksBrief();
+    renderActionCalendar();
+    renderDashTodayExecutionPlan();
+    renderMorningReport();
+    alert(`追加：${added}件${skipped ? ` / スキップ（重複）：${skipped}件` : ''}`);
+  }
+
+  function scheduleExecutionToDate(pickupId, execType, date) {
+    const pickup = Storage.getDemandPickups().find(p => p.id === pickupId);
+    if (!pickup) return;
+    const exec = DemandBrain.normalizeExecutionStatus(pickup);
+    const prev = exec[execType] || {};
+    const patch = { scheduledDate: date };
+    if (prev.status === 'draft') patch.status = 'scheduled';
+    exec[execType] = { ...prev, ...patch };
+    Storage.updateDemandPickup(pickupId, { executionStatus: exec });
+  }
+
+  function scheduleManualTaskToDate(taskId, date) {
+    Storage.updateManualDailyTask(taskId, { dueDate: date });
+  }
+
+  function scheduleWeeklyCandidateToDate(index, date) {
+    const strategy = getWeeklyStrategy();
+    const task = (strategy.actionTasks || [])[index];
+    if (!task) return;
+    const key = DemandBrain.buildWeeklyTaskDedupeKey(date, task.taskKind, task.title);
+    if (Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === key)) {
+      alert('すでに同じ予定が登録されています');
+      return;
+    }
+    Storage.addManualDailyTask({
+      title: task.title,
+      targetName: '—',
+      priority: task.priority || '中',
+      action: task.reason,
+      memo: task.reason,
+      dueDate: date,
+      status: 'open',
+      reason: task.reason,
+      pickupDedupeKey: key,
+      pickupTopic: task.topic || '',
+      pickupActionType: 'weekly-' + (task.taskKind || 'action')
+    });
+  }
+
+  function handleCalendarSchedule(action, payload) {
+    const today = TODAY();
+    const tomorrow = addDaysToDate(today, 1);
+    let date = payload.date || today;
+    if (action === 'today') date = today;
+    if (action === 'tomorrow') date = tomorrow;
+
+    if (payload.kind === 'execution') {
+      scheduleExecutionToDate(payload.pickupId, payload.execType, date);
+    } else if (payload.kind === 'manual' && payload.taskId) {
+      scheduleManualTaskToDate(payload.taskId, date);
+    } else if (payload.kind === 'weekly') {
+      scheduleWeeklyCandidateToDate(parseInt(payload.index, 10), date);
+    }
+    renderActionCalendar();
+    renderDashTodayExecutionPlan();
+    renderWeeklyStrategyBoard();
+    renderPickupExecutionManagement();
+    renderMorningReport();
+  }
+
+  function renderCalendarDayCard(day, dayItems) {
+    const isToday = day.isToday;
+    const emptyMsg = isToday
+      ? DemandBrain.buildTodayScheduleComment(dayItems)
+      : '';
+    const itemsHtml = dayItems.length
+      ? dayItems.map(item => `
+          <div class="calendar-item ${item.completed ? 'calendar-item-done' : ''} ${item.overdue ? 'calendar-item-overdue' : ''}">
+            <div class="calendar-item-header">
+              <span class="calendar-item-title">${esc(item.title)}</span>
+              <span class="calendar-item-status">${esc(item.statusLabel)}</span>
+            </div>
+            ${item.overdue && item.scheduledDate ? `<p class="calendar-item-meta">予定日：${esc(item.scheduledDate)}（期限超過）</p>` : ''}
+            <div class="calendar-item-actions">
+              ${!item.completed ? `<button type="button" class="btn btn-sm btn-primary" data-cal-add-daily="${esc(item.id)}">今日やることに追加</button>` : ''}
+              ${item.kind === 'execution' && !item.completed ? `
+                <button type="button" class="btn btn-sm btn-secondary" data-cal-schedule="today" data-cal-pickup="${esc(item.pickupId)}" data-cal-type="${esc(item.execType)}" data-cal-kind="execution">今日に入れる</button>
+                <button type="button" class="btn btn-sm btn-secondary" data-cal-schedule="tomorrow" data-cal-pickup="${esc(item.pickupId)}" data-cal-type="${esc(item.execType)}" data-cal-kind="execution">明日に入れる</button>
+              ` : ''}
+            </div>
+          </div>`).join('')
+      : (emptyMsg ? `<p class="calendar-day-empty">${esc(emptyMsg)}</p>` : '<p class="calendar-day-empty">予定なし</p>');
+
+    return `
+      <div class="calendar-day-card ${isToday ? 'calendar-day-today' : ''}">
+        <div class="calendar-day-header">
+          <span class="calendar-day-date">${esc(day.date)}</span>
+          <span class="calendar-day-weekday">${esc(day.weekday)}</span>
+          ${isToday ? '<span class="calendar-day-badge">今日</span>' : ''}
+        </div>
+        <div class="calendar-day-items">${itemsHtml}</div>
+      </div>`;
+  }
+
+  function bindActionCalendarEvents(container) {
+    if (!container) return;
+    container.querySelectorAll('[data-cal-add-daily]').forEach(btn => {
+      btn.addEventListener('click', () => addCalendarItemToDailyById(btn.dataset.calAddDaily));
+    });
+    container.querySelectorAll('[data-cal-schedule]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        handleCalendarSchedule(btn.dataset.calSchedule, {
+          kind: btn.dataset.calKind,
+          pickupId: btn.dataset.calPickup,
+          execType: btn.dataset.calType,
+          taskId: btn.dataset.calTask,
+          index: btn.dataset.calIndex,
+          date: btn.dataset.calDate
+        });
+      });
+    });
+    container.querySelectorAll('[data-cal-pick-date]').forEach(input => {
+      input.addEventListener('change', () => {
+        const wrap = input.closest('[data-cal-candidate]');
+        if (!wrap || !input.value) return;
+        handleCalendarSchedule('date', {
+          kind: wrap.dataset.calKind || 'weekly',
+          index: wrap.dataset.calCandidate,
+          date: input.value
+        });
+      });
+    });
+    const addAllBtn = document.getElementById('btn-cal-add-all-today');
+    if (addAllBtn) addAllBtn.addEventListener('click', addAllTodayScheduleToDaily);
+  }
+
+  function renderActionCalendar() {
+    const el = document.getElementById('dash-action-calendar');
+    if (!el) return;
+    const data = getCalendarData();
+    const hasAny = data.items.length || data.unscheduled.length;
+
+    if (!hasAny) {
+      el.innerHTML = `
+        <p class="calendar-empty">まだ投稿・広告予定はありません。<br>需要番頭で文案を作成し、予定日を入れるとここに表示されます。</p>
+        <p class="calendar-empty-sub">週間作戦や需要ピックアップを保存すると、ここに候補が出ます。</p>`;
+      return;
+    }
+
+    const daysHtml = data.days.map(day =>
+      renderCalendarDayCard(day, data.byDay[day.date] || [])
+    ).join('');
+
+    const unscheduledHtml = data.unscheduled.length
+      ? `<div class="calendar-unscheduled">
+          <h3>未予定の今週候補</h3>
+          <ul class="calendar-unscheduled-list">${data.unscheduled.map(c => `
+            <li class="calendar-unscheduled-item">
+              <span>${esc(c.title)}</span>
+              <div class="calendar-unscheduled-actions">
+                <button type="button" class="btn btn-sm btn-secondary" data-cal-schedule="today" data-cal-kind="weekly" data-cal-index="${c.index}">今日に入れる</button>
+                <button type="button" class="btn btn-sm btn-secondary" data-cal-schedule="tomorrow" data-cal-kind="weekly" data-cal-index="${c.index}">明日に入れる</button>
+                <span data-cal-candidate="${c.index}" data-cal-kind="weekly">
+                  <input type="date" class="calendar-date-input" data-cal-pick-date min="${esc(data.today)}" value="${esc(data.today)}" title="日付を選んで入れる">
+                </span>
+              </div>
+            </li>`).join('')}</ul>
+        </div>`
+      : '';
+
+    const todayCount = (data.byDay[data.today] || []).filter(i => !i.completed).length;
+    const addAllBtn = todayCount
+      ? `<button type="button" id="btn-cal-add-all-today" class="btn btn-sm btn-primary">今日の予定を全部追加</button>`
+      : '';
+
+    el.innerHTML = `
+      <div class="calendar-toolbar">${addAllBtn}</div>
+      <div class="calendar-days-grid">${daysHtml}</div>
+      ${unscheduledHtml}`;
+    bindActionCalendarEvents(el);
   }
 
   function bindPickupContentGenActions(container) {

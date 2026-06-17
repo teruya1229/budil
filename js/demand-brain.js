@@ -1557,5 +1557,238 @@ ${ctx.postTitle ? '今月の注目：' + ctx.postTitle : ''}`;
     strategy.actionTasks = this.getWeeklyActionTasks(strategy);
     strategy.morningLines = this.buildMorningWeeklyLines(strategy, 3);
     return strategy;
+  },
+
+  WEEKDAY_LABELS: ['日', '月', '火', '水', '木', '金', '土'],
+
+  getSevenDayCalendar(today) {
+    const t = today || new Date().toISOString().slice(0, 10);
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const date = this._addDays(t, i);
+      const d = new Date(date + 'T12:00:00');
+      days.push({
+        date,
+        weekday: this.WEEKDAY_LABELS[d.getDay()],
+        offset: i,
+        isToday: i === 0
+      });
+    }
+    return days;
+  },
+
+  getCalendarItemStatusLabel(item) {
+    const type = item.execType || item.type;
+    const meta = type ? this.EXECUTION_META[type] : null;
+    const status = item.status || 'draft';
+
+    if (item.kind === 'manual') {
+      if (status === 'done' || item.completed) return '完了済み';
+      if (status === 'snoozed') return '後回し';
+      if (item.inDailyTasks) return '今日やること追加済み';
+      return '未完了';
+    }
+
+    if (status === 'skipped') return '後回し';
+    if (meta && this.isExecutionDone(type, status)) {
+      const done = meta.statuses.find(s => s.value === 'posted');
+      return done ? done.label : '完了済み';
+    }
+    if (status === 'scheduled' && meta) {
+      const s = meta.statuses.find(x => x.value === 'scheduled');
+      return s ? s.label : '予定あり';
+    }
+    if (status === 'draft') return '下書き';
+    if (item.inDailyTasks) return '今日やること追加済み';
+    if (item.overdue) return '期限超過';
+    return this.getExecutionStatusLabel(type, status) || status;
+  },
+
+  getOverdueExecutionItems(pickups, today, dailyTaskKeys) {
+    const t = today || new Date().toISOString().slice(0, 10);
+    const items = [];
+    (pickups || []).forEach(raw => {
+      const p = this.normalizePickup(raw);
+      if (p.status !== 'open' && p.status !== 'used') return;
+      const exec = this.normalizeExecutionStatus(raw);
+      this.EXECUTION_TYPES.forEach(type => {
+        const ex = exec[type];
+        const scheduled = ex.scheduledDate;
+        if (!scheduled || scheduled >= t) return;
+        if (!this.isExecutionPending(type, ex)) return;
+        const meta = this.EXECUTION_META[type];
+        const title = `${meta.dashPrefix}：${p.topic}`;
+        const dedupeKey = this.buildExecutionTaskDedupeKey(t, p.topic, type, `${meta.taskTitle}：${p.topic}`);
+        items.push({
+          id: `exec-overdue-${p.id}-${type}`,
+          kind: 'execution',
+          date: t,
+          scheduledDate: scheduled,
+          title,
+          label: meta.dashPrefix,
+          topic: p.topic,
+          status: ex.status,
+          statusLabel: '期限超過',
+          pickupId: p.id,
+          execType: type,
+          completed: false,
+          overdue: true,
+          inDailyTasks: (dailyTaskKeys || new Set()).has(dedupeKey),
+          dedupeKey
+        });
+      });
+    });
+    return items;
+  },
+
+  getActionCalendarItems(pickups, manualTasks, taskStates, today) {
+    const t = today || new Date().toISOString().slice(0, 10);
+    const end = this._addDays(t, 6);
+    const items = [];
+    const dailyTaskKeys = new Set();
+    (manualTasks || []).forEach(mt => {
+      if (mt.pickupDedupeKey) dailyTaskKeys.add(mt.pickupDedupeKey);
+    });
+
+    (pickups || []).forEach(raw => {
+      const p = this.normalizePickup(raw);
+      if (p.status !== 'open' && p.status !== 'used') return;
+      const exec = this.normalizeExecutionStatus(raw);
+      this.EXECUTION_TYPES.forEach(type => {
+        const ex = exec[type];
+        const scheduled = ex.scheduledDate;
+        if (!scheduled || scheduled < t || scheduled > end) return;
+        const meta = this.EXECUTION_META[type];
+        const title = `${meta.dashPrefix}：${p.topic}`;
+        const dedupeKey = this.buildExecutionTaskDedupeKey(scheduled, p.topic, type, `${meta.taskTitle}：${p.topic}`);
+        items.push({
+          id: `exec-${p.id}-${type}`,
+          kind: 'execution',
+          date: scheduled,
+          title,
+          label: meta.dashPrefix,
+          topic: p.topic,
+          status: ex.status,
+          statusLabel: this.getCalendarItemStatusLabel({ kind: 'execution', execType: type, status: ex.status, inDailyTasks: dailyTaskKeys.has(dedupeKey) }),
+          pickupId: p.id,
+          execType: type,
+          completed: this.isExecutionDone(type, ex.status),
+          inDailyTasks: dailyTaskKeys.has(dedupeKey),
+          dedupeKey
+        });
+      });
+    });
+
+    (manualTasks || []).forEach(mt => {
+      const due = mt.dueDate;
+      if (!due || due < t || due > end) return;
+      const doneState = (taskStates || []).find(s => s.taskId === mt.id && s.status === 'done');
+      const isDone = !!(doneState || mt.status === 'done');
+      items.push({
+        id: `manual-${mt.id}`,
+        kind: 'manual',
+        date: due,
+        title: mt.title || '',
+        label: mt.title || '',
+        topic: mt.pickupTopic || '',
+        status: isDone ? 'done' : (mt.status || 'open'),
+        statusLabel: this.getCalendarItemStatusLabel({ kind: 'manual', status: mt.status, completed: isDone, inDailyTasks: true }),
+        taskId: mt.id,
+        completed: isDone,
+        inDailyTasks: true,
+        dedupeKey: mt.pickupDedupeKey || this.buildCalendarTaskDedupeKey(due, mt.title, 'manual', mt.pickupTopic || '')
+      });
+    });
+
+    return items.sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title));
+  },
+
+  groupCalendarItemsByDay(items, days, pickups, today, dailyTaskKeys) {
+    const byDay = {};
+    (days || []).forEach(d => { byDay[d.date] = []; });
+    (items || []).forEach(item => {
+      if (byDay[item.date]) byDay[item.date].push(item);
+    });
+    const overdue = this.getOverdueExecutionItems(pickups, today, dailyTaskKeys);
+    overdue.forEach(item => {
+      if (!byDay[today].some(x => x.id === item.id)) byDay[today].push(item);
+    });
+    return byDay;
+  },
+
+  getUnscheduledWeeklyCandidates(strategy, manualTasks, pickups, today) {
+    const candidates = (strategy && strategy.actionTasks) || [];
+    if (!candidates.length) return [];
+    const t = today || new Date().toISOString().slice(0, 10);
+    const end = this._addDays(t, 6);
+    const scheduledTitles = new Set();
+
+    (manualTasks || []).forEach(mt => {
+      if (mt.title) scheduledTitles.add(mt.title);
+    });
+
+    (pickups || []).forEach(raw => {
+      const exec = this.normalizeExecutionStatus(raw);
+      this.EXECUTION_TYPES.forEach(type => {
+        const scheduled = exec[type].scheduledDate;
+        if (scheduled && scheduled >= t && scheduled <= end) {
+          const p = this.normalizePickup(raw);
+          const meta = this.EXECUTION_META[type];
+          scheduledTitles.add(`${meta.dashPrefix}：${p.topic}`);
+        }
+      });
+    });
+
+    return candidates
+      .map((task, index) => ({ ...task, index }))
+      .filter(task => !scheduledTitles.has(task.title));
+  },
+
+  buildCalendarTaskDedupeKey(date, title, kind, topic) {
+    return [date, title, kind, topic || ''].join('|');
+  },
+
+  createCalendarTaskPayload(item) {
+    return {
+      title: item.title,
+      reason: `投稿・広告カレンダー（${item.date}）`,
+      priority: '中',
+      kind: item.kind || 'calendar',
+      topic: item.topic || '',
+      execType: item.execType || '',
+      pickupId: item.pickupId || ''
+    };
+  },
+
+  getTodayScheduleItems(pickups, manualTasks, taskStates, today) {
+    const t = today || new Date().toISOString().slice(0, 10);
+    const dailyTaskKeys = new Set();
+    (manualTasks || []).forEach(mt => { if (mt.pickupDedupeKey) dailyTaskKeys.add(mt.pickupDedupeKey); });
+    const weekItems = this.getActionCalendarItems(pickups, manualTasks, taskStates, t);
+    const todayItems = weekItems.filter(i => i.date === t);
+    const overdue = this.getOverdueExecutionItems(pickups, t, dailyTaskKeys);
+    const merged = [...todayItems];
+    overdue.forEach(o => {
+      if (!merged.some(x => x.pickupId === o.pickupId && x.execType === o.execType)) merged.push(o);
+    });
+    return merged.filter(i => !i.completed);
+  },
+
+  buildDashboardScheduleLines(items) {
+    return (items || []).map(i => `${i.label}：${i.topic || i.title.replace(/^[^:]+：/, '')}`);
+  },
+
+  buildMorningScheduleLines(items) {
+    return (items || []).map((i, idx) => {
+      const meta = i.execType ? this.EXECUTION_META[i.execType] : null;
+      const prefix = meta ? meta.shortLabel : (i.label || i.title).split('：')[0];
+      const topic = i.topic || i.title.replace(/^[^:]+：/, '');
+      return `${idx + 1}. ${prefix}：${topic}`;
+    });
+  },
+
+  buildTodayScheduleComment(items) {
+    if (items && items.length) return '';
+    return '今日の投稿・広告予定はありません。週間作戦から1件入れると、今日やることに反映できます。';
   }
 };
