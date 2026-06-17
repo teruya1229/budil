@@ -2,12 +2,13 @@
  * Budil v3.4 - 受付・予約番頭（AI番頭連携入口）
  */
 const ReceptionBrain = {
-  STATUSES: ['new', 'lead_created', 'task_created', 'revenue_candidate', 'done', 'archived'],
+  STATUSES: ['new', 'lead_created', 'task_created', 'work_scheduled', 'revenue_candidate', 'done', 'archived'],
 
   STATUS_LABELS: {
     new: '新規受付',
     lead_created: '営業先作成済み',
     task_created: 'タスク作成済み',
+    work_scheduled: '作業予定作成済み',
     revenue_candidate: '売上候補',
     done: '対応済み',
     archived: '保管'
@@ -56,6 +57,8 @@ const ReceptionBrain = {
       relatedLeadId: String(item.relatedLeadId || '').trim(),
       relatedRevenueId: String(item.relatedRevenueId || '').trim(),
       relatedTaskIds: Array.isArray(item.relatedTaskIds) ? item.relatedTaskIds.map(String) : [],
+      relatedWorkOrderId: String(item.relatedWorkOrderId || '').trim(),
+      relatedWorkOrderIds: Array.isArray(item.relatedWorkOrderIds) ? item.relatedWorkOrderIds.map(String) : [],
       createdAt: item.createdAt || now,
       updatedAt: item.updatedAt || now,
       isDemo: item.isDemo === true,

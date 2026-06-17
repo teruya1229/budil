@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v3.6 公開済み（予約・作業予定番頭MVP）
 - Budil v3.5 公開済み（Googleマップ軽連携・エリア番頭MVP）
 - Budil v3.4 公開済み（AI番頭連携入口MVP）
 - Budil v3.3 公開済み（販売・デモ準備MVP）
@@ -60,6 +61,15 @@
 | `js/data-backup.js` | バックアップ・復元 |
 | `js/reception-brain.js` | AI番頭受付パース・営業/タスク/売上変換 |
 | `js/map-brain.js` | 地図URL・エリア推定・エリア別集計 |
+| `js/work-order-brain.js` | 作業予定正規化・カレンダーURL・売上見込み |
+
+## v3.6で入ったもの
+
+- 予約・作業予定番頭画面（作業予定登録・今日/今週・売上見込み）
+- `budil_work_orders`（作業予定データ保存）
+- 受付/営業先→作業予定、作業予定→今日やること/売上フォーム
+- Googleカレンダー追加リンク（API不使用）
+- 経営番頭ホーム・朝レポート・エリア番頭への作業予定反映
 
 ## v3.5で入ったもの
 

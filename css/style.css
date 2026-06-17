@@ -5589,3 +5589,130 @@ body {
 .card-area-comment {
   border-left: 4px solid #0ea5e9;
 }
+
+/* v3.6 予約・作業予定番頭 */
+.card-work-order-comment {
+  border-left: 4px solid #8b5cf6;
+}
+
+.work-order-forecast {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.work-order-forecast-item {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+}
+
+.work-order-forecast-item span {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.work-order-forecast-item strong {
+  font-size: 1rem;
+}
+
+.work-order-schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.work-order-day-group {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.75rem;
+}
+
+.work-order-day-group:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.work-order-day-label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #334155;
+}
+
+.work-order-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.work-order-item-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.work-order-status-badge {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.work-order-status-tentative { background: #fef9c3; color: #a16207; }
+.work-order-status-confirmed { background: #dcfce7; color: #15803d; }
+.work-order-status-completed { background: #dbeafe; color: #1d4ed8; }
+.work-order-status-cancelled { background: #fee2e2; color: #b91c1c; }
+.work-order-status-archived { background: #f1f5f9; color: #94a3b8; }
+
+.work-order-item-meta {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0.2rem 0;
+}
+
+.work-order-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.work-order-calendar-hint {
+  font-size: 0.85rem;
+  color: #b45309;
+  margin: 0.35rem 0;
+}
+
+.work-order-intake-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.reception-status-work_scheduled { background: #ede9fe; color: #6d28d9; }
+
+.reception-work-order-badge {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.mgmt-work-orders-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.area-work-orders-list .area-summary-card {
+  margin-bottom: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .work-order-item-actions .btn {
+    flex: 1 1 auto;
+  }
+}

@@ -135,8 +135,14 @@ const MapBrain = {
     return '不明';
   },
 
+  getWorkOrderArea(workOrder) {
+    if (!workOrder) return '不明';
+    if (workOrder.area && workOrder.area.trim()) return workOrder.area.trim();
+    return this.detectAreaFromAddress(workOrder.address || '');
+  },
+
   buildAreaSummary(ctx) {
-    const { leads, intakes, revenues, today } = ctx;
+    const { leads, intakes, revenues, workOrders, today } = ctx;
     const t = today || new Date().toISOString().slice(0, 10);
     const areaMap = {};
 
@@ -151,6 +157,10 @@ const MapBrain = {
           revenueTotal: 0,
           openIntakes: 0,
           nextContactLeads: 0,
+          workOrderCount: 0,
+          todayWorkOrders: 0,
+          weekWorkOrders: 0,
+          workOrderEstimate: 0,
           distanceClass: this.classifyAreaDistance(key, key)
         };
       }
@@ -183,7 +193,27 @@ const MapBrain = {
       bucket.revenueTotal += Number(rec.amount) || 0;
     });
 
-    const rows = Object.values(areaMap).filter(r => r.leadCount || r.intakeCount || r.revenueCount);
+    const weekEnd = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.addDays(t, 6)
+      : t;
+    (workOrders || []).forEach(wo => {
+      if (!wo || wo.status === 'archived' || wo.status === 'cancelled') return;
+      if (!['tentative', 'confirmed'].includes(wo.status)) return;
+      const area = typeof WorkOrderBrain !== 'undefined'
+        ? WorkOrderBrain.getWorkOrderArea(wo)
+        : this.getWorkOrderArea(wo);
+      const bucket = ensure(area);
+      bucket.workOrderCount++;
+      bucket.workOrderEstimate += Number(wo.estimateAmount) || 0;
+      if (wo.scheduledDate === t) bucket.todayWorkOrders++;
+      if (wo.scheduledDate && wo.scheduledDate >= t && wo.scheduledDate <= weekEnd) {
+        bucket.weekWorkOrders++;
+      }
+    });
+
+    const rows = Object.values(areaMap).filter(r =>
+      r.leadCount || r.intakeCount || r.revenueCount || r.workOrderCount
+    );
     rows.sort((a, b) => {
       const score = r => r.revenueTotal + r.intakeCount * 10000 + r.leadCount * 100;
       return score(b) - score(a);
@@ -192,7 +222,7 @@ const MapBrain = {
   },
 
   getAreaWarnings(ctx) {
-    const { leads, intakes, revenues, today } = ctx;
+    const { leads, intakes, revenues, workOrders, today } = ctx;
     const t = today || new Date().toISOString().slice(0, 10);
     const warnings = [];
     const farItems = [];
@@ -239,6 +269,30 @@ const MapBrain = {
             id: lead.id
           });
         }
+      }
+    });
+
+    (workOrders || []).forEach(wo => {
+      if (!wo || wo.status === 'archived' || wo.status === 'cancelled') return;
+      if (!['tentative', 'confirmed'].includes(wo.status)) return;
+      const addr = (wo.address || '').trim();
+      const area = typeof WorkOrderBrain !== 'undefined'
+        ? WorkOrderBrain.getWorkOrderArea(wo)
+        : this.getWorkOrderArea(wo);
+      const dist = this.classifyAreaDistance(area, addr);
+      const name = wo.customerName || '（名前なし）';
+      if (!addr) {
+        noAddressItems.push({ kind: 'work-order', name, area, id: wo.id });
+      } else if (dist === 'far' || dist === 'caution') {
+        farItems.push({
+          kind: 'work-order',
+          area,
+          name,
+          message: dist === 'far'
+            ? '作業予定：遠方。移動距離と最低金額を確認'
+            : '作業予定：移動注意。日程と最低金額を確認',
+          id: wo.id
+        });
       }
     });
 
@@ -299,8 +353,13 @@ const MapBrain = {
     const farW = w.find(x => x.type === 'far');
     if (farW && farW.items) {
       const intakeFar = farW.items.filter(i => i.kind === 'intake');
+      const woFar = farW.items.filter(i => i.kind === 'work-order');
       if (intakeFar.length) {
         lines.push(`・${intakeFar[0].area}の受付${intakeFar.length}件、移動距離確認`);
+        has = true;
+      }
+      if (woFar.length) {
+        lines.push(`・${woFar[0].area}の作業予定${woFar.length}件、移動距離確認`);
         has = true;
       }
     }
@@ -308,8 +367,13 @@ const MapBrain = {
     const noAddrW = w.find(x => x.type === 'no-address');
     if (noAddrW && noAddrW.items) {
       const leadCount = noAddrW.items.filter(i => i.kind === 'lead').length;
+      const woCount = noAddrW.items.filter(i => i.kind === 'work-order').length;
       if (leadCount) {
         lines.push(`・住所未入力の営業先${leadCount}件`);
+        has = true;
+      }
+      if (woCount) {
+        lines.push(`・住所未入力の作業予定${woCount}件`);
         has = true;
       }
     }
@@ -323,12 +387,14 @@ const MapBrain = {
     return has ? lines : [];
   },
 
-  getDiagnosticsCounts(leads, intakes, revenues) {
+  getDiagnosticsCounts(leads, intakes, revenues, workOrders) {
     let leadsNoAddress = 0;
     let intakesNoAddress = 0;
     let leadsUnknownArea = 0;
     let intakesUnknownArea = 0;
     let revenueNoAreaWithLead = 0;
+    let workOrdersNoAddress = 0;
+    let workOrdersUnknownArea = 0;
 
     (leads || []).forEach(lead => {
       if (!this.getLeadAddress(lead)) leadsNoAddress++;
@@ -348,12 +414,23 @@ const MapBrain = {
       if (!this.getLeadAddress(lead) && this.getLeadArea(lead) === '不明') revenueNoAreaWithLead++;
     });
 
+    (workOrders || []).forEach(wo => {
+      if (!wo || wo.status === 'archived' || wo.status === 'cancelled') return;
+      if (!(wo.address || '').trim()) workOrdersNoAddress++;
+      const area = typeof WorkOrderBrain !== 'undefined'
+        ? WorkOrderBrain.getWorkOrderArea(wo)
+        : this.getWorkOrderArea(wo);
+      if (area === '不明' && (wo.address || '').trim()) workOrdersUnknownArea++;
+    });
+
     return {
       leadsNoAddress,
       intakesNoAddress,
       leadsUnknownArea,
       intakesUnknownArea,
-      revenueNoAreaWithLead
+      revenueNoAreaWithLead,
+      workOrdersNoAddress,
+      workOrdersUnknownArea
     };
   }
 };

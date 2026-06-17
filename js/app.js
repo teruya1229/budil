@@ -7,6 +7,7 @@
   let currentFollowupFilter = 'all';
   let currentMessageLeadId = null;
   let pendingImport = null;
+  let pendingRevenueWorkOrderId = '';
   let currentSalesTab = 'email';
   let currentSalesMessages = null;
   let pickupBulkPreview = [];
@@ -283,9 +284,10 @@
     const leads = Storage.getLeads();
     const intakes = Storage.getReceptionIntakes();
     const revenues = Storage.getRevenueRecords();
-    const summary = MapBrain.buildAreaSummary({ leads, intakes, revenues, today });
-    const warnings = MapBrain.getAreaWarnings({ leads, intakes, revenues, today });
-    return { today, leads, intakes, revenues, summary, warnings };
+    const workOrders = Storage.getWorkOrders();
+    const summary = MapBrain.buildAreaSummary({ leads, intakes, revenues, workOrders, today });
+    const warnings = MapBrain.getAreaWarnings({ leads, intakes, revenues, workOrders, today });
+    return { today, leads, intakes, revenues, workOrders, summary, warnings };
   }
 
   function goToAreaView() {
@@ -320,6 +322,61 @@
       bindMapActionEvents(mapEl);
     }
   }
+
+  function syncWorkOrderAreaFromAddress() {
+    const address = (document.getElementById('work-order-address')?.value || '').trim();
+    const areaEl = document.getElementById('work-order-area');
+    if (!areaEl || areaEl.dataset.manual === '1') return;
+    const detected = MapBrain.detectAreaFromAddress(address);
+    fillAreaSelectOptions(areaEl, detected);
+    const mapEl = document.getElementById('work-order-form-map-actions');
+    if (mapEl) {
+      mapEl.innerHTML = renderMapActionsHtml(address, { area: detected });
+      bindMapActionEvents(mapEl);
+    }
+    updateWorkOrderCalendarHint();
+  }
+
+  function getWorkOrderFormData() {
+    const startRaw = document.getElementById('work-order-start')?.value || '';
+    const endRaw = document.getElementById('work-order-end')?.value || '';
+    const address = (document.getElementById('work-order-address')?.value || '').trim();
+    const area = (document.getElementById('work-order-area')?.value || '').trim()
+      || MapBrain.detectAreaFromAddress(address);
+    return WorkOrderBrain.normalizeWorkOrder({
+      customerName: document.getElementById('work-order-customer')?.value || '',
+      phone: document.getElementById('work-order-phone')?.value || '',
+      address,
+      area,
+      source: document.getElementById('work-order-source')?.value || '',
+      serviceText: document.getElementById('work-order-service')?.value || '',
+      scheduledDate: document.getElementById('work-order-date')?.value || '',
+      startTime: startRaw ? startRaw.slice(0, 5) : '',
+      endTime: endRaw ? endRaw.slice(0, 5) : '',
+      status: document.getElementById('work-order-status')?.value || 'tentative',
+      estimateAmount: document.getElementById('work-order-amount')?.value || '',
+      memo: document.getElementById('work-order-memo')?.value || '',
+      intakeId: document.getElementById('work-order-intake')?.value || '',
+      leadId: document.getElementById('work-order-lead')?.value || ''
+    });
+  }
+
+  function updateWorkOrderCalendarHint() {
+    const hintEl = document.getElementById('work-order-calendar-hint');
+    const calBtn = document.getElementById('btn-work-order-calendar');
+    if (!hintEl || !calBtn) return;
+    const data = getWorkOrderFormData();
+    const cal = WorkOrderBrain.buildGoogleCalendarUrl(data);
+    if (cal.ready) {
+      hintEl.classList.add('hidden');
+      hintEl.textContent = '';
+      calBtn.disabled = false;
+    } else {
+      hintEl.classList.remove('hidden');
+      hintEl.textContent = cal.reason || '予定日または時間を入力してください';
+      calBtn.disabled = true;
+    }
+  }
   const CLOSED_STATUSES = ['成約', '見送り', 'NG'];
   const ACTIVE_LEAD_STATUSES = ['未接触', 'アプローチ中', '商談中'];
 
@@ -336,6 +393,7 @@
         if (view === 'radar') renderDemandRadar();
         if (view === 'pickup') renderDemandPickup();
         if (view === 'reception') renderReceptionView();
+        if (view === 'work-order') renderWorkOrderView();
         if (view === 'area') renderAreaView();
         if (view === 'revenue') renderRevenueView();
         if (view === 'data') renderDataManagement();
@@ -422,6 +480,9 @@
   function formatDailyTaskTypeLabel(task) {
     if (!task) return 'その他';
     if (task.type === 'manual') return '手動';
+    if (task.workOrderId || (task.pickupDedupeKey && String(task.pickupDedupeKey).startsWith('work-order|'))) {
+      return '作業予定';
+    }
     const map = {
       'sales-hold': '営業保留',
       'unlinked-revenue': '売上紐付け',
@@ -452,6 +513,7 @@
       if (due < today) return 0;
     }
     if (task.pickupActionType && task.pickupActionType.startsWith('decision-grow')) return 2;
+    if (task.pickupDedupeKey && String(task.pickupDedupeKey).startsWith('work-order|')) return 0;
     if (task.pickupDedupeKey && String(task.pickupDedupeKey).startsWith('intake|')) return 1;
     if (task.pickupActionType && task.pickupActionType.startsWith('decision-improve')) return 3;
     if (task.dueDate === today) return 1;
@@ -566,6 +628,14 @@
 
     ReceptionBrain.getReceptionWarnings(Storage.getReceptionIntakes()).forEach(w => warnings.push(w));
 
+    WorkOrderBrain.buildWorkOrderWarnings(
+      Storage.getWorkOrders(),
+      Storage.getLeads(),
+      Storage.getReceptionIntakes(),
+      Storage.getRevenueRecords(),
+      today
+    ).forEach(w => warnings.push(w));
+
     const mapCtx = getMapContext();
     mapCtx.warnings.forEach(w => {
       if (w.type === 'far' && w.items && w.items[0]) {
@@ -598,6 +668,9 @@
     const lines = [];
     const intakeComment = ReceptionBrain.buildReceptionHomeCommentFromIntakes(Storage.getReceptionIntakes());
     if (intakeComment) lines.push(intakeComment);
+
+    const workOrderComment = WorkOrderBrain.buildHomeComment(Storage.getWorkOrders(), today);
+    if (workOrderComment) lines.push(workOrderComment);
 
     const mapCtx = getMapContext();
     MapBrain.buildAreaHomeComment(mapCtx.summary, mapCtx.warnings).forEach(l => lines.push(l));
@@ -686,6 +759,10 @@
   function renderExecutiveHomeRevenueHtml() {
     const rev = getRevenueContext();
     const { summary, salesOutcome, comment } = rev;
+    const forecast = WorkOrderBrain.getSalesForecast(Storage.getWorkOrders(), rev.records, TODAY());
+    const forecastComment = forecast.weekAmount > 0
+      ? `今週の作業予定見込みは${WorkOrderBrain.formatYen(forecast.weekAmount)}です。作業完了後に売上登録して反映してください。`
+      : '';
   const outcomeComment = salesOutcome && salesOutcome.unlinkedTotal > 0
       ? '未紐付け売上があるため、営業先との紐付けを確認してください。'
       : (comment || '');
@@ -698,6 +775,7 @@
         <div><span>紐付け売上</span><strong>${esc(RevenueBrain.formatYen((salesOutcome && salesOutcome.linkedTotal) || 0))}</strong></div>
         <div><span>未紐付け売上</span><strong>${salesOutcome && salesOutcome.unlinkedTotal > 0 ? esc(RevenueBrain.formatYen(salesOutcome.unlinkedTotal)) : 'なし ✓'}</strong></div>
       </div>
+      ${forecastComment ? `<p class="exec-home-revenue-comment">${esc(forecastComment)}</p>` : ''}
       ${outcomeComment ? `<p class="exec-home-revenue-comment">${esc(outcomeComment)}</p>` : ''}
       <button type="button" class="btn btn-sm btn-secondary exec-home-revenue-link">売上番頭を開く</button>`;
   }
@@ -792,6 +870,7 @@
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="kurokuro">クロクロ調査プロンプト</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="pickup">需要番頭を開く</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="reception">受付番頭を開く</button>
+      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="work-order">作業予定番頭を開く</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="area">エリア番頭を開く</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="revenue">売上を登録</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="lead">営業先を登録</button>
@@ -806,6 +885,7 @@
     if (action === 'kurokuro') return goToKurokuroPrompt();
     if (action === 'pickup') return goToDemandPickup();
     if (action === 'reception') return goToReception();
+    if (action === 'work-order') return goToWorkOrder();
     if (action === 'area') return goToAreaView();
     if (action === 'revenue') return goToAddRevenue();
     if (action === 'lead') return goToAddLead();
@@ -825,6 +905,11 @@
   function goToReception() {
     navigateToView('reception');
     setTimeout(() => scrollToElement('#reception-paste-area'), 120);
+  }
+
+  function goToWorkOrder() {
+    navigateToView('work-order');
+    setTimeout(() => scrollToElement('#work-order-form'), 120);
   }
 
   function goToDataBackup() {
@@ -2176,6 +2261,7 @@
     if (summary.manualTasks) items.push('手動タスク ' + summary.manualTasks + '件');
     if (summary.demandPickups) items.push('需要ピックアップ ' + summary.demandPickups + '件');
     if (summary.receptionIntakes) items.push('受付データ ' + summary.receptionIntakes + '件');
+    if (summary.workOrders) items.push('作業予定 ' + summary.workOrders + '件');
     return items;
   }
 
@@ -2233,6 +2319,7 @@
     { title: '今日やることを整理', desc: '優先タスクを毎朝確認', action: 'task' },
     { title: '需要を拾う', desc: 'クロクロ調査結果を需要番頭に取り込み', action: 'pickup' },
     { title: '受付・予約をつなぐ', desc: 'AI番頭の受付結果を営業・タスク・売上へ', action: 'reception' },
+    { title: '予約・作業予定を管理', desc: '作業予定から今日やること・売上登録へ', action: 'work-order' },
     { title: 'エリアで移動を判断', desc: 'エリア別サマリーとGoogleマップ導線', action: 'area' },
     { title: '投稿・広告文案を作る', desc: '需要から投稿・広告案を生成', action: 'pickup' },
     { title: '投稿・広告予定を管理', desc: 'カレンダーで今週の予定を把握', action: 'calendar' },
@@ -2263,6 +2350,7 @@
     if (action === 'task') return goToAddDailyTask();
     if (action === 'pickup') return goToDemandPickup();
     if (action === 'reception') return goToReception();
+    if (action === 'work-order') return goToWorkOrder();
     if (action === 'area') return goToAreaView();
     if (action === 'calendar') {
       navigateToView('dashboard');
@@ -2310,6 +2398,13 @@
           ${done ? '' : `<button type="button" class="btn btn-sm ${i === 0 ? 'btn-primary' : 'btn-secondary'}" data-onboarding-action="${esc(step.action)}">${esc(step.btn)}</button>`}
         </li>`;
       }).join('')}</ol>
+      <div class="onboarding-workflow-hint">
+        <h3 class="onboarding-subtitle">受付〜売上の流れ</h3>
+        <ul class="onboarding-workflow-list">
+          <li>受付・予約番頭でAI番頭の結果を取り込み、「作業予定を作成」で予約化</li>
+          <li>予約・作業予定番頭で今日/今週の作業を確認し、作業完了後に売上フォームへ反映</li>
+        </ul>
+      </div>
       ${mode === 'detail' ? `
       <div class="onboarding-extra-actions">
         <button type="button" class="btn btn-sm btn-secondary" data-onboarding-nav="demo">デモデータを作成</button>
@@ -2402,7 +2497,7 @@
       <h2>デモデータ</h2>
       <p class="data-mgmt-desc">販売・デモ用のサンプルデータです。すべて <code>isDemo</code> フラグ付きで、削除時も本番データは触りません。</p>
       <ul class="demo-data-scope-list">
-        <li>営業先 3件 / 売上 2件 / 需要ピックアップ 3件</li>
+        <li>営業先 3件 / 売上 2件 / 需要ピックアップ 3件 / 受付 2件 / 作業予定 2件</li>
         <li>投稿・広告予定 2件 / 施策成果 1件</li>
         <li>今日やること 3件 / 確認完了 1件</li>
       </ul>
@@ -2411,7 +2506,7 @@
         <button type="button" id="btn-delete-demo-data" class="btn btn-secondary" ${hasDemo ? '' : 'disabled'}>デモデータを削除</button>
       </div>
       <div id="demo-data-guide" class="demo-data-guide ${demoGuideVisible ? '' : 'hidden'}">
-        <p class="demo-data-guide-text">デモデータを作成しました。<br>経営番頭ホーム → 需要番頭 → 受付・予約番頭 → 経営レポート の順で確認すると、Budilの流れが分かります。</p>
+        <p class="demo-data-guide-text">デモデータを作成しました。<br>経営番頭ホーム → 需要番頭 → 受付・予約番頭 → 予約・作業予定番頭 → 経営レポート の順で確認すると、Budilの流れが分かります。</p>
         <div class="demo-data-guide-actions">
           <button type="button" class="btn btn-sm btn-primary" data-demo-nav="home">経営番頭ホームを見る</button>
           <button type="button" class="btn btn-sm btn-secondary" data-demo-nav="pickup">需要番頭を見る</button>
@@ -2702,6 +2797,8 @@
       ['売上', counts.revenue],
       ['今日やること', counts.dailyTasks],
       ['需要ピックアップ', counts.pickups],
+      ['受付データ', counts.receptionIntakes],
+      ['作業予定', counts.workOrders],
       ['活動履歴', counts.activityLogs],
       ['成果入力済み', counts.performanceEntered],
       ['dailyChecks', counts.dailyChecks]
@@ -2717,7 +2814,7 @@
     const critical = Storage.CRITICAL_BACKUP_KEYS || [];
     const list = (backupKeys || []).filter(b => critical.includes(b.key));
     el.innerHTML = `
-      <p class="label-muted">バックアップ対象キー（主要5件）</p>
+      <p class="label-muted">バックアップ対象キー（主要7件）</p>
       <ul>${list.map(b => {
         const status = !b.exists ? '未保存' : (b.parseOk ? 'OK' : '読込エラー');
         return `<li><code>${esc(b.key)}</code> — ${esc(status)}</li>`;
@@ -3351,7 +3448,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v3.5</span>
+        <span class="business-report-version">v3.6</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -3508,6 +3605,9 @@
     renderFollowupTable();
     renderFollowupOverdue();
     renderRevenueView();
+    renderReceptionView();
+    renderWorkOrderView();
+    renderAreaView();
     renderDataManagement();
   }
 
@@ -3650,6 +3750,14 @@
       receptionMorningEl.innerHTML = lines.length
         ? `<ul class="mgmt-reception-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
         : '<p class="placeholder-text">受付データはありません。受付・予約番頭でAI番頭結果を取り込んでください。</p>';
+    }
+
+    const workOrderMorningEl = document.getElementById('mgmt-work-orders');
+    if (workOrderMorningEl) {
+      const lines = WorkOrderBrain.buildMorningLines(Storage.getWorkOrders(), TODAY());
+      workOrderMorningEl.innerHTML = lines.length
+        ? `<ul class="mgmt-work-orders-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '<p class="placeholder-text">作業予定はありません。予約・作業予定番頭で登録してください。</p>';
     }
 
     const areaMorningEl = document.getElementById('mgmt-area-warnings');
@@ -6163,6 +6271,354 @@
     });
   }
 
+  // ── 予約・作業予定番頭 ──
+  function fillWorkOrderSelects() {
+    const intakeEl = document.getElementById('work-order-intake');
+    const leadEl = document.getElementById('work-order-lead');
+    const areaEl = document.getElementById('work-order-area');
+    if (areaEl && !areaEl.options.length) fillAreaSelectOptions(areaEl, '');
+    if (intakeEl) {
+      const selected = intakeEl.value;
+      const intakes = Storage.getReceptionIntakes();
+      intakeEl.innerHTML = '<option value="">なし</option>' +
+        intakes.map(i => `<option value="${esc(i.id)}">${esc(i.customerName || i.id)}</option>`).join('');
+      if (selected) intakeEl.value = selected;
+    }
+    if (leadEl) {
+      const selected = leadEl.value;
+      const leads = Storage.getLeads().slice().sort((a, b) => (a.company || '').localeCompare(b.company || '', 'ja'));
+      leadEl.innerHTML = '<option value="">なし</option>' +
+        leads.map(l => `<option value="${esc(l.id)}">${esc(l.company)}</option>`).join('');
+      if (selected) leadEl.value = selected;
+    }
+  }
+
+  function setWorkOrderFormData(workOrder) {
+    fillWorkOrderSelects();
+    const wo = WorkOrderBrain.normalizeWorkOrder(workOrder);
+    document.getElementById('work-order-edit-id').value = wo.id || '';
+    document.getElementById('work-order-customer').value = wo.customerName || '';
+    document.getElementById('work-order-phone').value = wo.phone || '';
+    document.getElementById('work-order-address').value = wo.address || '';
+    fillAreaSelectOptions(document.getElementById('work-order-area'), wo.area || MapBrain.detectAreaFromAddress(wo.address));
+    document.getElementById('work-order-source').value = wo.source || '';
+    document.getElementById('work-order-service').value = wo.serviceText || '';
+    document.getElementById('work-order-date').value = wo.scheduledDate || '';
+    document.getElementById('work-order-start').value = wo.startTime || '';
+    document.getElementById('work-order-end').value = wo.endTime || '';
+    document.getElementById('work-order-status').value = wo.status || 'tentative';
+    document.getElementById('work-order-amount').value = wo.estimateAmount || '';
+    document.getElementById('work-order-memo').value = wo.memo || '';
+    document.getElementById('work-order-intake').value = wo.intakeId || '';
+    document.getElementById('work-order-lead').value = wo.leadId || '';
+    const mapEl = document.getElementById('work-order-form-map-actions');
+    if (mapEl) {
+      mapEl.innerHTML = renderMapActionsHtml(wo.address, { area: wo.area });
+      bindMapActionEvents(mapEl);
+    }
+    updateWorkOrderCalendarHint();
+  }
+
+  function clearWorkOrderForm() {
+    document.getElementById('work-order-edit-id').value = '';
+    document.getElementById('work-order-form').reset();
+    fillWorkOrderSelects();
+    const areaEl = document.getElementById('work-order-area');
+    if (areaEl) areaEl.dataset.manual = '';
+    syncWorkOrderAreaFromAddress();
+  }
+
+  function saveWorkOrderFromForm() {
+    const id = document.getElementById('work-order-edit-id').value;
+    const data = getWorkOrderFormData();
+    if (!data.customerName) {
+      alert('お客様名を入力してください');
+      return null;
+    }
+    if (id) {
+      Storage.updateWorkOrder(id, data);
+      return Storage.getWorkOrders().find(w => w.id === id);
+    }
+    return Storage.addWorkOrder(data);
+  }
+
+  function createWorkOrderFromIntake(intakeId) {
+    const intake = Storage.getReceptionIntakes().find(i => i.id === intakeId);
+    if (!intake) return;
+    const payload = WorkOrderBrain.createFromIntake(intake);
+    const workOrder = Storage.addWorkOrder(payload);
+    const relatedWorkOrderIds = Array.isArray(intake.relatedWorkOrderIds) ? [...intake.relatedWorkOrderIds] : [];
+    if (workOrder.id && !relatedWorkOrderIds.includes(workOrder.id)) relatedWorkOrderIds.push(workOrder.id);
+    const nextStatus = ['new', 'lead_created', 'task_created'].includes(intake.status)
+      ? 'work_scheduled'
+      : intake.status;
+    Storage.updateReceptionIntake(intakeId, {
+      relatedWorkOrderId: workOrder.id,
+      relatedWorkOrderIds,
+      status: nextStatus
+    });
+    navigateToView('work-order');
+    setWorkOrderFormData(workOrder);
+    renderReceptionView();
+    renderWorkOrderView();
+    renderDashboard();
+    alert('作業予定を作成しました。内容を確認して保存してください。');
+  }
+
+  function createWorkOrderFromLead(leadId) {
+    const lead = Storage.getLeads().find(l => l.id === leadId);
+    if (!lead) return;
+    const payload = WorkOrderBrain.createFromLead(lead);
+    navigateToView('work-order');
+    setWorkOrderFormData(payload);
+    scrollToElement('#work-order-form');
+    alert('営業先の情報を作業予定フォームに反映しました。');
+  }
+
+  function renderWorkOrderItemActions(workOrder) {
+    const wo = WorkOrderBrain.normalizeWorkOrder(workOrder);
+    const cal = WorkOrderBrain.buildGoogleCalendarUrl(wo);
+    const mapUrl = MapBrain.buildGoogleMapSearchUrl(wo.address);
+    const completed = wo.status === 'completed';
+    const hasRevenue = !!wo.actualRevenueId;
+    return `
+      ${mapUrl ? `<a href="${esc(mapUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary">Googleマップで開く</a>` : ''}
+      ${cal.ready ? `<a href="${esc(cal.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary" data-wo-calendar="${esc(wo.id)}">Googleカレンダーに追加</a>` : ''}
+      <button type="button" class="btn btn-sm btn-secondary" data-wo-add-task="${esc(wo.id)}">今日やることに追加</button>
+      ${!completed ? `<button type="button" class="btn btn-sm btn-primary" data-wo-complete="${esc(wo.id)}">作業完了</button>` : ''}
+      ${completed && !hasRevenue ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-fill-revenue="${esc(wo.id)}">売上フォームへ反映</button>` : ''}
+      <button type="button" class="btn btn-sm btn-secondary" data-wo-edit="${esc(wo.id)}">編集</button>`;
+  }
+
+  function renderWorkOrderItemCard(workOrder) {
+    const wo = WorkOrderBrain.normalizeWorkOrder(workOrder);
+    const area = WorkOrderBrain.getWorkOrderArea(wo);
+    const timeLabel = wo.startTime && wo.endTime ? `${wo.startTime}〜${wo.endTime}` : (wo.startTime || '時間未設定');
+    return `
+      <div class="work-order-item" data-work-order-id="${esc(wo.id)}">
+        <div class="work-order-item-header">
+          <strong>${esc(timeLabel)}</strong>
+          <span class="work-order-status-badge work-order-status-${esc(wo.status)}">${esc(WorkOrderBrain.formatStatus(wo.status))}</span>
+        </div>
+        <p class="work-order-item-meta"><strong>${esc(wo.customerName || '（名前なし）')}</strong> / ${esc(wo.serviceText || '—')}</p>
+        <p class="work-order-item-meta">エリア：${esc(area)} ${renderAreaDistanceBadge(area, wo.address)} / 見込み：${esc(WorkOrderBrain.formatYen(wo.estimateAmount))}</p>
+        <div class="work-order-item-actions">
+          ${renderWorkOrderItemActions(wo)}
+        </div>
+      </div>`;
+  }
+
+  function bindWorkOrderItemEvents(container) {
+    if (!container) return;
+    bindMapActionEvents(container);
+    container.querySelectorAll('[data-wo-calendar]').forEach(link => {
+      link.addEventListener('click', () => {
+        Storage.updateWorkOrder(link.dataset.woCalendar, { calendarAdded: true });
+      });
+    });
+    container.querySelectorAll('[data-wo-add-task]').forEach(btn => {
+      btn.addEventListener('click', () => addTaskFromWorkOrder(btn.dataset.woAddTask));
+    });
+    container.querySelectorAll('[data-wo-complete]').forEach(btn => {
+      btn.addEventListener('click', () => completeWorkOrder(btn.dataset.woComplete));
+    });
+    container.querySelectorAll('[data-wo-fill-revenue]').forEach(btn => {
+      btn.addEventListener('click', () => fillRevenueFromWorkOrder(btn.dataset.woFillRevenue));
+    });
+    container.querySelectorAll('[data-wo-edit]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const wo = Storage.getWorkOrders().find(w => w.id === btn.dataset.woEdit);
+        if (wo) {
+          setWorkOrderFormData(wo);
+          scrollToElement('#work-order-form');
+        }
+      });
+    });
+  }
+
+  function addTaskFromWorkOrder(workOrderId) {
+    const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
+    if (!wo) return;
+    const today = TODAY();
+    const taskPayload = WorkOrderBrain.createTaskPayload(wo, today);
+    const store = Storage.getDailyActionTasksData();
+    if (store.manualTasks.some(t => t.pickupDedupeKey === taskPayload.pickupDedupeKey)) {
+      alert('同じ今日やることはすでに追加済みです。');
+      return;
+    }
+    Storage.addManualDailyTask(taskPayload);
+    renderWorkOrderView();
+    renderDailyActionTasks();
+    renderExecutiveHome();
+    renderMorningDailyTasksBrief();
+    alert('今日やることに追加しました。');
+  }
+
+  function completeWorkOrder(workOrderId) {
+    Storage.updateWorkOrder(workOrderId, {
+      status: 'completed',
+      completedAt: new Date().toISOString()
+    });
+    renderWorkOrderView();
+    renderDashboard();
+    renderAreaView();
+    alert('作業を完了にしました。売上フォームへ反映して登録してください。');
+  }
+
+  function fillRevenueFromWorkOrder(workOrderId) {
+    const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
+    if (!wo) return;
+    const candidate = WorkOrderBrain.buildRevenueFormPayload(wo);
+    pendingRevenueWorkOrderId = workOrderId;
+    fillRevenueSelects();
+    navigateToView('revenue');
+    resetRevenueForm();
+    pendingRevenueWorkOrderId = workOrderId;
+    document.getElementById('revenue-work-date').value = candidate.workDate || TODAY();
+    document.getElementById('revenue-customer').value = candidate.customerName || '';
+    const serviceEl = document.getElementById('revenue-service');
+    if (serviceEl) serviceEl.value = candidate.service || serviceEl.value;
+    const sourceEl = document.getElementById('revenue-source');
+    if (sourceEl) sourceEl.value = candidate.source || sourceEl.value;
+    document.getElementById('revenue-amount').value = candidate.amount || '';
+    document.getElementById('revenue-memo').value = candidate.memo || '';
+    document.getElementById('revenue-status').value = '予定';
+    fillRevenueLeadSelect(candidate.leadId || '');
+    toggleRevenueLeadOptions();
+    setTimeout(() => scrollToElement('#revenue-form'), 120);
+    alert('売上フォームに反映しました。内容を確認して保存してください。');
+  }
+
+  function renderWorkOrderForecast() {
+    const el = document.getElementById('work-order-forecast');
+    if (!el) return;
+    const forecast = WorkOrderBrain.getSalesForecast(Storage.getWorkOrders(), Storage.getRevenueRecords(), TODAY());
+    const cards = [
+      { label: '今日の売上見込み', value: WorkOrderBrain.formatYen(forecast.todayAmount), sub: `${forecast.todayCount}件` },
+      { label: '今週の売上見込み', value: WorkOrderBrain.formatYen(forecast.weekAmount), sub: `${forecast.weekCount}件` },
+      { label: '今月の売上見込み', value: WorkOrderBrain.formatYen(forecast.monthAmount), sub: `${forecast.monthCount}件` },
+      { label: '仮予定の見込み', value: WorkOrderBrain.formatYen(forecast.tentativeAmount), sub: `${forecast.tentativeCount}件` },
+      { label: '確定予定の見込み', value: WorkOrderBrain.formatYen(forecast.confirmedAmount), sub: `${forecast.confirmedCount}件` },
+      { label: '完了・売上未登録', value: `${forecast.completedNoRevenueCount}件`, sub: '要対応' }
+    ];
+    el.innerHTML = cards.map(c =>
+      `<div class="work-order-forecast-item"><span>${esc(c.label)}</span><strong>${esc(c.value)}</strong><small>${esc(c.sub)}</small></div>`
+    ).join('');
+  }
+
+  function renderWorkOrderTodayList() {
+    const el = document.getElementById('work-order-today-list');
+    if (!el) return;
+    const today = TODAY();
+    const items = WorkOrderBrain.getTodayWorkOrders(Storage.getWorkOrders(), today);
+    if (!items.length) {
+      el.innerHTML = '<p class="placeholder-text">今日の作業予定はありません。</p>';
+      return;
+    }
+    el.innerHTML = items.map(wo => renderWorkOrderItemCard(wo)).join('');
+    bindWorkOrderItemEvents(el);
+  }
+
+  function renderWorkOrderWeekList() {
+    const el = document.getElementById('work-order-week-list');
+    if (!el) return;
+    const today = TODAY();
+    const items = WorkOrderBrain.getWeekWorkOrders(Storage.getWorkOrders(), today);
+    if (!items.length) {
+      el.innerHTML = '<p class="placeholder-text">今週の作業予定はありません。</p>';
+      return;
+    }
+    const groups = WorkOrderBrain.groupByDate(items);
+    el.innerHTML = groups.map(g => `
+      <div class="work-order-day-group">
+        <p class="work-order-day-label">${esc(g.date === today ? '今日 ' + g.date : g.date)}</p>
+        ${g.items.map(wo => renderWorkOrderItemCard(wo)).join('')}
+      </div>`).join('');
+    bindWorkOrderItemEvents(el);
+  }
+
+  function renderWorkOrderFromIntakeList() {
+    const el = document.getElementById('work-order-from-intake-list');
+    if (!el) return;
+    const linked = Storage.getWorkOrders().filter(w => w.intakeId);
+    if (!linked.length) {
+      el.innerHTML = '<p class="placeholder-text">受付から作成した作業予定はまだありません。</p>';
+      return;
+    }
+    el.innerHTML = linked.map(wo => renderWorkOrderItemCard(wo)).join('');
+    bindWorkOrderItemEvents(el);
+  }
+
+  function renderWorkOrderView() {
+    try {
+      safeRenderSection('work-order-forecast', () => renderWorkOrderForecast(), '売上見込み');
+      safeRenderSection('work-order-today-list', () => renderWorkOrderTodayList(), '今日の作業予定');
+      safeRenderSection('work-order-week-list', () => renderWorkOrderWeekList(), '今週の作業予定');
+      safeRenderSection('work-order-from-intake-list', () => renderWorkOrderFromIntakeList(), '受付から作業予定化');
+      fillWorkOrderSelects();
+      updateWorkOrderCalendarHint();
+    } catch (err) {
+      console.error('[Budil] render error: 作業予定番頭', err);
+      const el = document.getElementById('work-order-today-list');
+      if (el) {
+        el.innerHTML = '<p class="section-render-error">このセクションの表示中にエラーが発生しました。バックアップ後、データ診断を実行してください。</p>';
+      }
+    }
+  }
+
+  function initWorkOrder() {
+    const form = document.getElementById('work-order-form');
+    if (!form) return;
+    fillWorkOrderSelects();
+    ['work-order-address'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', debounce(syncWorkOrderAreaFromAddress, 300));
+    });
+    ['work-order-date', 'work-order-start', 'work-order-end'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', updateWorkOrderCalendarHint);
+    });
+    const areaEl = document.getElementById('work-order-area');
+    if (areaEl) {
+      areaEl.addEventListener('change', () => {
+        areaEl.dataset.manual = areaEl.value ? '1' : '';
+        syncWorkOrderAreaFromAddress();
+      });
+    }
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const saved = saveWorkOrderFromForm();
+      if (!saved) return;
+      renderWorkOrderView();
+      renderDashboard();
+      renderAreaView();
+      alert('作業予定を保存しました。');
+    });
+    const clearBtn = document.getElementById('btn-work-order-clear');
+    if (clearBtn) clearBtn.addEventListener('click', clearWorkOrderForm);
+    const gmapBtn = document.getElementById('btn-work-order-gmap');
+    if (gmapBtn) {
+      gmapBtn.addEventListener('click', () => {
+        const url = MapBrain.buildGoogleMapSearchUrl(getWorkOrderFormData().address);
+        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+        else alert('住所を入力してください');
+      });
+    }
+    const calBtn = document.getElementById('btn-work-order-calendar');
+    if (calBtn) {
+      calBtn.addEventListener('click', () => {
+        const cal = WorkOrderBrain.buildGoogleCalendarUrl(getWorkOrderFormData());
+        if (!cal.ready) {
+          alert(cal.reason || '予定日または時間を入力してください');
+          return;
+        }
+        window.open(cal.url, '_blank', 'noopener,noreferrer');
+        const id = document.getElementById('work-order-edit-id').value;
+        if (id) Storage.updateWorkOrder(id, { calendarAdded: true });
+      });
+    }
+  }
+
   // ── エリア番頭 ──
   function renderAreaTodaySummary() {
     const el = document.getElementById('area-today-summary');
@@ -6194,7 +6650,7 @@
       if (w.type === 'no-address' && w.items) {
         parts.push('<h3 class="area-warnings-subtitle">住所未入力</h3><ul class="area-warnings-items">');
         w.items.forEach(item => {
-          const kind = item.kind === 'intake' ? '受付' : '営業先';
+          const kind = item.kind === 'intake' ? '受付' : (item.kind === 'work-order' ? '作業予定' : '営業先');
           parts.push(`<li>${esc(kind)}：${esc(item.name)} — Googleマップ確認不可</li>`);
         });
         parts.push('</ul>');
@@ -6225,7 +6681,8 @@
           <strong>${esc(row.area)}</strong>
           ${renderAreaDistanceBadge(row.area, row.area)}
         </div>
-        <p class="area-summary-meta">営業先：${row.leadCount}件 / 受付：${row.intakeCount}件 / 売上：${esc(RevenueBrain.formatYen(row.revenueTotal))}</p>
+        <p class="area-summary-meta">営業先：${row.leadCount}件 / 受付：${row.intakeCount}件 / 作業予定：${row.workOrderCount || 0}件 / 売上：${esc(RevenueBrain.formatYen(row.revenueTotal))}</p>
+        <p class="area-summary-meta">今日の作業：${row.todayWorkOrders || 0}件 / 今週：${row.weekWorkOrders || 0}件 / 見込み：${esc(RevenueBrain.formatYen(row.workOrderEstimate || 0))}</p>
         <p class="area-summary-meta">次：${nextParts.length ? esc(nextParts.join('、')) : '—'}</p>
         <div class="map-actions-inline">
           ${areaUrl ? `<a href="${esc(areaUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary">Googleマップでエリア検索</a>` : ''}
@@ -6312,6 +6769,35 @@
     bindMapActionEvents(el);
   }
 
+  function renderAreaWorkOrdersList() {
+    const el = document.getElementById('area-work-orders-list');
+    if (!el) return;
+    const { workOrders, today } = getMapContext();
+    const active = WorkOrderBrain.filterActive(workOrders);
+    if (!active.length) {
+      el.innerHTML = '<p class="placeholder-text">作業予定はまだありません。</p>';
+      return;
+    }
+    const weekEnd = WorkOrderBrain.addDays(today, 6);
+    const byArea = {};
+    active.forEach(wo => {
+      const area = WorkOrderBrain.getWorkOrderArea(wo);
+      if (!byArea[area]) byArea[area] = [];
+      byArea[area].push(wo);
+    });
+    el.innerHTML = Object.keys(byArea).sort().map(area => {
+      const list = byArea[area];
+      const todayCount = list.filter(w => w.scheduledDate === today).length;
+      const weekCount = list.filter(w => w.scheduledDate >= today && w.scheduledDate <= weekEnd).length;
+      const estimate = WorkOrderBrain.sumEstimate(list);
+      return `
+      <div class="area-summary-card">
+        <strong>${esc(area)}</strong> ${renderAreaDistanceBadge(area, area)}
+        <p class="area-summary-meta">作業予定 ${list.length}件 / 今日 ${todayCount}件 / 今週 ${weekCount}件 / 見込み ${esc(WorkOrderBrain.formatYen(estimate))}</p>
+      </div>`;
+    }).join('');
+  }
+
   function renderAreaView() {
     try {
       safeRenderSection(null, () => renderAreaTodaySummary(), 'エリアサマリー');
@@ -6320,6 +6806,7 @@
       safeRenderSection('area-revenue-list', () => renderAreaRevenueList(), 'エリア別売上');
       safeRenderSection('area-leads-list', () => renderAreaLeadsList(), 'エリア別営業先');
       safeRenderSection('area-intakes-list', () => renderAreaIntakesList(), 'エリア別受付');
+      safeRenderSection('area-work-orders-list', () => renderAreaWorkOrdersList(), 'エリア別作業予定');
     } catch (err) {
       console.error('[Budil] render error: エリア番頭', err);
     }
@@ -6479,11 +6966,17 @@
       const revLabel = intake.relatedRevenueId ? 'あり' : (intake.status === 'revenue_candidate' ? '候補' : '—');
       const area = MapBrain.getIntakeArea(intake);
       const addr = (intake.address || '').trim();
+      const woIds = [
+        ...(intake.relatedWorkOrderId ? [intake.relatedWorkOrderId] : []),
+        ...(Array.isArray(intake.relatedWorkOrderIds) ? intake.relatedWorkOrderIds : [])
+      ].filter(Boolean);
+      const hasWorkOrder = woIds.length > 0;
       return `
       <div class="reception-saved-item" data-intake-id="${esc(intake.id)}">
         <div class="reception-saved-header">
           <span class="reception-saved-date">${esc(formatReceptionDate(intake.createdAt))}</span>
           <span class="reception-status-badge reception-status-${esc(intake.status)}">${esc(formatReceptionStatus(intake.status))}</span>
+          ${hasWorkOrder ? '<span class="reception-work-order-badge">作業予定あり</span>' : ''}
         </div>
         <p class="reception-saved-title"><strong>${esc(intake.customerName || '（名前なし）')}</strong> / ${esc(intake.source || '—')}</p>
         <p class="reception-saved-meta">エリア：${esc(area)} ${renderAreaDistanceBadge(area, addr)}</p>
@@ -6493,6 +6986,7 @@
         <div class="reception-saved-map">${renderMapActionsHtml(addr, { area, showNoAddress: true })}</div>
         <div class="reception-saved-actions">
           <button type="button" class="btn btn-sm btn-primary" data-reception-create-lead="${esc(intake.id)}">営業先を作成</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-create-work-order="${esc(intake.id)}">作業予定を作成</button>
           <button type="button" class="btn btn-sm btn-secondary" data-reception-add-task="${esc(intake.id)}">今日やることに追加</button>
           <button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(intake.id)}">売上フォームに反映</button>
           <button type="button" class="btn btn-sm btn-secondary" data-reception-revenue-candidate="${esc(intake.id)}">売上候補にする</button>
@@ -6510,6 +7004,9 @@
     bindMapActionEvents(container);
     container.querySelectorAll('[data-reception-create-lead]').forEach(btn => {
       btn.addEventListener('click', () => createLeadFromReceptionIntake(btn.dataset.receptionCreateLead));
+    });
+    container.querySelectorAll('[data-reception-create-work-order]').forEach(btn => {
+      btn.addEventListener('click', () => createWorkOrderFromIntake(btn.dataset.receptionCreateWorkOrder));
     });
     container.querySelectorAll('[data-reception-add-task]').forEach(btn => {
       btn.addEventListener('click', () => addTaskFromReceptionIntake(btn.dataset.receptionAddTask));
@@ -7028,6 +7525,7 @@
   function initLeads() {
     fillAreaSelectOptions(document.getElementById('lead-area'), '');
     fillAreaSelectOptions(document.getElementById('reception-area'), '');
+    fillAreaSelectOptions(document.getElementById('work-order-area'), '');
     ['lead-address', 'lead-region'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', debounce(syncLeadAreaFromAddress, 300));
@@ -7060,6 +7558,12 @@
       if (!currentMessageLeadId) return;
       openRevenueFormForLead(currentMessageLeadId);
     });
+    const leadWoBtn = document.getElementById('btn-lead-create-work-order');
+    if (leadWoBtn) {
+      leadWoBtn.addEventListener('click', () => {
+        if (currentMessageLeadId) createWorkOrderFromLead(currentMessageLeadId);
+      });
+    }
 
     ['sales-mgmt-status', 'sales-mgmt-next-date', 'sales-mgmt-next-action', 'sales-mgmt-last-contact'].forEach(id => {
       const el = document.getElementById(id);
@@ -7389,6 +7893,7 @@
     if (viewName === 'radar') renderDemandRadar();
     if (viewName === 'pickup') renderDemandPickup();
     if (viewName === 'reception') renderReceptionView();
+    if (viewName === 'work-order') renderWorkOrderView();
     if (viewName === 'area') renderAreaView();
     if (viewName === 'revenue') renderRevenueView();
     if (viewName === 'data') renderDataManagement();
@@ -8020,6 +8525,7 @@
   function resetRevenueForm() {
     document.getElementById('revenue-edit-id').value = '';
     document.getElementById('revenue-form').reset();
+    pendingRevenueWorkOrderId = '';
     document.getElementById('revenue-work-date').value = TODAY();
     document.getElementById('revenue-status').value = '予定';
     document.getElementById('revenue-payment').value = '未入金';
@@ -8289,14 +8795,22 @@
     const markWon = document.getElementById('revenue-mark-won').checked;
     const leadId = data.leadId;
     const id = document.getElementById('revenue-edit-id').value;
+    const workOrderId = pendingRevenueWorkOrderId;
+    let newRecord = null;
     if (id) Storage.updateRevenueRecord(id, data);
-    else Storage.addRevenueRecord(data);
+    else newRecord = Storage.addRevenueRecord(data);
+    if (workOrderId) {
+      const revId = id || (newRecord && newRecord.id);
+      if (revId) Storage.updateWorkOrder(workOrderId, { actualRevenueId: revId });
+      pendingRevenueWorkOrderId = '';
+    }
     if (markWon && leadId) {
       const updated = updateLeadStatusFromRevenue(leadId);
       if (updated) renderLeadsTable();
     }
     resetRevenueForm();
     renderRevenueView();
+    renderWorkOrderView();
     renderDashboard();
     if (currentMessageLeadId === leadId) {
       renderLeadDetailSubpanels(leadId);
@@ -8522,6 +9036,7 @@
     initDemandRadar();
     initDemandPickup();
     initReception();
+    initWorkOrder();
     initDemandSearch();
     initLeads();
     initRevenue();

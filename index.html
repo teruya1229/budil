@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v3.5</small>
+          <small>AI経営脳みそ v3.6</small>
         </div>
       </div>
       <nav class="nav">
@@ -35,6 +35,9 @@
         <button class="nav-item" data-view="reception">
           <span class="nav-icon">📞</span>受付・予約番頭
         </button>
+        <button class="nav-item" data-view="work-order">
+          <span class="nav-icon">📅</span>予約・作業予定番頭
+        </button>
         <button class="nav-item" data-view="area">
           <span class="nav-icon">🗺️</span>エリア番頭
         </button>
@@ -52,7 +55,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v3.5</small>
+        <small>Budil v3.6</small>
       </div>
     </aside>
 
@@ -67,7 +70,7 @@
         <div id="executive-home" class="card card-wide card-executive-home">
           <div class="exec-home-header">
             <h2>経営番頭ホーム</h2>
-            <span class="exec-home-version">v3.5</span>
+            <span class="exec-home-version">v3.6</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <div id="exec-home-quick-actions" class="exec-home-quick-actions"></div>
@@ -295,6 +298,10 @@
             <div class="morning-section">
               <h3>受付・予約</h3>
               <div id="mgmt-reception-intake" class="mgmt-reception-intake-block"></div>
+            </div>
+            <div class="morning-section">
+              <h3>作業予定</h3>
+              <div id="mgmt-work-orders" class="mgmt-work-orders-block"></div>
             </div>
             <div class="morning-section morning-section-collapsed">
               <h3>今日の需要</h3>
@@ -1062,6 +1069,7 @@
             <div class="lead-revenue-header">
               <h3>売上履歴</h3>
               <button type="button" id="btn-lead-add-revenue" class="btn btn-sm btn-primary">売上を登録</button>
+              <button type="button" id="btn-lead-create-work-order" class="btn btn-sm btn-secondary">作業予定を作成</button>
             </div>
             <p class="lead-section-note">最新5件まで表示</p>
             <div id="lead-revenue-panel" class="lead-revenue-panel"></div>
@@ -1352,6 +1360,128 @@
         </div>
       </section>
 
+      <!-- 予約・作業予定番頭 -->
+      <section id="view-work-order" class="view">
+        <header class="view-header">
+          <h1>予約・作業予定番頭</h1>
+          <p class="view-subtitle">受付・営業先から作業予定をつなぎ、今日/今週の作業と売上見込みを管理する</p>
+        </header>
+
+        <div class="card card-wide card-work-order-comment">
+          <h2>売上見込み</h2>
+          <div id="work-order-forecast" class="work-order-forecast"></div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>今日の作業予定</h2>
+          <div id="work-order-today-list" class="work-order-schedule-list"></div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>今週の作業予定</h2>
+          <div id="work-order-week-list" class="work-order-schedule-list"></div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>作業予定登録</h2>
+          <form id="work-order-form">
+            <input type="hidden" id="work-order-edit-id">
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="work-order-customer">お客様名</label>
+                <input type="text" id="work-order-customer" placeholder="例：山田様">
+              </div>
+              <div class="form-group">
+                <label for="work-order-phone">電話番号</label>
+                <input type="tel" id="work-order-phone" placeholder="090-0000-0000">
+              </div>
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="work-order-address">住所</label>
+                <input type="text" id="work-order-address" placeholder="沖縄県南城市...">
+              </div>
+              <div class="form-group">
+                <label for="work-order-area">エリア</label>
+                <select id="work-order-area">
+                  <option value="">自動推定</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="work-order-source">依頼元</label>
+                <input type="text" id="work-order-source" placeholder="例：くらしのマーケット">
+              </div>
+              <div class="form-group">
+                <label for="work-order-amount">見込み金額（円）</label>
+                <input type="number" id="work-order-amount" min="0" step="1" placeholder="15000">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="work-order-service">作業内容</label>
+              <textarea id="work-order-service" rows="2" placeholder="作業内容・サービス"></textarea>
+            </div>
+            <div class="form-row form-row-3">
+              <div class="form-group">
+                <label for="work-order-date">予定日</label>
+                <input type="date" id="work-order-date">
+              </div>
+              <div class="form-group">
+                <label for="work-order-start">開始時間</label>
+                <input type="time" id="work-order-start">
+              </div>
+              <div class="form-group">
+                <label for="work-order-end">終了時間</label>
+                <input type="time" id="work-order-end">
+              </div>
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="work-order-status">状態</label>
+                <select id="work-order-status">
+                  <option value="tentative">仮予定</option>
+                  <option value="confirmed">確定</option>
+                  <option value="completed">作業完了</option>
+                  <option value="cancelled">キャンセル</option>
+                  <option value="archived">保管</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="work-order-intake">関連受付</label>
+                <select id="work-order-intake">
+                  <option value="">なし</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="work-order-lead">関連営業先</label>
+              <select id="work-order-lead">
+                <option value="">なし</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="work-order-memo">メモ</label>
+              <textarea id="work-order-memo" rows="2" placeholder="型番未確認など"></textarea>
+            </div>
+            <div id="work-order-form-map-actions" class="map-actions-row"></div>
+            <p id="work-order-calendar-hint" class="work-order-calendar-hint hidden"></p>
+            <div class="pickup-form-actions">
+              <button type="submit" class="btn btn-primary">保存</button>
+              <button type="button" id="btn-work-order-clear" class="btn btn-secondary btn-sm">クリア</button>
+              <button type="button" id="btn-work-order-gmap" class="btn btn-secondary btn-sm">Googleマップで開く</button>
+              <button type="button" id="btn-work-order-calendar" class="btn btn-secondary btn-sm">Googleカレンダーに追加</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card card-wide">
+          <h2>受付から作業予定化</h2>
+          <p class="data-mgmt-desc">受付一覧の「作業予定を作成」からも登録できます。下記は関連受付付きの作業予定一覧です。</p>
+          <div id="work-order-from-intake-list" class="work-order-intake-list"></div>
+        </div>
+      </section>
+
       <!-- エリア番頭 -->
       <section id="view-area" class="view">
         <header class="view-header">
@@ -1387,6 +1517,11 @@
         <div class="card card-wide">
           <h2>エリア別受付</h2>
           <div id="area-intakes-list" class="area-intakes-list"></div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>エリア別作業予定</h2>
+          <div id="area-work-orders-list" class="area-work-orders-list"></div>
         </div>
       </section>
 
@@ -2021,6 +2156,7 @@
   <script src="js/revenue-brain.js"></script>
   <script src="js/reception-brain.js"></script>
   <script src="js/map-brain.js"></script>
+  <script src="js/work-order-brain.js"></script>
   <script src="js/card-ocr.js"></script>
   <script src="js/data-backup.js"></script>
   <script src="js/app.js"></script>

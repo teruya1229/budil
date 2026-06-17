@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v3.5',
+  BUDIL_VERSION: 'v3.6',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -19,7 +19,8 @@ const Storage = {
     REVENUE_SETTINGS: 'budil_revenue_settings',
     DAILY_ACTION_TASKS: 'budil_daily_action_tasks',
     DEMAND_PICKUPS: 'budil_demand_pickups',
-    RECEPTION_INTAKES: 'budil_reception_intakes'
+    RECEPTION_INTAKES: 'budil_reception_intakes',
+    WORK_ORDERS: 'budil_work_orders'
   },
 
   get(key, defaultValue = null) {
@@ -507,8 +508,53 @@ const Storage = {
     'budil_revenue_settings',
     'budil_daily_action_tasks',
     'budil_demand_pickups',
-    'budil_reception_intakes'
+    'budil_reception_intakes',
+    'budil_work_orders'
   ],
+
+  getWorkOrders() {
+    const raw = this.get(this.KEYS.WORK_ORDERS, []);
+    return Array.isArray(raw) ? raw : [];
+  },
+
+  saveWorkOrders(list) {
+    this.set(this.KEYS.WORK_ORDERS, list);
+  },
+
+  addWorkOrder(item) {
+    const list = this.getWorkOrders();
+    const now = new Date().toISOString();
+    const normalized = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.normalizeWorkOrder(item)
+      : { ...item };
+    const record = {
+      ...normalized,
+      id: normalized.id || ('work-' + this.generateId()),
+      status: normalized.status || 'tentative',
+      createdAt: normalized.createdAt || now,
+      updatedAt: now
+    };
+    list.unshift(record);
+    this.saveWorkOrders(list);
+    return record;
+  },
+
+  updateWorkOrder(id, data) {
+    const list = this.getWorkOrders();
+    const idx = list.findIndex(w => w.id === id);
+    if (idx === -1) return null;
+    const prev = list[idx];
+    const merged = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.normalizeWorkOrder({ ...prev, ...data, id: prev.id })
+      : { ...prev, ...data };
+    list[idx] = { ...merged, updatedAt: new Date().toISOString() };
+    this.saveWorkOrders(list);
+    return list[idx];
+  },
+
+  deleteDemoWorkOrders() {
+    this.saveWorkOrders(this.getWorkOrders().filter(w => !this.isDemoOrTestFlag(w)));
+  },
 
   getReceptionIntakes() {
     const raw = this.get(this.KEYS.RECEPTION_INTAKES, []);
@@ -597,6 +643,7 @@ const Storage = {
       dailyTasks: 0,
       pickups: 0,
       receptionIntakes: 0,
+      workOrders: 0,
       activityLogs: 0,
       performanceEntered: 0,
       dailyChecks: 0
@@ -890,8 +937,65 @@ const Storage = {
       add('ok', '受付データ 0件');
     }
 
+    const workOrderRaw = this._readRawKey(this.KEYS.WORK_ORDERS);
+    let workOrders = [];
+    const VALID_WO_STATUS = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.STATUSES
+      : ['tentative', 'confirmed', 'completed', 'cancelled', 'archived'];
+    const revIdsForWo = new Set(revenues.filter(r => r && r.id).map(r => r.id));
+    if (!workOrderRaw.parseOk) {
+      add('critical', '作業予定データ（budil_work_orders）を読み込めません');
+    } else if (workOrderRaw.exists) {
+      workOrders = Array.isArray(workOrderRaw.parsed) ? workOrderRaw.parsed : [];
+      if (!Array.isArray(workOrderRaw.parsed)) add('review', '作業予定データが配列ではありません');
+      counts.workOrders = workOrders.length;
+      add('ok', `作業予定 ${counts.workOrders}件`);
+
+      let noId = 0; let noName = 0; let badDate = 0;
+      let badStart = 0; let badEnd = 0; let badStatus = 0;
+      let badLeadRef = 0; let badIntakeRef = 0; let badRevRef = 0;
+      let completedNoRev = 0; let overdue = 0; let noAddress = 0; let unknownArea = 0;
+      const todayDiag = new Date().toISOString().slice(0, 10);
+
+      workOrders.forEach(item => {
+        if (!item || typeof item !== 'object') return;
+        if (!item.id) noId++;
+        if (!(item.customerName || '').trim()) noName++;
+        if (item.scheduledDate && !this.isValidDateStr(item.scheduledDate)) badDate++;
+        if (item.startTime && typeof WorkOrderBrain !== 'undefined' && !WorkOrderBrain.isValidTime(item.startTime)) badStart++;
+        if (item.endTime && typeof WorkOrderBrain !== 'undefined' && !WorkOrderBrain.isValidTime(item.endTime)) badEnd++;
+        if (item.status && !VALID_WO_STATUS.includes(item.status)) badStatus++;
+        if (item.leadId && !leadIds.has(item.leadId)) badLeadRef++;
+        if (item.intakeId && !intakes.some(i => i && i.id === item.intakeId)) badIntakeRef++;
+        if (item.actualRevenueId && !revIdsForWo.has(item.actualRevenueId)) badRevRef++;
+        if (item.status === 'completed' && !item.actualRevenueId) completedNoRev++;
+        if (['tentative', 'confirmed'].includes(item.status) && item.scheduledDate && item.scheduledDate < todayDiag) overdue++;
+        if (['tentative', 'confirmed'].includes(item.status) && !(item.address || '').trim()) noAddress++;
+        if (typeof MapBrain !== 'undefined' && (item.address || '').trim()) {
+          const area = item.area || MapBrain.detectAreaFromAddress(item.address);
+          if (area === '不明') unknownArea++;
+        }
+      });
+
+      if (noId) add('review', `IDなしの作業予定 ${noId}件`);
+      if (noName) add('review', `お客様名なしの作業予定 ${noName}件`);
+      if (badDate) add('review', `scheduledDate形式不正 ${badDate}件`);
+      if (badStart) add('review', `startTime不正 ${badStart}件`);
+      if (badEnd) add('review', `endTime不正 ${badEnd}件`);
+      if (badStatus) add('caution', `作業予定statusが想定外 ${badStatus}件`);
+      if (badLeadRef) add('review', `存在しない営業先を指すleadId ${badLeadRef}件`);
+      if (badIntakeRef) add('review', `存在しない受付を指すintakeId ${badIntakeRef}件`);
+      if (badRevRef) add('review', `存在しない売上を指すactualRevenueId ${badRevRef}件`);
+      if (completedNoRev) add('caution', `作業完了済みで売上未登録 ${completedNoRev}件`);
+      if (overdue) add('caution', `予定日超過で未完了 ${overdue}件`);
+      if (noAddress) add('caution', `住所未入力の作業予定 ${noAddress}件`);
+      if (unknownArea) add('caution', `エリア不明の作業予定 ${unknownArea}件`);
+    } else {
+      add('ok', '作業予定 0件');
+    }
+
     if (typeof MapBrain !== 'undefined') {
-      const mapDiag = MapBrain.getDiagnosticsCounts(leads, intakes, revenues);
+      const mapDiag = MapBrain.getDiagnosticsCounts(leads, intakes, revenues, workOrders);
       if (mapDiag.leadsNoAddress) add('caution', `住所未入力の営業先 ${mapDiag.leadsNoAddress}件`);
       if (mapDiag.intakesNoAddress) add('caution', `住所未入力の受付 ${mapDiag.intakesNoAddress}件`);
       if (mapDiag.leadsUnknownArea) add('caution', `エリア不明の営業先 ${mapDiag.leadsUnknownArea}件`);
@@ -935,6 +1039,7 @@ const Storage = {
     lines.push(`今日やること: ${c.dailyTasks ?? '—'}件`);
     lines.push(`需要ピックアップ: ${c.pickups ?? '—'}件`);
     lines.push(`受付データ: ${c.receptionIntakes ?? '—'}件`);
+    lines.push(`作業予定: ${c.workOrders ?? '—'}件`);
     lines.push(`活動履歴: ${c.activityLogs ?? '—'}件`);
     lines.push(`成果入力済み: ${c.performanceEntered ?? '—'}件`);
     lines.push(`dailyChecks: ${c.dailyChecks ?? '—'}件`);
@@ -1117,6 +1222,7 @@ const Storage = {
       || this.getRevenueRecords().some(r => this.isDemoOrTestFlag(r))
       || this.getDemandPickups().some(p => this.isDemoOrTestFlag(p))
       || this.getReceptionIntakes().some(i => this.isDemoOrTestFlag(i))
+      || this.getWorkOrders().some(w => this.isDemoOrTestFlag(w))
       || (store.manualTasks || []).some(t => this.isDemoOrTestFlag(t))
       || (store.states || []).some(t => this.isDemoOrTestFlag(t))
       || demoChecks;
@@ -1336,6 +1442,40 @@ const Storage = {
       this.addReceptionIntake({ ...def, ...flag });
     });
 
+    const tomorrowWo = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.addDays(today, 1)
+      : today;
+    this.addWorkOrder({
+      ...flag,
+      customerName: 'デモ：山田様',
+      phone: '090-0000-0000',
+      address: '沖縄県南城市玉城字某某',
+      area: '南城市',
+      source: 'くらしのマーケット',
+      serviceText: 'お掃除機能付きエアコン1台、完全分解',
+      scheduledDate: today,
+      startTime: '09:00',
+      endTime: '11:00',
+      status: 'confirmed',
+      estimateAmount: 15000,
+      memo: 'デモ：今日の作業予定'
+    });
+    this.addWorkOrder({
+      ...flag,
+      customerName: 'デモ：佐藤様',
+      phone: '080-1111-2222',
+      address: '沖縄県八重瀬町',
+      area: '八重瀬町',
+      source: 'LINE',
+      serviceText: '縦型洗濯機クリーニング',
+      scheduledDate: tomorrowWo,
+      startTime: '10:00',
+      endTime: '12:00',
+      status: 'tentative',
+      estimateAmount: 12000,
+      memo: 'デモ：明日の作業予定'
+    });
+
     return { ok: true, pickupIds, leadIds };
   },
 
@@ -1348,6 +1488,7 @@ const Storage = {
     this.saveRevenueRecords(this.getRevenueRecords().filter(r => !this.isDemoOrTestFlag(r)));
     this.saveDemandPickups(this.getDemandPickups().filter(p => !this.isDemoOrTestFlag(p)));
     this.deleteDemoReceptionIntakes();
+    this.deleteDemoWorkOrders();
 
     const store = this.getDailyActionTasksData();
     store.manualTasks = (store.manualTasks || []).filter(t => !this.isDemoOrTestFlag(t));
