@@ -6,7 +6,8 @@
 
 - 公開URL: https://teruya1229.github.io/budil/
 - 現在バージョン: v1.9.3.1
-- 最新commit: （push後に更新）
+- 最新commit: 77b18af
+- push済み（`a54f24d..77b18af main -> main`）
 
 ## v1.9.3.1 実装内容（未入金判定の現場向け修正）
 
