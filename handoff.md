@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v1.9.9 公開済み（営業先詳細の見やすさ整理）
 - Budil v1.9.8 公開済み（活動履歴から次回アクション設定）
 - Budil v1.9.7 公開済み（タスク完了を営業履歴に残す）
 - Budil v1.9.6 公開済み（手動タスク追加・タスク調整）
@@ -39,6 +40,13 @@
 | `js/messages.js` | 営業文面テンプレート・プリセット |
 | `js/management-brain.js` | 朝レポート・今日の営業生成 |
 | `js/revenue-brain.js` | 売上集計・番頭コメント |
+
+## v1.9.9で入ったもの
+
+- 営業先詳細のブロック整理（状態サマリー・次回アクション・累計売上・今日やること/次の一手・活動履歴・売上履歴・基本情報）
+- `renderLeadStatusSummary()` / `renderLeadRevenueCompact()` / `renderLeadDailyTasks()` / `renderLeadDetailSubpanels()`
+- 次回連絡日の期限状態ラベル（今日対応 / 期限超過 / 予定あり / 未設定）
+- スマホ向け営業先詳細スタイル（`.lead-detail-block` 等）
 
 ## v1.9.8で入ったもの
 

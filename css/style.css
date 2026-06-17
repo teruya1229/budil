@@ -1791,6 +1791,195 @@ body {
   font-size: 0.85rem;
 }
 
+/* v1.9.9 営業先詳細ブロック整理 */
+.lead-detail-block {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.lead-detail-block h3 {
+  margin: 0 0 10px;
+  font-size: 0.92rem;
+}
+
+.lead-section-note {
+  margin: -4px 0 10px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.lead-status-summary {
+  border-color: rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.lead-status-company {
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+}
+
+.lead-status-line {
+  margin: 4px 0;
+  font-size: 0.88rem;
+}
+
+.lead-status-main {
+  font-weight: 600;
+}
+
+.lead-status-hold {
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+.lead-status-hold-reason {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+.sales-next-action-summary {
+  border-color: rgba(99, 179, 237, 0.4);
+}
+
+.sales-next-action-summary.urgent {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.sales-next-action-summary.unset {
+  border-style: dashed;
+  opacity: 0.95;
+}
+
+.sales-next-action-main {
+  margin: 6px 0;
+  font-size: 0.88rem;
+}
+
+.sales-next-action-empty {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.sales-next-action-hint {
+  margin: 6px 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.next-contact-due-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.due-status-today {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+.due-status-overdue {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.due-status-scheduled {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.due-status-unset {
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--text-muted);
+}
+
+.lead-revenue-compact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.lead-revenue-compact-item {
+  background: var(--surface-2, rgba(255, 255, 255, 0.04));
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.lead-revenue-compact-item span {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.lead-revenue-compact-item strong {
+  font-size: 0.9rem;
+}
+
+.lead-revenue-compact-wide {
+  grid-column: 1 / -1;
+}
+
+.lead-action-focus {
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.lead-daily-tasks {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.lead-daily-tasks.hidden {
+  display: none;
+}
+
+.lead-daily-tasks-title {
+  margin: 0 0 6px;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.lead-daily-tasks-list {
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: 0.86rem;
+}
+
+.lead-daily-tasks-list li {
+  margin: 4px 0;
+}
+
+.lead-activity-section.lead-detail-block {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 12px;
+}
+
+.lead-revenue-history-section.lead-detail-block {
+  margin-top: 0;
+}
+
+.activity-log-item.activity-log-older {
+  opacity: 0.85;
+}
+
+.lead-basic-section.lead-detail-block {
+  margin-top: 16px;
+}
+
 .sales-next-action-summary {
   margin: 12px 0 14px;
   padding: 12px 14px;
@@ -1866,7 +2055,6 @@ body {
 }
 
 .lead-activity-section {
-  border-top: 1px solid var(--border);
   padding-top: 14px;
   margin-top: 14px;
 }
@@ -2020,6 +2208,33 @@ body {
 
   .sales-next-action-grid {
     grid-template-columns: 1fr;
+  }
+
+  .lead-revenue-compact-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .lead-detail-block {
+    padding: 10px 12px;
+  }
+
+  .sales-detail-panel .btn {
+    min-height: 40px;
+  }
+
+  .lead-revenue-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .sales-history-actions {
+    gap: 6px;
+  }
+
+  .sales-history-actions .btn {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 0;
   }
 }
 

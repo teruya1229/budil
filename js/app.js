@@ -203,7 +203,7 @@
       priorityReason: pri.reasons.join('、')
     });
     populateSalesMgmtForm(draft);
-    renderLeadActionSummary(draft);
+    renderLeadDetailSubpanels(currentMessageLeadId);
     renderLeadsTable();
     renderDashboard();
     alert('営業管理情報を保存しました');
@@ -350,7 +350,7 @@
     const updated = Storage.getLeads().find(l => l.id === leadId) || null;
     if (updated && currentMessageLeadId === leadId) {
       populateSalesMgmtForm(updated);
-      renderLeadActionSummary(updated);
+      renderLeadDetailSubpanels(leadId);
     }
     return updated;
   }
@@ -417,7 +417,7 @@
       listEl.innerHTML = '<p class="placeholder-text">活動履歴はまだありません</p>';
       return;
     }
-    listEl.innerHTML = logs.map(log => {
+    listEl.innerHTML = logs.map((log, index) => {
       const typeLabel = formatActivityLogType(log.type);
       const created = log.createdAt ? log.createdAt.slice(0, 16).replace('T', ' ') : '';
       const extra = [
@@ -425,8 +425,9 @@
         (log.nextAction || log.nextContact) ? `<p class="activity-log-meta">次回：${esc(log.nextAction || '—')}${log.nextContact ? `（${esc(log.nextContact)}）` : ''}</p>` : '',
         log.memo ? `<p class="activity-log-meta">メモ：${esc(log.memo)}</p>` : ''
       ].filter(Boolean).join('');
+      const recentClass = index < 3 ? ' activity-log-recent' : ' activity-log-older';
       return `
-        <div class="activity-log-item">
+        <div class="activity-log-item${recentClass}">
           <div class="activity-log-header">
             <span class="activity-log-date">${esc(log.date)}</span>
             <span class="activity-log-type">${esc(typeLabel)}</span>
@@ -474,14 +475,113 @@
     });
     resetLeadActivityForm();
     const updated = Storage.getLeads().find(l => l.id === currentMessageLeadId);
-    renderLeadActivityLogs(currentMessageLeadId);
     if (updated) {
       populateSalesMgmtForm(updated);
-      renderLeadActionSummary(updated);
+      renderLeadDetailSubpanels(currentMessageLeadId);
     }
     renderLeadsTable();
     renderDashboard();
     renderMorningRecentActivities();
+  }
+
+  function getNextContactDueStatus(nextDate, today) {
+    const t = today || TODAY();
+    if (!nextDate) return { label: '未設定', className: 'due-status-unset' };
+    if (nextDate === t) return { label: '今日対応', className: 'due-status-today' };
+    if (nextDate < t) return { label: '期限超過', className: 'due-status-overdue' };
+    return { label: '予定あり', className: 'due-status-scheduled' };
+  }
+
+  function renderLeadStatusSummary(leadId) {
+    const el = document.getElementById('lead-status-summary');
+    if (!el) return;
+    const lead = Storage.getLeads().find(l => l.id === leadId);
+    if (!lead) {
+      el.innerHTML = '';
+      return;
+    }
+    const normalized = SalesBrain.normalizeLead(lead);
+    const enriched = getEnrichedLead(leadId) || normalized;
+    const { records, leads } = getRevenueContext();
+    const revSummary = RevenueBrain.getLeadRevenueSummary(leadId, records);
+    const hold = RevenueBrain.getLeadSalesHold(leadId, records, leads);
+    const priority = normalized.priority || enriched.priorityLabel || '—';
+    const lastContact = normalized.lastContactAt || normalized.lastContact || '—';
+    const nextContact = normalized.nextActionDate || normalized.nextContact || '—';
+    const totalText = revSummary.count ? RevenueBrain.formatYen(revSummary.total) : '—';
+    const statusLine = hold
+      ? `<p class="lead-status-line lead-status-hold"><span class="label-muted">状態</span> 営業保留</p>
+         <p class="lead-status-line lead-status-hold-reason"><span class="label-muted">理由</span> ${esc(hold.reason)}</p>`
+      : `<p class="lead-status-line"><span class="label-muted">状態</span> 通常営業OK</p>`;
+    el.innerHTML = `
+      <h3 class="lead-status-company">${esc(lead.company)}</h3>
+      <p class="lead-status-line lead-status-main">${esc(normalized.salesStatus || '—')} / 優先度${esc(priority)}</p>
+      <p class="lead-status-line"><span class="label-muted">最終連絡</span> ${esc(lastContact)}</p>
+      <p class="lead-status-line"><span class="label-muted">次回連絡</span> ${esc(nextContact)}</p>
+      <p class="lead-status-line"><span class="label-muted">累計売上</span> ${esc(totalText)}</p>
+      ${statusLine}`;
+  }
+
+  function renderLeadRevenueCompact(leadId) {
+    const el = document.getElementById('lead-revenue-compact');
+    if (!el) return;
+    const summary = RevenueBrain.getLeadRevenueSummary(leadId, Storage.getRevenueRecords());
+    if (!summary.count) {
+      el.innerHTML = `
+        <h3>累計売上</h3>
+        <p class="placeholder-text">この営業先に紐付いた売上はまだありません</p>`;
+      return;
+    }
+    el.innerHTML = `
+      <h3>累計売上</h3>
+      <div class="lead-revenue-compact-grid">
+        <div class="lead-revenue-compact-item"><span>累計売上</span><strong>${esc(RevenueBrain.formatYen(summary.total))}</strong></div>
+        <div class="lead-revenue-compact-item"><span>入金済み</span><strong>${esc(RevenueBrain.formatYen(summary.paid))}</strong></div>
+        <div class="lead-revenue-compact-item${summary.unpaid > 0 ? ' lead-revenue-pending-cell' : ''}"><span>入金待ち</span><strong>${esc(RevenueBrain.formatYen(summary.unpaid))}</strong></div>
+        <div class="lead-revenue-compact-item"><span>売上件数</span><strong>${summary.count}件</strong></div>
+        <div class="lead-revenue-compact-item lead-revenue-compact-wide"><span>最終売上日</span><strong>${esc(summary.latestDate || '—')}</strong></div>
+      </div>`;
+  }
+
+  function renderLeadDailyTasks(leadId) {
+    const el = document.getElementById('lead-daily-tasks');
+    if (!el) return;
+    const tasks = getDailyActionTasksWithState().filter(t => t.leadId === leadId);
+    if (!tasks.length) {
+      el.innerHTML = '';
+      el.classList.add('hidden');
+      return;
+    }
+    const active = tasks.filter(t => t.status !== 'done' && !isDailyTaskSnoozedAway(t, TODAY()));
+    const doneToday = tasks.filter(t => t.status === 'done');
+    if (!active.length && doneToday.length) {
+      el.classList.remove('hidden');
+      el.innerHTML = `<p class="lead-daily-tasks-title">今日のタスク完了済み</p>`;
+      return;
+    }
+    if (!active.length) {
+      el.innerHTML = '';
+      el.classList.add('hidden');
+      return;
+    }
+    el.classList.remove('hidden');
+    el.innerHTML = `
+      <p class="lead-daily-tasks-title">今日やることあり</p>
+      <ul class="lead-daily-tasks-list">
+        ${active.map(t => `<li>${esc(t.title || t.action || 'タスク')}</li>`).join('')}
+      </ul>`;
+  }
+
+  function renderLeadDetailSubpanels(leadId) {
+    const lead = Storage.getLeads().find(l => l.id === leadId);
+    if (!lead) return;
+    renderLeadStatusSummary(leadId);
+    renderLeadActionSummary(lead);
+    renderLeadRevenueCompact(leadId);
+    renderLeadDailyTasks(leadId);
+    renderLeadNextSalesAction(leadId);
+    renderLeadActivityLogs(leadId);
+    renderLeadRevenuePanel(leadId);
   }
 
   function renderLeadActionSummary(lead) {
@@ -489,19 +589,27 @@
     if (!el || !lead) return;
     const normalized = SalesBrain.normalizeLead(lead);
     const nextDate = normalized.nextActionDate || normalized.nextContact || '';
-    const isDue = nextDate && nextDate <= TODAY();
-    el.className = 'sales-next-action-summary' + (isDue ? ' due' : '');
+    const nextAction = (normalized.nextAction || '').trim();
+    const due = getNextContactDueStatus(nextDate, TODAY());
+    if (!nextAction && !nextDate) {
+      el.className = 'lead-detail-block sales-next-action-summary unset';
+      el.innerHTML = `
+        <h3>次回アクション</h3>
+        <p class="sales-next-action-empty">次回アクション未設定</p>
+        <p class="sales-next-action-hint">活動履歴から次回アクションを設定できます</p>`;
+      return;
+    }
+    const isUrgent = due.className === 'due-status-today' || due.className === 'due-status-overdue';
+    el.className = 'lead-detail-block sales-next-action-summary' + (isUrgent ? ' urgent' : '');
     el.innerHTML = `
-      <h3>次回アクション設定</h3>
-      <div class="sales-next-action-grid">
-        <p><span class="label-muted">次回アクション</span> ${esc(normalized.nextAction || '—')}</p>
-        <p><span class="label-muted">次回連絡日</span> ${esc(nextDate || '—')}</p>
-        <p><span class="label-muted">最終連絡日</span> ${esc(normalized.lastContactAt || normalized.lastContact || '—')}</p>
-        <p><span class="label-muted">営業ステータス</span> ${esc(normalized.salesStatus || '—')}</p>
-        <p><span class="label-muted">優先度</span> ${esc(normalized.priority || '—')}</p>
-      </div>
-      ${isDue ? '<p class="sales-next-action-alert">次回連絡日が今日以前です。今日やることに反映されます。</p>' : ''}
-    `;
+      <h3>次回アクション</h3>
+      <p class="sales-next-action-main"><span class="label-muted">次回アクション</span> ${esc(nextAction || '—')}</p>
+      <p class="sales-next-action-main"><span class="label-muted">次回連絡日</span> ${esc(nextDate || '—')}</p>
+      <p class="sales-next-action-main">
+        <span class="label-muted">状態</span>
+        <span class="next-contact-due-badge ${due.className}">${esc(due.label)}</span>
+      </p>
+      ${isUrgent ? '<p class="sales-next-action-alert">次回連絡日が今日以前です。今日やることに反映されます。</p>' : ''}`;
   }
 
   function fillDailyTaskLeadSelect() {
@@ -657,6 +765,7 @@
     Storage.upsertDailyActionTaskState(taskId, today, data);
     renderDailyActionTasks();
     renderMorningDailyTasksBrief();
+    if (currentMessageLeadId) renderLeadDailyTasks(currentMessageLeadId);
   }
 
   function updateDailyActionTaskState(taskId, status, memo, extra) {
@@ -706,6 +815,7 @@
     });
     renderDailyActionTasks();
     renderMorningDailyTasksBrief();
+    if (currentMessageLeadId) renderLeadDailyTasks(currentMessageLeadId);
   }
 
   function completeManualDailyTask(taskId, memo) {
@@ -736,6 +846,7 @@
     renderDailyActionTasks();
     renderMorningDailyTasksBrief();
     renderMorningRecentActivities();
+    if (currentMessageLeadId) renderLeadDailyTasks(currentMessageLeadId);
   }
 
   function snoozeManualTaskToday(taskId, memo) {
@@ -2668,10 +2779,7 @@
 
     switchSalesTab(currentSalesTab || 'email');
     renderSalesHistory(leadId);
-    renderLeadRevenuePanel(leadId);
-    renderLeadNextSalesAction(leadId);
-    renderLeadActionSummary(lead);
-    renderLeadActivityLogs(leadId);
+    renderLeadDetailSubpanels(leadId);
     resetLeadActivityForm();
 
     if (opts.navigate) navigateToView('sales');
@@ -3043,8 +3151,7 @@
     renderRevenueView();
     renderDashboard();
     if (currentMessageLeadId === lead.id) {
-      renderLeadRevenuePanel(lead.id);
-      renderLeadNextSalesAction(lead.id);
+      renderLeadDetailSubpanels(lead.id);
     }
     return lead;
   }
@@ -3137,11 +3244,11 @@
     const summary = RevenueBrain.getLeadRevenueSummary(leadId, Storage.getRevenueRecords());
     if (!summary.count) {
       container.innerHTML = '<p class="placeholder-text">この営業先に紐付いた売上はまだありません</p>';
-      renderLeadNextSalesAction(leadId);
       return;
     }
     const historyHtml = summary.records
       .filter(r => r.status !== 'キャンセル')
+      .slice(0, 5)
       .map(r => `
         <li>
           <strong>${esc(RevenueBrain.formatYen(r.amount))}</strong>
@@ -3152,19 +3259,7 @@
             ${renderPaymentStatusBadge(r)}
           </div>
         </li>`).join('');
-    container.innerHTML = `
-      <p class="lead-revenue-value-title">累計価値</p>
-      <div class="lead-revenue-summary">
-        <div class="lead-revenue-summary-item"><span>累計売上</span><strong>${esc(RevenueBrain.formatYen(summary.total))}</strong></div>
-        <div class="lead-revenue-summary-item"><span>入金済み</span><strong>${esc(RevenueBrain.formatYen(summary.paid))}</strong></div>
-        <div class="lead-revenue-summary-item${summary.unpaid > 0 ? ' lead-revenue-pending-cell' : ''}"><span>入金待ち</span><strong>${esc(RevenueBrain.formatYen(summary.unpaid))}</strong></div>
-        ${summary.paymentConcern ? `<div class="lead-revenue-summary-item lead-revenue-concern-cell"><span>入金注意</span><strong>${summary.paymentConcernCount}件</strong></div>` : ''}
-        <div class="lead-revenue-summary-item"><span>売上件数</span><strong>${summary.count}件</strong></div>
-        <div class="lead-revenue-summary-item"><span>最終売上日</span><strong>${esc(summary.latestDate || '—')}</strong></div>
-      </div>
-      <p class="lead-revenue-value-title">売上履歴</p>
-      <ul class="lead-revenue-history">${historyHtml}</ul>`;
-    renderLeadNextSalesAction(leadId);
+    container.innerHTML = `<ul class="lead-revenue-history">${historyHtml}</ul>`;
   }
 
   function fillRevenueSelects() {
@@ -3415,8 +3510,7 @@
     renderRevenueView();
     renderDashboard();
     if (currentMessageLeadId === leadId) {
-      renderLeadRevenuePanel(leadId);
-      renderLeadNextSalesAction(leadId);
+      renderLeadDetailSubpanels(leadId);
     }
   }
 

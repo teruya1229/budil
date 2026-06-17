@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v1.9.8</small>
+          <small>AI経営脳みそ v1.9.9</small>
         </div>
       </div>
       <nav class="nav">
@@ -43,7 +43,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v1.9.8</small>
+        <small>Budil v1.9.9</small>
       </div>
     </aside>
 
@@ -598,97 +598,22 @@
 
         <div id="sales-detail-panel" class="card sales-detail-panel hidden">
           <div class="card-header-row">
-            <h2>営業準備 — <span id="sales-detail-company"></span></h2>
+            <h2>営業先詳細 — <span id="sales-detail-company"></span></h2>
             <button type="button" id="btn-close-sales-detail" class="btn btn-secondary btn-sm">閉じる</button>
           </div>
 
-          <div class="sales-detail-summary">
-            <div class="sales-detail-meta">
-              <p><span class="label-muted">推奨商品</span> <strong id="sales-detail-product">—</strong></p>
-              <p><span class="label-muted">使用中プリセット</span> <strong id="sales-detail-preset">—</strong></p>
-              <p><span class="label-muted">優先度</span> <span id="sales-detail-priority" class="sales-priority-label">—</span></p>
-              <p><span class="label-muted">理由</span> <span id="sales-detail-reason">—</span></p>
-            </div>
-            <div class="sales-detail-info">
-              <p id="sales-detail-contact"></p>
-              <p id="sales-detail-links"></p>
-              <p id="sales-detail-memo" class="sales-detail-memo"></p>
-            </div>
-          </div>
+          <div id="lead-status-summary" class="lead-detail-block lead-status-summary"></div>
+          <div id="sales-next-action-summary" class="lead-detail-block sales-next-action-summary"></div>
+          <div id="lead-revenue-compact" class="lead-detail-block lead-revenue-compact"></div>
 
-          <div id="sales-next-action-summary" class="sales-next-action-summary"></div>
-
-          <div class="sales-mgmt-section">
-            <h3>営業管理</h3>
-            <div class="form-row form-row-2">
-              <div class="form-group">
-                <label for="sales-mgmt-status">営業ステータス</label>
-                <select id="sales-mgmt-status">
-                  <option value="未営業">未営業</option>
-                  <option value="初回連絡済み">初回連絡済み</option>
-                  <option value="興味あり">興味あり</option>
-                  <option value="見積り・提案中">見積り・提案中</option>
-                  <option value="日程調整中">日程調整中</option>
-                  <option value="成約">成約</option>
-                  <option value="見送り">見送り</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="sales-mgmt-next-date">次アクション日</label>
-                <input type="date" id="sales-mgmt-next-date">
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="sales-mgmt-next-action">次アクションメモ</label>
-              <textarea id="sales-mgmt-next-action" rows="2" placeholder="例: LINEで再提案"></textarea>
-            </div>
-            <div class="form-row form-row-2">
-              <div class="form-group">
-                <label for="sales-mgmt-last-contact">最終連絡日</label>
-                <input type="date" id="sales-mgmt-last-contact">
-              </div>
-              <div class="form-group">
-                <label>優先度（自動）</label>
-                <p id="sales-mgmt-priority" class="sales-priority-label">—</p>
-                <small id="sales-mgmt-priority-reason" class="label-muted"></small>
-              </div>
-            </div>
-            <button type="button" id="btn-save-sales-mgmt" class="btn btn-primary btn-sm">営業管理を保存</button>
-          </div>
-
-          <p class="notice notice-info">相手を評価・指摘しない敬意ある提案型文面です。コピーして調整してください。</p>
-
-          <div class="sales-detail-tabs" role="tablist">
-            <button type="button" class="sales-tab active" data-tab="email">メール</button>
-            <button type="button" class="sales-tab" data-tab="form">問い合わせフォーム</button>
-            <button type="button" class="sales-tab" data-tab="dm">DM</button>
-            <button type="button" class="sales-tab" data-tab="phone">電話トーク</button>
-          </div>
-
-          <div class="sales-tab-body">
-            <textarea id="sales-tab-content" class="message-text sales-tab-textarea" rows="12" readonly></textarea>
-            <div class="sales-tab-actions">
-              <button type="button" id="sales-tab-copy" class="btn btn-primary btn-sm">コピー</button>
-              <button type="button" id="sales-tab-log" class="btn btn-secondary btn-sm">送信を記録</button>
-            </div>
-          </div>
-
-          <textarea id="msg-email" class="hidden" readonly></textarea>
-          <textarea id="msg-form" class="hidden" readonly></textarea>
-          <textarea id="msg-dm" class="hidden" readonly></textarea>
-          <textarea id="msg-phone" class="hidden" readonly></textarea>
-
-          <div class="lead-revenue-section">
+          <div class="lead-detail-block lead-action-focus">
+            <div id="lead-daily-tasks" class="lead-daily-tasks hidden"></div>
             <div id="lead-next-sales-action" class="lead-next-sales-action hidden"></div>
-            <div class="lead-revenue-header">
-              <h3>売上履歴</h3>
-              <button type="button" id="btn-lead-add-revenue" class="btn btn-sm btn-primary">この営業先の売上を登録</button>
-            </div>
-            <div id="lead-revenue-panel" class="lead-revenue-panel"></div>
           </div>
 
-          <div class="lead-activity-section">
+          <div class="lead-detail-block lead-activity-section">
             <h3>活動履歴</h3>
+            <p class="lead-section-note">最近の活動を表示（最新5件まで）</p>
             <div id="lead-activity-logs-list" class="lead-activity-logs-list"></div>
             <form id="lead-activity-add-form" class="lead-activity-add-form">
               <div class="form-row form-row-2">
@@ -759,8 +684,93 @@
             </form>
           </div>
 
+          <div class="lead-detail-block lead-revenue-history-section">
+            <div class="lead-revenue-header">
+              <h3>売上履歴</h3>
+              <button type="button" id="btn-lead-add-revenue" class="btn btn-sm btn-primary">売上を登録</button>
+            </div>
+            <p class="lead-section-note">最新5件まで表示</p>
+            <div id="lead-revenue-panel" class="lead-revenue-panel"></div>
+          </div>
+
+          <div class="lead-detail-block lead-basic-section">
+            <h3>基本情報・営業文面</h3>
+            <div class="sales-detail-summary">
+              <div class="sales-detail-meta">
+                <p><span class="label-muted">推奨商品</span> <strong id="sales-detail-product">—</strong></p>
+                <p><span class="label-muted">使用中プリセット</span> <strong id="sales-detail-preset">—</strong></p>
+                <p><span class="label-muted">優先度</span> <span id="sales-detail-priority" class="sales-priority-label">—</span></p>
+                <p><span class="label-muted">理由</span> <span id="sales-detail-reason">—</span></p>
+              </div>
+              <div class="sales-detail-info">
+                <p id="sales-detail-contact"></p>
+                <p id="sales-detail-links"></p>
+                <p id="sales-detail-memo" class="sales-detail-memo"></p>
+              </div>
+            </div>
+
+          <div class="sales-mgmt-section">
+            <h3>営業管理</h3>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="sales-mgmt-status">営業ステータス</label>
+                <select id="sales-mgmt-status">
+                  <option value="未営業">未営業</option>
+                  <option value="初回連絡済み">初回連絡済み</option>
+                  <option value="興味あり">興味あり</option>
+                  <option value="見積り・提案中">見積り・提案中</option>
+                  <option value="日程調整中">日程調整中</option>
+                  <option value="成約">成約</option>
+                  <option value="見送り">見送り</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="sales-mgmt-next-date">次アクション日</label>
+                <input type="date" id="sales-mgmt-next-date">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="sales-mgmt-next-action">次アクションメモ</label>
+              <textarea id="sales-mgmt-next-action" rows="2" placeholder="例: LINEで再提案"></textarea>
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="sales-mgmt-last-contact">最終連絡日</label>
+                <input type="date" id="sales-mgmt-last-contact">
+              </div>
+              <div class="form-group">
+                <label>優先度（自動）</label>
+                <p id="sales-mgmt-priority" class="sales-priority-label">—</p>
+                <small id="sales-mgmt-priority-reason" class="label-muted"></small>
+              </div>
+            </div>
+            <button type="button" id="btn-save-sales-mgmt" class="btn btn-primary btn-sm">営業管理を保存</button>
+          </div>
+
+          <p class="notice notice-info">相手を評価・指摘しない敬意ある提案型文面です。コピーして調整してください。</p>
+
+          <div class="sales-detail-tabs" role="tablist">
+            <button type="button" class="sales-tab active" data-tab="email">メール</button>
+            <button type="button" class="sales-tab" data-tab="form">問い合わせフォーム</button>
+            <button type="button" class="sales-tab" data-tab="dm">DM</button>
+            <button type="button" class="sales-tab" data-tab="phone">電話トーク</button>
+          </div>
+
+          <div class="sales-tab-body">
+            <textarea id="sales-tab-content" class="message-text sales-tab-textarea" rows="12" readonly></textarea>
+            <div class="sales-tab-actions">
+              <button type="button" id="sales-tab-copy" class="btn btn-primary btn-sm">コピー</button>
+              <button type="button" id="sales-tab-log" class="btn btn-secondary btn-sm">送信を記録</button>
+            </div>
+          </div>
+
+          <textarea id="msg-email" class="hidden" readonly></textarea>
+          <textarea id="msg-form" class="hidden" readonly></textarea>
+          <textarea id="msg-dm" class="hidden" readonly></textarea>
+          <textarea id="msg-phone" class="hidden" readonly></textarea>
+
           <div class="sales-history-section">
-            <h3>営業履歴</h3>
+            <h3>送信記録</h3>
             <div class="sales-history-actions">
               <button type="button" class="btn btn-sm btn-secondary sales-log-btn" data-log-type="メール送信">メール送信</button>
               <button type="button" class="btn btn-sm btn-secondary sales-log-btn" data-log-type="フォーム送信">フォーム送信</button>
@@ -768,6 +778,7 @@
               <button type="button" class="btn btn-sm btn-secondary sales-log-btn" data-log-type="電話">電話</button>
             </div>
             <ul id="sales-history-list" class="sales-history-list"></ul>
+          </div>
           </div>
         </div>
       </section>
