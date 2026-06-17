@@ -6,7 +6,8 @@
 
 - 公開URL: https://teruya1229.github.io/budil/
 - 現在バージョン: v1.9.6
-- 最新commit: （push後に更新）
+- 最新commit: 377c488
+- push済み（`9b8e5f3..377c488 main -> main`）
 
 ## v1.9.6 実装内容（手動タスク追加・タスク調整）
 
