@@ -215,6 +215,8 @@ const Storage = {
       reason: log.reason || '',
       action: log.action || '',
       targetName: log.targetName || '',
+      nextAction: log.nextAction || '',
+      nextContact: log.nextContact || '',
       createdAt: log.createdAt || new Date().toISOString()
     };
     list[idx].activityLogs.unshift(entry);
@@ -392,6 +394,8 @@ const Storage = {
       priority: data.priority != null ? data.priority : prev.priority,
       targetName: data.targetName != null ? data.targetName : prev.targetName,
       action: data.action != null ? data.action : prev.action,
+      nextAction: data.nextAction != null ? data.nextAction : (prev.nextAction || ''),
+      nextContact: data.nextContact != null ? data.nextContact : (prev.nextContact || ''),
       dueDate: data.dueDate != null ? data.dueDate : prev.dueDate,
       updatedAt: new Date().toISOString()
     };

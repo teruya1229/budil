@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v1.9.7</small>
+          <small>AI経営脳みそ v1.9.8</small>
         </div>
       </div>
       <nav class="nav">
@@ -43,7 +43,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v1.9.7</small>
+        <small>Budil v1.9.8</small>
       </div>
     </aside>
 
@@ -134,6 +134,14 @@
             <div class="form-group">
               <label for="daily-task-edit-memo">メモ</label>
               <input type="text" id="daily-task-edit-memo" placeholder="任意">
+            </div>
+            <div class="form-group">
+              <label for="daily-task-edit-next-action">次回アクション</label>
+              <input type="text" id="daily-task-edit-next-action" placeholder="例：1ヶ月後に完全分解を提案">
+            </div>
+            <div class="form-group">
+              <label for="daily-task-edit-next-contact">次回連絡日</label>
+              <input type="date" id="daily-task-edit-next-contact">
             </div>
             <div class="daily-task-edit-actions">
               <button type="button" id="btn-daily-task-edit-save" class="btn btn-primary btn-sm">保存</button>
@@ -608,6 +616,8 @@
             </div>
           </div>
 
+          <div id="sales-next-action-summary" class="sales-next-action-summary"></div>
+
           <div class="sales-mgmt-section">
             <h3>営業管理</h3>
             <div class="form-row form-row-2">
@@ -704,6 +714,46 @@
               <div class="form-group">
                 <label for="lead-activity-memo">メモ</label>
                 <input type="text" id="lead-activity-memo" placeholder="任意">
+              </div>
+              <div class="form-group">
+                <label for="lead-activity-next-action">次回アクション</label>
+                <input type="text" id="lead-activity-next-action" placeholder="例：1ヶ月後に再提案">
+                <div class="memo-chips">
+                  <button type="button" class="memo-chip lead-activity-next-preset" data-next-action="1ヶ月後に再提案">お礼連絡済み → 1ヶ月後に再提案</button>
+                  <button type="button" class="memo-chip lead-activity-next-preset" data-next-action="完全分解を提案">完全分解を提案</button>
+                  <button type="button" class="memo-chip lead-activity-next-preset" data-next-action="洗濯機クリーニングを提案">洗濯機クリーニングを提案</button>
+                  <button type="button" class="memo-chip lead-activity-next-preset" data-next-action="法人定期清掃を提案">法人定期清掃を提案</button>
+                  <button type="button" class="memo-chip lead-activity-next-preset" data-next-action="入金確認後に再連絡">入金確認後に再連絡</button>
+                  <button type="button" class="memo-chip lead-activity-next-preset" data-next-action="見送り、しばらく追わない">見送り、しばらく追わない</button>
+                </div>
+              </div>
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="lead-activity-next-contact">次回連絡日</label>
+                  <input type="date" id="lead-activity-next-contact">
+                </div>
+                <div class="form-group">
+                  <label for="lead-activity-status">営業ステータス</label>
+                  <select id="lead-activity-status">
+                    <option value="">変更なし</option>
+                    <option value="未営業">未営業</option>
+                    <option value="初回連絡済み">初回連絡済み</option>
+                    <option value="興味あり">興味あり</option>
+                    <option value="見積り・提案中">見積り・提案中</option>
+                    <option value="日程調整中">日程調整中</option>
+                    <option value="成約">成約</option>
+                    <option value="見送り">見送り</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="lead-activity-priority">優先度</label>
+                <select id="lead-activity-priority">
+                  <option value="">変更なし</option>
+                  <option value="A">A — 今すぐ営業</option>
+                  <option value="B">B — 今週営業</option>
+                  <option value="C">C — 保留</option>
+                </select>
               </div>
               <button type="submit" class="btn btn-primary btn-sm">活動を追加</button>
             </form>

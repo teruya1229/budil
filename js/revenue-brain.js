@@ -527,13 +527,16 @@ const RevenueBrain = {
       const ss = normalized.salesStatus || normalized.status;
       if (['成約', '見送り', 'NG'].includes(ss)) return;
       if (normalized.nextActionDate && normalized.nextActionDate <= today) {
+        const dateReason = normalized.nextActionDate === today
+          ? '次回連絡日が今日です'
+          : `次回連絡日が過ぎています（${normalized.nextActionDate}）`;
         tasks.push({
           id: `next-action:${lead.id}`,
           priority: '高',
           type: 'next-action',
           title: '予定していた営業アクションを実行',
           targetName: lead.company,
-          reason: normalized.nextAction || `次アクション日：${normalized.nextActionDate}`,
+          reason: normalized.nextAction || dateReason,
           action: normalized.nextAction || '予定していた営業アクションを実行',
           leadId: lead.id,
           openTarget: 'lead'

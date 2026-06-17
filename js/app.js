@@ -20,6 +20,15 @@
     'work-memo': '作業メモ',
     other: 'その他'
   };
+  const SALES_STATUS_TO_LEGACY = {
+    '未営業': '未接触',
+    '初回連絡済み': 'アプローチ中',
+    '興味あり': '商談中',
+    '見積り・提案中': '商談中',
+    '日程調整中': '商談中',
+    '成約': '成約',
+    '見送り': '見送り'
+  };
 
   // ── 営業プリセット（v1.6）──
   // 目的: 営業先登録の最初に「何を売るか」を選ぶだけで、入力/提案/文面生成を揃える
@@ -194,6 +203,7 @@
       priorityReason: pri.reasons.join('、')
     });
     populateSalesMgmtForm(draft);
+    renderLeadActionSummary(draft);
     renderLeadsTable();
     renderDashboard();
     alert('営業管理情報を保存しました');
@@ -299,6 +309,52 @@
     return ACTIVITY_TYPE_LABELS[type] || type;
   }
 
+  function mapSalesStatusToLegacyStatus(salesStatus) {
+    return SALES_STATUS_TO_LEGACY[salesStatus] || '';
+  }
+
+  function buildLeadUpdateFromNextActionInput(lead, input) {
+    const patch = {};
+    const nextAction = (input.nextAction || '').trim();
+    const nextContact = input.nextContact || '';
+    const salesStatus = input.salesStatus || '';
+    const priority = input.priority || '';
+    const activityDate = input.activityDate || TODAY();
+    if (activityDate) {
+      patch.lastContact = activityDate;
+      patch.lastContactAt = activityDate;
+    }
+    if (nextAction) patch.nextAction = nextAction;
+    if (nextContact) {
+      patch.nextContact = nextContact;
+      patch.nextActionDate = nextContact;
+    }
+    if (salesStatus) {
+      patch.salesStatus = salesStatus;
+      const legacy = mapSalesStatusToLegacyStatus(salesStatus);
+      if (legacy) patch.status = legacy;
+    }
+    if (priority) patch.priority = priority;
+    const normalized = SalesBrain.normalizeLead({ ...lead, ...patch });
+    const pri = SalesBrain.computeSalesPriority(normalized, TODAY());
+    patch.priorityScore = pri.score;
+    patch.priorityReason = pri.reasons.join('、');
+    return patch;
+  }
+
+  function applyLeadNextActionUpdate(leadId, input) {
+    const lead = Storage.getLeads().find(l => l.id === leadId);
+    if (!lead) return null;
+    const updates = buildLeadUpdateFromNextActionInput(lead, input || {});
+    Storage.updateLead(leadId, updates);
+    const updated = Storage.getLeads().find(l => l.id === leadId) || null;
+    if (updated && currentMessageLeadId === leadId) {
+      populateSalesMgmtForm(updated);
+      renderLeadActionSummary(updated);
+    }
+    return updated;
+  }
+
   function recordTaskCompletionActivity(task) {
     if (!task || !task.leadId) return;
     const lead = Storage.getLeads().find(l => l.id === task.leadId);
@@ -313,7 +369,9 @@
       priority: task.priority || '',
       reason: task.reason || '',
       action: task.action || '',
-      targetName: task.targetName || lead.company
+      targetName: task.targetName || lead.company,
+      nextAction: task.nextAction || '',
+      nextContact: task.nextContact || ''
     });
     if (added && currentMessageLeadId === task.leadId) {
       renderLeadActivityLogs(task.leadId);
@@ -364,6 +422,7 @@
       const created = log.createdAt ? log.createdAt.slice(0, 16).replace('T', ' ') : '';
       const extra = [
         log.type === 'task-done' && log.reason ? `<p class="activity-log-meta">理由：${esc(log.reason)}</p>` : '',
+        (log.nextAction || log.nextContact) ? `<p class="activity-log-meta">次回：${esc(log.nextAction || '—')}${log.nextContact ? `（${esc(log.nextContact)}）` : ''}</p>` : '',
         log.memo ? `<p class="activity-log-meta">メモ：${esc(log.memo)}</p>` : ''
       ].filter(Boolean).join('');
       return `
@@ -393,11 +452,56 @@
     const type = document.getElementById('lead-activity-type').value;
     const title = document.getElementById('lead-activity-title').value.trim();
     const memo = document.getElementById('lead-activity-memo').value.trim();
+    const nextAction = document.getElementById('lead-activity-next-action').value.trim();
+    const nextContact = document.getElementById('lead-activity-next-contact').value;
+    const salesStatus = document.getElementById('lead-activity-status').value;
+    const priority = document.getElementById('lead-activity-priority').value;
     if (!title) return;
-    Storage.addLeadActivityLog(currentMessageLeadId, { type, date, title, memo });
+    Storage.addLeadActivityLog(currentMessageLeadId, {
+      type,
+      date,
+      title,
+      memo,
+      nextAction,
+      nextContact
+    });
+    applyLeadNextActionUpdate(currentMessageLeadId, {
+      activityDate: date,
+      nextAction,
+      nextContact,
+      salesStatus,
+      priority
+    });
     resetLeadActivityForm();
+    const updated = Storage.getLeads().find(l => l.id === currentMessageLeadId);
     renderLeadActivityLogs(currentMessageLeadId);
+    if (updated) {
+      populateSalesMgmtForm(updated);
+      renderLeadActionSummary(updated);
+    }
+    renderLeadsTable();
+    renderDashboard();
     renderMorningRecentActivities();
+  }
+
+  function renderLeadActionSummary(lead) {
+    const el = document.getElementById('sales-next-action-summary');
+    if (!el || !lead) return;
+    const normalized = SalesBrain.normalizeLead(lead);
+    const nextDate = normalized.nextActionDate || normalized.nextContact || '';
+    const isDue = nextDate && nextDate <= TODAY();
+    el.className = 'sales-next-action-summary' + (isDue ? ' due' : '');
+    el.innerHTML = `
+      <h3>次回アクション設定</h3>
+      <div class="sales-next-action-grid">
+        <p><span class="label-muted">次回アクション</span> ${esc(normalized.nextAction || '—')}</p>
+        <p><span class="label-muted">次回連絡日</span> ${esc(nextDate || '—')}</p>
+        <p><span class="label-muted">最終連絡日</span> ${esc(normalized.lastContactAt || normalized.lastContact || '—')}</p>
+        <p><span class="label-muted">営業ステータス</span> ${esc(normalized.salesStatus || '—')}</p>
+        <p><span class="label-muted">優先度</span> ${esc(normalized.priority || '—')}</p>
+      </div>
+      ${isDue ? '<p class="sales-next-action-alert">次回連絡日が今日以前です。今日やることに反映されます。</p>' : ''}
+    `;
   }
 
   function fillDailyTaskLeadSelect() {
@@ -450,7 +554,9 @@
       memo: state.memo || '',
       snoozedUntil: state.snoozedUntil || '',
       completedAt: state.completedAt || '',
-      dueDate: state.dueDate || base.dueDate
+      dueDate: state.dueDate || base.dueDate,
+      nextAction: state.nextAction || base.nextAction || '',
+      nextContact: state.nextContact || base.nextContact || ''
     };
     if (state.title) merged.title = state.title;
     if (state.priority) merged.priority = state.priority;
@@ -475,7 +581,9 @@
       dueDate: task.dueDate || today,
       status,
       snoozedUntil: task.snoozedUntil || '',
-      completedAt: task.completedAt || ''
+      completedAt: task.completedAt || '',
+      nextAction: task.nextAction || '',
+      nextContact: task.nextContact || ''
     };
   }
 
@@ -568,7 +676,16 @@
     saveDailyTaskState(taskId, payload);
     if (status === 'done') {
       const task = getDailyActionTasksWithState().find(t => t.id === taskId);
-      if (task) recordTaskCompletionActivity(task);
+      if (task) {
+        if (task.leadId && (task.nextAction || task.nextContact)) {
+          applyLeadNextActionUpdate(task.leadId, {
+            activityDate: TODAY(),
+            nextAction: task.nextAction || '',
+            nextContact: task.nextContact || ''
+          });
+        }
+        recordTaskCompletionActivity(task);
+      }
       renderMorningRecentActivities();
     }
   }
@@ -607,6 +724,13 @@
         memo: memo || '',
         completedAt: new Date().toISOString()
       }, TODAY());
+      if (task.leadId && (task.nextAction || task.nextContact)) {
+        applyLeadNextActionUpdate(task.leadId, {
+          activityDate: TODAY(),
+          nextAction: task.nextAction || '',
+          nextContact: task.nextContact || ''
+        });
+      }
       recordTaskCompletionActivity(task);
     }
     renderDailyActionTasks();
@@ -668,6 +792,8 @@
     document.getElementById('daily-task-edit-priority').value = task.priority || '中';
     document.getElementById('daily-task-edit-due').value = task.dueDate || TODAY();
     document.getElementById('daily-task-edit-memo').value = task.memo || '';
+    document.getElementById('daily-task-edit-next-action').value = task.nextAction || '';
+    document.getElementById('daily-task-edit-next-contact').value = task.nextContact || '';
     panel.classList.remove('hidden');
   }
 
@@ -685,6 +811,8 @@
     const priority = document.getElementById('daily-task-edit-priority').value;
     const dueDate = document.getElementById('daily-task-edit-due').value || TODAY();
     const memo = document.getElementById('daily-task-edit-memo').value.trim();
+    const nextAction = document.getElementById('daily-task-edit-next-action').value.trim();
+    const nextContact = document.getElementById('daily-task-edit-next-contact').value;
     if (kind === 'manual') {
       Storage.updateManualDailyTask(id, {
         title,
@@ -692,7 +820,9 @@
         priority,
         dueDate,
         memo,
-        action: memo || title
+        action: memo || title,
+        nextAction,
+        nextContact
       });
     } else {
       const task = getDailyActionTasksWithState().find(t => t.id === id);
@@ -704,7 +834,9 @@
         priority,
         dueDate,
         memo,
-        action: memo || title
+        action: memo || title,
+        nextAction,
+        nextContact
       });
     }
     closeDailyTaskEditPanel();
@@ -2166,6 +2298,13 @@
       activityForm.addEventListener('submit', handleLeadActivityAddSubmit);
       resetLeadActivityForm();
     }
+    document.querySelectorAll('.lead-activity-next-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const nextActionInput = document.getElementById('lead-activity-next-action');
+        if (!nextActionInput) return;
+        nextActionInput.value = btn.dataset.nextAction || '';
+      });
+    });
 
     const aiToggle = document.getElementById('ai-priority-toggle');
     const settings = Storage.getSettings();
@@ -2531,6 +2670,7 @@
     renderSalesHistory(leadId);
     renderLeadRevenuePanel(leadId);
     renderLeadNextSalesAction(leadId);
+    renderLeadActionSummary(lead);
     renderLeadActivityLogs(leadId);
     resetLeadActivityForm();
 
