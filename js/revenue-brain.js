@@ -1,5 +1,5 @@
 /**
- * Budil v1.9.3.2 - 売上番頭（経営判断用）・営業先連携
+ * Budil v1.9.4 - 売上番頭（経営判断用）・営業先連携
  */
 const RevenueBrain = {
   SERVICES: [
@@ -426,6 +426,52 @@ const RevenueBrain = {
       byService: this.groupByField(active, 'service'),
       bySource: this.groupByField(active, 'source'),
       recordCount: active.length
+    };
+  },
+
+  buildManagementComment(context) {
+    const summary = (context && context.summary) || {};
+    const salesOutcome = (context && context.salesOutcome) || {};
+    const nextCandidates = (context && (context.nextSalesCandidates || context.nextCandidates)) || [];
+    const holdCandidates = (context && (context.salesHoldCandidates || context.holdCandidates)) || [];
+    const lines = [];
+    const top = nextCandidates[0];
+    const hasHold = holdCandidates.length > 0;
+    const hasTarget = summary.monthlyTarget > 0;
+    const targetMet = hasTarget && summary.achievementRate >= 100;
+    const targetNotMet = hasTarget && summary.remainingToTarget > 0 && summary.achievementRate < 100;
+
+    if (summary.recordCount === 0) {
+      const line = '今月の売上登録がまだありません。まずは直近の作業・予約・見込み客を登録して、状況を見える化してください。';
+      return { lines: [line], brief: line };
+    }
+
+    if (targetNotMet) {
+      lines.push(`今月は目標まであと${this.formatYen(summary.remainingToTarget)}です。売上候補を増やすか、既存営業先への追加提案を優先してください。`);
+    } else if (targetMet && salesOutcome.unlinkedTotal === 0 && !hasHold) {
+      lines.push('今月は売上管理が順調です。次はリピート候補と法人提案を増やして、翌月の売上につなげましょう。');
+    } else if (salesOutcome.linkedTotal > 0) {
+      lines.push(`今月は営業先に紐付いた売上が${this.formatYen(salesOutcome.linkedTotal)}あります。売上が出た営業先へのお礼・次回提案を忘れずに確認してください。`);
+    } else {
+      lines.push(`今月の売上予定は${this.formatYen(summary.planned)}です。`);
+    }
+
+    if (top) {
+      lines.push(`今日の優先営業候補は${top.leadName}です。理由：${top.reason}。まずこの1件から動くのがおすすめです。`);
+    }
+
+    if (hasHold) {
+      lines.push('営業保留中の案件があります。入金注意の確認が終わるまでは追加営業を控えてください。');
+    } else if (salesOutcome.unlinkedTotal > 0) {
+      lines.push('未紐付け売上があります。営業先と紐付けると、営業成果の分析に反映されます。');
+    } else if (salesOutcome.linkedTotal > 0 || targetMet) {
+      lines.push('未紐付け売上はありません。営業成果は正しく分析できています。');
+    }
+
+    const finalLines = lines.slice(0, 3);
+    return {
+      lines: finalLines,
+      brief: finalLines.slice(0, 2).join(' ')
     };
   },
 

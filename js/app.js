@@ -247,6 +247,7 @@
     renderSalesInsights();
     renderDashboardLists();
     renderDashRevenueSummary();
+    renderManagementComments();
   }
 
   function getRevenueContext() {
@@ -260,7 +261,34 @@
     const salesOutcome = RevenueBrain.getLinkedRevenueSummary(records, leads, monthKey);
     const nextSalesCandidates = RevenueBrain.getNextSalesCandidates(records, leads, today);
     const salesHoldCandidates = RevenueBrain.getSalesHoldCandidates(records, leads, today);
-    return { today, records, settings, leads, monthKey, summary, comment, salesOutcome, nextSalesCandidates, salesHoldCandidates };
+    const managementComment = RevenueBrain.buildManagementComment({
+      summary, salesOutcome, nextSalesCandidates, salesHoldCandidates
+    });
+    return { today, records, settings, leads, monthKey, summary, comment, salesOutcome, nextSalesCandidates, salesHoldCandidates, managementComment };
+  }
+
+  function renderManagementComment(containerId, options) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const { managementComment } = getRevenueContext();
+    const opts = options || {};
+    if (!managementComment || !managementComment.lines.length) {
+      el.innerHTML = '';
+      return;
+    }
+    if (opts.brief) {
+      el.innerHTML = `<p class="management-comment-line">${esc(managementComment.brief)}</p>`;
+      return;
+    }
+    el.innerHTML = managementComment.lines
+      .map(line => `<p class="management-comment-line">${esc(line)}</p>`)
+      .join('');
+  }
+
+  function renderManagementComments() {
+    renderManagementComment('dash-management-comment');
+    renderManagementComment('revenue-management-comment');
+    renderManagementComment('mgmt-management-comment', { brief: true });
   }
 
   function renderNextSalesCandidatesList(containerId, limit) {
@@ -774,6 +802,7 @@
       mgmtCandidateEl.innerHTML = renderMorningSalesCandidateHtml();
       bindSalesOutcomeLeadLinks(mgmtCandidateEl);
     }
+    renderManagementComment('mgmt-management-comment', { brief: true });
 
     const top3Legacy = document.getElementById('dash-top3');
     if (top3Legacy) {
@@ -2586,6 +2615,7 @@
     }
     renderNextSalesCandidatesList('revenue-next-sales', 5);
     renderSalesHoldCandidatesList('revenue-sales-hold', 5);
+    renderManagementComment('revenue-management-comment');
     renderRevenueBreakdown('revenue-by-service', summary.byService);
     renderRevenueBreakdown('revenue-by-source', summary.bySource);
   }

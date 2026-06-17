@@ -5,9 +5,13 @@
 ## 現在の公開状態
 
 - 公開URL: https://teruya1229.github.io/budil/
-- 現在バージョン: v1.9.3.2
-- 最新commit: c0cb592
-- push済み（`64ffa7e..c0cb592 main -> main`）
+- 現在バージョン: v1.9.4
+- 最新commit: （push後に更新）
+
+## v1.9.4 実装内容（経営番頭コメント）
+
+- `RevenueBrain.buildManagementComment()` — 今月状況・優先アクション・注意点を1〜3行で生成
+- ダッシュボード・売上番頭・朝レポートに「経営番頭コメント」表示
 
 ## v1.9.3.2 実装内容（入金注意を営業候補から除外）
 

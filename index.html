@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v1.9.3.2</small>
+          <small>AI経営脳みそ v1.9.4</small>
         </div>
       </div>
       <nav class="nav">
@@ -43,7 +43,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v1.9.3.2</small>
+        <small>Budil v1.9.4</small>
       </div>
     </aside>
 
@@ -56,6 +56,11 @@
         </header>
 
         <div id="budil-greeting" class="card card-budil card-wide"></div>
+
+        <div class="card card-wide card-management-comment">
+          <h2>経営番頭コメント</h2>
+          <div id="dash-management-comment" class="management-comment-body"></div>
+        </div>
 
         <div id="morning-report" class="card card-morning card-wide">
           <h2>🌅 朝レポート</h2>
@@ -81,6 +86,8 @@
               <h3>今月の売上</h3>
               <div id="mgmt-revenue" class="mgmt-copy-block"></div>
               <div id="mgmt-sales-outcome" class="revenue-sales-outcome revenue-sales-outcome-compact"></div>
+              <p class="management-comment-heading label-muted">経営番頭コメント</p>
+              <div id="mgmt-management-comment" class="management-comment-body management-comment-brief"></div>
               <div id="mgmt-sales-candidate" class="sales-candidate-block"></div>
             </div>
             <div class="morning-section">
@@ -707,6 +714,11 @@
         <div id="revenue-unlinked-banner" class="revenue-unlinked-banner hidden" role="alert">
           <p>未紐付け売上があります。営業先と紐付けると、営業成果の分析に反映されます。</p>
           <button type="button" id="btn-scroll-unlinked-revenue" class="btn btn-sm btn-secondary">未紐付け売上を見る</button>
+        </div>
+
+        <div class="card card-wide card-management-comment">
+          <h2>経営番頭コメント</h2>
+          <div id="revenue-management-comment" class="management-comment-body"></div>
         </div>
 
         <div class="card card-wide">
