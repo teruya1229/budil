@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v1.9.1</small>
+          <small>AI経営脳みそ v1.9.2</small>
         </div>
       </div>
       <nav class="nav">
@@ -43,7 +43,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v1.9.1</small>
+        <small>Budil v1.9.2</small>
       </div>
     </aside>
 
@@ -702,6 +702,11 @@
           <p class="view-subtitle">今月の売上・入金・目標差分を把握する</p>
         </header>
 
+        <div id="revenue-unlinked-banner" class="revenue-unlinked-banner hidden" role="alert">
+          <p>未紐付け売上があります。営業先と紐付けると、営業成果の分析に反映されます。</p>
+          <button type="button" id="btn-scroll-unlinked-revenue" class="btn btn-sm btn-secondary">未紐付け売上を見る</button>
+        </div>
+
         <div class="card card-wide">
           <h2>今月サマリー</h2>
           <div id="revenue-summary" class="revenue-summary-grid"></div>
@@ -818,7 +823,7 @@
           </div>
         </div>
 
-        <div class="card card-wide">
+        <div class="card card-wide" id="revenue-list-section">
           <div class="card-header-row">
             <h2>売上一覧（今月）</h2>
             <button type="button" id="btn-revenue-new" class="btn btn-primary btn-sm">+ 新規登録</button>

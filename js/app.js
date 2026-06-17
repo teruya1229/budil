@@ -261,38 +261,72 @@
     return { today, records, settings, leads, monthKey, summary, comment, salesOutcome };
   }
 
+  function renderOutcomeLeadName(lead, leads) {
+    if (lead.leadId && (leads || Storage.getLeads()).find(l => l.id === lead.leadId)) {
+      return `<button type="button" class="revenue-lead-link" data-outcome-open-lead="${esc(lead.leadId)}">${esc(lead.leadName)}</button>`;
+    }
+    return esc(lead.leadName);
+  }
+
+  function bindSalesOutcomeLeadLinks(container) {
+    if (!container) return;
+    container.querySelectorAll('[data-outcome-open-lead]').forEach(btn => {
+      btn.addEventListener('click', () => openSalesDetail(btn.dataset.outcomeOpenLead, { navigate: true }));
+    });
+  }
+
   function renderSalesOutcomeHtml(outcome, options) {
     const opts = options || {};
     if (!outcome) return '';
+
+    if (opts.brief) {
+      return RevenueBrain.buildMorningSalesOutcomeLines(outcome)
+        .map(l => `<p class="revenue-outcome-brief-line">${esc(l)}</p>`)
+        .join('');
+    }
+
+    const unlinkedClass = outcome.unlinkedTotal > 0 ? 'revenue-outcome-item-warn' : 'revenue-outcome-item-ok';
+    const linkedClass = outcome.linkedTotal > 0 ? 'revenue-outcome-item-highlight' : '';
+    const leads = opts.leads || Storage.getLeads();
+
     const lines = [
       `<div class="revenue-outcome-grid">`,
-      `<div class="revenue-outcome-item"><span>紐付け売上</span><strong>${esc(RevenueBrain.formatYen(outcome.linkedTotal))}</strong></div>`,
-      `<div class="revenue-outcome-item"><span>未紐付け売上</span><strong>${esc(RevenueBrain.formatYen(outcome.unlinkedTotal))}</strong></div>`,
+      `<div class="revenue-outcome-item ${linkedClass}"><span>紐付け売上</span><strong>${esc(RevenueBrain.formatYen(outcome.linkedTotal))}</strong></div>`,
+      `<div class="revenue-outcome-item ${unlinkedClass}"><span>未紐付け売上</span><strong>${outcome.unlinkedTotal > 0 ? esc(RevenueBrain.formatYen(outcome.unlinkedTotal)) : 'なし ✓'}</strong></div>`,
       `<div class="revenue-outcome-item"><span>売上発生営業先</span><strong>${outcome.leadCount}件</strong></div>`,
-      `<div class="revenue-outcome-item"><span>今月成約営業先</span><strong>${outcome.contractedCount}件</strong></div>`,
+      `<div class="revenue-outcome-item"><span>成約営業先</span><strong>${outcome.contractedCount}件</strong></div>`,
       `</div>`
     ];
+
     if (outcome.topLeads && outcome.topLeads.length) {
-      lines.push('<p class="label-muted">売上上位営業先</p>');
+      lines.push('<p class="revenue-outcome-section-title label-muted">売上上位営業先</p>');
       lines.push('<ul class="revenue-outcome-list">');
       outcome.topLeads.forEach(l => {
-        lines.push(`<li><span>${esc(l.leadName)}</span><strong>${esc(RevenueBrain.formatYen(l.total))}</strong></li>`);
+        lines.push(`<li><span>${renderOutcomeLeadName(l, leads)}</span><strong>${esc(RevenueBrain.formatYen(l.total))}</strong></li>`);
       });
       lines.push('</ul>');
     }
+
     if (outcome.unpaidLeads && outcome.unpaidLeads.length) {
-      lines.push('<p class="label-muted">未入金がある営業先</p>');
-      lines.push('<ul class="revenue-outcome-list">');
+      lines.push('<p class="revenue-outcome-section-title label-muted">未入金がある営業先</p>');
+      lines.push('<ul class="revenue-outcome-list revenue-outcome-list-warn">');
       outcome.unpaidLeads.forEach(l => {
-        lines.push(`<li><span>${esc(l.leadName)}</span><strong>${esc(RevenueBrain.formatYen(l.unpaid))}</strong></li>`);
+        lines.push(`<li><span>${renderOutcomeLeadName(l, leads)}</span><strong>${esc(RevenueBrain.formatYen(l.unpaid))}</strong></li>`);
       });
       lines.push('</ul>');
     }
+
     if (opts.showComments) {
       const comments = RevenueBrain.buildSalesOutcomeComment(outcome);
       comments.forEach(c => lines.push(`<p class="revenue-outcome-comment">${esc(c)}</p>`));
     }
     return lines.join('');
+  }
+
+  function renderRevenueUnlinkedBanner(salesOutcome) {
+    const banner = document.getElementById('revenue-unlinked-banner');
+    if (!banner) return;
+    banner.classList.toggle('hidden', !(salesOutcome && salesOutcome.unlinkedTotal > 0));
   }
 
   function renderRevenueSummaryHtml(summary, comment, options) {
@@ -330,7 +364,7 @@
     if (btn) btn.addEventListener('click', () => navigateToView('revenue'));
     const outcomeEl = document.getElementById('dash-sales-outcome');
     if (outcomeEl) {
-      outcomeEl.innerHTML = renderSalesOutcomeHtml(salesOutcome, { showComments: true });
+      outcomeEl.innerHTML = renderSalesOutcomeHtml(salesOutcome, { brief: true });
     }
   }
 
@@ -633,7 +667,7 @@
     const mgmtOutcomeEl = document.getElementById('mgmt-sales-outcome');
     if (mgmtOutcomeEl) {
       const rev = getRevenueContext();
-      mgmtOutcomeEl.innerHTML = renderSalesOutcomeHtml(rev.salesOutcome, { showComments: true });
+      mgmtOutcomeEl.innerHTML = renderSalesOutcomeHtml(rev.salesOutcome, { brief: true });
     }
 
     const top3Legacy = document.getElementById('dash-top3');
@@ -1456,9 +1490,16 @@
       const overdue = l.nextActionDate && l.nextActionDate < today && !l.salesPriorityExcluded;
       const nextActionNote = !l.nextAction ? ' <small class="sales-priority-warning">未設定</small>' : '';
       const revSummary = RevenueBrain.getLeadRevenueSummary(l.id, Storage.getRevenueRecords());
-      const revenueHint = revSummary.count
-        ? `<small class="lead-revenue-hint">売上: ${esc(RevenueBrain.formatYen(revSummary.total))}${revSummary.latestDate ? ' / 最新: ' + esc(revSummary.latestDate) : ''}</small>`
-        : '';
+      let revenueHint = '';
+      if (revSummary.count) {
+        revenueHint = `<small class="lead-revenue-hint">売上：${esc(RevenueBrain.formatYen(revSummary.total))}</small>`;
+        if (revSummary.latestDate) {
+          revenueHint += `<small class="lead-revenue-hint">最新：${esc(revSummary.latestDate)}</small>`;
+        }
+        if (revSummary.unpaid > 0) {
+          revenueHint += `<small class="lead-revenue-hint lead-revenue-unpaid-warn">未入金あり</small>`;
+        }
+      }
       const wonBadge = l.salesStatus === '成約'
         ? ' <span class="sales-status-badge sales-status-won">成約</span>' : '';
       return `
@@ -2189,12 +2230,15 @@
           </div>
         </li>`).join('');
     container.innerHTML = `
+      <p class="lead-revenue-value-title">累計価値</p>
       <div class="lead-revenue-summary">
-        <div class="lead-revenue-summary-item"><span>売上合計</span><strong>${esc(RevenueBrain.formatYen(summary.total))}</strong></div>
+        <div class="lead-revenue-summary-item"><span>累計売上</span><strong>${esc(RevenueBrain.formatYen(summary.total))}</strong></div>
         <div class="lead-revenue-summary-item"><span>入金済み</span><strong>${esc(RevenueBrain.formatYen(summary.paid))}</strong></div>
-        <div class="lead-revenue-summary-item"><span>未入金</span><strong>${esc(RevenueBrain.formatYen(summary.unpaid))}</strong></div>
-        <div class="lead-revenue-summary-item"><span>最新売上日</span><strong>${esc(summary.latestDate || '—')}</strong></div>
+        <div class="lead-revenue-summary-item${summary.unpaid > 0 ? ' lead-revenue-unpaid-cell' : ''}"><span>未入金</span><strong>${esc(RevenueBrain.formatYen(summary.unpaid))}</strong></div>
+        <div class="lead-revenue-summary-item"><span>売上件数</span><strong>${summary.count}件</strong></div>
+        <div class="lead-revenue-summary-item"><span>最終売上日</span><strong>${esc(summary.latestDate || '—')}</strong></div>
       </div>
+      <p class="lead-revenue-value-title">売上履歴</p>
       <ul class="lead-revenue-history">${historyHtml}</ul>`;
   }
 
@@ -2368,14 +2412,16 @@
   }
 
   function renderRevenueSummaryPanel() {
-    const { summary, comment, settings, salesOutcome } = getRevenueContext();
+    const { summary, comment, settings, salesOutcome, leads } = getRevenueContext();
     const summaryEl = document.getElementById('revenue-summary');
     const commentEl = document.getElementById('revenue-bantou-comment');
     const targetEl = document.getElementById('revenue-monthly-target');
     const outcomeEl = document.getElementById('revenue-sales-outcome');
 
+    renderRevenueUnlinkedBanner(salesOutcome);
+
     if (summaryEl) {
-      summaryEl.innerHTML = [
+      const baseItems = [
         { label: '売上予定', value: RevenueBrain.formatYen(summary.planned) },
         { label: '確定', value: RevenueBrain.formatYen(summary.confirmed) },
         { label: '完了', value: RevenueBrain.formatYen(summary.completed) },
@@ -2386,15 +2432,25 @@
         { label: '達成率', value: summary.achievementRate + '%' },
         { label: '残り日数', value: summary.daysLeft + '日' },
         { label: '1日あたり必要', value: RevenueBrain.formatYen(summary.dailyNeeded) }
-      ].map(item => `
-        <div class="revenue-summary-item">
+      ];
+      const outcomeItems = [
+        { label: '紐付け売上', value: RevenueBrain.formatYen(salesOutcome.linkedTotal), extraClass: 'revenue-summary-outcome revenue-summary-outcome-linked' },
+        { label: '未紐付け売上', value: salesOutcome.unlinkedTotal > 0 ? RevenueBrain.formatYen(salesOutcome.unlinkedTotal) : 'なし ✓', extraClass: 'revenue-summary-outcome ' + (salesOutcome.unlinkedTotal > 0 ? 'revenue-summary-outcome-warn' : 'revenue-summary-outcome-ok') },
+        { label: '売上発生営業先', value: salesOutcome.leadCount + '件', extraClass: 'revenue-summary-outcome' },
+        { label: '成約営業先', value: salesOutcome.contractedCount + '件', extraClass: 'revenue-summary-outcome' }
+      ];
+      summaryEl.innerHTML = [...baseItems, ...outcomeItems].map(item => `
+        <div class="revenue-summary-item ${item.extraClass || ''}">
           <span>${esc(item.label)}</span>
           <strong>${esc(item.value)}</strong>
         </div>`).join('');
     }
     if (commentEl) commentEl.textContent = comment;
     if (targetEl) targetEl.value = settings.monthlyTarget || '';
-    if (outcomeEl) outcomeEl.innerHTML = renderSalesOutcomeHtml(salesOutcome);
+    if (outcomeEl) {
+      outcomeEl.innerHTML = renderSalesOutcomeHtml(salesOutcome, { leads });
+      bindSalesOutcomeLeadLinks(outcomeEl);
+    }
     renderRevenueBreakdown('revenue-by-service', summary.byService);
     renderRevenueBreakdown('revenue-by-source', summary.bySource);
   }
@@ -2453,6 +2509,13 @@
       renderRevenueView();
       renderDashboard();
     });
+    const scrollUnlinkedBtn = document.getElementById('btn-scroll-unlinked-revenue');
+    if (scrollUnlinkedBtn) {
+      scrollUnlinkedBtn.addEventListener('click', () => {
+        const section = document.getElementById('revenue-list-section');
+        if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
     resetRevenueForm();
     renderRevenueView();
   }

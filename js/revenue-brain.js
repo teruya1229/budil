@@ -1,5 +1,5 @@
 /**
- * Budil v1.9.1 - 売上番頭（経営判断用）・営業先連携
+ * Budil v1.9.2 - 売上番頭（経営判断用）・営業先連携
  */
 const RevenueBrain = {
   SERVICES: [
@@ -154,6 +154,20 @@ const RevenueBrain = {
     }
     if (outcome.contractedCount > 0) {
       lines.push('成約済み営業先があります。口コミ・次回提案・法人化提案を忘れずに確認してください');
+    }
+    return lines;
+  },
+
+  buildMorningSalesOutcomeLines(outcome) {
+    if (!outcome) return [];
+    const lines = [`今月の紐付け売上：${this.formatYen(outcome.linkedTotal)}`];
+    if (outcome.unlinkedTotal > 0) {
+      lines.push(`未紐付け売上：${this.formatYen(outcome.unlinkedTotal)}`);
+    } else {
+      lines.push('未紐付け売上なし');
+    }
+    if (outcome.unpaidLeads && outcome.unpaidLeads.length) {
+      lines.push('未入金あり：' + outcome.unpaidLeads.map(l => l.leadName).join('、'));
     }
     return lines;
   },
