@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v2.1</small>
+          <small>AI経営脳みそ v2.2</small>
         </div>
       </div>
       <nav class="nav">
@@ -46,7 +46,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v2.1</small>
+        <small>Budil v2.2</small>
       </div>
     </aside>
 
@@ -173,6 +173,10 @@
           <h2>🌅 朝レポート</h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid">
+            <div class="morning-section">
+              <h3>今日の需要</h3>
+              <div id="mgmt-demand-top" class="mgmt-demand-top-block"></div>
+            </div>
             <div class="morning-section morning-section-hero">
               <h3>今日の経営判断</h3>
               <ol id="mgmt-decisions" class="mgmt-decisions-list"></ol>
@@ -350,8 +354,6 @@
         </div>
       </section>
 
-      </section>
-
       <!-- 需要番頭（需要ピックアップ受信箱） -->
       <section id="view-pickup" class="view">
         <header class="view-header">
@@ -360,17 +362,40 @@
         </header>
 
         <div class="card card-wide card-pickup-comment">
-          <h2>今日の需要ピックアップ</h2>
+          <h2>需要番頭コメント</h2>
           <div id="pickup-today-summary" class="pickup-today-summary"></div>
+        </div>
+
+        <div class="card card-wide card-pickup-morning">
+          <div class="card-header-row">
+            <h2>今日の需要トップ3</h2>
+            <button type="button" id="btn-pickup-taskify-top3" class="btn btn-primary btn-sm">今日のトップ3を全部タスク化</button>
+          </div>
+          <div id="pickup-morning-top3" class="pickup-morning-top3-list"></div>
+          <div id="pickup-used-today" class="pickup-used-today"></div>
+        </div>
+
+        <div class="card card-wide card-pickup-prompt">
+          <h2>クロクロ毎朝調査プロンプト</h2>
+          <p class="pickup-paste-hint">毎朝クロクロに貼り付けて、3件の需要ピックアップを作ってもらいます。</p>
+          <textarea id="pickup-cloclo-prompt" class="pickup-prompt-text" readonly rows="12"></textarea>
+          <button type="button" id="btn-pickup-copy-prompt" class="btn btn-secondary btn-sm">プロンプトをコピー</button>
         </div>
 
         <div class="card card-wide">
           <h2>クロクロ調査結果を貼り付け</h2>
-          <p class="pickup-paste-hint">クロクロの調査結果をそのまま貼り付けて、フォームに反映できます。</p>
+          <p class="pickup-paste-hint">1件形式はフォームへ反映、3件形式（【需要ピックアップ1】…）はプレビュー表示後にまとめて保存できます。</p>
           <div class="form-group">
-            <textarea id="pickup-paste-area" rows="8" placeholder="テーマ：湿気・カビ&#10;要約：沖縄は湿度が高く、エアコン内部のカビ・臭い訴求が合いそう。&#10;需要スコア：82&#10;関連サービス：エアコン完全分解、洗濯機クリーニング&#10;投稿案：エアコン内部のカビ注意リール&#10;営業案：過去の完全分解見込み客へLINE&#10;広告案：完全分解LPを強める"></textarea>
+            <textarea id="pickup-paste-area" rows="10" placeholder="【需要ピックアップ1】&#10;テーマ：湿気・カビ&#10;要約：…&#10;需要スコア：82&#10;…"></textarea>
           </div>
-          <button type="button" id="btn-pickup-apply-paste" class="btn btn-secondary">貼り付け内容をフォームに反映</button>
+          <div class="pickup-paste-actions">
+            <button type="button" id="btn-pickup-apply-paste" class="btn btn-secondary">貼り付け内容をフォームに反映</button>
+            <button type="button" id="btn-pickup-save-bulk" class="btn btn-primary hidden">3件まとめて保存</button>
+          </div>
+          <div id="pickup-bulk-preview" class="pickup-bulk-preview hidden">
+            <h3 class="pickup-preview-title">一括取り込みプレビュー</h3>
+            <div id="pickup-bulk-preview-list" class="pickup-bulk-preview-list"></div>
+          </div>
         </div>
 
         <div class="card card-wide">
@@ -434,11 +459,6 @@
               <button type="button" id="btn-pickup-clear" class="btn btn-secondary btn-sm">クリア</button>
             </div>
           </form>
-        </div>
-
-        <div class="card card-wide">
-          <h2>需要トップ3</h2>
-          <div id="pickup-top3" class="pickup-top3-list"></div>
         </div>
 
         <div class="pickup-candidates-grid">
@@ -1369,6 +1389,22 @@
             <button type="button" id="btn-create-test-data" class="btn btn-secondary">テストデータを作成</button>
             <button type="button" id="btn-delete-test-data" class="btn btn-secondary">テストデータを削除</button>
           </div>
+        </div>
+
+        <div class="card card-wide card-mvp-checklist">
+          <h2>v2.2 動作確認チェックリスト</h2>
+          <p class="data-mgmt-desc">クロクロ3件一括取り込みと毎朝運用導線を確認してください。</p>
+          <ul class="mvp-checklist">
+            <li>クロクロ3件形式を貼り付けてプレビューできる</li>
+            <li>3件まとめて保存できる</li>
+            <li>1件形式のフォーム反映も動く</li>
+            <li>今日の需要トップ3がスコア順で出る</li>
+            <li>投稿/営業/広告を個別・一括で今日やることへ追加できる</li>
+            <li>同じタスクを重複追加しない</li>
+            <li>採用済み / 無視 / 保管 が動く</li>
+            <li>クロクロ毎朝調査プロンプトをコピーできる</li>
+            <li>朝レポートに需要トップが出る</li>
+          </ul>
         </div>
 
         <div class="card card-wide card-mvp-checklist">

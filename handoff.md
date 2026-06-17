@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v2.2 公開済み（クロクロ3件一括取り込み・毎朝運用強化）
 - Budil v2.1 公開済み（需要ピックアップ受信箱MVP）
 - Budil v2.0 公開済み（実運用MVP仕上げ）
 - Budil v1.9.9 公開済み（営業先詳細の見やすさ整理）
@@ -44,6 +45,16 @@
 | `js/demand-brain.js` | 需要分析・需要ピックアップパース・トップ3 |
 | `js/demand-radar.js` | 需要レーダー分析 |
 | `js/data-backup.js` | バックアップ・復元 |
+
+## v2.2で入ったもの
+
+- クロクロ3件一括パース（`parseKurokuroBulkPaste` / `parseClocloPaste`）
+- 一括取り込みプレビュー + `3件まとめて保存`
+- 朝用需要トップ3カード（判断ラベル・個別/一括タスク化）
+- 重複タスク防止（`pickupDedupeKey` on manualTasks）
+- ステータス `archived`（保管）UI
+- クロクロ毎朝調査プロンプト表示・コピー
+- 朝レポート `mgmt-demand-top` に需要トップ表示
 
 ## v2.1で入ったもの
 

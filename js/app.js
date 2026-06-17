@@ -9,6 +9,7 @@
   let pendingImport = null;
   let currentSalesTab = 'email';
   let currentSalesMessages = null;
+  let pickupBulkPreview = [];
 
   const SALES_TAB_FIELDS = { email: 'msg-email', form: 'msg-form', dm: 'msg-dm', phone: 'msg-phone' };
   const SALES_TAB_LOG = { email: 'メール送信', form: 'フォーム送信', dm: 'DM', phone: '電話' };
@@ -1775,6 +1776,14 @@
     tasksEl.innerHTML = report.tasks.map((t, i) => `
       <li><span class="top3-num">${i + 1}</span> ${esc(t)}</li>`).join('');
 
+    const demandTopEl = document.getElementById('mgmt-demand-top');
+    if (demandTopEl) {
+      const demandLines = DemandBrain.buildMorningDemandLines(Storage.getDemandPickups(), TODAY());
+      demandTopEl.innerHTML = demandLines.length
+        ? `<p class="mgmt-demand-label">今日の需要：</p><ul class="mgmt-demand-list">${demandLines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '<p class="placeholder-text">需要ピックアップ未登録。需要番頭でクロクロ調査結果を取り込んでください。</p>';
+    }
+
     const postEl = document.getElementById('mgmt-post');
     postEl.innerHTML = `
       <p class="mgmt-highlight">${esc(report.todayPost.theme)}</p>
@@ -2340,10 +2349,115 @@
     renderPickupServiceChips([]);
     const paste = document.getElementById('pickup-paste-area');
     if (paste) paste.value = '';
+    pickupBulkPreview = [];
+    renderPickupBulkPreview();
+  }
+
+  function isPickupTaskDuplicate(date, topic, actionType, rawTitle) {
+    if (!rawTitle) return false;
+    const key = DemandBrain.buildPickupTaskDedupeKey(date, topic, actionType, rawTitle);
+    return Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === key);
+  }
+
+  function addPickupTaskSingle(pickup, actionType, today) {
+    const task = DemandBrain.buildDailyTaskFromPickup(pickup, actionType);
+    if (!task) return 'empty';
+    const date = today || TODAY();
+    if (isPickupTaskDuplicate(date, task.topic, task.actionType, task.rawTitle)) {
+      return 'duplicate';
+    }
+    Storage.addManualDailyTask({
+      title: task.title,
+      targetName: '—',
+      priority: task.priority,
+      action: task.reason,
+      memo: task.reason,
+      dueDate: date,
+      status: 'open',
+      reason: task.reason,
+      pickupDedupeKey: DemandBrain.buildPickupTaskDedupeKey(date, task.topic, task.actionType, task.rawTitle),
+      pickupTopic: task.topic,
+      pickupActionType: task.actionType
+    });
+    return 'added';
+  }
+
+  function reportPickupTaskResults(results) {
+    const added = results.filter(r => r === 'added').length;
+    const duplicate = results.filter(r => r === 'duplicate').length;
+    if (!added && duplicate) {
+      alert('すでに今日やることに追加済みです');
+      return;
+    }
+    if (!added) {
+      alert('追加できるアクション案がありません。投稿・営業・広告案を入力してください。');
+      return;
+    }
+    renderDailyActionTasks();
+    renderMorningDailyTasksBrief();
+    renderMorningReport();
+    let msg = '今日やることに' + added + '件追加しました。';
+    if (duplicate) msg += '（' + duplicate + '件は追加済みのためスキップ）';
+    alert(msg);
+  }
+
+  function addPickupTasksToDaily(pickup, actionTypes) {
+    const types = actionTypes || ['post', 'sales', 'ad'];
+    const results = types.map(type => addPickupTaskSingle(pickup, type, TODAY()));
+    reportPickupTaskResults(results);
+  }
+
+  function addPickupTaskById(id, actionType) {
+    const pickup = Storage.getDemandPickups().find(p => p.id === id);
+    if (!pickup) return;
+    const result = addPickupTaskSingle(pickup, actionType, TODAY());
+    if (result === 'duplicate') {
+      alert('すでに今日やることに追加済みです');
+      return;
+    }
+    if (result === 'empty') {
+      alert('追加できるアクション案がありません。');
+      return;
+    }
+    renderDailyActionTasks();
+    renderMorningDailyTasksBrief();
+    renderMorningReport();
+    alert('今日やることに追加しました。');
+  }
+
+  function addAllPickupTasksById(id) {
+    const pickup = Storage.getDemandPickups().find(p => p.id === id);
+    if (!pickup) return;
+    addPickupTasksToDaily(pickup);
+  }
+
+  function addTop3AllTasks() {
+    const top3 = DemandBrain.getTopDemandPickups(Storage.getDemandPickups(), TODAY());
+    if (!top3.length) {
+      alert('今日の需要トップ3がありません。');
+      return;
+    }
+    const results = [];
+    top3.forEach(p => {
+      ['post', 'sales', 'ad'].forEach(type => results.push(addPickupTaskSingle(p, type, TODAY())));
+    });
+    reportPickupTaskResults(results);
   }
 
   function applyPickupPaste() {
     const text = document.getElementById('pickup-paste-area').value;
+    if (DemandBrain.isBulkPasteFormat(text)) {
+      const items = DemandBrain.parseKurokuroBulkPaste(text);
+      if (!items.length) {
+        alert('3件形式の貼り付け内容を読み取れませんでした。ラベルを確認してください。');
+        return;
+      }
+      pickupBulkPreview = items.map((item, index) => ({ ...item, included: true, index }));
+      renderPickupBulkPreview();
+      return;
+    }
+    pickupBulkPreview = [];
+    renderPickupBulkPreview();
     const parsed = DemandBrain.parseKurokuroPaste(text);
     if (!Object.keys(parsed).length) {
       alert('貼り付け内容から項目を読み取れませんでした。テーマ・要約などのラベルを確認してください。');
@@ -2359,8 +2473,72 @@
         ? parsed.relatedServices : current.relatedServices,
       postAction: parsed.postAction || current.postAction,
       salesAction: parsed.salesAction || current.salesAction,
-      adAction: parsed.adAction || current.adAction
+      adAction: parsed.adAction || current.adAction,
+      memo: parsed.memo || current.memo
     });
+  }
+
+  function renderPickupBulkPreview() {
+    const wrap = document.getElementById('pickup-bulk-preview');
+    const list = document.getElementById('pickup-bulk-preview-list');
+    const saveBtn = document.getElementById('btn-pickup-save-bulk');
+    if (!wrap || !list) return;
+    const hasPreview = pickupBulkPreview.length > 0;
+    wrap.classList.toggle('hidden', !hasPreview);
+    if (saveBtn) saveBtn.classList.toggle('hidden', !hasPreview);
+    if (!hasPreview) {
+      list.innerHTML = '';
+      return;
+    }
+    list.innerHTML = pickupBulkPreview.map((item, i) => {
+      const services = (item.relatedServices || []).join('、') || '—';
+      return `
+        <div class="pickup-preview-card${item.included ? '' : ' pickup-preview-excluded'}">
+          <label class="pickup-preview-include">
+            <input type="checkbox" data-pickup-preview-toggle="${i}"${item.included ? ' checked' : ''}>
+            <span>保存対象</span>
+          </label>
+          <div class="pickup-preview-body">
+            <p><strong>テーマ：</strong>${esc(item.topic || '—')}</p>
+            <p><strong>需要スコア：</strong>${item.demandScore != null ? item.demandScore : '—'}</p>
+            <p><strong>要約：</strong>${esc(item.summary || '—')}</p>
+            <p><strong>関連サービス：</strong>${esc(services)}</p>
+            <p><strong>投稿案：</strong>${esc(item.postAction || '—')}</p>
+            <p><strong>営業案：</strong>${esc(item.salesAction || '—')}</p>
+            <p><strong>広告案：</strong>${esc(item.adAction || '—')}</p>
+          </div>
+        </div>`;
+    }).join('');
+    list.querySelectorAll('[data-pickup-preview-toggle]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const idx = parseInt(cb.dataset.pickupPreviewToggle, 10);
+        if (pickupBulkPreview[idx]) {
+          pickupBulkPreview[idx].included = cb.checked;
+          renderPickupBulkPreview();
+        }
+      });
+    });
+  }
+
+  function saveBulkPickups() {
+    const selected = pickupBulkPreview.filter(item => item.included);
+    if (!selected.length) {
+      alert('保存対象が選ばれていません。');
+      return;
+    }
+    const defaults = {
+      date: document.getElementById('pickup-date').value || TODAY(),
+      source: document.getElementById('pickup-source').value || 'クロクロ'
+    };
+    selected.forEach(item => {
+      Storage.addDemandPickup(DemandBrain.buildPickupFromParsed(item, defaults));
+    });
+    pickupBulkPreview = [];
+    renderPickupBulkPreview();
+    renderDemandPickup();
+    renderManagementComments();
+    renderMorningReport();
+    alert(selected.length + '件の需要ピックアップを保存しました。');
   }
 
   function savePickupFromForm() {
@@ -2372,6 +2550,7 @@
     const record = Storage.addDemandPickup(DemandBrain.buildPickupFromForm(form));
     renderDemandPickup();
     renderManagementComments();
+    renderMorningReport();
     return record;
   }
 
@@ -2385,89 +2564,73 @@
     addPickupTasksToDaily(pickup);
   }
 
-  function addPickupTasksToDaily(pickup) {
-    const today = TODAY();
-    let added = 0;
-    ['post', 'sales', 'ad'].forEach(type => {
-      const task = DemandBrain.buildDailyTaskFromPickup(pickup, type);
-      if (!task) return;
-      Storage.addManualDailyTask({
-        title: task.title,
-        targetName: '—',
-        priority: task.priority,
-        action: task.reason,
-        memo: task.reason,
-        dueDate: today,
-        status: 'open',
-        reason: task.reason
-      });
-      added++;
-    });
-    if (!added) {
-      alert('追加できるアクション案がありません。投稿・営業・広告案を入力してください。');
-      return;
-    }
-    renderDailyActionTasks();
-    renderMorningDailyTasksBrief();
-    alert('今日やることに' + added + '件追加しました。');
-  }
-
   function updatePickupStatus(id, status) {
     Storage.updateDemandPickup(id, { status });
     renderDemandPickup();
     renderManagementComments();
+    renderMorningReport();
   }
 
   function renderPickupTodaySummary() {
     const el = document.getElementById('pickup-today-summary');
     if (!el) return;
-    const top3 = DemandBrain.getTodayTop3(Storage.getDemandPickups(), TODAY());
-    if (!top3.length) {
-      el.innerHTML = '<p class="placeholder-text">今日の需要ピックアップはまだありません。クロクロで調査した結果を貼り付けると、投稿案・営業案・広告案に変換できます。</p>';
-      return;
-    }
-    const demandLine = DemandBrain.buildManagementDemandLine(Storage.getDemandPickups(), TODAY());
-    el.innerHTML = `
-      <p class="pickup-summary-line pickup-summary-highlight">${esc(demandLine)}</p>
-      <ul class="pickup-summary-top-list">
-        ${top3.map(p => `<li><strong>${esc(p.topic)}</strong>（スコア ${p.demandScore}）— ${esc(p.summary)}</li>`).join('')}
-      </ul>`;
+    const comment = DemandBrain.buildDemandComment(Storage.getDemandPickups(), TODAY());
+    el.innerHTML = `<p class="pickup-summary-line pickup-summary-highlight">${esc(comment)}</p>`;
   }
 
-  function renderPickupTop3Card(p, rank) {
-    const services = p.relatedServices.length
-      ? p.relatedServices.map(s => `<span class="pickup-tag">${esc(s)}</span>`).join('')
-      : '<span class="pickup-tag pickup-tag-muted">未設定</span>';
+  function renderPickupMorningTop3Card(p, rank) {
+    const judgment = DemandBrain.getScoreJudgment(p.demandScore);
+    const idAttr = p.id ? esc(p.id) : '';
     return `
-      <div class="pickup-top-card" data-pickup-id="${esc(p.id)}">
-        <div class="pickup-top-card-header">
-          <span class="pickup-rank">#${rank}</span>
-          <strong>${esc(p.topic)}</strong>
-          <span class="pickup-score-badge">${p.demandScore}</span>
+      <div class="pickup-morning-card ${judgment.className}" data-pickup-id="${idAttr}">
+        <div class="pickup-morning-header">
+          <span class="pickup-rank">${rank}位</span>
+          <strong class="pickup-morning-topic">${esc(p.topic)}</strong>
+          <span class="pickup-score-badge">${p.demandScore}点</span>
+          <span class="pickup-judgment ${judgment.className}">${esc(judgment.label)}</span>
         </div>
         <p class="pickup-meta">${esc(p.summary)}</p>
-        <div class="pickup-services-row">${services}</div>
-        ${p.postTitle ? `<p class="pickup-action-line"><span class="pickup-action-label">投稿案</span>${esc(p.postTitle)}</p>` : ''}
-        ${p.salesTitle ? `<p class="pickup-action-line"><span class="pickup-action-label">営業案</span>${esc(p.salesTitle)}</p>` : ''}
-        ${p.adTitle ? `<p class="pickup-action-line"><span class="pickup-action-label">広告案</span>${esc(p.adTitle)}</p>` : ''}
-        <div class="pickup-card-actions">
-          <button type="button" class="btn btn-sm btn-primary" data-pickup-add-tasks="${esc(p.id)}">今日やることに追加</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-pickup-used="${esc(p.id)}">採用済みにする</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-pickup-ignore="${esc(p.id)}">無視</button>
+        ${p.postTitle ? `<p class="pickup-morning-action"><span class="pickup-action-label">投稿</span>${esc(p.postTitle)}</p>` : ''}
+        ${p.adTitle ? `<p class="pickup-morning-action"><span class="pickup-action-label">広告</span>${esc(p.adTitle)}</p>` : ''}
+        <div class="pickup-card-actions pickup-morning-actions">
+          ${p.postTitle ? `<button type="button" class="btn btn-sm btn-secondary" data-pickup-add-post="${idAttr}">投稿をタスク追加</button>` : ''}
+          ${p.salesTitle ? `<button type="button" class="btn btn-sm btn-secondary" data-pickup-add-sales="${idAttr}">営業をタスク追加</button>` : ''}
+          ${p.adTitle ? `<button type="button" class="btn btn-sm btn-secondary" data-pickup-add-ad="${idAttr}">広告をタスク追加</button>` : ''}
+          ${idAttr ? `<button type="button" class="btn btn-sm btn-primary" data-pickup-add-all="${idAttr}">この需要のアクションを全部追加</button>` : ''}
+          ${idAttr ? `
+            <button type="button" class="btn btn-sm btn-secondary" data-pickup-used="${idAttr}">採用済み</button>
+            <button type="button" class="btn btn-sm btn-secondary" data-pickup-ignore="${idAttr}">無視</button>
+            <button type="button" class="btn btn-sm btn-secondary" data-pickup-archive="${idAttr}">保管</button>
+          ` : ''}
         </div>
       </div>`;
   }
 
-  function renderPickupTop3() {
-    const el = document.getElementById('pickup-top3');
+  function renderPickupMorningTop3() {
+    const el = document.getElementById('pickup-morning-top3');
     if (!el) return;
-    const top3 = DemandBrain.getTodayTop3(Storage.getDemandPickups(), TODAY());
+    const top3 = DemandBrain.getTopDemandPickups(Storage.getDemandPickups(), TODAY());
     if (!top3.length) {
       el.innerHTML = '<p class="placeholder-text">今日の需要ピックアップはまだありません。クロクロで調査した結果を貼り付けると、投稿案・営業案・広告案に変換できます。</p>';
       return;
     }
-    el.innerHTML = top3.map((p, i) => renderPickupTop3Card(p, i + 1)).join('');
+    el.innerHTML = top3.map((p, i) => renderPickupMorningTop3Card(p, i + 1)).join('');
     bindPickupCardActions(el);
+  }
+
+  function renderPickupUsedToday() {
+    const el = document.getElementById('pickup-used-today');
+    if (!el) return;
+    const used = DemandBrain.getTodayUsedPickups(Storage.getDemandPickups(), TODAY());
+    if (!used.length) {
+      el.innerHTML = '';
+      return;
+    }
+    el.innerHTML = `
+      <p class="pickup-used-title">採用済み（今日）</p>
+      <ul class="pickup-used-list">
+        ${used.map(p => `<li>${esc(p.topic)}（${p.demandScore}点）— ${esc(p.postTitle || p.summary.slice(0, 30))}</li>`).join('')}
+      </ul>`;
   }
 
   function renderPickupCandidates() {
@@ -2505,7 +2668,7 @@
       el.innerHTML = '<p class="placeholder-text">保存済みの需要メモはまだありません。</p>';
       return;
     }
-    const statusLabel = { open: '未処理', used: '採用済み', ignored: '無視', archived: 'アーカイブ' };
+    const statusLabel = { open: '未対応', used: '採用済み', ignored: '無視', archived: '保管' };
     el.innerHTML = list.map(p => `
       <div class="pickup-saved-item pickup-status-${esc(p.status)}">
         <div class="pickup-saved-header">
@@ -2518,9 +2681,10 @@
         <p class="pickup-meta pickup-meta-sub">情報元：${esc(p.source)} / 関連：${esc(p.relatedServices.join('、') || '—')}</p>
         <div class="pickup-card-actions">
           ${p.status === 'open' ? `
-            <button type="button" class="btn btn-sm btn-primary" data-pickup-add-tasks="${esc(p.id)}">今日やることに追加</button>
+            <button type="button" class="btn btn-sm btn-primary" data-pickup-add-all="${esc(p.id)}">今日やることに追加</button>
             <button type="button" class="btn btn-sm btn-secondary" data-pickup-used="${esc(p.id)}">採用済み</button>
             <button type="button" class="btn btn-sm btn-secondary" data-pickup-ignore="${esc(p.id)}">無視</button>
+            <button type="button" class="btn btn-sm btn-secondary" data-pickup-archive="${esc(p.id)}">保管</button>
           ` : ''}
         </div>
       </div>`).join('');
@@ -2528,12 +2692,17 @@
   }
 
   function bindPickupCardActions(container) {
-    container.querySelectorAll('[data-pickup-add-tasks]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.dataset.pickupAddTasks;
-        const pickup = Storage.getDemandPickups().find(p => p.id === id);
-        if (pickup) addPickupTasksToDaily(pickup);
-      });
+    container.querySelectorAll('[data-pickup-add-all]').forEach(btn => {
+      btn.addEventListener('click', () => addAllPickupTasksById(btn.dataset.pickupAddAll));
+    });
+    container.querySelectorAll('[data-pickup-add-post]').forEach(btn => {
+      btn.addEventListener('click', () => addPickupTaskById(btn.dataset.pickupAddPost, 'post'));
+    });
+    container.querySelectorAll('[data-pickup-add-sales]').forEach(btn => {
+      btn.addEventListener('click', () => addPickupTaskById(btn.dataset.pickupAddSales, 'sales'));
+    });
+    container.querySelectorAll('[data-pickup-add-ad]').forEach(btn => {
+      btn.addEventListener('click', () => addPickupTaskById(btn.dataset.pickupAddAd, 'ad'));
     });
     container.querySelectorAll('[data-pickup-used]').forEach(btn => {
       btn.addEventListener('click', () => updatePickupStatus(btn.dataset.pickupUsed, 'used'));
@@ -2541,11 +2710,16 @@
     container.querySelectorAll('[data-pickup-ignore]').forEach(btn => {
       btn.addEventListener('click', () => updatePickupStatus(btn.dataset.pickupIgnore, 'ignored'));
     });
+    container.querySelectorAll('[data-pickup-archive]').forEach(btn => {
+      btn.addEventListener('click', () => updatePickupStatus(btn.dataset.pickupArchive, 'archived'));
+    });
   }
 
   function renderDemandPickup() {
     renderPickupTodaySummary();
-    renderPickupTop3();
+    renderPickupMorningTop3();
+    renderPickupUsedToday();
+    renderPickupBulkPreview();
     renderPickupCandidates();
     renderPickupSavedList();
   }
@@ -2562,6 +2736,7 @@
     Storage.addDemandPickup(DemandBrain.createTestPickup(TODAY()));
     renderDemandPickup();
     renderManagementComments();
+    renderMorningReport();
     alert('需要テストデータを作成しました。');
   }
 
@@ -2576,6 +2751,7 @@
     Storage.saveDemandPickups(filtered);
     renderDemandPickup();
     renderManagementComments();
+    renderMorningReport();
     alert('需要テストデータを削除しました。');
   }
 
@@ -2585,14 +2761,31 @@
     dateEl.value = TODAY();
     renderPickupServiceChips([]);
 
+    const promptEl = document.getElementById('pickup-cloclo-prompt');
+    if (promptEl) promptEl.value = DemandBrain.KUROKURO_MORNING_PROMPT;
+
     document.getElementById('pickup-form').addEventListener('submit', e => {
       e.preventDefault();
       if (savePickupFromForm()) alert('需要ピックアップを保存しました。');
     });
 
     document.getElementById('btn-pickup-apply-paste').addEventListener('click', applyPickupPaste);
+    const saveBulkBtn = document.getElementById('btn-pickup-save-bulk');
+    if (saveBulkBtn) saveBulkBtn.addEventListener('click', saveBulkPickups);
     document.getElementById('btn-pickup-add-tasks').addEventListener('click', addPickupTasksFromForm);
     document.getElementById('btn-pickup-clear').addEventListener('click', clearPickupForm);
+
+    const taskifyTop3Btn = document.getElementById('btn-pickup-taskify-top3');
+    if (taskifyTop3Btn) taskifyTop3Btn.addEventListener('click', addTop3AllTasks);
+
+    const copyPromptBtn = document.getElementById('btn-pickup-copy-prompt');
+    if (copyPromptBtn) {
+      copyPromptBtn.addEventListener('click', () => {
+        copyText(DemandBrain.KUROKURO_MORNING_PROMPT)
+          .then(() => alert('プロンプトをコピーしました。'))
+          .catch(() => alert('コピーに失敗しました。'));
+      });
+    }
 
     document.getElementById('btn-pickup-copy-post').addEventListener('click', () => {
       const text = document.getElementById('pickup-post-action').value.trim();

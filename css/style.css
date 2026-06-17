@@ -3394,3 +3394,186 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* v2.2 クロクロ3件一括取り込み */
+.card-pickup-morning {
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.card-pickup-prompt {
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+.pickup-prompt-text {
+  width: 100%;
+  margin: 8px 0 10px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.pickup-paste-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.pickup-bulk-preview {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.pickup-preview-title {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+}
+
+.pickup-bulk-preview-list {
+  display: grid;
+  gap: 10px;
+}
+
+.pickup-preview-card {
+  padding: 12px;
+  background: var(--bg-input);
+  border-radius: 10px;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.pickup-preview-excluded {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.pickup-preview-include {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.pickup-preview-body p {
+  margin: 4px 0;
+  font-size: 0.86rem;
+}
+
+.pickup-morning-top3-list {
+  display: grid;
+  gap: 12px;
+}
+
+.pickup-morning-card {
+  padding: 16px;
+  background: var(--bg-input);
+  border-radius: 12px;
+  border-left: 4px solid rgba(148, 163, 184, 0.5);
+}
+
+.pickup-morning-card.pickup-judgment-high {
+  border-left-color: #ef4444;
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.pickup-morning-card.pickup-judgment-mid {
+  border-left-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.pickup-morning-card.pickup-judgment-low {
+  border-left-color: #94a3b8;
+}
+
+.pickup-morning-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.pickup-morning-topic {
+  font-size: 1.05rem;
+}
+
+.pickup-judgment {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.pickup-judgment-high {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.pickup-judgment-mid {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+}
+
+.pickup-judgment-low {
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--text-muted);
+}
+
+.pickup-morning-action {
+  margin: 4px 0;
+  font-size: 0.9rem;
+}
+
+.pickup-morning-actions {
+  margin-top: 12px;
+}
+
+.pickup-used-today {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.25);
+}
+
+.pickup-used-title {
+  margin: 0 0 6px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.pickup-used-list {
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.pickup-used-list li {
+  margin: 4px 0;
+}
+
+.mgmt-demand-top-block {
+  font-size: 0.9rem;
+}
+
+.mgmt-demand-label {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.mgmt-demand-list {
+  margin: 0;
+  padding-left: 1.1em;
+}
+
+.mgmt-demand-list li {
+  margin: 5px 0;
+  line-height: 1.45;
+}
+
+.pickup-status-archived .pickup-status-label {
+  background: rgba(100, 116, 139, 0.2);
+  color: var(--text-muted);
+}

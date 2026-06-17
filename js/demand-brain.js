@@ -174,8 +174,84 @@ const DemandBrain = {
     { key: 'relatedServices', labels: ['関連サービス：', '関連サービス:'] },
     { key: 'postAction', labels: ['投稿案：', '投稿案:'] },
     { key: 'salesAction', labels: ['営業案：', '営業案:'] },
-    { key: 'adAction', labels: ['広告案：', '広告案:'] }
+    { key: 'adAction', labels: ['広告案：', '広告案:'] },
+    { key: 'memo', labels: ['メモ：', 'メモ:'] }
   ],
+
+  KUROKURO_MORNING_PROMPT: `沖縄南部の清掃業向けに、今日の需要ピックアップを作ってください。
+
+目的：
+Budilの需要番頭に入力するため、今日の投稿・営業・広告アクションにつながる需要ネタを3件出してください。
+
+調査観点：
+1. 沖縄の天気・湿度・台風・梅雨・気温
+2. エアコンクリーニング需要
+3. 洗濯機クリーニング需要
+4. カビ・臭い・湿気・水漏れ・結露
+5. 家庭向け清掃需要
+6. 法人向け清掃需要
+7. SNS投稿に使えそうな生活者の不安
+8. Google広告で押すべきサービス
+9. 今週優先すべきサービス
+
+出力形式は必ず以下でお願いします。
+
+【需要ピックアップ1】
+テーマ：
+要約：
+需要スコア：
+関連サービス：
+投稿案：
+営業案：
+広告案：
+メモ：
+
+【需要ピックアップ2】
+テーマ：
+要約：
+需要スコア：
+関連サービス：
+投稿案：
+営業案：
+広告案：
+メモ：
+
+【需要ピックアップ3】
+テーマ：
+要約：
+需要スコア：
+関連サービス：
+投稿案：
+営業案：
+広告案：
+メモ：
+
+条件：
+- 地域は沖縄南部を中心
+- サービスはエアコン通常、エアコン完全分解、お掃除機能付きエアコン、洗濯機クリーニング、レンジフード、キッチン、浴室、法人案件から選ぶ
+- 今日やる行動に落とし込める内容にする
+- 投稿案はInstagramリール向けにする
+- 広告案はGoogle広告やLP改善に使える内容にする
+- 需要スコアは0〜100で付ける
+- 机上の空論ではなく、今日動ける提案にする`,
+
+  isBulkPasteFormat(text) {
+    return /【需要ピックアップ\s*\d+】/.test(text || '');
+  },
+
+  parseKurokuroBulkPaste(text) {
+    const raw = (text || '').trim();
+    if (!raw || !this.isBulkPasteFormat(raw)) return [];
+    return raw.split(/【需要ピックアップ\s*\d+】/)
+      .map(block => this.parseKurokuroPaste(block))
+      .filter(p => p.topic || p.summary || p.demandScore != null);
+  },
+
+  parseClocloPaste(text) {
+    if (this.isBulkPasteFormat(text)) return this.parseKurokuroBulkPaste(text);
+    const single = this.parseKurokuroPaste(text);
+    return Object.keys(single).length ? [single] : [];
+  },
 
   parseKurokuroPaste(text) {
     const raw = (text || '').trim();
@@ -275,6 +351,45 @@ const DemandBrain = {
     };
   },
 
+  buildPickupFromParsed(parsed, defaults) {
+    return this.buildPickupFromForm({
+      date: (defaults && defaults.date) || new Date().toISOString().slice(0, 10),
+      source: (defaults && defaults.source) || 'クロクロ',
+      topic: parsed.topic || '',
+      summary: parsed.summary || '',
+      demandScore: parsed.demandScore != null ? parsed.demandScore : 50,
+      relatedServices: parsed.relatedServices || [],
+      postAction: parsed.postAction || '',
+      salesAction: parsed.salesAction || '',
+      adAction: parsed.adAction || '',
+      memo: parsed.memo || ''
+    });
+  },
+
+  getScoreJudgment(score) {
+    const n = typeof score === 'number' ? score : 0;
+    if (n >= 80) return { label: '今日優先', className: 'pickup-judgment-high' };
+    if (n >= 60) return { label: '候補', className: 'pickup-judgment-mid' };
+    return { label: '様子見', className: 'pickup-judgment-low' };
+  },
+
+  getTopDemandPickups(pickups, date) {
+    const today = date || new Date().toISOString().slice(0, 10);
+    return (pickups || [])
+      .filter(p => p.date === today && p.status === 'open')
+      .map(p => this.normalizePickup(p))
+      .sort((a, b) => b.demandScore - a.demandScore)
+      .slice(0, 3);
+  },
+
+  getTodayUsedPickups(pickups, date) {
+    const today = date || new Date().toISOString().slice(0, 10);
+    return (pickups || [])
+      .filter(p => p.date === today && p.status === 'used')
+      .map(p => this.normalizePickup(p))
+      .sort((a, b) => b.demandScore - a.demandScore);
+  },
+
   getTodayPickups(pickups, date) {
     const today = date || new Date().toISOString().slice(0, 10);
     return (pickups || [])
@@ -284,30 +399,72 @@ const DemandBrain = {
   },
 
   getTodayTop3(pickups, date) {
-    return this.getTodayPickups(pickups, date).slice(0, 3);
+    return this.getTopDemandPickups(pickups, date);
+  },
+
+  buildDemandComment(pickups, date) {
+    const top3 = this.getTopDemandPickups(pickups, date);
+    if (!top3.length) {
+      return '今日の需要ピックアップはまだありません。クロクロで調査した結果を貼り付けると、投稿案・営業案・広告案に変換できます。';
+    }
+    const top = top3[0];
+    const services = top.relatedServices.slice(0, 2).join('・') || '関連サービス';
+    let line = `今日の需要は「${top.topic}」が強めです。`;
+    if (top.demandScore >= 80) {
+      line += `${top.topic}を最優先に。`;
+    }
+    if (top.postTitle) {
+      line += `${services}の投稿を優先してください。`;
+    } else {
+      line += `${services}の訴求を優先してください。`;
+    }
+    if (top.adTitle) line += ' 広告・LPの確認も忘れずに。';
+    return line;
   },
 
   buildManagementDemandLine(pickups, date) {
-    const top3 = this.getTodayTop3(pickups, date);
+    const top3 = this.getTopDemandPickups(pickups, date);
     if (!top3.length) return '';
-    const top = top3[0];
-    const services = top.relatedServices.slice(0, 2).join('・') || '関連サービス';
-    const post = top.postTitle;
-    const actionHint = post ? `${services}の投稿を優先してください。` : `${services}の訴求を優先してください。`;
-    return `今日の需要は「${top.topic}」が強めです。${actionHint}`;
+    return this.buildDemandComment(pickups, date);
+  },
+
+  buildMorningDemandLines(pickups, date) {
+    const top3 = this.getTopDemandPickups(pickups, date);
+    return top3.map((p, i) => {
+      const services = p.relatedServices.slice(0, 2).join('・');
+      let hint = '';
+      if (p.postTitle && services) hint = `${services}投稿を優先`;
+      else if (p.postTitle) hint = p.postTitle.slice(0, 24);
+      else if (services) hint = `${services}訴求`;
+      else hint = (p.summary || '').slice(0, 24);
+      return `${i + 1}. ${p.topic}（${p.demandScore}点） ${hint}`;
+    });
+  },
+
+  buildPickupTaskDedupeKey(date, topic, actionType, rawTitle) {
+    return [date, topic, actionType, rawTitle].join('|');
+  },
+
+  getPickupActionRawTitle(pickup, actionType) {
+    const p = this.normalizePickup(pickup);
+    if (actionType === 'post') return p.postTitle;
+    if (actionType === 'sales') return p.salesTitle;
+    if (actionType === 'ad') return p.adTitle;
+    return '';
   },
 
   buildDailyTaskFromPickup(pickup, actionType) {
     const p = this.normalizePickup(pickup);
     const reason = `今日の需要ピックアップ「${p.topic}」から`;
-    if (actionType === 'post' && p.postTitle) {
-      return { title: `投稿する：${p.postTitle}`, reason, priority: '中' };
+    const rawTitle = this.getPickupActionRawTitle(pickup, actionType);
+    if (actionType === 'post' && rawTitle) {
+      return { title: `投稿する：${rawTitle}`, reason, priority: '中', actionType, rawTitle, topic: p.topic };
     }
-    if (actionType === 'sales' && p.salesTitle) {
-      return { title: `営業する：${p.salesTitle}`, reason, priority: '中' };
+    if (actionType === 'sales' && rawTitle) {
+      return { title: `営業する：${rawTitle}`, reason, priority: '中', actionType, rawTitle, topic: p.topic };
     }
-    if (actionType === 'ad' && p.adTitle) {
-      return { title: `広告確認：${p.adTitle}`, reason, priority: '中' };
+    if (actionType === 'ad' && rawTitle) {
+      return { title: `広告確認：${rawTitle}`, reason, priority: '中', actionType, rawTitle, topic: p.topic };
     }
     return null;
   },
