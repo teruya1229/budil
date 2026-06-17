@@ -298,6 +298,9 @@
     safeRenderSection('dash-daily-action-tasks', () => renderDailyActionTasks(), '今日やること');
     safeRenderSection(null, () => renderMorningDailyTasksBrief(), '朝レポートタスク');
     safeRenderSection('business-report-dash', () => renderBusinessReport('compact'), '経営レポート');
+    safeRenderSection('onboarding-guide-dash', () => renderOnboardingGuide('compact'), 'はじめてガイド');
+    safeRenderSection('product-overview-dash', () => renderProductOverview('compact'), 'Budilでできること');
+    safeRenderSection('recommended-ops-dash', () => renderRecommendedOperations('compact'), 'おすすめ運用');
   }
 
   function hasExecutiveHomeData() {
@@ -2028,9 +2031,7 @@
   }
 
   function shouldShowStartGuide() {
-    return !Storage.getLeads().length
-      && !Storage.getRevenueRecords().length
-      && !getDailyActionTasksWithState().length;
+    return !hasExecutiveHomeData() && !Storage.getOnboardingStatus().businessProfile;
   }
 
   function renderStartGuide() {
@@ -2042,6 +2043,359 @@
   function scrollToElement(selector) {
     const el = document.querySelector(selector);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function goToBusinessProfile() {
+    navigateToView('data');
+    setTimeout(() => scrollToElement('#business-profile-settings'), 120);
+  }
+
+  function goToRevenueTarget() {
+    navigateToView('revenue');
+    setTimeout(() => scrollToElement('#revenue-monthly-target'), 120);
+  }
+
+  function goToBusinessReportSection() {
+    navigateToView('dashboard');
+    setTimeout(() => scrollToElement('#business-report-dash'), 120);
+  }
+
+  function refreshKurokuroPrompt() {
+    const promptEl = document.getElementById('pickup-cloclo-prompt');
+    if (promptEl) {
+      promptEl.value = DemandBrain.buildKurokuroMorningPrompt(Storage.getBusinessProfile());
+    }
+  }
+
+  const ONBOARDING_STEPS = [
+    { key: 'businessProfile', label: '事業プロフィールを設定', btn: '設定する', action: 'profile' },
+    { key: 'monthlyTarget', label: '月間売上目標を設定', btn: '設定する', action: 'target' },
+    { key: 'leads', label: '営業先を1件登録', btn: '登録する', action: 'lead' },
+    { key: 'revenue', label: '売上を1件登録', btn: '登録する', action: 'revenue' },
+    { key: 'pickups', label: 'クロクロ需要を3件取り込み', btn: '開く', action: 'pickup' },
+    { key: 'taskCompleted', label: '今日やることを1件完了', btn: '開く', action: 'task' },
+    { key: 'reportGenerated', label: '経営レポートをコピー', btn: 'コピーする', action: 'report' }
+  ];
+
+  const PRODUCT_OVERVIEW_ITEMS = [
+    { title: '売上を見える化', desc: '月間目標・達成率・未紐付け売上を確認', action: 'revenue' },
+    { title: '営業先を管理', desc: '次の一手・保留・活動履歴を整理', action: 'sales' },
+    { title: '今日やることを整理', desc: '優先タスクを毎朝確認', action: 'task' },
+    { title: '需要を拾う', desc: 'クロクロ調査結果を需要番頭に取り込み', action: 'pickup' },
+    { title: '投稿・広告文案を作る', desc: '需要から投稿・広告案を生成', action: 'pickup' },
+    { title: '投稿・広告予定を管理', desc: 'カレンダーで今週の予定を把握', action: 'calendar' },
+    { title: '施策成果を見る', desc: 'LINE相談・予約・売上を入力', action: 'pickup' },
+    { title: '続ける/改善/停止を判断', desc: '施策判断で次の打ち手を決める', action: 'pickup' },
+    { title: '週次・月次レポートを出す', desc: '経営レポートをコピーして分析', action: 'report' },
+    { title: 'データ診断で安全確認', desc: '紐付け切れや形式をチェック', action: 'diagnostics' }
+  ];
+
+  function handleOnboardingAction(action) {
+    if (action === 'profile') return goToBusinessProfile();
+    if (action === 'target') return goToRevenueTarget();
+    if (action === 'lead') return goToAddLead();
+    if (action === 'revenue') return goToAddRevenue();
+    if (action === 'pickup') return goToDemandPickup();
+    if (action === 'task') return goToAddDailyTask();
+    if (action === 'report') {
+      generateBusinessReport();
+      copyBusinessReport();
+      return;
+    }
+  }
+
+  function handleProductOverviewAction(action) {
+    if (action === 'revenue') return navigateToView('revenue');
+    if (action === 'sales') return navigateToView('sales');
+    if (action === 'task') return goToAddDailyTask();
+    if (action === 'pickup') return goToDemandPickup();
+    if (action === 'calendar') {
+      navigateToView('dashboard');
+      setTimeout(() => {
+        const details = document.querySelector('.dash-detail-sections');
+        if (details && !details.open) details.open = true;
+        scrollToElement('#dash-action-calendar');
+      }, 120);
+      return;
+    }
+    if (action === 'report') return goToBusinessReportSection();
+    if (action === 'diagnostics') {
+      navigateToView('data');
+      setTimeout(() => scrollToElement('#btn-run-diagnostics'), 120);
+    }
+  }
+
+  function renderOnboardingGuide(mode) {
+    const containerId = mode === 'detail' ? 'onboarding-guide-data' : 'onboarding-guide-dash';
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const status = Storage.getOnboardingStatus();
+    const profile = Storage.getBusinessProfile();
+    const doneCount = ONBOARDING_STEPS.filter(s => status[s.key]).length;
+    const profileHint = profile && profile.businessName
+      ? `<p class="onboarding-profile-hint">${esc(profile.businessName)}${profile.area ? '（' + esc(profile.area) + '）' : ''}</p>`
+      : '<p class="onboarding-profile-hint onboarding-profile-missing">事業プロフィール未設定 — まず設定するとプロンプトやレポートが自分向けになります</p>';
+
+    el.innerHTML = `
+      <div class="onboarding-header">
+        <h2>はじめてガイド</h2>
+        <span class="onboarding-progress">${doneCount}/${ONBOARDING_STEPS.length} 完了</span>
+      </div>
+      <p class="onboarding-lead">${mode === 'detail'
+        ? 'Budilを初めて使う方・デモを見る方向けのセットアップ手順です。'
+        : 'まずはこの順番で進めると、Budilの流れがつかめます。'}</p>
+      ${profileHint}
+      <h3 class="onboarding-subtitle">まずやること</h3>
+      <ol class="onboarding-steps">${ONBOARDING_STEPS.map((step, i) => {
+        const done = status[step.key];
+        return `<li class="onboarding-step ${done ? 'onboarding-step-done' : ''}">
+          <span class="onboarding-step-num">${i + 1}</span>
+          <span class="onboarding-step-label">${esc(step.label)}</span>
+          <span class="onboarding-step-status">${done ? '完了 ✓' : '未完了'}</span>
+          ${done ? '' : `<button type="button" class="btn btn-sm ${i === 0 ? 'btn-primary' : 'btn-secondary'}" data-onboarding-action="${esc(step.action)}">${esc(step.btn)}</button>`}
+        </li>`;
+      }).join('')}</ol>
+      ${mode === 'detail' ? `
+      <div class="onboarding-extra-actions">
+        <button type="button" class="btn btn-sm btn-secondary" data-onboarding-nav="demo">デモデータを作成</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-onboarding-nav="profile">事業プロフィールを開く</button>
+      </div>` : ''}`;
+
+    el.querySelectorAll('[data-onboarding-action]').forEach(btn => {
+      btn.addEventListener('click', () => handleOnboardingAction(btn.dataset.onboardingAction));
+    });
+    el.querySelectorAll('[data-onboarding-nav]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.onboardingNav === 'demo') scrollToElement('#demo-data-panel');
+        if (btn.dataset.onboardingNav === 'profile') goToBusinessProfile();
+      });
+    });
+  }
+
+  function renderBusinessProfileSettings() {
+    const el = document.getElementById('business-profile-settings');
+    if (!el) return;
+    const p = Storage.getBusinessProfile() || {};
+    el.innerHTML = `
+      <h2>事業プロフィール</h2>
+      <p class="data-mgmt-desc">事業情報はプロンプト・経営レポート・はじめてガイドに反映されます。localStorageの設定（budil_settings）に保存されます。</p>
+      <form id="business-profile-form" class="business-profile-form">
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label for="bp-business-name">事業名</label>
+            <input type="text" id="bp-business-name" placeholder="例：BCサービス" value="${esc(p.businessName || '')}">
+          </div>
+          <div class="form-group">
+            <label for="bp-area">地域</label>
+            <input type="text" id="bp-area" placeholder="例：沖縄南部" value="${esc(p.area || '')}">
+          </div>
+        </div>
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label for="bp-industry">業種</label>
+            <input type="text" id="bp-industry" placeholder="例：清掃業" value="${esc(p.industry || '')}">
+          </div>
+          <div class="form-group">
+            <label for="bp-line-url">LINE URL</label>
+            <input type="url" id="bp-line-url" placeholder="https://..." value="${esc(p.lineUrl || '')}">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="bp-main-services">主力サービス（カンマ区切り）</label>
+          <input type="text" id="bp-main-services" placeholder="エアコンクリーニング、洗濯機クリーニング" value="${esc((p.mainServices || []).join('、'))}">
+        </div>
+        <div class="form-group">
+          <label for="bp-main-channels">主な集客経路（カンマ区切り）</label>
+          <input type="text" id="bp-main-channels" placeholder="Instagram、Google広告、LINE" value="${esc((p.mainChannels || []).join('、'))}">
+        </div>
+        <div class="form-group">
+          <label for="bp-memo">メモ</label>
+          <textarea id="bp-memo" rows="2" placeholder="デモ用メモなど">${esc(p.memo || '')}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">事業プロフィールを保存</button>
+      </form>`;
+
+    const form = el.querySelector('#business-profile-form');
+    if (form && !form.dataset.bound) {
+      form.dataset.bound = '1';
+      form.addEventListener('submit', e => {
+        e.preventDefault();
+        Storage.saveBusinessProfile({
+          businessName: document.getElementById('bp-business-name').value.trim(),
+          area: document.getElementById('bp-area').value.trim(),
+          industry: document.getElementById('bp-industry').value.trim(),
+          lineUrl: document.getElementById('bp-line-url').value.trim(),
+          mainServices: document.getElementById('bp-main-services').value.trim(),
+          mainChannels: document.getElementById('bp-main-channels').value.trim(),
+          memo: document.getElementById('bp-memo').value.trim()
+        });
+        refreshKurokuroPrompt();
+        renderOnboardingGuide('compact');
+        renderOnboardingGuide('detail');
+        alert('事業プロフィールを保存しました');
+      });
+    }
+  }
+
+  let demoGuideVisible = false;
+
+  function renderDemoDataPanel() {
+    const el = document.getElementById('demo-data-panel');
+    if (!el) return;
+    const hasDemo = Storage.hasDemoData();
+    el.innerHTML = `
+      <h2>デモデータ</h2>
+      <p class="data-mgmt-desc">販売・デモ用のサンプルデータです。すべて <code>isDemo</code> フラグ付きで、削除時も本番データは触りません。</p>
+      <ul class="demo-data-scope-list">
+        <li>営業先 3件 / 売上 2件 / 需要ピックアップ 3件</li>
+        <li>投稿・広告予定 2件 / 施策成果 1件</li>
+        <li>今日やること 3件 / 確認完了 1件</li>
+      </ul>
+      <div class="data-mgmt-actions">
+        <button type="button" id="btn-create-demo-data" class="btn btn-primary" ${hasDemo ? 'disabled' : ''}>デモデータを作成</button>
+        <button type="button" id="btn-delete-demo-data" class="btn btn-secondary" ${hasDemo ? '' : 'disabled'}>デモデータを削除</button>
+      </div>
+      <div id="demo-data-guide" class="demo-data-guide ${demoGuideVisible ? '' : 'hidden'}">
+        <p class="demo-data-guide-text">デモデータを作成しました。<br>経営番頭ホーム → 需要番頭 → 経営レポート の順で確認すると、Budilの流れが分かります。</p>
+        <div class="demo-data-guide-actions">
+          <button type="button" class="btn btn-sm btn-primary" data-demo-nav="home">経営番頭ホームを見る</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-demo-nav="pickup">需要番頭を見る</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-demo-nav="report">経営レポートを見る</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-demo-nav="diagnostics">データ診断を実行</button>
+        </div>
+      </div>`;
+
+    const createBtn = el.querySelector('#btn-create-demo-data');
+    if (createBtn) {
+      createBtn.addEventListener('click', () => {
+        const result = Storage.createDemoData();
+        if (!result.ok) {
+          alert(result.error === 'exists'
+            ? 'デモデータはすでにあります。「デモデータを削除」で消してから再度作成してください。'
+            : 'デモデータの作成に失敗しました');
+          return;
+        }
+        demoGuideVisible = true;
+        refreshAllViews();
+        renderDemoDataPanel();
+      });
+    }
+    const deleteBtn = el.querySelector('#btn-delete-demo-data');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', () => {
+        if (!Storage.hasDemoData()) {
+          alert('削除できるデモデータがありません');
+          return;
+        }
+        const ok = confirm('デモデータ（isDemo / isTest）だけを削除します。本番データは残ります。よろしいですか？');
+        if (!ok) return;
+        Storage.deleteDemoData();
+        demoGuideVisible = false;
+        refreshAllViews();
+        alert('デモデータを削除しました');
+      });
+    }
+    el.querySelectorAll('[data-demo-nav]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const nav = btn.dataset.demoNav;
+        if (nav === 'home') {
+          navigateToView('dashboard');
+          setTimeout(() => scrollToElement('#executive-home'), 120);
+        } else if (nav === 'pickup') {
+          goToDemandPickup();
+        } else if (nav === 'report') {
+          navigateToView('data');
+          setTimeout(() => scrollToElement('#business-report-data'), 120);
+        } else if (nav === 'diagnostics') {
+          runDataDiagnosticsUI();
+          scrollToElement('#data-diagnostics-result');
+        }
+      });
+    });
+  }
+
+  function renderDataSafetyNotice() {
+    const el = document.getElementById('data-safety-notice');
+    if (!el) return;
+    el.innerHTML = `
+      <h2>データの保存について</h2>
+      <ul class="data-safety-list">
+        <li>Budilは現在、ブラウザの <strong>localStorage</strong> にデータを保存します</li>
+        <li>別の端末・別ブラウザでは、同じデータは自動では見えません</li>
+        <li>機種変更や誤操作に備え、<strong>定期的なバックアップ</strong>を推奨します</li>
+        <li>本番データを誤って消さない設計です（デモ削除は <code>isDemo</code> / <code>isTest</code> のみ）</li>
+        <li>販売・複数端末での本格運用には、将来のクラウド保存が必要です</li>
+      </ul>`;
+  }
+
+  function renderProductOverview(mode) {
+    const containerId = mode === 'detail' ? 'product-overview-data' : 'product-overview-dash';
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = `
+      <h2>Budilでできること</h2>
+      <p class="product-overview-lead">${mode === 'detail'
+        ? 'Budilの主要機能一覧です。デモや説明時にご利用ください。'
+        : 'このツールでできることをまとめています。'}</p>
+      <div class="product-overview-grid">${PRODUCT_OVERVIEW_ITEMS.map((item, i) => `
+        <div class="product-overview-card">
+          <span class="product-overview-num">${i + 1}</span>
+          <strong>${esc(item.title)}</strong>
+          <p>${esc(item.desc)}</p>
+          <button type="button" class="btn btn-sm btn-secondary" data-product-action="${esc(item.action)}">開く</button>
+        </div>`).join('')}</div>`;
+    el.querySelectorAll('[data-product-action]').forEach(btn => {
+      btn.addEventListener('click', () => handleProductOverviewAction(btn.dataset.productAction));
+    });
+  }
+
+  function renderRecommendedOperations(mode) {
+    const containerId = mode === 'detail' ? 'recommended-ops-data' : 'recommended-ops-dash';
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = `
+      <h2>おすすめ運用</h2>
+      <div class="recommended-ops-grid">
+        <div class="recommended-ops-block">
+          <h3>毎朝5分</h3>
+          <ol>
+            <li>経営番頭ホームを見る</li>
+            <li>クロクロ調査結果を需要番頭に入れる</li>
+            <li>今日やることを確認</li>
+            <li>今日の確認完了を押す</li>
+          </ol>
+        </div>
+        <div class="recommended-ops-block">
+          <h3>週1回</h3>
+          <ol>
+            <li>週間作戦ボードを見る</li>
+            <li>投稿・広告カレンダーを確認</li>
+            <li>施策成果を入力</li>
+            <li>経営レポートをコピーしてChatGPTに分析させる</li>
+          </ol>
+        </div>
+        <div class="recommended-ops-block">
+          <h3>月1回</h3>
+          <ol>
+            <li>売上目標の達成率を見る</li>
+            <li>勝ちパターンを見る</li>
+            <li>改善・停止候補を見る</li>
+            <li>来月の重点サービスを決める</li>
+          </ol>
+        </div>
+      </div>`;
+  }
+
+  function renderSalesDemoSections() {
+    renderOnboardingGuide('compact');
+    renderOnboardingGuide('detail');
+    renderBusinessProfileSettings();
+    renderDemoDataPanel();
+    renderDataSafetyNotice();
+    renderProductOverview('compact');
+    renderProductOverview('detail');
+    renderRecommendedOperations('compact');
+    renderRecommendedOperations('detail');
   }
 
   function goToAddLead() {
@@ -2296,6 +2650,7 @@
     }
     renderDataDiagnosticsSummary();
     renderBusinessReport('detail');
+    renderSalesDemoSections();
   }
 
   const BUSINESS_REPORT_PERIOD_LABELS = {
@@ -2565,6 +2920,11 @@
 
     lines.push('【Budil 経営レポート】');
     lines.push(`期間：${periodLabel}`);
+    const profileBlock = Storage.formatBusinessProfileText(Storage.getBusinessProfile());
+    if (profileBlock) {
+      lines.push('');
+      lines.push(profileBlock);
+    }
     lines.push('');
 
     lines.push('■ 1. 全体まとめ');
@@ -2650,9 +3010,21 @@
 
   function buildChatGptAnalysisPrompt(context) {
     const report = (context && context.reportText) || buildBusinessReportText(context);
-    return [
+    const profile = Storage.getBusinessProfile();
+    const areaIndustry = profile && profile.area
+      ? `${profile.area}の${profile.industry || '清掃業'}`
+      : '沖縄南部の清掃業';
+    const profileBlock = Storage.formatBusinessProfileText(profile);
+    const intro = [
       '以下はBudilの経営レポートです。',
-      '沖縄南部の清掃業として、売上・営業・需要・投稿・広告の状況を見て、次の7日間で優先すべき行動を3〜5個に絞って提案してください。',
+      `${areaIndustry}として、売上・営業・需要・投稿・広告の状況を見て、次の7日間で優先すべき行動を3〜5個に絞って提案してください。`
+    ];
+    if (profileBlock) {
+      intro.push('');
+      intro.push(profileBlock);
+    }
+    return [
+      ...intro,
       '',
       '条件：',
       '- 現場作業があるため、作業量は増やしすぎない',
@@ -2824,7 +3196,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v3.2</span>
+        <span class="business-report-version">v3.3</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -5619,6 +5991,7 @@
   }
 
   function renderDemandPickup() {
+    refreshKurokuroPrompt();
     try {
       safeRenderSection(null, () => renderPickupTodaySummary(), '需要番頭サマリー');
       safeRenderSection('pickup-decision-list', () => renderPickupDecisionSections(), '施策判断');
@@ -5678,7 +6051,7 @@
     renderPickupServiceChips([]);
 
     const promptEl = document.getElementById('pickup-cloclo-prompt');
-    if (promptEl) promptEl.value = DemandBrain.KUROKURO_MORNING_PROMPT;
+    if (promptEl) refreshKurokuroPrompt();
 
     document.getElementById('pickup-form').addEventListener('submit', e => {
       e.preventDefault();
@@ -5697,7 +6070,7 @@
     const copyPromptBtn = document.getElementById('btn-pickup-copy-prompt');
     if (copyPromptBtn) {
       copyPromptBtn.addEventListener('click', () => {
-        copyText(DemandBrain.KUROKURO_MORNING_PROMPT)
+        copyText(DemandBrain.buildKurokuroMorningPrompt(Storage.getBusinessProfile()))
           .then(() => alert('プロンプトをコピーしました。'))
           .catch(() => alert('コピーに失敗しました。'));
       });

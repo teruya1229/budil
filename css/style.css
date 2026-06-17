@@ -4815,6 +4815,244 @@ body {
   margin-top: 0.75rem;
 }
 
+/* ── v3.3 販売・デモ準備 ── */
+.card-onboarding-guide {
+  border-color: #fde68a;
+  background: linear-gradient(180deg, #fffbeb 0%, #fff 120px);
+}
+
+.onboarding-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.onboarding-header h2 {
+  margin: 0;
+}
+
+.onboarding-progress {
+  font-size: 0.8rem;
+  color: #b45309;
+  background: #fef3c7;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.onboarding-lead,
+.onboarding-profile-hint {
+  font-size: 0.88rem;
+  color: #4b5563;
+  margin: 0 0 0.65rem;
+  line-height: 1.5;
+}
+
+.onboarding-profile-missing {
+  color: #b45309;
+}
+
+.onboarding-subtitle {
+  font-size: 0.92rem;
+  margin: 0 0 0.45rem;
+}
+
+.onboarding-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.onboarding-step {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.35rem 0.5rem;
+  align-items: center;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+@media (min-width: 640px) {
+  .onboarding-step {
+    grid-template-columns: auto 1fr auto auto;
+  }
+}
+
+.onboarding-step-done {
+  opacity: 0.72;
+}
+
+.onboarding-step-num {
+  font-weight: 700;
+  color: #9ca3af;
+  min-width: 1.2rem;
+}
+
+.onboarding-step-label {
+  font-size: 0.9rem;
+}
+
+.onboarding-step-status {
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+.onboarding-step-done .onboarding-step-status {
+  color: #059669;
+}
+
+.onboarding-extra-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.card-business-profile {
+  border-color: #bfdbfe;
+}
+
+.business-profile-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.card-demo-data {
+  border-color: #c4b5fd;
+}
+
+.demo-data-scope-list {
+  margin: 0.5rem 0 0.75rem;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+  color: #4b5563;
+}
+
+.demo-data-guide {
+  margin-top: 0.85rem;
+  padding: 0.75rem;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  border-radius: 8px;
+}
+
+.demo-data-guide-text {
+  margin: 0 0 0.65rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.demo-data-guide-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.card-data-safety {
+  border-color: #e5e7eb;
+  background: #f9fafb;
+}
+
+.data-safety-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: #374151;
+}
+
+.card-product-overview {
+  border-color: #dbeafe;
+}
+
+.product-overview-lead {
+  font-size: 0.88rem;
+  color: #6b7280;
+  margin: 0 0 0.75rem;
+}
+
+.product-overview-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+}
+
+@media (min-width: 640px) {
+  .product-overview-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 960px) {
+  .product-overview-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.product-overview-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+}
+
+.product-overview-num {
+  display: inline-block;
+  font-size: 0.72rem;
+  color: #6b7280;
+  margin-bottom: 0.2rem;
+}
+
+.product-overview-card strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.92rem;
+}
+
+.product-overview-card p {
+  margin: 0 0 0.45rem;
+  font-size: 0.82rem;
+  color: #6b7280;
+  line-height: 1.45;
+}
+
+.card-recommended-ops {
+  border-color: #e0e7ff;
+}
+
+.recommended-ops-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .recommended-ops-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.recommended-ops-block {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+}
+
+.recommended-ops-block h3 {
+  margin: 0 0 0.45rem;
+  font-size: 0.92rem;
+}
+
+.recommended-ops-block ol {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: #374151;
+}
+
 /* ── v3.0 経営番頭ホーム ── */
 .card-executive-home {
   border: 2px solid var(--primary, #2563eb);

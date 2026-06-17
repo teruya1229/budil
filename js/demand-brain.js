@@ -235,6 +235,26 @@ Budilの需要番頭に入力するため、今日の投稿・営業・広告ア
 - 需要スコアは0〜100で付ける
 - 机上の空論ではなく、今日動ける提案にする`,
 
+  buildKurokuroMorningPrompt(businessProfile) {
+    const lines = [];
+  const profileText = typeof Storage !== 'undefined'
+      ? Storage.formatBusinessProfileText(businessProfile)
+      : '';
+    if (profileText) {
+      lines.push(profileText);
+      lines.push('');
+    }
+    lines.push(this.KUROKURO_MORNING_PROMPT);
+    const prompt = lines.join('\n');
+    const p = businessProfile && typeof Storage !== 'undefined'
+      ? Storage.normalizeBusinessProfile(businessProfile)
+      : (businessProfile || null);
+    if (!p || !p.area) return prompt;
+    return prompt
+      .replace(/沖縄南部の清掃業向けに/g, `${p.area}の${p.industry || '清掃業'}向けに`)
+      .replace(/地域は沖縄南部を中心/g, `地域は${p.area}を中心`);
+  },
+
   isBulkPasteFormat(text) {
     return /【需要ピックアップ\s*\d+】/.test(text || '');
   },

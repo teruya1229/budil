@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v3.2',
+  BUDIL_VERSION: 'v3.3',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -911,6 +911,301 @@ const Storage = {
     });
     if (fixed) this.saveDemandPickups(next);
     return { fixed };
+  },
+
+  normalizeBusinessProfile(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const parseList = val => {
+      if (Array.isArray(val)) return val.map(s => String(s).trim()).filter(Boolean);
+      if (!val) return [];
+      return String(val).split(/[,、]/).map(s => s.trim()).filter(Boolean);
+    };
+    const businessName = (raw.businessName || '').trim();
+    const area = (raw.area || '').trim();
+    const industry = (raw.industry || '').trim();
+    if (!businessName && !area && !industry) return null;
+    return {
+      businessName,
+      area,
+      industry,
+      mainServices: parseList(raw.mainServices),
+      mainChannels: parseList(raw.mainChannels),
+      lineUrl: (raw.lineUrl || '').trim(),
+      memo: (raw.memo || '').trim(),
+      updatedAt: raw.updatedAt || new Date().toISOString()
+    };
+  },
+
+  getBusinessProfile() {
+    const settings = this.getSettings();
+    return this.normalizeBusinessProfile(settings.businessProfile);
+  },
+
+  saveBusinessProfile(profile) {
+    const settings = this.getSettings();
+    const normalized = this.normalizeBusinessProfile({
+      ...profile,
+      updatedAt: new Date().toISOString()
+    });
+    settings.businessProfile = normalized;
+    this.saveSettings(settings);
+    return normalized;
+  },
+
+  formatBusinessProfileText(profile) {
+    const p = this.normalizeBusinessProfile(profile);
+    if (!p || !p.businessName) return '';
+    const lines = [
+      '事業プロフィール：',
+      '事業名：' + p.businessName
+    ];
+    if (p.area) lines.push('地域：' + p.area);
+    if (p.industry) lines.push('業種：' + p.industry);
+    if (p.mainServices.length) lines.push('主力サービス：' + p.mainServices.join('、'));
+    if (p.mainChannels.length) lines.push('主な集客経路：' + p.mainChannels.join('、'));
+    if (p.lineUrl) lines.push('LINE URL：' + p.lineUrl);
+    if (p.memo) lines.push('メモ：' + p.memo);
+    return lines.join('\n');
+  },
+
+  isDemoOrTestFlag(item) {
+    return !!(item && (item.isDemo === true || item.isTest === true));
+  },
+
+  getOnboardingStatus() {
+    const profile = this.getBusinessProfile();
+    const monthlyTarget = Number(this.getRevenueSettings().monthlyTarget) || 0;
+    const leads = this.getLeads().filter(l => !this.isDemoOrTestFlag(l));
+    const revenues = this.getRevenueRecords().filter(r => !this.isDemoOrTestFlag(r));
+    const pickups = this.getDemandPickups().filter(p => !this.isDemoOrTestFlag(p));
+    const store = this.getDailyActionTasksData();
+    const manual = (store.manualTasks || []).filter(t => !this.isDemoOrTestFlag(t));
+    const states = (store.states || []).filter(t => !this.isDemoOrTestFlag(t));
+    const doneCount = manual.filter(t => t.status === 'done').length
+      + states.filter(t => t.status === 'done').length;
+    const settings = this.getSettings();
+    return {
+      businessProfile: !!(profile && profile.businessName),
+      monthlyTarget: monthlyTarget > 0,
+      leads: leads.length > 0,
+      revenue: revenues.length > 0,
+      pickups: pickups.length >= 3,
+      dailyTasks: manual.length + states.length > 0,
+      taskCompleted: doneCount > 0,
+      reportGenerated: !!settings.lastReportGeneratedAt
+    };
+  },
+
+  hasDemoData() {
+    const store = this.getDailyActionTasksData();
+    const demoChecks = store.dailyChecks && Object.values(store.dailyChecks).some(c => c && c.isDemo === true);
+    return this.getLeads().some(l => this.isDemoOrTestFlag(l))
+      || this.getRevenueRecords().some(r => this.isDemoOrTestFlag(r))
+      || this.getDemandPickups().some(p => this.isDemoOrTestFlag(p))
+      || (store.manualTasks || []).some(t => this.isDemoOrTestFlag(t))
+      || (store.states || []).some(t => this.isDemoOrTestFlag(t))
+      || demoChecks;
+  },
+
+  createDemoData() {
+    if (this.hasDemoData()) return { ok: false, error: 'exists' };
+    const today = new Date().toISOString().slice(0, 10);
+    const tomorrow = typeof DemandBrain !== 'undefined'
+      ? DemandBrain._addDays(today, 1)
+      : today;
+    const now = new Date().toISOString();
+    const demo = true;
+    const flag = { isDemo: demo, isTest: demo };
+
+    const leadIds = [
+      'demo_lead_' + this.generateId(),
+      'demo_lead_' + this.generateId(),
+      'demo_lead_' + this.generateId()
+    ];
+    const leadNames = ['デモ：南部マンション管理組合', 'デモ：読谷の飲食店', 'デモ：豊見城の個人宅'];
+    const leads = this.getLeads();
+    leadIds.forEach((id, i) => {
+      leads.push({
+        id,
+        company: leadNames[i],
+        ...flag,
+        createdAt: now,
+        salesStatus: i === 0 ? '成約' : (i === 1 ? '見積り・提案中' : '初回連絡済み'),
+        status: i === 0 ? '成約' : '商談中',
+        priority: i === 0 ? 'A' : 'B',
+        service: i === 2 ? '洗濯機クリーニング' : 'エアコン完全分解',
+        lastContact: today,
+        lastContactAt: today,
+        nextAction: i === 1 ? '見積り送付のフォロー' : 'お礼連絡',
+        nextContact: tomorrow,
+        nextActionDate: tomorrow,
+        activityLogs: [{
+          id: 'demo_activity_' + this.generateId(),
+          date: today,
+          type: 'contact',
+          title: 'デモ用の営業メモ',
+          ...flag,
+          createdAt: now
+        }]
+      });
+    });
+    this.saveLeads(leads);
+
+    this.addRevenueRecord({
+      ...flag,
+      workDate: today,
+      customerName: leadNames[0],
+      service: 'エアコン完全分解',
+      source: 'LINE',
+      amount: 28000,
+      status: '完了',
+      paymentStatus: '入金済み',
+      leadId: leadIds[0],
+      leadName: leadNames[0],
+      memo: 'デモデータ'
+    });
+    this.addRevenueRecord({
+      ...flag,
+      workDate: today,
+      customerName: leadNames[1],
+      service: 'エアコン通常',
+      source: '紹介',
+      amount: 15000,
+      status: '確定',
+      paymentStatus: '未入金',
+      leadId: leadIds[1],
+      leadName: leadNames[1],
+      memo: 'デモデータ（入金待ち）'
+    });
+
+    const pickupTopics = [
+      { topic: '湿気・カビ', score: 88, services: ['エアコン完全分解', '洗濯機クリーニング'] },
+      { topic: '梅雨前のエアコン', score: 76, services: ['エアコン通常', 'お掃除機能付きエアコン'] },
+      { topic: '法人定期清掃', score: 71, services: ['法人案件', 'キッチン'] }
+    ];
+    const pickups = this.getDemandPickups();
+    const pickupIds = [];
+    pickupTopics.forEach((item, i) => {
+      const id = 'demo_pickup_' + this.generateId();
+      pickupIds.push(id);
+      const execBase = typeof DemandBrain !== 'undefined'
+        ? DemandBrain.normalizeExecutionStatus({})
+        : {};
+      const pickup = {
+        id,
+        date: today,
+        source: 'クロクロ',
+        topic: item.topic,
+        summary: `デモ用：${item.topic}の需要が高まっています。`,
+        demandScore: item.score,
+        relatedServices: item.services,
+        suggestedActions: [
+          { type: 'post', title: `${item.topic}の注意喚起リール`, channel: 'Instagram' },
+          { type: 'sales', title: `${item.topic}の見込み客へLINE` },
+          { type: 'ad', title: `${item.topic}LP広告を強化` }
+        ],
+        memo: 'デモデータ',
+        status: 'open',
+        ...flag,
+        createdAt: now,
+        updatedAt: now,
+        executionStatus: execBase,
+        executionLogs: [],
+        generatedOutputs: {}
+      };
+      if (i === 0 && pickup.executionStatus) {
+        pickup.executionStatus.reel = {
+          ...pickup.executionStatus.reel,
+          status: 'scheduled',
+          scheduledDate: today,
+          memo: 'デモ：リール投稿予定'
+        };
+        pickup.executionStatus.ad = {
+          ...pickup.executionStatus.ad,
+          status: 'scheduled',
+          scheduledDate: tomorrow,
+          memo: 'デモ：広告反映予定'
+        };
+        pickup.executionStatus.instagram = {
+          ...pickup.executionStatus.instagram,
+          status: 'posted',
+          executedAt: today,
+          resultMemo: 'デモ：LINE相談2件',
+          metrics: {
+            views: 1200,
+            reactions: 45,
+            clicks: 18,
+            lineInquiries: 2,
+            reservations: 1,
+            salesAmount: 28000,
+            updatedAt: now
+          }
+        };
+      }
+      pickups.unshift(pickup);
+    });
+    this.saveDemandPickups(pickups);
+
+    const taskDefs = [
+      { title: 'デモ：湿気・カビリールを投稿', priority: '高', status: 'open' },
+      { title: 'デモ：見積りフォロー電話', priority: '中', status: 'open', leadId: leadIds[1], leadName: leadNames[1] },
+      { title: 'デモ：週次レポートを確認', priority: '中', status: 'done' }
+    ];
+    taskDefs.forEach((task, i) => {
+      this.addManualDailyTask({
+        ...flag,
+        id: 'demo_manual_' + this.generateId(),
+        title: task.title,
+        targetName: task.leadName || '—',
+        priority: task.priority,
+        action: task.title,
+        memo: 'デモデータ',
+        dueDate: today,
+        status: task.status,
+        reason: 'デモデータ',
+        leadId: task.leadId || '',
+        leadName: task.leadName || '',
+        completedAt: task.status === 'done' ? now : '',
+        pickupDedupeKey: ['demo-task', today, task.title].join('|')
+      });
+    });
+
+    const store = this.getDailyActionTasksData();
+    store.dailyChecks = store.dailyChecks || {};
+    store.dailyChecks[today] = {
+      checkedAt: now,
+      memo: 'デモ：朝の確認完了',
+      version: 'v3.3',
+      isDemo: true
+    };
+    this.saveDailyActionTasksData(store);
+
+    return { ok: true, pickupIds, leadIds };
+  },
+
+  deleteDemoData() {
+    const testManualIds = (this.getDailyActionTasksData().manualTasks || [])
+      .filter(t => this.isDemoOrTestFlag(t))
+      .map(t => t.id);
+
+    this.saveLeads(this.getLeads().filter(l => !this.isDemoOrTestFlag(l)));
+    this.saveRevenueRecords(this.getRevenueRecords().filter(r => !this.isDemoOrTestFlag(r)));
+    this.saveDemandPickups(this.getDemandPickups().filter(p => !this.isDemoOrTestFlag(p)));
+
+    const store = this.getDailyActionTasksData();
+    store.manualTasks = (store.manualTasks || []).filter(t => !this.isDemoOrTestFlag(t));
+    store.states = (store.states || []).filter(s =>
+      !this.isDemoOrTestFlag(s) && !testManualIds.includes(s.taskId)
+    );
+    if (store.dailyChecks) {
+      Object.keys(store.dailyChecks).forEach(date => {
+        if (store.dailyChecks[date] && store.dailyChecks[date].isDemo === true) {
+          delete store.dailyChecks[date];
+        }
+      });
+    }
+    this.saveDailyActionTasksData(store);
+    return { ok: true };
   },
 
   runSafeFormatCorrection() {
