@@ -6,7 +6,8 @@
 
 - 公開URL: https://teruya1229.github.io/budil/
 - 現在バージョン: v1.9
-- 最新commit: （v1.9 push後に更新）
+- 最新commit: 4a8407a
+- push済み（`265446f..4a8407a main -> main`）
 
 ## v1.9 実装内容（売上×営業先連携MVP）
 
