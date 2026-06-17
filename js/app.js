@@ -259,7 +259,8 @@
     const comment = RevenueBrain.buildBantouComment(summary);
     const salesOutcome = RevenueBrain.getLinkedRevenueSummary(records, leads, monthKey);
     const nextSalesCandidates = RevenueBrain.getNextSalesCandidates(records, leads, today);
-    return { today, records, settings, leads, monthKey, summary, comment, salesOutcome, nextSalesCandidates };
+    const salesHoldCandidates = RevenueBrain.getSalesHoldCandidates(records, leads, today);
+    return { today, records, settings, leads, monthKey, summary, comment, salesOutcome, nextSalesCandidates, salesHoldCandidates };
   }
 
   function renderNextSalesCandidatesList(containerId, limit) {
@@ -280,8 +281,30 @@
         <p class="next-sales-meta">理由：${esc(c.reason)}</p>
         <p class="next-sales-meta">推奨：${esc(c.action)}</p>
         <p class="next-sales-meta">累計売上：${esc(RevenueBrain.formatYen(c.total))}${c.latestDate ? ' / 最終売上：' + esc(c.latestDate) : ''}</p>
-        ${c.paymentConcern ? '<p class="next-sales-concern-warn">入金注意</p>' : ''}
         <button type="button" class="btn btn-sm btn-secondary" data-outcome-open-lead="${esc(c.leadId)}">営業先を開く</button>
+      </div>`).join('');
+    bindSalesOutcomeLeadLinks(el);
+  }
+
+  function renderSalesHoldCandidatesList(containerId, limit) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const { salesHoldCandidates } = getRevenueContext();
+    const holds = (salesHoldCandidates || []).slice(0, limit || 5);
+    if (!holds.length) {
+      el.innerHTML = '<p class="placeholder-text">営業保留中の案件はありません</p>';
+      return;
+    }
+    el.innerHTML = holds.map(h => `
+      <div class="next-sales-card sales-hold-card">
+        <div class="next-sales-card-header">
+          <strong>${esc(h.leadName)}</strong>
+          <span class="sales-hold-label">営業保留</span>
+        </div>
+        <p class="next-sales-meta">理由：${esc(h.reason)}</p>
+        <p class="next-sales-meta">対応：${esc(h.action)}</p>
+        <p class="next-sales-meta">対象売上：${esc(RevenueBrain.formatYen(h.concernAmount))}${h.latestDate ? ' / 最終売上：' + esc(h.latestDate) : ''}</p>
+        <button type="button" class="btn btn-sm btn-secondary" data-outcome-open-lead="${esc(h.leadId)}">営業先を開く</button>
       </div>`).join('');
     bindSalesOutcomeLeadLinks(el);
   }
@@ -290,6 +313,18 @@
     const el = document.getElementById('lead-next-sales-action');
     if (!el) return;
     const { records, leads, today } = getRevenueContext();
+    const hold = RevenueBrain.getLeadSalesHold(leadId, records, leads);
+    if (hold) {
+      el.classList.remove('hidden');
+      el.innerHTML = `
+        <h3>営業状況</h3>
+        <div class="lead-next-sales-card sales-hold-card">
+          <p class="lead-next-sales-title">営業保留：入金予定を確認。確認できるまで追加営業は保留</p>
+          <p class="next-sales-meta">理由：${esc(hold.reason)}</p>
+          <p class="next-sales-meta">対象売上：${esc(RevenueBrain.formatYen(hold.concernAmount))}${hold.latestDate ? ' / 最終売上：' + esc(hold.latestDate) : ''}</p>
+        </div>`;
+      return;
+    }
     const action = RevenueBrain.getLeadNextSalesAction(leadId, records, leads, today);
     if (!action) {
       el.innerHTML = '';
@@ -297,30 +332,33 @@
       return;
     }
     el.classList.remove('hidden');
-    const reasonDetail = action.paymentConcern
-      ? '入金注意タグがあります'
-      : action.reason;
     el.innerHTML = `
       <h3>次の一手</h3>
       <div class="lead-next-sales-card next-sales-priority-${esc(action.priority)}">
         <p class="lead-next-sales-title">次の一手：${esc(action.actionTitle)}</p>
-        <p class="next-sales-meta">理由：${esc(reasonDetail)}</p>
+        <p class="next-sales-meta">理由：${esc(action.reason)}</p>
         <p class="next-sales-meta">優先度：${esc(action.priorityLabel)}</p>
         ${action.nextActionUnset ? '<p class="sales-priority-warning">次アクション日が未設定です</p>' : ''}
       </div>`;
   }
 
   function renderMorningSalesCandidateHtml() {
-    const { nextSalesCandidates } = getRevenueContext();
+    const { nextSalesCandidates, salesHoldCandidates } = getRevenueContext();
+    const parts = [];
     const top = (nextSalesCandidates || [])[0];
-    if (!top) {
-      return '<p class="sales-candidate-brief">売上後の緊急営業アクションはありません</p>';
+    if (top) {
+      parts.push(`<p class="sales-candidate-brief"><strong>今日の営業候補：${esc(top.leadName)}</strong></p>`);
+      parts.push(`<p class="sales-candidate-brief">理由：${esc(top.reason)}</p>`);
+      parts.push(`<p class="sales-candidate-brief">やること：${esc(top.action)}</p>`);
+      parts.push(`<button type="button" class="btn btn-sm btn-secondary" data-outcome-open-lead="${esc(top.leadId)}">営業先を開く</button>`);
+    } else {
+      parts.push('<p class="sales-candidate-brief">売上後の緊急営業アクションはありません</p>');
     }
-    return `
-      <p class="sales-candidate-brief"><strong>今日の営業候補：${esc(top.leadName)}</strong></p>
-      <p class="sales-candidate-brief">理由：${esc(top.reason)}</p>
-      <p class="sales-candidate-brief">やること：${esc(top.action)}</p>
-      <button type="button" class="btn btn-sm btn-secondary" data-outcome-open-lead="${esc(top.leadId)}">営業先を開く</button>`;
+    (salesHoldCandidates || []).forEach(h => {
+      parts.push(`<p class="sales-hold-brief"><strong>営業保留：${esc(h.leadName)}</strong></p>`);
+      parts.push(`<p class="sales-hold-brief">理由：${esc(h.reason)}。追加営業は保留</p>`);
+    });
+    return parts.join('');
   }
 
   function renderOutcomeLeadName(lead, leads) {
@@ -1568,10 +1606,14 @@
           revenueHint += `<small class="lead-revenue-hint lead-revenue-concern-warn">入金注意</small>`;
         }
       }
-      const salesCandidate = RevenueBrain.getLeadNextSalesAction(l.id, records, allLeads, today);
-      const salesTag = salesCandidate
-        ? `<small class="lead-sales-candidate-tag lead-sales-tag-${salesCandidate.priority}">${esc(salesCandidate.shortTag)}</small>`
-        : '';
+      const salesHold = RevenueBrain.getLeadSalesHold(l.id, records, allLeads);
+      const salesCandidate = salesHold ? null : RevenueBrain.getLeadNextSalesAction(l.id, records, allLeads, today);
+      let salesTag = '';
+      if (salesHold) {
+        salesTag = '<small class="lead-sales-candidate-tag lead-sales-tag-hold">営業保留</small>';
+      } else if (salesCandidate) {
+        salesTag = `<small class="lead-sales-candidate-tag lead-sales-tag-${salesCandidate.priority}">${esc(salesCandidate.shortTag)}</small>`;
+      }
       const wonBadge = l.salesStatus === '成約'
         ? ' <span class="sales-status-badge sales-status-won">成約</span>' : '';
       return `
@@ -2543,6 +2585,7 @@
       bindSalesOutcomeLeadLinks(outcomeEl);
     }
     renderNextSalesCandidatesList('revenue-next-sales', 5);
+    renderSalesHoldCandidatesList('revenue-sales-hold', 5);
     renderRevenueBreakdown('revenue-by-service', summary.byService);
     renderRevenueBreakdown('revenue-by-source', summary.bySource);
   }

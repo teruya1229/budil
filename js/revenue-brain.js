@@ -1,5 +1,5 @@
 /**
- * Budil v1.9.3.1 - 売上番頭（経営判断用）・営業先連携
+ * Budil v1.9.3.2 - 売上番頭（経営判断用）・営業先連携
  */
 const RevenueBrain = {
   SERVICES: [
@@ -203,24 +203,17 @@ const RevenueBrain = {
   evaluateLeadSalesCandidate(lead, revSummary, today) {
     if (!lead || !revSummary || !revSummary.count) return null;
 
+    const activeRecords = revSummary.records.filter(r => r.status !== 'キャンセル');
+    const hasPaymentConcern = activeRecords.some(r => this.recordHasPaymentConcern(r));
+    if (hasPaymentConcern) return null;
+
     const normalized = typeof SalesBrain !== 'undefined'
       ? SalesBrain.normalizeLead(lead)
       : lead;
-    const activeRecords = revSummary.records.filter(r => r.status !== 'キャンセル');
     const services = activeRecords.map(r => r.service);
     const hasService = name => services.includes(name);
     const candidates = [];
 
-    const hasPaymentConcern = activeRecords.some(r => this.recordHasPaymentConcern(r));
-    if (hasPaymentConcern) {
-      candidates.push({
-        priority: 'high', priorityScore: 3, rule: 1,
-        reason: '入金注意タグあり',
-        action: '入金予定を確認',
-        actionTitle: '入金予定を確認',
-        shortTag: '入金注意'
-      });
-    }
     if (!normalized.nextAction && !normalized.nextActionDate) {
       candidates.push({
         priority: 'high', priorityScore: 3, rule: 2,
@@ -269,7 +262,7 @@ const RevenueBrain = {
         shortTag: '次回提案候補'
       });
     }
-    if (!hasPaymentConcern && (normalized.nextAction || normalized.nextActionDate)) {
+    if (normalized.nextAction || normalized.nextActionDate) {
       candidates.push({
         priority: 'low', priorityScore: 1, rule: 7,
         reason: '良好な既存営業先',
@@ -293,10 +286,53 @@ const RevenueBrain = {
       priorityLabel: best.priority === 'high' ? '高' : best.priority === 'mid' ? '中' : '低',
       total: revSummary.total,
       unpaid: revSummary.unpaid,
-      paymentConcern: revSummary.paymentConcern,
       latestDate: revSummary.latestDate,
       nextActionUnset: !normalized.nextAction && !normalized.nextActionDate
     };
+  },
+
+  evaluateLeadSalesHold(lead, revSummary) {
+    if (!lead || !revSummary || !revSummary.paymentConcern) return null;
+    const activeRecords = revSummary.records.filter(r => r.status !== 'キャンセル');
+    const concernRecords = activeRecords.filter(r => this.recordHasPaymentConcern(r));
+    if (!concernRecords.length) return null;
+    return {
+      leadId: lead.id,
+      leadName: lead.company,
+      reason: '入金注意タグあり',
+      action: '入金予定を確認。確認できるまで追加営業は保留',
+      concernAmount: revSummary.paymentConcernAmount,
+      concernCount: revSummary.paymentConcernCount,
+      latestDate: revSummary.latestDate
+    };
+  },
+
+  getLeadSalesHold(leadId, records, leads) {
+    const lead = (leads || []).find(l => l.id === leadId);
+    if (!lead) return null;
+    const revSummary = this.getLeadRevenueSummary(leadId, this.normalizeRevenueRecords(records));
+    return this.evaluateLeadSalesHold(lead, revSummary);
+  },
+
+  getSalesHoldCandidates(records, leads, today) {
+    const normalizedRecords = this.normalizeRevenueRecords(records);
+    const leadMap = {};
+    (leads || []).forEach(l => { leadMap[l.id] = l; });
+
+    const byLead = this.summarizeRevenueByLead(normalizedRecords, leads);
+    const holds = [];
+
+    byLead.forEach(item => {
+      if (!item.paymentConcern) return;
+      const lead = leadMap[item.leadId];
+      if (!lead) return;
+      const revSummary = this.getLeadRevenueSummary(item.leadId, normalizedRecords);
+      const hold = this.evaluateLeadSalesHold(lead, revSummary);
+      if (hold) holds.push(hold);
+    });
+
+    holds.sort((a, b) => (b.concernAmount || 0) - (a.concernAmount || 0));
+    return holds;
   },
 
   getLeadNextSalesAction(leadId, records, leads, today) {
@@ -318,6 +354,7 @@ const RevenueBrain = {
       const lead = leadMap[item.leadId];
       if (!lead) return;
       const revSummary = this.getLeadRevenueSummary(item.leadId, normalizedRecords);
+      if (revSummary.paymentConcern) return;
       const candidate = this.evaluateLeadSalesCandidate(lead, revSummary, today);
       if (candidate) candidates.push(candidate);
     });
@@ -326,9 +363,6 @@ const RevenueBrain = {
     candidates.sort((a, b) => {
       const po = (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2);
       if (po !== 0) return po;
-      if ((b.paymentConcern ? 1 : 0) !== (a.paymentConcern ? 1 : 0)) {
-        return (b.paymentConcern ? 1 : 0) - (a.paymentConcern ? 1 : 0);
-      }
       return (b.total || 0) - (a.total || 0);
     });
 

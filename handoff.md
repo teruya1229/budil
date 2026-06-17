@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v1.9.3.2 公開済み（入金注意を営業候補から除外・営業保留リスト）
 - Budil v1.9.3.1 公開済み（未入金判定の現場向け修正・入金注意タグ）
 - Budil v1.9.3 公開済み（次に売るべき営業先・リピート候補）
 - 売上番頭 v1.8 実装済み
@@ -33,6 +34,12 @@
 | `js/messages.js` | 営業文面テンプレート・プリセット |
 | `js/management-brain.js` | 朝レポート・今日の営業生成 |
 | `js/revenue-brain.js` | 売上集計・番頭コメント |
+
+## v1.9.3.2で入ったもの
+
+- `RevenueBrain.getSalesHoldCandidates()` / `getLeadSalesHold()` / `evaluateLeadSalesHold()`
+- 売上番頭「営業保留・入金確認」カード（`#revenue-sales-hold`）
+- 入金注意あり営業先の営業候補除外・営業保留表示
 
 ## v1.9.3.1で入ったもの
 

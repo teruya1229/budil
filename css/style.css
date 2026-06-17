@@ -2501,6 +2501,31 @@ body {
   color: #60a5fa;
 }
 
+.lead-sales-tag-hold {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+
+.sales-hold-card {
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+.sales-hold-label {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(248, 113, 113, 0.2);
+  color: #f87171;
+}
+
+.sales-hold-brief {
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+  color: #f87171;
+}
+
 .checkbox-label {
   display: flex;
   align-items: center;
