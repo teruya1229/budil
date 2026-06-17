@@ -2387,6 +2387,102 @@ body {
   margin: 0;
 }
 
+.next-sales-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.next-sales-card {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--surface-2, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+}
+
+.next-sales-priority-high {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.next-sales-priority-mid {
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.next-sales-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.next-sales-meta {
+  margin: 4px 0;
+  font-size: 0.9rem;
+  color: var(--text-muted, #8b9cb3);
+}
+
+.next-sales-unpaid-warn {
+  margin: 6px 0;
+  font-size: 0.85rem;
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+.lead-next-sales-action {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+}
+
+.lead-next-sales-action.hidden {
+  display: none;
+}
+
+.lead-next-sales-card {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface-2, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+}
+
+.lead-next-sales-title {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.sales-candidate-block {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border, rgba(255, 255, 255, 0.1));
+}
+
+.sales-candidate-brief {
+  margin: 4px 0;
+  font-size: 0.9rem;
+}
+
+.lead-sales-candidate-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  background: rgba(139, 156, 179, 0.15);
+  color: #8b9cb3;
+}
+
+.lead-sales-tag-high {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.lead-sales-tag-mid {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
 .checkbox-label {
   display: flex;
   align-items: center;

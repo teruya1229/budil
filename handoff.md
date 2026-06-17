@@ -11,7 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
-- Budil v1.9.2 公開済み（営業成果サマリー強化）
+- Budil v1.9.3 公開済み（次に売るべき営業先・リピート候補）
 - 売上番頭 v1.8 実装済み
 - 営業プリセット v1.6 実装済み
 - 営業ステータス / 次アクション / 優先度判定 v1.7 実装済み
@@ -32,6 +32,13 @@
 | `js/messages.js` | 営業文面テンプレート・プリセット |
 | `js/management-brain.js` | 朝レポート・今日の営業生成 |
 | `js/revenue-brain.js` | 売上集計・番頭コメント |
+
+## v1.9.3で入ったもの
+
+- `RevenueBrain.getNextSalesCandidates()` / `getLeadNextSalesAction()`
+- 売上番頭「次に売るべき営業先」カード
+- 営業先詳細「次の一手」
+- 朝レポート `mgmt-sales-candidate`
 
 ## v1.9.2で入ったもの
 

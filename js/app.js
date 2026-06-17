@@ -258,7 +258,69 @@
     const summary = RevenueBrain.summarize(records, settings, monthKey);
     const comment = RevenueBrain.buildBantouComment(summary);
     const salesOutcome = RevenueBrain.getLinkedRevenueSummary(records, leads, monthKey);
-    return { today, records, settings, leads, monthKey, summary, comment, salesOutcome };
+    const nextSalesCandidates = RevenueBrain.getNextSalesCandidates(records, leads, today);
+    return { today, records, settings, leads, monthKey, summary, comment, salesOutcome, nextSalesCandidates };
+  }
+
+  function renderNextSalesCandidatesList(containerId, limit) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const { nextSalesCandidates } = getRevenueContext();
+    const candidates = (nextSalesCandidates || []).slice(0, limit || 5);
+    if (!candidates.length) {
+      el.innerHTML = '<p class="placeholder-text">売上に紐付いた営業先からの提案はありません</p>';
+      return;
+    }
+    el.innerHTML = candidates.map(c => `
+      <div class="next-sales-card next-sales-priority-${esc(c.priority)}">
+        <div class="next-sales-card-header">
+          <strong>${esc(c.leadName)}</strong>
+          <span class="sales-priority-label priority-${c.priority === 'high' ? 'high' : c.priority === 'mid' ? 'mid' : 'low'}">${esc(c.priorityLabel)}</span>
+        </div>
+        <p class="next-sales-meta">理由：${esc(c.reason)}</p>
+        <p class="next-sales-meta">推奨：${esc(c.action)}</p>
+        <p class="next-sales-meta">累計売上：${esc(RevenueBrain.formatYen(c.total))}${c.latestDate ? ' / 最終売上：' + esc(c.latestDate) : ''}</p>
+        ${c.unpaid > 0 ? '<p class="next-sales-unpaid-warn">未入金あり</p>' : ''}
+        <button type="button" class="btn btn-sm btn-secondary" data-outcome-open-lead="${esc(c.leadId)}">営業先を開く</button>
+      </div>`).join('');
+    bindSalesOutcomeLeadLinks(el);
+  }
+
+  function renderLeadNextSalesAction(leadId) {
+    const el = document.getElementById('lead-next-sales-action');
+    if (!el) return;
+    const { records, leads, today } = getRevenueContext();
+    const action = RevenueBrain.getLeadNextSalesAction(leadId, records, leads, today);
+    if (!action) {
+      el.innerHTML = '';
+      el.classList.add('hidden');
+      return;
+    }
+    el.classList.remove('hidden');
+    const reasonDetail = action.unpaid > 0
+      ? `未入金${RevenueBrain.formatYen(action.unpaid)}があります`
+      : action.reason;
+    el.innerHTML = `
+      <h3>次の一手</h3>
+      <div class="lead-next-sales-card next-sales-priority-${esc(action.priority)}">
+        <p class="lead-next-sales-title">次の一手：${esc(action.actionTitle)}</p>
+        <p class="next-sales-meta">理由：${esc(reasonDetail)}</p>
+        <p class="next-sales-meta">優先度：${esc(action.priorityLabel)}</p>
+        ${action.nextActionUnset ? '<p class="sales-priority-warning">次アクション日が未設定です</p>' : ''}
+      </div>`;
+  }
+
+  function renderMorningSalesCandidateHtml() {
+    const { nextSalesCandidates } = getRevenueContext();
+    const top = (nextSalesCandidates || [])[0];
+    if (!top) {
+      return '<p class="sales-candidate-brief">売上後の緊急営業アクションはありません</p>';
+    }
+    return `
+      <p class="sales-candidate-brief"><strong>今日の営業候補：${esc(top.leadName)}</strong></p>
+      <p class="sales-candidate-brief">理由：${esc(top.reason)}</p>
+      <p class="sales-candidate-brief">やること：${esc(top.action)}</p>
+      <button type="button" class="btn btn-sm btn-secondary" data-outcome-open-lead="${esc(top.leadId)}">営業先を開く</button>`;
   }
 
   function renderOutcomeLeadName(lead, leads) {
@@ -668,6 +730,11 @@
     if (mgmtOutcomeEl) {
       const rev = getRevenueContext();
       mgmtOutcomeEl.innerHTML = renderSalesOutcomeHtml(rev.salesOutcome, { brief: true });
+    }
+    const mgmtCandidateEl = document.getElementById('mgmt-sales-candidate');
+    if (mgmtCandidateEl) {
+      mgmtCandidateEl.innerHTML = renderMorningSalesCandidateHtml();
+      bindSalesOutcomeLeadLinks(mgmtCandidateEl);
     }
 
     const top3Legacy = document.getElementById('dash-top3');
@@ -1486,10 +1553,11 @@
     const displayList = [...activeList, ...closed.map(l => SalesBrain.enrichLead(l, Storage.getGeneratedPosts(), settings, TODAY()))];
 
     const today = TODAY();
+    const records = Storage.getRevenueRecords();
     tbody.innerHTML = displayList.map(l => {
       const overdue = l.nextActionDate && l.nextActionDate < today && !l.salesPriorityExcluded;
       const nextActionNote = !l.nextAction ? ' <small class="sales-priority-warning">未設定</small>' : '';
-      const revSummary = RevenueBrain.getLeadRevenueSummary(l.id, Storage.getRevenueRecords());
+      const revSummary = RevenueBrain.getLeadRevenueSummary(l.id, records);
       let revenueHint = '';
       if (revSummary.count) {
         revenueHint = `<small class="lead-revenue-hint">売上：${esc(RevenueBrain.formatYen(revSummary.total))}</small>`;
@@ -1500,6 +1568,10 @@
           revenueHint += `<small class="lead-revenue-hint lead-revenue-unpaid-warn">未入金あり</small>`;
         }
       }
+      const salesCandidate = RevenueBrain.getLeadNextSalesAction(l.id, records, allLeads, today);
+      const salesTag = salesCandidate
+        ? `<small class="lead-sales-candidate-tag lead-sales-tag-${salesCandidate.priority}">${esc(salesCandidate.shortTag)}</small>`
+        : '';
       const wonBadge = l.salesStatus === '成約'
         ? ' <span class="sales-status-badge sales-status-won">成約</span>' : '';
       return `
@@ -1512,7 +1584,7 @@
         <td><span class="sales-status-badge sales-status-${salesStatusClass(l.salesStatus)}">${esc(l.salesStatus)}</span></td>
         <td>${esc(l.nextActionDate || '—')}</td>
         <td>${esc(l.recommendedProduct || '—')}</td>
-        <td>${esc(l.nextAction || l.suggestedAction || '—')}${nextActionNote}</td>
+        <td>${esc(l.nextAction || l.suggestedAction || '—')}${nextActionNote}${salesTag}</td>
         <td class="actions">
           <button class="btn-edit" data-edit-lead="${l.id}">編集</button>
           <button class="btn-edit" data-open-lead="${l.id}">営業準備</button>
@@ -1763,6 +1835,7 @@
     switchSalesTab(currentSalesTab || 'email');
     renderSalesHistory(leadId);
     renderLeadRevenuePanel(leadId);
+    renderLeadNextSalesAction(leadId);
 
     if (opts.navigate) navigateToView('sales');
     document.getElementById('sales-detail-panel').classList.remove('hidden');
@@ -2132,7 +2205,10 @@
     renderLeadsTable();
     renderRevenueView();
     renderDashboard();
-    if (currentMessageLeadId === lead.id) renderLeadRevenuePanel(lead.id);
+    if (currentMessageLeadId === lead.id) {
+      renderLeadRevenuePanel(lead.id);
+      renderLeadNextSalesAction(lead.id);
+    }
     return lead;
   }
 
@@ -2215,6 +2291,7 @@
     const summary = RevenueBrain.getLeadRevenueSummary(leadId, Storage.getRevenueRecords());
     if (!summary.count) {
       container.innerHTML = '<p class="placeholder-text">この営業先に紐付いた売上はまだありません</p>';
+      renderLeadNextSalesAction(leadId);
       return;
     }
     const historyHtml = summary.records
@@ -2240,6 +2317,7 @@
       </div>
       <p class="lead-revenue-value-title">売上履歴</p>
       <ul class="lead-revenue-history">${historyHtml}</ul>`;
+    renderLeadNextSalesAction(leadId);
   }
 
   function fillRevenueSelects() {
@@ -2451,6 +2529,7 @@
       outcomeEl.innerHTML = renderSalesOutcomeHtml(salesOutcome, { leads });
       bindSalesOutcomeLeadLinks(outcomeEl);
     }
+    renderNextSalesCandidatesList('revenue-next-sales', 5);
     renderRevenueBreakdown('revenue-by-service', summary.byService);
     renderRevenueBreakdown('revenue-by-source', summary.bySource);
   }
@@ -2483,7 +2562,10 @@
     resetRevenueForm();
     renderRevenueView();
     renderDashboard();
-    if (currentMessageLeadId === leadId) renderLeadRevenuePanel(leadId);
+    if (currentMessageLeadId === leadId) {
+      renderLeadRevenuePanel(leadId);
+      renderLeadNextSalesAction(leadId);
+    }
   }
 
   function initRevenue() {

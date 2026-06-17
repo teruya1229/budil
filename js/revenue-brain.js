@@ -1,5 +1,5 @@
 /**
- * Budil v1.9.2 - 売上番頭（経営判断用）・営業先連携
+ * Budil v1.9.3 - 売上番頭（経営判断用）・営業先連携
  */
 const RevenueBrain = {
   SERVICES: [
@@ -170,6 +170,142 @@ const RevenueBrain = {
       lines.push('未入金あり：' + outcome.unpaidLeads.map(l => l.leadName).join('、'));
     }
     return lines;
+  },
+
+  daysSince(dateStr, today) {
+    if (!dateStr) return null;
+    return Math.floor((new Date(today) - new Date(dateStr)) / 86400000);
+  },
+
+  evaluateLeadSalesCandidate(lead, revSummary, today) {
+    if (!lead || !revSummary || !revSummary.count) return null;
+
+    const normalized = typeof SalesBrain !== 'undefined'
+      ? SalesBrain.normalizeLead(lead)
+      : lead;
+    const activeRecords = revSummary.records.filter(r => r.status !== 'キャンセル');
+    const services = activeRecords.map(r => r.service);
+    const hasService = name => services.includes(name);
+    const candidates = [];
+
+    if (revSummary.unpaid > 0) {
+      candidates.push({
+        priority: 'high', priorityScore: 3, rule: 1,
+        reason: '未入金があります',
+        action: 'まず入金確認。その後、次回提案へ',
+        actionTitle: '入金確認',
+        shortTag: '未入金確認'
+      });
+    }
+    if (!normalized.nextAction && !normalized.nextActionDate) {
+      candidates.push({
+        priority: 'high', priorityScore: 3, rule: 2,
+        reason: '売上後の次アクション未設定',
+        action: 'お礼連絡・次回提案を設定',
+        actionTitle: 'お礼連絡・次回提案を設定',
+        shortTag: '次回提案候補'
+      });
+    }
+    if (revSummary.latestDate) {
+      const days = this.daysSince(revSummary.latestDate, today);
+      if (days !== null && days >= 30) {
+        candidates.push({
+          priority: 'high', priorityScore: 3, rule: 3,
+          reason: '前回売上から30日以上',
+          action: 'お礼＋次回提案',
+          actionTitle: 'お礼＋次回提案',
+          shortTag: 'リピート候補'
+        });
+      }
+    }
+    if (hasService('エアコン通常')) {
+      candidates.push({
+        priority: 'mid', priorityScore: 2, rule: 4,
+        reason: '通常洗浄から追加提案余地あり',
+        action: '完全分解・洗濯機クリーニング提案',
+        actionTitle: '完全分解・洗濯機提案',
+        shortTag: '次回提案候補'
+      });
+    }
+    if (hasService('法人案件')) {
+      candidates.push({
+        priority: 'mid', priorityScore: 2, rule: 5,
+        reason: '法人案件は継続提案向き',
+        action: '定期清掃・複数台提案',
+        actionTitle: '定期清掃・複数台提案',
+        shortTag: '法人定期提案候補'
+      });
+    }
+    if (hasService('洗濯機クリーニング')) {
+      candidates.push({
+        priority: 'mid', priorityScore: 2, rule: 6,
+        reason: '水回り・エアコン提案余地あり',
+        action: 'エアコン・浴室・レンジフード提案',
+        actionTitle: 'エアコン・浴室・レンジフード提案',
+        shortTag: '次回提案候補'
+      });
+    }
+    if (revSummary.unpaid === 0 && (normalized.nextAction || normalized.nextActionDate)) {
+      candidates.push({
+        priority: 'low', priorityScore: 1, rule: 7,
+        reason: '良好な既存営業先',
+        action: '定期的に関係維持',
+        actionTitle: '関係維持',
+        shortTag: 'リピート候補'
+      });
+    }
+
+    if (!candidates.length) return null;
+    candidates.sort((a, b) => b.priorityScore - a.priorityScore || a.rule - b.rule);
+    const best = candidates[0];
+    return {
+      leadId: lead.id,
+      leadName: lead.company,
+      reason: best.reason,
+      action: best.action,
+      actionTitle: best.actionTitle,
+      shortTag: best.shortTag,
+      priority: best.priority,
+      priorityLabel: best.priority === 'high' ? '高' : best.priority === 'mid' ? '中' : '低',
+      total: revSummary.total,
+      unpaid: revSummary.unpaid,
+      latestDate: revSummary.latestDate,
+      nextActionUnset: !normalized.nextAction && !normalized.nextActionDate
+    };
+  },
+
+  getLeadNextSalesAction(leadId, records, leads, today) {
+    const lead = (leads || []).find(l => l.id === leadId);
+    if (!lead) return null;
+    const revSummary = this.getLeadRevenueSummary(leadId, this.normalizeRevenueRecords(records));
+    return this.evaluateLeadSalesCandidate(lead, revSummary, today || new Date().toISOString().slice(0, 10));
+  },
+
+  getNextSalesCandidates(records, leads, today) {
+    const normalizedRecords = this.normalizeRevenueRecords(records);
+    const leadMap = {};
+    (leads || []).forEach(l => { leadMap[l.id] = l; });
+
+    const byLead = this.summarizeRevenueByLead(normalizedRecords, leads);
+    const candidates = [];
+
+    byLead.forEach(item => {
+      const lead = leadMap[item.leadId];
+      if (!lead) return;
+      const revSummary = this.getLeadRevenueSummary(item.leadId, normalizedRecords);
+      const candidate = this.evaluateLeadSalesCandidate(lead, revSummary, today);
+      if (candidate) candidates.push(candidate);
+    });
+
+    const priorityOrder = { high: 0, mid: 1, low: 2 };
+    candidates.sort((a, b) => {
+      const po = (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2);
+      if (po !== 0) return po;
+      if ((b.unpaid > 0) !== (a.unpaid > 0)) return (b.unpaid > 0 ? 1 : 0) - (a.unpaid > 0 ? 1 : 0);
+      return (b.total || 0) - (a.total || 0);
+    });
+
+    return candidates;
   },
 
   sumAmount(list) {
