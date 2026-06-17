@@ -1,8 +1,8 @@
 /**
- * Budil v1.4 - データバックアップ・復元
+ * Budil v2.0 - データバックアップ・復元
  */
 const DataBackup = {
-  VERSION: '1.4',
+  VERSION: '2.0',
 
   BACKUP_KEYS: [
     'budil_leads',
@@ -15,7 +15,8 @@ const DataBackup = {
     'budil_demand_radar',
     'budil_card_draft',
     'budil_revenue_records',
-    'budil_revenue_settings'
+    'budil_revenue_settings',
+    'budil_daily_action_tasks'
   ],
 
   exportPayload() {
@@ -68,8 +69,21 @@ const DataBackup = {
     const hasSettings = !!(data.budil_settings);
     const revenueRecords = Array.isArray(data.budil_revenue_records) ? data.budil_revenue_records.length : 0;
     const hasRevenueSettings = !!(data.budil_revenue_settings);
+    const dailyTasks = data.budil_daily_action_tasks;
+    let dailyTaskStates = 0;
+    let manualTasks = 0;
+    if (Array.isArray(dailyTasks)) {
+      dailyTaskStates = dailyTasks.length;
+    } else if (dailyTasks && typeof dailyTasks === 'object') {
+      dailyTaskStates = Array.isArray(dailyTasks.states) ? dailyTasks.states.length : 0;
+      manualTasks = Array.isArray(dailyTasks.manualTasks) ? dailyTasks.manualTasks.length : 0;
+    }
 
-    return { leads, followups, demandLogs, radarKw, messages, hasPosts, hasCardDraft, hasDemandNotes, hasSettings, revenueRecords, hasRevenueSettings };
+    return {
+      leads, followups, demandLogs, radarKw, messages, hasPosts, hasCardDraft,
+      hasDemandNotes, hasSettings, revenueRecords, hasRevenueSettings,
+      dailyTaskStates, manualTasks
+    };
   },
 
   getCurrentSummary() {

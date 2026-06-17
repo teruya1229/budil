@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v1.9.9</small>
+          <small>AI経営脳みそ v2.0</small>
         </div>
       </div>
       <nav class="nav">
@@ -43,7 +43,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v1.9.9</small>
+        <small>Budil v2.0</small>
       </div>
     </aside>
 
@@ -54,6 +54,21 @@
           <h1>経営番頭</h1>
           <p class="view-subtitle">朝Budilを開いて、今日やるべきことを把握する</p>
         </header>
+
+        <div id="dash-start-guide" class="card card-wide card-start-guide hidden">
+          <h2>はじめての方へ</h2>
+          <p class="start-guide-lead">Budilを使い始めるには、まず以下の3つから始めてください。</p>
+          <ol class="start-guide-steps">
+            <li>営業先を1件登録する</li>
+            <li>売上を1件登録する</li>
+            <li>今日やることを1件追加する</li>
+          </ol>
+          <div class="start-guide-actions">
+            <button type="button" id="btn-start-add-lead" class="btn btn-primary btn-sm">営業先を登録</button>
+            <button type="button" id="btn-start-add-revenue" class="btn btn-secondary btn-sm">売上を登録</button>
+            <button type="button" id="btn-start-add-task" class="btn btn-secondary btn-sm">今日やることを追加</button>
+          </div>
+        </div>
 
         <div id="budil-greeting" class="card card-budil card-wide"></div>
 
@@ -1185,7 +1200,13 @@
         <div class="card card-wide backup-status-card">
           <h2>バックアップ状況</h2>
           <p id="data-last-backup" class="backup-last-date">—</p>
-          <p class="backup-recommend">定期的にエクスポートして、JSONファイルを安全な場所に保管してください。</p>
+          <p class="backup-recommend">バックアップすると、営業先・売上・タスク・活動履歴などを保存できます。機種変更や誤操作対策として、定期的に保存してください。</p>
+          <ul class="backup-scope-list">
+            <li>営業先・活動履歴・売上履歴</li>
+            <li>売上記録・売上目標</li>
+            <li>今日やること（タスク）</li>
+            <li>設定・需要メモ・朝レポート用データ</li>
+          </ul>
         </div>
 
         <div class="card card-wide">
@@ -1195,16 +1216,17 @@
 
         <div class="data-mgmt-grid">
           <div class="card">
-            <h2>エクスポート</h2>
-            <p class="data-mgmt-desc">全BudilデータをJSONファイルとしてダウンロードします。</p>
-            <button type="button" id="btn-export-data" class="btn btn-primary">JSONをエクスポート</button>
+            <h2>エクスポート（バックアップ）</h2>
+            <p class="data-mgmt-desc">営業先・売上・タスク・活動履歴など、BudilのデータをJSONファイルとしてダウンロードします。スマホでは「共有」や「ファイルに保存」で保管してください。</p>
+            <button type="button" id="btn-export-data" class="btn btn-primary">バックアップを保存</button>
           </div>
 
           <div class="card">
-            <h2>インポート</h2>
-            <p class="data-mgmt-desc">バックアップJSONを選択して内容を確認し、復元します。</p>
+            <h2>インポート（復元）</h2>
+            <p class="data-mgmt-desc">以前保存したバックアップJSONを選んで復元します。復元前に内容を確認できます。</p>
+            <p class="notice notice-warning data-mgmt-notice">復元すると、現在のデータはバックアップの内容で上書きされます。不安な場合は先にエクスポートしてください。</p>
             <input type="file" id="import-file-input" accept=".json,application/json" hidden>
-            <button type="button" id="btn-import-select" class="btn btn-secondary">JSONファイルを選択</button>
+            <button type="button" id="btn-import-select" class="btn btn-secondary">バックアップファイルを選択</button>
           </div>
         </div>
 
@@ -1212,11 +1234,34 @@
           <h2>インポート内容の確認</h2>
           <p id="import-preview-meta" class="import-preview-meta"></p>
           <ul id="import-preview-list" class="data-summary-list"></ul>
-          <p class="notice notice-warning">現在のデータは上書きされます。復元前にエクスポートを推奨します。</p>
+          <p class="notice notice-warning">この操作で、営業先・売上・タスク・活動履歴などが上書きされます。本番データがある場合は、復元前に必ずエクスポートしてください。</p>
           <div class="data-mgmt-actions">
             <button type="button" id="btn-import-cancel" class="btn btn-secondary">キャンセル</button>
             <button type="button" id="btn-import-confirm" class="btn btn-primary">復元する</button>
           </div>
+        </div>
+
+        <div class="card card-wide card-test-data">
+          <h2>テストデータ（実機確認用）</h2>
+          <p class="data-mgmt-desc">動作確認用のサンプルデータを作成・削除できます。削除はテストデータ（<code>isTest</code>）だけを対象とし、本番データは触りません。</p>
+          <div class="data-mgmt-actions">
+            <button type="button" id="btn-create-test-data" class="btn btn-secondary">テストデータを作成</button>
+            <button type="button" id="btn-delete-test-data" class="btn btn-secondary">テストデータを削除</button>
+          </div>
+        </div>
+
+        <div class="card card-wide card-mvp-checklist">
+          <h2>v2.0 動作確認チェックリスト</h2>
+          <p class="data-mgmt-desc">実機で毎朝使う前に、主要な導線が動くか確認してください。</p>
+          <ul class="mvp-checklist">
+            <li>営業先を登録できる</li>
+            <li>売上を登録できる</li>
+            <li>売上を営業先に紐付けできる</li>
+            <li>今日やることを追加できる</li>
+            <li>タスク完了で活動履歴に残る</li>
+            <li>次回アクションが今日やることに出る</li>
+            <li>バックアップできる</li>
+          </ul>
         </div>
 
         <div class="card card-wide card-danger-zone">

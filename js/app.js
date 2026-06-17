@@ -259,6 +259,7 @@
   }
 
   function renderDashboard() {
+    renderStartGuide();
     renderBackupStatus();
     renderMorningReport();
     renderDemandInsights();
@@ -293,7 +294,11 @@
     const { managementComment } = getRevenueContext();
     const opts = options || {};
     if (!managementComment || !managementComment.lines.length) {
-      el.innerHTML = '';
+      if (!opts.brief) {
+        el.innerHTML = '<p class="placeholder-text">データが揃うと、今月の状況と優先アクションをここに表示します。まずは営業先と売上を1件ずつ登録してみましょう。</p>';
+      } else {
+        el.innerHTML = '';
+      }
       return;
     }
     if (opts.brief) {
@@ -414,7 +419,7 @@
     if (!listEl) return;
     const logs = Storage.getLeadActivityLogs(leadId).slice(0, 5);
     if (!logs.length) {
-      listEl.innerHTML = '<p class="placeholder-text">活動履歴はまだありません</p>';
+      listEl.innerHTML = '<p class="placeholder-text">活動履歴はまだありません。活動を追加するか、今日やることのタスクを完了するとここに残ります。</p>';
       return;
     }
     listEl.innerHTML = logs.map((log, index) => {
@@ -529,7 +534,7 @@
     if (!summary.count) {
       el.innerHTML = `
         <h3>累計売上</h3>
-        <p class="placeholder-text">この営業先に紐付いた売上はまだありません</p>`;
+        <p class="placeholder-text">この営業先に紐付いた売上はまだありません。作業が終わったら売上番頭から登録できます。</p>`;
       return;
     }
     el.innerHTML = `
@@ -1083,12 +1088,12 @@
     const parts = [];
 
     if (!allTasks.length) {
-      parts.push('<p class="placeholder-text">今日の重要タスクはありません。売上登録・営業先登録を続けると、ここに自動で出ます。</p>');
+      parts.push('<p class="placeholder-text">今日のタスクはまだありません。上のフォームから1件追加するか、売上・営業先を登録すると自動で出ます。</p>');
     } else {
       if (active.length) {
         active.slice(0, 8).forEach(t => parts.push(renderDailyActionTaskCard(t, { showActions: true })));
       } else if (!snoozedToday.length && !snoozedAway.length && !done.length) {
-        parts.push('<p class="placeholder-text">今日の重要タスクはありません。売上登録・営業先登録を続けると、ここに自動で出ます。</p>');
+        parts.push('<p class="placeholder-text">今日対応のタスクはありません。期限が来たタスクや手動追加がここに表示されます。</p>');
       }
       if (snoozedToday.length || snoozedAway.length) {
         parts.push('<div class="daily-task-snoozed-section">');
@@ -1156,7 +1161,7 @@
     const { nextSalesCandidates } = getRevenueContext();
     const candidates = (nextSalesCandidates || []).slice(0, limit || 5);
     if (!candidates.length) {
-      el.innerHTML = '<p class="placeholder-text">売上に紐付いた営業先からの提案はありません</p>';
+      el.innerHTML = '<p class="placeholder-text">次に売るべき営業先はまだありません。売上を営業先に紐付けて登録すると、ここに提案が出ます。</p>';
       return;
     }
     el.innerHTML = candidates.map(c => `
@@ -1179,7 +1184,7 @@
     const { salesHoldCandidates } = getRevenueContext();
     const holds = (salesHoldCandidates || []).slice(0, limit || 5);
     if (!holds.length) {
-      el.innerHTML = '<p class="placeholder-text">営業保留中の案件はありません</p>';
+      el.innerHTML = '<p class="placeholder-text">営業保留中の案件はありません。入金注意タグがある売上だけがここに表示されます。</p>';
       return;
     }
     el.innerHTML = holds.map(h => `
@@ -1390,7 +1395,153 @@
     if (summary.hasSettings) items.push('設定 あり');
     if (summary.revenueRecords) items.push('売上記録 ' + summary.revenueRecords + '件');
     if (summary.hasRevenueSettings) items.push('売上目標 あり');
+    if (summary.dailyTaskStates) items.push('タスク状態 ' + summary.dailyTaskStates + '件');
+    if (summary.manualTasks) items.push('手動タスク ' + summary.manualTasks + '件');
     return items;
+  }
+
+  function shouldShowStartGuide() {
+    return !Storage.getLeads().length
+      && !Storage.getRevenueRecords().length
+      && !getDailyActionTasksWithState().length;
+  }
+
+  function renderStartGuide() {
+    const el = document.getElementById('dash-start-guide');
+    if (!el) return;
+    el.classList.toggle('hidden', !shouldShowStartGuide());
+  }
+
+  function scrollToElement(selector) {
+    const el = document.querySelector(selector);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function goToAddLead() {
+    navigateToView('sales');
+    setTimeout(() => {
+      scrollToElement('#btn-add-lead');
+      if (typeof openLeadModal === 'function') openLeadModal();
+    }, 120);
+  }
+
+  function goToAddRevenue() {
+    navigateToView('revenue');
+    setTimeout(() => scrollToElement('#revenue-form'), 120);
+  }
+
+  function goToAddDailyTask() {
+    navigateToView('dashboard');
+    setTimeout(() => {
+      scrollToElement('#daily-task-add-form');
+      const titleEl = document.getElementById('daily-task-add-title');
+      if (titleEl) titleEl.focus();
+    }, 120);
+  }
+
+  function hasBudilTestData() {
+    const leads = Storage.getLeads().some(l => l.isTest === true);
+    const revenue = Storage.getRevenueRecords().some(r => r.isTest === true);
+    const manual = Storage.getDailyActionTasksData().manualTasks.some(t => t.isTest === true);
+    return leads || revenue || manual;
+  }
+
+  function createBudilTestData() {
+    if (hasBudilTestData()) {
+      alert('テストデータはすでにあります。「テストデータを削除」で消してから再度作成してください。');
+      return;
+    }
+    const today = TODAY();
+    const nextContact = addDaysToDate(today, 30);
+    const leadId = 'test_' + Storage.generateId();
+    const leads = Storage.getLeads();
+    leads.push({
+      id: leadId,
+      company: 'テスト工務店',
+      isTest: true,
+      createdAt: new Date().toISOString(),
+      salesStatus: '成約',
+      status: '成約',
+      priority: 'B',
+      lastContact: today,
+      lastContactAt: today,
+      nextAction: '1ヶ月後に再提案',
+      nextContact,
+      nextActionDate: nextContact,
+      activityLogs: [{
+        id: 'test_activity_' + Storage.generateId(),
+        date: today,
+        type: 'contact',
+        title: 'LINEでお礼連絡',
+        isTest: true,
+        createdAt: new Date().toISOString()
+      }]
+    });
+    Storage.saveLeads(leads);
+
+    Storage.addRevenueRecord({
+      isTest: true,
+      workDate: today,
+      customerName: 'テスト工務店',
+      service: RevenueBrain.SERVICES[0],
+      source: RevenueBrain.SOURCES[0],
+      amount: 10000,
+      status: '完了',
+      paymentStatus: '入金済み',
+      leadId,
+      leadName: 'テスト工務店',
+      memo: 'テストデータ'
+    });
+
+    Storage.addManualDailyTask({
+      isTest: true,
+      id: 'test_manual_' + Storage.generateId(),
+      title: 'テスト確認タスク',
+      targetName: 'テスト工務店',
+      leadId,
+      leadName: 'テスト工務店',
+      dueDate: today,
+      priority: '中',
+      action: 'テスト確認タスク',
+      status: 'open',
+      reason: '手動追加'
+    });
+
+    refreshAllViews();
+    alert('テストデータを作成しました（テスト工務店・売上1件・活動履歴・今日やること）');
+  }
+
+  function deleteBudilTestData() {
+    if (!hasBudilTestData()) {
+      alert('削除できるテストデータがありません');
+      return;
+    }
+    const ok = confirm('テストデータ（isTest）だけを削除します。本番データは残ります。よろしいですか？');
+    if (!ok) return;
+
+    const testManualIds = Storage.getDailyActionTasksData().manualTasks
+      .filter(t => t.isTest === true)
+      .map(t => t.id);
+
+    Storage.saveLeads(Storage.getLeads().filter(l => l.isTest !== true));
+    Storage.saveRevenueRecords(Storage.getRevenueRecords().filter(r => r.isTest !== true));
+
+    const store = Storage.getDailyActionTasksData();
+    store.manualTasks = store.manualTasks.filter(t => t.isTest !== true);
+    store.states = store.states.filter(s => s.isTest !== true && !testManualIds.includes(s.taskId));
+    Storage.saveDailyActionTasksData(store);
+
+    refreshAllViews();
+    alert('テストデータを削除しました');
+  }
+
+  function initStartGuide() {
+    const leadBtn = document.getElementById('btn-start-add-lead');
+    const revBtn = document.getElementById('btn-start-add-revenue');
+    const taskBtn = document.getElementById('btn-start-add-task');
+    if (leadBtn) leadBtn.addEventListener('click', goToAddLead);
+    if (revBtn) revBtn.addEventListener('click', goToAddRevenue);
+    if (taskBtn) taskBtn.addEventListener('click', goToAddDailyTask);
   }
 
   function renderDataManagement() {
@@ -1533,7 +1684,11 @@
 
     document.getElementById('btn-import-confirm').addEventListener('click', () => {
       if (!pendingImport) return;
-      const ok = confirm('バックアップデータで現在のBudilデータを上書き復元します。よろしいですか？');
+      const ok = confirm(
+        'バックアップデータで現在のBudilデータを上書き復元します。\n\n' +
+        '対象：営業先・売上・タスク・活動履歴・設定など\n' +
+        '本番データがある場合は、先にエクスポートしてください。\n\nよろしいですか？'
+      );
       if (!ok) return;
 
       DataBackup.importData(pendingImport.data, pendingImport.keys);
@@ -1560,6 +1715,11 @@
       refreshAllViews();
       alert('全データを初期化しました');
     });
+
+    const createTestBtn = document.getElementById('btn-create-test-data');
+    if (createTestBtn) createTestBtn.addEventListener('click', createBudilTestData);
+    const deleteTestBtn = document.getElementById('btn-delete-test-data');
+    if (deleteTestBtn) deleteTestBtn.addEventListener('click', deleteBudilTestData);
 
     renderDataManagement();
   }
@@ -2480,7 +2640,7 @@
     });
 
     if (!list.length && !Storage.getLeads().length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">営業先が登録されていません</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">まだ営業先がありません。名刺登録または「+ 新規追加」から追加できます。</td></tr>';
       return;
     }
 
@@ -2690,7 +2850,7 @@
     const lead = Storage.getLeads().find(l => l.id === leadId);
     const history = (lead && lead.salesHistory) || [];
     if (!history.length) {
-      listEl.innerHTML = '<li class="placeholder-text">営業履歴はまだありません</li>';
+      listEl.innerHTML = '<li class="placeholder-text">送信記録はまだありません。メールや電話の記録ボタンから残せます。</li>';
       return;
     }
     listEl.innerHTML = history.slice(0, 20).map(h => {
@@ -3243,7 +3403,7 @@
     if (!container) return;
     const summary = RevenueBrain.getLeadRevenueSummary(leadId, Storage.getRevenueRecords());
     if (!summary.count) {
-      container.innerHTML = '<p class="placeholder-text">この営業先に紐付いた売上はまだありません</p>';
+      container.innerHTML = '<p class="placeholder-text">この営業先の売上履歴はまだありません。作業が終わったら「売上を登録」から追加できます。</p>';
       return;
     }
     const historyHtml = summary.records
@@ -3339,7 +3499,7 @@
     const el = document.getElementById(id);
     if (!el) return;
     if (!items.length) {
-      el.innerHTML = '<li class="placeholder-text">今月のデータがありません</li>';
+      el.innerHTML = '<li class="placeholder-text">今月の内訳データはまだありません。売上を登録すると表示されます。</li>';
       return;
     }
     el.innerHTML = items.map(item =>
@@ -3365,9 +3525,9 @@
     const cardList = document.getElementById('revenue-card-list');
 
     if (!records.length) {
-      const empty = '<tr><td colspan="9" class="empty-state">今月の売上がありません</td></tr>';
+      const empty = '<tr><td colspan="9" class="empty-state">今月の売上登録がまだありません。作業が終わったら1件登録してみましょう。</td></tr>';
       if (tbody) tbody.innerHTML = empty;
-      if (cardList) cardList.innerHTML = '<p class="empty-state">今月の売上がありません</p>';
+      if (cardList) cardList.innerHTML = '<p class="empty-state">今月の売上登録がまだありません。作業が終わったら1件登録してみましょう。</p>';
       return;
     }
 
@@ -3737,5 +3897,6 @@
     initCardParser();
     initFollowup();
     initDataManagement();
+    initStartGuide();
   });
 })();
