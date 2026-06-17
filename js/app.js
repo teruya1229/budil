@@ -12,6 +12,14 @@
 
   const SALES_TAB_FIELDS = { email: 'msg-email', form: 'msg-form', dm: 'msg-dm', phone: 'msg-phone' };
   const SALES_TAB_LOG = { email: 'メール送信', form: 'フォーム送信', dm: 'DM', phone: '電話' };
+  const ACTIVITY_TYPE_LABELS = {
+    'task-done': 'タスク完了',
+    contact: '連絡',
+    proposal: '提案',
+    'payment-check': '入金確認',
+    'work-memo': '作業メモ',
+    other: 'その他'
+  };
 
   // ── 営業プリセット（v1.6）──
   // 目的: 営業先登録の最初に「何を売るか」を選ぶだけで、入力/提案/文面生成を揃える
@@ -287,6 +295,121 @@
       .join('');
   }
 
+  function formatActivityLogType(type) {
+    return ACTIVITY_TYPE_LABELS[type] || type;
+  }
+
+  function recordTaskCompletionActivity(task) {
+    if (!task || !task.leadId) return;
+    const lead = Storage.getLeads().find(l => l.id === task.leadId);
+    if (!lead) return;
+    const added = Storage.addLeadActivityLog(task.leadId, {
+      type: 'task-done',
+      date: TODAY(),
+      title: task.title || '',
+      memo: task.memo || '',
+      taskId: task.id,
+      taskKind: task.type || 'auto',
+      priority: task.priority || '',
+      reason: task.reason || '',
+      action: task.action || '',
+      targetName: task.targetName || lead.company
+    });
+    if (added && currentMessageLeadId === task.leadId) {
+      renderLeadActivityLogs(task.leadId);
+    }
+  }
+
+  function getRecentCompletedActivityLogs(max) {
+    const today = TODAY();
+    const yesterday = addDaysToDate(today, -1);
+    const all = [];
+    Storage.getLeads().forEach(lead => {
+      (lead.activityLogs || []).forEach(log => {
+        if (log.type === 'task-done' && (log.date === today || log.date === yesterday)) {
+          all.push({ ...log, leadName: lead.company });
+        }
+      });
+    });
+    return all
+      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+      .slice(0, max || 3);
+  }
+
+  function renderMorningRecentActivities() {
+    const el = document.getElementById('mgmt-recent-activities');
+    if (!el) return;
+    const recent = getRecentCompletedActivityLogs(3);
+    if (!recent.length) {
+      el.innerHTML = '';
+      return;
+    }
+    el.innerHTML = `
+      <p class="daily-tasks-brief-title">最近の完了活動：</p>
+      <ul class="daily-tasks-brief-list">
+        ${recent.map(l => `<li>${esc(l.leadName || l.targetName)}：${esc(l.title)}を完了</li>`).join('')}
+      </ul>`;
+  }
+
+  function renderLeadActivityLogs(leadId) {
+    const listEl = document.getElementById('lead-activity-logs-list');
+    if (!listEl) return;
+    const logs = Storage.getLeadActivityLogs(leadId).slice(0, 5);
+    if (!logs.length) {
+      listEl.innerHTML = '<p class="placeholder-text">活動履歴はまだありません</p>';
+      return;
+    }
+    listEl.innerHTML = logs.map(log => {
+      const typeLabel = formatActivityLogType(log.type);
+      const created = log.createdAt ? log.createdAt.slice(0, 16).replace('T', ' ') : '';
+      const extra = [
+        log.type === 'task-done' && log.reason ? `<p class="activity-log-meta">理由：${esc(log.reason)}</p>` : '',
+        log.memo ? `<p class="activity-log-meta">メモ：${esc(log.memo)}</p>` : ''
+      ].filter(Boolean).join('');
+      return `
+        <div class="activity-log-item">
+          <div class="activity-log-header">
+            <span class="activity-log-date">${esc(log.date)}</span>
+            <span class="activity-log-type">${esc(typeLabel)}</span>
+          </div>
+          <strong class="activity-log-title">${esc(log.title)}</strong>
+          ${extra}
+          <small class="activity-log-created">作成：${esc(created)}</small>
+        </div>`;
+    }).join('');
+  }
+
+  function resetLeadActivityForm() {
+    const form = document.getElementById('lead-activity-add-form');
+    const dateEl = document.getElementById('lead-activity-date');
+    if (form) form.reset();
+    if (dateEl) dateEl.value = TODAY();
+  }
+
+  function handleLeadActivityAddSubmit(e) {
+    e.preventDefault();
+    if (!currentMessageLeadId) return;
+    const date = document.getElementById('lead-activity-date').value || TODAY();
+    const type = document.getElementById('lead-activity-type').value;
+    const title = document.getElementById('lead-activity-title').value.trim();
+    const memo = document.getElementById('lead-activity-memo').value.trim();
+    if (!title) return;
+    Storage.addLeadActivityLog(currentMessageLeadId, { type, date, title, memo });
+    resetLeadActivityForm();
+    renderLeadActivityLogs(currentMessageLeadId);
+    renderMorningRecentActivities();
+  }
+
+  function fillDailyTaskLeadSelect() {
+    const el = document.getElementById('daily-task-add-lead');
+    if (!el) return;
+    const selected = el.value;
+    const leads = Storage.getLeads().slice().sort((a, b) => (a.company || '').localeCompare(b.company || '', 'ja'));
+    el.innerHTML = '<option value="">未選択</option>' +
+      leads.map(l => `<option value="${esc(l.id)}">${esc(l.company)}</option>`).join('');
+    if (selected && leads.some(l => l.id === selected)) el.value = selected;
+  }
+
   function addDaysToDate(dateStr, offsetDays) {
     const d = new Date(dateStr + 'T12:00:00');
     d.setDate(d.getDate() + Number(offsetDays || 0));
@@ -443,6 +566,11 @@
       payload.snoozedUntil = '';
     }
     saveDailyTaskState(taskId, payload);
+    if (status === 'done') {
+      const task = getDailyActionTasksWithState().find(t => t.id === taskId);
+      if (task) recordTaskCompletionActivity(task);
+      renderMorningRecentActivities();
+    }
   }
 
   function snoozeDailyTaskUntilTomorrow(taskId, memo) {
@@ -464,14 +592,26 @@
   }
 
   function completeManualDailyTask(taskId, memo) {
+    const store = Storage.getDailyActionTasksData();
+    const raw = store.manualTasks.find(t => t.id === taskId);
     Storage.updateManualDailyTask(taskId, {
       status: 'done',
       completedAt: new Date().toISOString(),
       snoozedUntil: '',
       memo: memo || ''
     });
+    if (raw) {
+      const task = normalizeManualDailyTask({
+        ...raw,
+        status: 'done',
+        memo: memo || '',
+        completedAt: new Date().toISOString()
+      }, TODAY());
+      recordTaskCompletionActivity(task);
+    }
     renderDailyActionTasks();
     renderMorningDailyTasksBrief();
+    renderMorningRecentActivities();
   }
 
   function snoozeManualTaskToday(taskId, memo) {
@@ -489,6 +629,7 @@
     document.getElementById('daily-task-add-form').reset();
     if (dueEl) dueEl.value = TODAY();
     document.getElementById('daily-task-add-priority').value = '中';
+    fillDailyTaskLeadSelect();
   }
 
   function handleDailyTaskAddSubmit(e) {
@@ -499,14 +640,18 @@
     const priority = document.getElementById('daily-task-add-priority').value;
     const dueDate = document.getElementById('daily-task-add-due').value || TODAY();
     const memo = document.getElementById('daily-task-add-memo').value.trim();
+    const leadId = document.getElementById('daily-task-add-lead').value;
+    const lead = leadId ? Storage.getLeads().find(l => l.id === leadId) : null;
     Storage.addManualDailyTask({
       title,
-      targetName: targetName || '—',
+      targetName: targetName || (lead ? lead.company : '—'),
       priority,
       action: memo || title,
       memo,
       dueDate,
-      status: 'open'
+      status: 'open',
+      leadId: lead ? lead.id : '',
+      leadName: lead ? lead.company : ''
     });
     resetDailyTaskAddForm();
     renderDailyActionTasks();
@@ -1275,6 +1420,7 @@
     }
     renderManagementComment('mgmt-management-comment', { brief: true });
     renderMorningDailyTasksBrief();
+    renderMorningRecentActivities();
 
     const top3Legacy = document.getElementById('dash-top3');
     if (top3Legacy) {
@@ -2015,6 +2161,12 @@
       btn.addEventListener('click', () => recordSalesActivity(btn.dataset.logType));
     });
 
+    const activityForm = document.getElementById('lead-activity-add-form');
+    if (activityForm) {
+      activityForm.addEventListener('submit', handleLeadActivityAddSubmit);
+      resetLeadActivityForm();
+    }
+
     const aiToggle = document.getElementById('ai-priority-toggle');
     const settings = Storage.getSettings();
     aiToggle.checked = settings.aiPriorityEnabled !== false;
@@ -2379,6 +2531,8 @@
     renderSalesHistory(leadId);
     renderLeadRevenuePanel(leadId);
     renderLeadNextSalesAction(leadId);
+    renderLeadActivityLogs(leadId);
+    resetLeadActivityForm();
 
     if (opts.navigate) navigateToView('sales');
     document.getElementById('sales-detail-panel').classList.remove('hidden');

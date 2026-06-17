@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v1.9.7 公開済み（タスク完了を営業履歴に残す）
 - Budil v1.9.6 公開済み（手動タスク追加・タスク調整）
 - Budil v1.9.5 公開済み（今日やることリスト化）
 - Budil v1.9.4 公開済み（経営番頭コメント）
@@ -37,6 +38,14 @@
 | `js/messages.js` | 営業文面テンプレート・プリセット |
 | `js/management-brain.js` | 朝レポート・今日の営業生成 |
 | `js/revenue-brain.js` | 売上集計・番頭コメント |
+
+## v1.9.7で入ったもの
+
+- 営業先 `activityLogs` — タスク完了・手動活動メモ
+- `Storage.addLeadActivityLog()` / `getLeadActivityLogs()`
+- 手動タスクの `leadId` / `leadName` 紐付け
+- 営業先詳細「活動履歴」セクション（最新5件・手動追加）
+- 朝レポート「最近の完了活動」（最大3件）
 
 ## v1.9.6で入ったもの
 

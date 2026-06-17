@@ -1829,6 +1829,75 @@ body {
   margin-top: 8px;
 }
 
+.lead-activity-section {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  margin-top: 14px;
+}
+
+.lead-activity-section h3 {
+  font-size: 0.95rem;
+  margin-bottom: 10px;
+}
+
+.lead-activity-logs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.activity-log-item {
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.activity-log-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.activity-log-date {
+  font-weight: 600;
+}
+
+.activity-log-type {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(99, 179, 237, 0.15);
+  color: var(--primary, #63b3ed);
+}
+
+.activity-log-title {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.activity-log-meta {
+  margin: 2px 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.activity-log-created {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.lead-activity-add-form {
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
 .sales-history-section {
   border-top: 1px solid var(--border);
   padding-top: 14px;

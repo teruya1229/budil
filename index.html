@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v1.9.6</small>
+          <small>AI経営脳みそ v1.9.7</small>
         </div>
       </div>
       <nav class="nav">
@@ -43,7 +43,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v1.9.6</small>
+        <small>Budil v1.9.7</small>
       </div>
     </aside>
 
@@ -77,6 +77,12 @@
             </div>
             <div class="form-row form-row-2">
               <div class="form-group">
+                <label for="daily-task-add-lead">関連営業先</label>
+                <select id="daily-task-add-lead">
+                  <option value="">未選択</option>
+                </select>
+              </div>
+              <div class="form-group">
                 <label for="daily-task-add-priority">優先度</label>
                 <select id="daily-task-add-priority">
                   <option value="高">高</option>
@@ -84,6 +90,8 @@
                   <option value="低">低</option>
                 </select>
               </div>
+            </div>
+            <div class="form-row form-row-2">
               <div class="form-group">
                 <label for="daily-task-add-due">期限日</label>
                 <input type="date" id="daily-task-add-due" required>
@@ -162,6 +170,7 @@
               <p class="management-comment-heading label-muted">経営番頭コメント</p>
               <div id="mgmt-management-comment" class="management-comment-body management-comment-brief"></div>
               <div id="mgmt-daily-tasks" class="daily-tasks-brief-block"></div>
+              <div id="mgmt-recent-activities" class="daily-tasks-brief-block"></div>
               <div id="mgmt-sales-candidate" class="sales-candidate-block"></div>
             </div>
             <div class="morning-section">
@@ -666,6 +675,38 @@
               <button type="button" id="btn-lead-add-revenue" class="btn btn-sm btn-primary">この営業先の売上を登録</button>
             </div>
             <div id="lead-revenue-panel" class="lead-revenue-panel"></div>
+          </div>
+
+          <div class="lead-activity-section">
+            <h3>活動履歴</h3>
+            <div id="lead-activity-logs-list" class="lead-activity-logs-list"></div>
+            <form id="lead-activity-add-form" class="lead-activity-add-form">
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="lead-activity-date">日付</label>
+                  <input type="date" id="lead-activity-date" required>
+                </div>
+                <div class="form-group">
+                  <label for="lead-activity-type">種別</label>
+                  <select id="lead-activity-type">
+                    <option value="contact">連絡</option>
+                    <option value="proposal">提案</option>
+                    <option value="payment-check">入金確認</option>
+                    <option value="work-memo">作業メモ</option>
+                    <option value="other">その他</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="lead-activity-title">内容</label>
+                <input type="text" id="lead-activity-title" required placeholder="例：電話で入金確認">
+              </div>
+              <div class="form-group">
+                <label for="lead-activity-memo">メモ</label>
+                <input type="text" id="lead-activity-memo" placeholder="任意">
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">活動を追加</button>
+            </form>
           </div>
 
           <div class="sales-history-section">

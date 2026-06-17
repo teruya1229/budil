@@ -185,6 +185,43 @@ const Storage = {
     this.saveLeads(list);
   },
 
+  getLeadActivityLogs(leadId) {
+    const lead = this.getLeads().find(l => l.id === leadId);
+    if (!lead || !Array.isArray(lead.activityLogs)) return [];
+    return lead.activityLogs;
+  },
+
+  addLeadActivityLog(leadId, log) {
+    const list = this.getLeads();
+    const idx = list.findIndex(l => l.id === leadId);
+    if (idx === -1) return null;
+    if (!list[idx].activityLogs) list[idx].activityLogs = [];
+    const date = log.date || new Date().toISOString().slice(0, 10);
+    if (log.type === 'task-done' && log.taskId) {
+      const dup = list[idx].activityLogs.some(
+        a => a.type === 'task-done' && a.taskId === log.taskId && a.date === date
+      );
+      if (dup) return null;
+    }
+    const entry = {
+      id: log.id || ('activity_' + this.generateId()),
+      date,
+      type: log.type || 'other',
+      title: log.title || '',
+      memo: log.memo || '',
+      taskId: log.taskId || '',
+      taskKind: log.taskKind || '',
+      priority: log.priority || '',
+      reason: log.reason || '',
+      action: log.action || '',
+      targetName: log.targetName || '',
+      createdAt: log.createdAt || new Date().toISOString()
+    };
+    list[idx].activityLogs.unshift(entry);
+    this.saveLeads(list);
+    return entry;
+  },
+
   deleteLead(id) {
     this.saveLeads(this.getLeads().filter(l => l.id !== id));
   },
