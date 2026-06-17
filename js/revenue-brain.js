@@ -50,6 +50,11 @@ const RevenueBrain = {
       normalized.leadId = String(normalized.leadId);
       normalized.leadName = normalized.leadName || '';
     }
+    if (record.followUp != null && typeof record.followUp === 'object') {
+      normalized.followUp = typeof FollowUpBrain !== 'undefined'
+        ? FollowUpBrain.normalizeFollowUp(record.followUp)
+        : record.followUp;
+    }
     return normalized;
   },
 

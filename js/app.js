@@ -8,6 +8,7 @@
   let currentMessageLeadId = null;
   let pendingImport = null;
   let pendingRevenueWorkOrderId = '';
+  let selectedFollowUpTargetId = null;
   let currentSalesTab = 'email';
   let currentSalesMessages = null;
   let pickupBulkPreview = [];
@@ -394,6 +395,7 @@
         if (view === 'pickup') renderDemandPickup();
         if (view === 'reception') renderReceptionView();
         if (view === 'work-order') renderWorkOrderView();
+        if (view === 'follow-up') renderFollowUpView();
         if (view === 'area') renderAreaView();
         if (view === 'revenue') renderRevenueView();
         if (view === 'data') renderDataManagement();
@@ -483,6 +485,9 @@
     if (task.workOrderId || (task.pickupDedupeKey && String(task.pickupDedupeKey).startsWith('work-order|'))) {
       return '作業予定';
     }
+    if (task.followUpType || (task.pickupDedupeKey && String(task.pickupDedupeKey).startsWith('follow-up|'))) {
+      return '作業後フォロー';
+    }
     const map = {
       'sales-hold': '営業保留',
       'unlinked-revenue': '売上紐付け',
@@ -513,7 +518,8 @@
       if (due < today) return 0;
     }
     if (task.pickupActionType && task.pickupActionType.startsWith('decision-grow')) return 2;
-    if (task.pickupDedupeKey && String(task.pickupDedupeKey).startsWith('work-order|')) return 0;
+    if (task.pickupDedupeKey && String(task.pickupDedupeKey).startsWith('follow-up|')) return 0;
+    if (task.pickupDedupeKey && String(task.pickupDedupeKey).startsWith('work-order|')) return 1;
     if (task.pickupDedupeKey && String(task.pickupDedupeKey).startsWith('intake|')) return 1;
     if (task.pickupActionType && task.pickupActionType.startsWith('decision-improve')) return 3;
     if (task.dueDate === today) return 1;
@@ -636,6 +642,8 @@
       today
     ).forEach(w => warnings.push(w));
 
+    FollowUpBrain.buildWarnings(getFollowUpContext().targets, today).forEach(w => warnings.push(w));
+
     const mapCtx = getMapContext();
     mapCtx.warnings.forEach(w => {
       if (w.type === 'far' && w.items && w.items[0]) {
@@ -671,6 +679,9 @@
 
     const workOrderComment = WorkOrderBrain.buildHomeComment(Storage.getWorkOrders(), today);
     if (workOrderComment) lines.push(workOrderComment);
+
+    const followUpComment = FollowUpBrain.buildHomeComment(getFollowUpContext().targets);
+    if (followUpComment) lines.push(followUpComment);
 
     const mapCtx = getMapContext();
     MapBrain.buildAreaHomeComment(mapCtx.summary, mapCtx.warnings).forEach(l => lines.push(l));
@@ -871,6 +882,7 @@
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="pickup">需要番頭を開く</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="reception">受付番頭を開く</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="work-order">作業予定番頭を開く</button>
+      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="follow-up">作業後フォロー</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="area">エリア番頭を開く</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="revenue">売上を登録</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="lead">営業先を登録</button>
@@ -886,6 +898,7 @@
     if (action === 'pickup') return goToDemandPickup();
     if (action === 'reception') return goToReception();
     if (action === 'work-order') return goToWorkOrder();
+    if (action === 'follow-up') return goToFollowUp();
     if (action === 'area') return goToAreaView();
     if (action === 'revenue') return goToAddRevenue();
     if (action === 'lead') return goToAddLead();
@@ -910,6 +923,11 @@
   function goToWorkOrder() {
     navigateToView('work-order');
     setTimeout(() => scrollToElement('#work-order-form'), 120);
+  }
+
+  function goToFollowUp() {
+    navigateToView('follow-up');
+    setTimeout(() => scrollToElement('#follow-up-targets-list'), 120);
   }
 
   function goToDataBackup() {
@@ -1438,6 +1456,7 @@
     const lead = Storage.getLeads().find(l => l.id === leadId);
     if (!lead) return;
     renderLeadStatusSummary(leadId);
+    renderLeadFollowUpSummary(leadId);
     renderLeadActionSummary(lead);
     renderLeadRevenueCompact(leadId);
     renderLeadDailyTasks(leadId);
@@ -2320,6 +2339,7 @@
     { title: '需要を拾う', desc: 'クロクロ調査結果を需要番頭に取り込み', action: 'pickup' },
     { title: '受付・予約をつなぐ', desc: 'AI番頭の受付結果を営業・タスク・売上へ', action: 'reception' },
     { title: '予約・作業予定を管理', desc: '作業予定から今日やること・売上登録へ', action: 'work-order' },
+    { title: '作業後フォローをつなぐ', desc: 'お礼・口コミ依頼・リピート提案を文面生成', action: 'follow-up' },
     { title: 'エリアで移動を判断', desc: 'エリア別サマリーとGoogleマップ導線', action: 'area' },
     { title: '投稿・広告文案を作る', desc: '需要から投稿・広告案を生成', action: 'pickup' },
     { title: '投稿・広告予定を管理', desc: 'カレンダーで今週の予定を把握', action: 'calendar' },
@@ -2351,6 +2371,7 @@
     if (action === 'pickup') return goToDemandPickup();
     if (action === 'reception') return goToReception();
     if (action === 'work-order') return goToWorkOrder();
+    if (action === 'follow-up') return goToFollowUp();
     if (action === 'area') return goToAreaView();
     if (action === 'calendar') {
       navigateToView('dashboard');
@@ -2402,7 +2423,8 @@
         <h3 class="onboarding-subtitle">受付〜売上の流れ</h3>
         <ul class="onboarding-workflow-list">
           <li>受付・予約番頭でAI番頭の結果を取り込み、「作業予定を作成」で予約化</li>
-          <li>予約・作業予定番頭で今日/今週の作業を確認し、作業完了後に売上フォームへ反映</li>
+          <li>作業完了後は作業後フォロー番頭でお礼LINE・口コミ依頼・リピート提案</li>
+          <li>予約・作業予定番頭から売上フォームへ反映して売上登録</li>
         </ul>
       </div>
       ${mode === 'detail' ? `
@@ -2451,6 +2473,14 @@
           </div>
         </div>
         <div class="form-group">
+          <label for="bp-google-review-url">Google口コミURL</label>
+          <input type="url" id="bp-google-review-url" placeholder="https://g.page/..." value="${esc(p.googleReviewUrl || '')}">
+        </div>
+        <div class="form-group">
+          <label for="bp-follow-up-memo">フォロー文面メモ（任意）</label>
+          <input type="text" id="bp-follow-up-memo" placeholder="お礼文に足す一言など" value="${esc(p.followUpMemo || '')}">
+        </div>
+        <div class="form-group">
           <label for="bp-main-services">主力サービス（カンマ区切り）</label>
           <input type="text" id="bp-main-services" placeholder="エアコンクリーニング、洗濯機クリーニング" value="${esc((p.mainServices || []).join('、'))}">
         </div>
@@ -2475,6 +2505,8 @@
           area: document.getElementById('bp-area').value.trim(),
           industry: document.getElementById('bp-industry').value.trim(),
           lineUrl: document.getElementById('bp-line-url').value.trim(),
+          googleReviewUrl: document.getElementById('bp-google-review-url').value.trim(),
+          followUpMemo: document.getElementById('bp-follow-up-memo').value.trim(),
           mainServices: document.getElementById('bp-main-services').value.trim(),
           mainChannels: document.getElementById('bp-main-channels').value.trim(),
           memo: document.getElementById('bp-memo').value.trim()
@@ -3448,7 +3480,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v3.6</span>
+        <span class="business-report-version">v3.7</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -3607,6 +3639,7 @@
     renderRevenueView();
     renderReceptionView();
     renderWorkOrderView();
+    renderFollowUpView();
     renderAreaView();
     renderDataManagement();
   }
@@ -3758,6 +3791,14 @@
       workOrderMorningEl.innerHTML = lines.length
         ? `<ul class="mgmt-work-orders-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
         : '<p class="placeholder-text">作業予定はありません。予約・作業予定番頭で登録してください。</p>';
+    }
+
+    const followUpMorningEl = document.getElementById('mgmt-follow-up');
+    if (followUpMorningEl) {
+      const lines = FollowUpBrain.buildMorningLines(getFollowUpContext().targets);
+      followUpMorningEl.innerHTML = lines.length
+        ? `<ul class="mgmt-follow-up-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '<p class="placeholder-text">作業後フォローはありません。</p>';
     }
 
     const areaMorningEl = document.getElementById('mgmt-area-warnings');
@@ -6619,6 +6660,337 @@
     }
   }
 
+  // ── 作業後フォロー番頭 ──
+  function getFollowUpContext() {
+    const today = TODAY();
+    const workOrders = Storage.getWorkOrders();
+    const revenues = Storage.getRevenueRecords();
+    const leads = Storage.getLeads();
+    const targets = FollowUpBrain.getFollowUpTargets({ workOrders, revenues, leads, today });
+    return { today, workOrders, revenues, leads, targets };
+  }
+
+  function findFollowUpTarget(targetId) {
+    if (!targetId) return null;
+    return getFollowUpContext().targets.find(t => t.id === targetId) || null;
+  }
+
+  function saveFollowUpForTarget(target, partialFollowUp) {
+    if (!target) return;
+    const now = new Date().toISOString();
+    const nextFollowUp = FollowUpBrain.normalizeFollowUp({
+      ...target.followUp,
+      ...partialFollowUp,
+      updatedAt: now
+    });
+    if (target.workOrderId) {
+      Storage.updateWorkOrder(target.workOrderId, { followUp: nextFollowUp });
+    }
+    if (target.revenueId) {
+      Storage.updateRevenueRecord(target.revenueId, { followUp: nextFollowUp });
+    }
+    return nextFollowUp;
+  }
+
+  function addLeadFollowUpActivity(target, type, extra) {
+    if (!target.leadId) return;
+    const log = FollowUpBrain.buildLeadActivityLog(target, type, extra);
+    Storage.addLeadActivityLog(target.leadId, log);
+    if (extra && extra.nextAction) {
+      Storage.updateLead(target.leadId, {
+        nextAction: extra.nextAction,
+        nextActionDate: extra.nextActionDate || '',
+        nextContact: extra.nextActionDate || ''
+      });
+    }
+    if (extra && extra.salesStatus) {
+      Storage.updateLead(target.leadId, { salesStatus: extra.salesStatus, priority: extra.priority || 'B' });
+    }
+  }
+
+  function renderFollowUpTargetCard(target, selected) {
+    const lead = target.leadId ? Storage.getLeads().find(l => l.id === target.leadId) : null;
+    const leadLabel = lead ? lead.company : (target.leadId ? '（削除済み）' : '—');
+    return `
+      <div class="follow-up-target-card ${selected ? 'selected' : ''}" data-follow-up-target="${esc(target.id)}">
+        <div class="follow-up-target-header">
+          <strong>${esc(target.customerName || '（名前なし）')}</strong>
+          ${FollowUpBrain.formatFollowUpBadges(target.followUp)}
+        </div>
+        <p class="follow-up-target-meta">作業日：${esc(target.workDate || '—')} / ${esc(target.serviceText || '—')}</p>
+        <p class="follow-up-target-meta">売上：${esc(RevenueBrain.formatYen(target.amount))} / 依頼元：${esc(target.source || '—')} / 営業先：${esc(leadLabel)}</p>
+        <p class="follow-up-target-meta">状態：${esc(FollowUpBrain.formatFollowUpStatus(target))}</p>
+        <p class="follow-up-target-meta">次回メンテ目安：${esc(target.followUp.nextMaintenanceDate || '—')}（${esc(target.maintenanceLabel || '—')}）</p>
+      </div>`;
+  }
+
+  function renderFollowUpDetail(target) {
+    const panel = document.getElementById('follow-up-detail-panel');
+    const el = document.getElementById('follow-up-detail');
+    if (!panel || !el || !target) {
+      if (panel) panel.classList.add('hidden');
+      return;
+    }
+    panel.classList.remove('hidden');
+    const profile = Storage.getBusinessProfile() || {};
+    const thanksMsg = FollowUpBrain.generateThanksMessage(target, profile);
+    const reviewMsg = FollowUpBrain.generateReviewRequest(target, profile);
+    const repeatMsg = FollowUpBrain.generateRepeatProposal(target, profile);
+    const nextMaint = target.followUp.nextMaintenanceDate
+      || FollowUpBrain.estimateNextMaintenanceDate(target, TODAY());
+
+    el.innerHTML = `
+      <p class="follow-up-target-meta"><strong>${esc(target.customerName)}</strong> / ${esc(target.serviceText || '')} / ${esc(target.workDate || '')}</p>
+      <div class="follow-up-detail-block">
+        <h3>お礼LINE文</h3>
+        <textarea class="follow-up-message-text" id="follow-up-thanks-text" readonly>${esc(thanksMsg)}</textarea>
+        <div class="follow-up-actions">
+          <button type="button" class="btn btn-sm btn-secondary" data-follow-copy="thanks">お礼文コピー</button>
+          <button type="button" class="btn btn-sm btn-primary" data-follow-mark="thanks">お礼済みにする</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-follow-task="thanks">今日やることに追加</button>
+        </div>
+      </div>
+      <div class="follow-up-detail-block">
+        <h3>口コミ依頼文</h3>
+        <textarea class="follow-up-message-text" id="follow-up-review-text" readonly>${esc(reviewMsg)}</textarea>
+        <div class="follow-up-actions">
+          <button type="button" class="btn btn-sm btn-secondary" data-follow-copy="review">口コミ依頼文コピー</button>
+          <button type="button" class="btn btn-sm btn-primary" data-follow-mark="review">口コミ依頼済みにする</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-follow-task="review">今日やることに追加</button>
+        </div>
+      </div>
+      <div class="follow-up-detail-block">
+        <h3>次回メンテナンス提案</h3>
+        <p class="follow-up-target-meta">次回目安：${esc(target.maintenanceLabel || '—')} / 予定日：<input type="date" id="follow-up-next-maint-date" value="${esc(nextMaint)}"></p>
+        <textarea class="follow-up-message-text" id="follow-up-repeat-text" readonly>${esc(repeatMsg)}</textarea>
+        <div class="form-group">
+          <label for="follow-up-memo">フォローメモ</label>
+          <input type="text" id="follow-up-memo" value="${esc(target.followUp.memo || '')}" placeholder="任意メモ">
+        </div>
+        <div class="follow-up-actions">
+          <button type="button" class="btn btn-sm btn-secondary" data-follow-copy="repeat">提案文コピー</button>
+          <button type="button" class="btn btn-sm btn-primary" data-follow-mark="repeat">リピート予定にする</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-follow-task="repeat">今日やることに追加</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-follow-save-memo>メモ保存</button>
+        </div>
+      </div>`;
+
+    bindFollowUpDetailEvents(target);
+  }
+
+  function bindFollowUpDetailEvents(target) {
+    const root = document.getElementById('follow-up-detail');
+    if (!root) return;
+    root.querySelectorAll('[data-follow-copy]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const kind = btn.dataset.followCopy;
+        const id = kind === 'thanks' ? 'follow-up-thanks-text'
+          : kind === 'review' ? 'follow-up-review-text' : 'follow-up-repeat-text';
+        const text = document.getElementById(id)?.value || '';
+        copyText(text).then(() => showAppToast('コピーしました')).catch(() => alert('コピーに失敗しました'));
+      });
+    });
+    root.querySelectorAll('[data-follow-mark]').forEach(btn => {
+      btn.addEventListener('click', () => markFollowUpDone(target.id, btn.dataset.followMark));
+    });
+    root.querySelectorAll('[data-follow-task]').forEach(btn => {
+      btn.addEventListener('click', () => addFollowUpTask(target.id, btn.dataset.followTask));
+    });
+    const memoBtn = root.querySelector('[data-follow-save-memo]');
+    if (memoBtn) {
+      memoBtn.addEventListener('click', () => {
+        const t = findFollowUpTarget(target.id);
+        if (!t) return;
+        const memo = document.getElementById('follow-up-memo')?.value.trim() || '';
+        saveFollowUpForTarget(t, { memo });
+        addLeadFollowUpActivity(t, 'memo', { memo });
+        renderFollowUpView();
+        alert('フォローメモを保存しました。');
+      });
+    }
+  }
+
+  function markFollowUpDone(targetId, type) {
+    const target = findFollowUpTarget(targetId);
+    if (!target) return;
+    const now = new Date().toISOString();
+    const today = TODAY();
+    if (type === 'thanks') {
+      saveFollowUpForTarget(target, { thanksStatus: 'done', thanksSentAt: now });
+      addLeadFollowUpActivity(target, 'thanks');
+    } else if (type === 'review') {
+      saveFollowUpForTarget(target, { reviewStatus: 'done', reviewRequestedAt: now });
+      addLeadFollowUpActivity(target, 'review');
+    } else if (type === 'repeat') {
+      const nextDate = document.getElementById('follow-up-next-maint-date')?.value
+        || FollowUpBrain.estimateNextMaintenanceDate(target, today);
+      const memo = document.getElementById('follow-up-memo')?.value.trim() || '';
+      saveFollowUpForTarget(target, {
+        repeatStatus: 'planned',
+        nextMaintenanceDate: nextDate,
+        memo
+      });
+      addLeadFollowUpActivity(target, 'repeat', {
+        nextMaintenanceDate: nextDate,
+        memo,
+        nextAction: '次回メンテナンス確認',
+        nextActionDate: nextDate,
+        salesStatus: 'リピート候補',
+        priority: 'B'
+      });
+    }
+    renderFollowUpView();
+    renderDashboard();
+    renderLeadsTable();
+    if (currentMessageLeadId === target.leadId) renderLeadDetailSubpanels(target.leadId);
+    renderRevenueView();
+    alert('フォロー状態を更新しました。');
+  }
+
+  function addFollowUpTask(targetId, type) {
+    const target = findFollowUpTarget(targetId);
+    if (!target) return;
+    const today = TODAY();
+    const payload = FollowUpBrain.createFollowUpTaskPayload(target, type, today);
+    const store = Storage.getDailyActionTasksData();
+    if (store.manualTasks.some(t => t.pickupDedupeKey === payload.pickupDedupeKey)) {
+      alert('同じ今日やることはすでに追加済みです。');
+      return;
+    }
+    Storage.addManualDailyTask(payload);
+    renderDailyActionTasks();
+    renderExecutiveHome();
+    renderMorningDailyTasksBrief();
+    alert('今日やることに追加しました。');
+  }
+
+  function renderFollowUpTargetsList() {
+    const el = document.getElementById('follow-up-targets-list');
+    if (!el) return;
+    const { targets } = getFollowUpContext();
+    const actionable = targets.filter(t => t.needsThanks || t.needsReview || t.maintenanceNear);
+    const list = actionable;
+    if (!list.length) {
+      el.innerHTML = '<p class="placeholder-text">フォローが必要な作業はありません。作業完了・売上登録後に表示されます。</p>';
+      selectedFollowUpTargetId = null;
+      const panel = document.getElementById('follow-up-detail-panel');
+      if (panel) panel.classList.add('hidden');
+      return;
+    }
+    if (!selectedFollowUpTargetId || !list.some(t => t.id === selectedFollowUpTargetId)) {
+      selectedFollowUpTargetId = list[0].id;
+    }
+    el.innerHTML = list.map(t => renderFollowUpTargetCard(t, t.id === selectedFollowUpTargetId)).join('');
+    el.querySelectorAll('[data-follow-up-target]').forEach(card => {
+      card.addEventListener('click', () => {
+        selectedFollowUpTargetId = card.dataset.followUpTarget;
+        renderFollowUpTargetsList();
+        renderFollowUpDetail(findFollowUpTarget(selectedFollowUpTargetId));
+      });
+    });
+    renderFollowUpDetail(findFollowUpTarget(selectedFollowUpTargetId));
+  }
+
+  function renderFollowUpRepeatList() {
+    const el = document.getElementById('follow-up-repeat-list');
+    if (!el) return;
+    const { targets, leads } = getFollowUpContext();
+    const repeatTargets = targets.filter(t => t.needsRepeat && (t.maintenanceNear || t.followUp.repeatStatus === 'planned'));
+    const leadRepeats = leads.filter(l => l.salesStatus === 'リピート候補');
+    if (!repeatTargets.length && !leadRepeats.length) {
+      el.innerHTML = '<p class="placeholder-text">リピート候補はまだありません。</p>';
+      return;
+    }
+    const parts = [];
+    repeatTargets.forEach(t => {
+      parts.push(`<div class="follow-up-target-card"><strong>${esc(t.customerName)}</strong>
+        <p class="follow-up-target-meta">次回：${esc(t.followUp.nextMaintenanceDate || '—')} / ${esc(t.serviceText || '')}</p></div>`);
+    });
+    leadRepeats.forEach(l => {
+      if (repeatTargets.some(t => t.leadId === l.id)) return;
+      parts.push(`<div class="follow-up-target-card"><strong>${esc(l.company)}</strong>
+        <p class="follow-up-target-meta">次回連絡：${esc(l.nextActionDate || l.nextContact || '—')} / ${esc(l.nextAction || '')}</p></div>`);
+    });
+    el.innerHTML = parts.join('');
+  }
+
+  function renderFollowUpHistoryList() {
+    const el = document.getElementById('follow-up-history-list');
+    if (!el) return;
+    const history = FollowUpBrain.getFollowUpHistory(getFollowUpContext().targets);
+    if (!history.length) {
+      el.innerHTML = '<p class="placeholder-text">フォロー履歴はまだありません。</p>';
+      return;
+    }
+    el.innerHTML = history.map(t => `
+      <div class="follow-up-target-card">
+        <strong>${esc(t.customerName)}</strong> ${FollowUpBrain.formatFollowUpBadges(t.followUp)}
+        <p class="follow-up-target-meta">${esc(t.workDate || '—')} / ${esc(t.serviceText || '')}</p>
+        <p class="follow-up-target-meta">${esc(FollowUpBrain.formatFollowUpStatus(t))}</p>
+      </div>`).join('');
+  }
+
+  function renderFollowUpView() {
+    try {
+      safeRenderSection('follow-up-targets-list', () => renderFollowUpTargetsList(), 'フォロー対象');
+      safeRenderSection('follow-up-repeat-list', () => renderFollowUpRepeatList(), 'リピート候補');
+      safeRenderSection('follow-up-history-list', () => renderFollowUpHistoryList(), 'フォロー履歴');
+    } catch (err) {
+      console.error('[Budil] render error: 作業後フォロー番頭', err);
+      const el = document.getElementById('follow-up-targets-list');
+      if (el) {
+        el.innerHTML = '<p class="section-render-error">このセクションの表示中にエラーが発生しました。</p>';
+      }
+    }
+  }
+
+  function renderLeadFollowUpSummary(leadId) {
+    const el = document.getElementById('lead-follow-up-summary');
+    if (!el) return;
+    const lead = Storage.getLeads().find(l => l.id === leadId);
+    if (!lead) {
+      el.innerHTML = '';
+      return;
+    }
+    const { targets } = getFollowUpContext();
+    const related = targets.filter(t => t.leadId === leadId);
+    const latest = related[0];
+    const isRepeat = lead.salesStatus === 'リピート候補';
+    const nextMaint = lead.nextActionDate || lead.nextContact || (latest && latest.followUp.nextMaintenanceDate) || '';
+    if (!latest && !isRepeat) {
+      el.innerHTML = '';
+      return;
+    }
+    el.innerHTML = `
+      <h3>作業後フォロー${isRepeat ? '<span class="lead-repeat-badge">リピート候補</span>' : ''}</h3>
+      ${latest ? `<p class="follow-up-target-meta">最新：${esc(latest.serviceText || '—')}（${esc(latest.workDate || '—')}）</p>
+        <p class="follow-up-target-meta">${FollowUpBrain.formatFollowUpBadges(latest.followUp)}</p>
+        <p class="follow-up-target-meta">状態：${esc(FollowUpBrain.formatFollowUpStatus(latest))}</p>` : ''}
+      ${nextMaint ? `<p class="follow-up-target-meta">次回メンテナンス予定：${esc(nextMaint)}</p>` : ''}
+      <button type="button" class="btn btn-sm btn-secondary" data-lead-open-follow-up>作業後フォロー番頭を開く</button>`;
+    const btn = el.querySelector('[data-lead-open-follow-up]');
+    if (btn) btn.addEventListener('click', goToFollowUp);
+  }
+
+  function renderRevenueFollowUpBadges(record) {
+    if (!record || !record.followUp) return '';
+    const badges = FollowUpBrain.formatFollowUpBadges(record.followUp);
+    return badges ? `<div class="revenue-follow-up-badges">${badges}</div>` : '';
+  }
+
+  function getRevenueFollowUpFromWorkOrder(record) {
+    if (!record) return null;
+    if (record.followUp) return FollowUpBrain.normalizeFollowUp(record.followUp);
+    if (!record.id) return null;
+    const wo = Storage.getWorkOrders().find(w => w.actualRevenueId === record.id);
+    if (wo && wo.followUp) return FollowUpBrain.normalizeFollowUp(wo.followUp);
+    return null;
+  }
+
+  function initFollowUp() {
+    /* イベントは renderFollowUpView 内で都度バインド */
+  }
+
   // ── エリア番頭 ──
   function renderAreaTodaySummary() {
     const el = document.getElementById('area-today-summary');
@@ -7894,6 +8266,7 @@
     if (viewName === 'pickup') renderDemandPickup();
     if (viewName === 'reception') renderReceptionView();
     if (viewName === 'work-order') renderWorkOrderView();
+    if (viewName === 'follow-up') renderFollowUpView();
     if (viewName === 'area') renderAreaView();
     if (viewName === 'revenue') renderRevenueView();
     if (viewName === 'data') renderDataManagement();
@@ -8624,10 +8997,12 @@
     if (tbody) {
       tbody.innerHTML = records.map(r => {
         const area = MapBrain.getRevenueArea(r, leads);
+        const fu = getRevenueFollowUpFromWorkOrder(r);
+        const fuBadges = fu ? FollowUpBrain.formatFollowUpBadges(fu) : '';
         return `
         <tr>
           <td>${esc(r.workDate)}</td>
-          <td>${esc(r.customerName)}</td>
+          <td>${esc(r.customerName)}${fuBadges ? `<div class="revenue-follow-up-badges">${fuBadges}</div>` : ''}</td>
           <td class="revenue-lead-label">${renderRevenueLeadLinkHtml(r, leads)}</td>
           <td>${esc(r.service)}<br><small class="area-label-compact">${esc(area)}</small></td>
           <td>${esc(r.source)}</td>
@@ -8652,12 +9027,15 @@
           cardLeadHtml = `<span class="revenue-lead-deleted">${esc(RevenueBrain.resolveLeadLabel(r, leads))}</span>`;
         }
         const area = MapBrain.getRevenueArea(r, leads);
+        const fu = getRevenueFollowUpFromWorkOrder(r);
+        const fuBadges = fu ? FollowUpBrain.formatFollowUpBadges(fu) : '';
         return `
         <div class="revenue-card">
           <div class="revenue-card-header">
             <strong>${esc(r.customerName)}</strong>
             <span class="revenue-card-amount">${esc(RevenueBrain.formatYen(r.amount))}</span>
           </div>
+          ${fuBadges ? `<div class="revenue-follow-up-badges">${fuBadges}</div>` : ''}
           <p class="revenue-card-meta">${esc(r.workDate)} ｜ ${esc(r.service)} ｜ ${esc(r.source)} ｜ ${esc(area)}</p>
           <div class="revenue-card-meta revenue-card-lead-row">
             <span>紐付け:</span> ${cardLeadHtml}
@@ -9037,6 +9415,7 @@
     initDemandPickup();
     initReception();
     initWorkOrder();
+    initFollowUp();
     initDemandSearch();
     initLeads();
     initRevenue();

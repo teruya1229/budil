@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v3.6',
+  BUDIL_VERSION: 'v3.7',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -994,6 +994,14 @@ const Storage = {
       add('ok', '作業予定 0件');
     }
 
+    if (typeof FollowUpBrain !== 'undefined') {
+      const fuDiag = FollowUpBrain.getDiagnosticsCounts(workOrders, revenues, leads, todayDiag);
+      if (fuDiag.thanksPending) add('caution', `作業完了済み・お礼未送信 ${fuDiag.thanksPending}件`);
+      if (fuDiag.reviewPending) add('caution', `作業完了済み・口コミ依頼未送信 ${fuDiag.reviewPending}件`);
+      if (fuDiag.maintNear) add('caution', `次回メンテナンス日が近い ${fuDiag.maintNear}件`);
+      if (fuDiag.badFollowUp) add('caution', `followUp形式不正 ${fuDiag.badFollowUp}件`);
+    }
+
     if (typeof MapBrain !== 'undefined') {
       const mapDiag = MapBrain.getDiagnosticsCounts(leads, intakes, revenues, workOrders);
       if (mapDiag.leadsNoAddress) add('caution', `住所未入力の営業先 ${mapDiag.leadsNoAddress}件`);
@@ -1148,6 +1156,8 @@ const Storage = {
       mainServices: parseList(raw.mainServices),
       mainChannels: parseList(raw.mainChannels),
       lineUrl: (raw.lineUrl || '').trim(),
+      googleReviewUrl: (raw.googleReviewUrl || '').trim(),
+      followUpMemo: (raw.followUpMemo || '').trim(),
       memo: (raw.memo || '').trim(),
       updatedAt: raw.updatedAt || new Date().toISOString()
     };
@@ -1181,6 +1191,8 @@ const Storage = {
     if (p.mainServices.length) lines.push('主力サービス：' + p.mainServices.join('、'));
     if (p.mainChannels.length) lines.push('主な集客経路：' + p.mainChannels.join('、'));
     if (p.lineUrl) lines.push('LINE URL：' + p.lineUrl);
+    if (p.googleReviewUrl) lines.push('Google口コミURL：' + p.googleReviewUrl);
+    if (p.followUpMemo) lines.push('フォロー文面メモ：' + p.followUpMemo);
     if (p.memo) lines.push('メモ：' + p.memo);
     return lines.join('\n');
   },
@@ -1445,6 +1457,9 @@ const Storage = {
     const tomorrowWo = typeof WorkOrderBrain !== 'undefined'
       ? WorkOrderBrain.addDays(today, 1)
       : today;
+    const demoWorkDate = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.addDays(today, -2)
+      : today;
     this.addWorkOrder({
       ...flag,
       customerName: 'デモ：山田様',
@@ -1453,14 +1468,22 @@ const Storage = {
       area: '南城市',
       source: 'くらしのマーケット',
       serviceText: 'お掃除機能付きエアコン1台、完全分解',
-      scheduledDate: today,
+      scheduledDate: demoWorkDate,
       startTime: '09:00',
       endTime: '11:00',
-      status: 'confirmed',
+      status: 'completed',
       estimateAmount: 15000,
-      memo: 'デモ：今日の作業予定'
+      completedAt: new Date(demoWorkDate + 'T12:00:00').toISOString(),
+      actualRevenueId: '',
+      memo: 'デモ：今日の作業完了・お礼未送信',
+      followUp: {
+        thanksStatus: 'pending',
+        reviewStatus: 'pending',
+        repeatStatus: 'pending',
+        updatedAt: now
+      }
     });
-    this.addWorkOrder({
+    const demoWo2 = this.addWorkOrder({
       ...flag,
       customerName: 'デモ：佐藤様',
       phone: '080-1111-2222',
@@ -1475,6 +1498,52 @@ const Storage = {
       estimateAmount: 12000,
       memo: 'デモ：明日の作業予定'
     });
+
+    const demoRevenues = this.getRevenueRecords();
+    const demoWo1 = this.getWorkOrders().find(w => w.isDemo && w.customerName.includes('山田'));
+    if (demoWo1 && demoRevenues[0]) {
+      const rev0 = demoRevenues[0];
+      this.updateRevenueRecord(rev0.id, {
+        followUp: {
+          thanksStatus: 'done',
+          reviewStatus: 'done',
+          repeatStatus: 'planned',
+          reviewRequestedAt: now,
+          nextMaintenanceDate: typeof WorkOrderBrain !== 'undefined'
+            ? WorkOrderBrain.addDays(today, 365)
+            : today,
+          memo: 'デモ：口コミ依頼済み・リピート予定あり',
+          updatedAt: now
+        }
+      });
+      this.updateWorkOrder(demoWo1.id, {
+        actualRevenueId: rev0.id,
+        followUp: {
+          thanksStatus: 'pending',
+          reviewStatus: 'done',
+          repeatStatus: 'planned',
+          nextMaintenanceDate: typeof WorkOrderBrain !== 'undefined'
+            ? WorkOrderBrain.addDays(today, 365)
+            : today,
+          updatedAt: now
+        }
+      });
+    }
+
+    const repeatDate = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.addDays(today, 7)
+      : today;
+    const leadsAfter = this.getLeads();
+    const demoLead = leadsAfter.find(l => l.isDemo && (l.company || '').includes('読谷'));
+    if (demoLead) {
+      this.updateLead(demoLead.id, {
+        salesStatus: 'リピート候補',
+        priority: 'B',
+        nextAction: '次回メンテナンス確認',
+        nextActionDate: repeatDate,
+        nextContact: repeatDate
+      });
+    }
 
     return { ok: true, pickupIds, leadIds };
   },

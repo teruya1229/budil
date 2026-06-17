@@ -5716,3 +5716,116 @@ body {
     flex: 1 1 auto;
   }
 }
+
+/* v3.7 作業後フォロー番頭 */
+.card-follow-up-comment {
+  border-left: 4px solid #14b8a6;
+}
+
+.follow-up-targets-list,
+.follow-up-repeat-list,
+.follow-up-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.follow-up-target-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem;
+  cursor: pointer;
+}
+
+.follow-up-target-card.selected {
+  border-color: #14b8a6;
+  box-shadow: 0 0 0 1px #14b8a6;
+}
+
+.follow-up-target-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.follow-up-target-meta {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0.2rem 0;
+}
+
+.follow-up-badge {
+  font-size: 0.68rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  display: inline-block;
+  margin-right: 0.25rem;
+}
+
+.follow-up-thanks-pending { background: #fef9c3; color: #a16207; }
+.follow-up-thanks-done { background: #dcfce7; color: #15803d; }
+.follow-up-review-pending { background: #fce7f3; color: #be185d; }
+.follow-up-review-done { background: #dbeafe; color: #1d4ed8; }
+.follow-up-repeat-planned { background: #ede9fe; color: #6d28d9; }
+
+.follow-up-detail-block {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.follow-up-detail-block:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.follow-up-message-text {
+  width: 100%;
+  min-height: 120px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0.5rem 0;
+  padding: 0.65rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.follow-up-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.lead-follow-up-summary .lead-repeat-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: #ede9fe;
+  color: #6d28d9;
+  margin-left: 0.35rem;
+}
+
+.revenue-follow-up-badges {
+  margin-top: 0.25rem;
+}
+
+.mgmt-follow-up-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.onboarding-workflow-hint {
+  margin-top: 1rem;
+}
+
+.onboarding-workflow-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+}

@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v3.7 公開済み（作業後フォロー・口コミ・リピート番頭MVP）
 - Budil v3.6 公開済み（予約・作業予定番頭MVP）
 - Budil v3.5 公開済み（Googleマップ軽連携・エリア番頭MVP）
 - Budil v3.4 公開済み（AI番頭連携入口MVP）
@@ -62,6 +63,16 @@
 | `js/reception-brain.js` | AI番頭受付パース・営業/タスク/売上変換 |
 | `js/map-brain.js` | 地図URL・エリア推定・エリア別集計 |
 | `js/work-order-brain.js` | 作業予定正規化・カレンダーURL・売上見込み |
+
+| `js/follow-up-brain.js` | 作業後フォロー抽出・文面生成・リピート提案 |
+
+## v3.7で入ったもの
+
+- 作業後フォロー番頭画面（お礼・口コミ・リピート）
+- `followUp` 任意フィールド（作業予定・売上）
+- 文面生成・コピー・フォロー状態管理
+- 営業先活動履歴・今日やること・リピート候補連携
+- 事業プロフィールに Google口コミURL
 
 ## v3.6で入ったもの
 

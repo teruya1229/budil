@@ -53,6 +53,12 @@ const WorkOrderBrain = {
       isDemo: item.isDemo === true,
       isTest: item.isTest === true
     };
+    if (item.followUp != null && typeof item.followUp === 'object') {
+      normalized.followUp = typeof FollowUpBrain !== 'undefined'
+        ? FollowUpBrain.normalizeFollowUp(item.followUp)
+        : item.followUp;
+    }
+    return normalized;
   },
 
   isValidTime(str) {
