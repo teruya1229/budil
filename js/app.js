@@ -1324,6 +1324,10 @@
     document.getElementById('lead-form').addEventListener('submit', handleLeadSubmit);
     document.getElementById('btn-close-sales-detail').addEventListener('click', closeSalesDetail);
     document.getElementById('btn-save-sales-mgmt').addEventListener('click', saveSalesMgmt);
+    document.getElementById('btn-lead-add-revenue').addEventListener('click', () => {
+      if (!currentMessageLeadId) return;
+      openRevenueFormForLead(currentMessageLeadId);
+    });
 
     ['sales-mgmt-status', 'sales-mgmt-next-date', 'sales-mgmt-next-action', 'sales-mgmt-last-contact'].forEach(id => {
       const el = document.getElementById(id);
@@ -1983,6 +1987,170 @@
     const leadId = document.getElementById('revenue-lead').value;
     const wrap = document.getElementById('revenue-mark-won-wrap');
     if (wrap) wrap.classList.toggle('hidden', !leadId);
+    toggleRevenueOpenLeadButton();
+  }
+
+  function toggleRevenueOpenLeadButton() {
+    const leadId = document.getElementById('revenue-lead').value;
+    const btn = document.getElementById('btn-revenue-open-lead');
+    if (!btn) return;
+    btn.disabled = !(leadId && Storage.getLeads().find(l => l.id === leadId));
+  }
+
+  function showRevenueLeadNotice(message) {
+    const el = document.getElementById('revenue-lead-notice');
+    if (!el) return;
+    el.textContent = message;
+    el.classList.remove('hidden');
+    clearTimeout(showRevenueLeadNotice._timer);
+    showRevenueLeadNotice._timer = setTimeout(() => el.classList.add('hidden'), 4000);
+  }
+
+  function matchRevenueService(leadService) {
+    if (!leadService) return RevenueBrain.SERVICES[0];
+    if (RevenueBrain.SERVICES.includes(leadService)) return leadService;
+    const found = RevenueBrain.SERVICES.find(s => leadService.includes(s) || s.includes(leadService));
+    return found || RevenueBrain.SERVICES[0];
+  }
+
+  function buildLeadPayloadFromRevenueFields(fields) {
+    const company = (fields.customerName || '').trim();
+    if (!company) return null;
+    const workDate = fields.workDate || TODAY();
+    const memoParts = ['【売上登録から作成】'];
+    if (fields.source) memoParts.push('依頼元: ' + fields.source);
+    if (fields.amount) memoParts.push('金額: ' + RevenueBrain.formatYen(fields.amount));
+    if (fields.memo) memoParts.push(fields.memo);
+
+    const draft = SalesBrain.normalizeLead({
+      company,
+      service: fields.service || '',
+      priority: 'B',
+      status: '成約',
+      salesStatus: '成約',
+      lastContact: workDate,
+      lastContactAt: workDate,
+      memo: memoParts.join('\n')
+    });
+    const pri = SalesBrain.computeSalesPriority(draft, TODAY());
+    return {
+      ...draft,
+      priorityScore: pri.score,
+      priorityReason: pri.reasons.join('、')
+    };
+  }
+
+  function createLeadFromRevenueForm() {
+    const customerName = document.getElementById('revenue-customer').value.trim();
+    if (!customerName) {
+      alert('顧客名を入力してください');
+      return null;
+    }
+    const fields = {
+      workDate: document.getElementById('revenue-work-date').value || TODAY(),
+      customerName,
+      service: document.getElementById('revenue-service').value,
+      source: document.getElementById('revenue-source').value,
+      amount: Number(document.getElementById('revenue-amount').value) || 0,
+      memo: document.getElementById('revenue-memo').value.trim()
+    };
+    const payload = buildLeadPayloadFromRevenueFields(fields);
+    if (!payload) return null;
+    const lead = Storage.addLead(payload);
+    fillRevenueLeadSelect(lead.id);
+    toggleRevenueLeadOptions();
+    document.getElementById('revenue-mark-won').checked = true;
+    showRevenueLeadNotice('営業先「' + lead.company + '」を作成して紐付けました');
+    renderLeadsTable();
+    renderDashboard();
+    return lead;
+  }
+
+  function createLeadFromRevenueRecord(revenueId) {
+    const record = RevenueBrain.normalizeRevenueRecord(
+      Storage.getRevenueRecords().find(r => r.id === revenueId)
+    );
+    if (!record) return null;
+    if (record.leadId && Storage.getLeads().find(l => l.id === record.leadId)) {
+      alert('すでに営業先が紐付いています');
+      return null;
+    }
+    const fields = {
+      workDate: record.workDate || TODAY(),
+      customerName: record.customerName,
+      service: record.service,
+      source: record.source,
+      amount: record.amount,
+      memo: record.memo
+    };
+    const payload = buildLeadPayloadFromRevenueFields(fields);
+    if (!payload) return null;
+    const lead = Storage.addLead(payload);
+    Storage.updateRevenueRecord(revenueId, { leadId: lead.id, leadName: lead.company });
+    showRevenueLeadNotice('営業先「' + lead.company + '」を作成して売上に紐付けました');
+    renderLeadsTable();
+    renderRevenueView();
+    renderDashboard();
+    if (currentMessageLeadId === lead.id) renderLeadRevenuePanel(lead.id);
+    return lead;
+  }
+
+  function openSelectedRevenueLead() {
+    const leadId = document.getElementById('revenue-lead').value;
+    if (!leadId) {
+      alert('営業先を選択してください');
+      return;
+    }
+    if (!Storage.getLeads().find(l => l.id === leadId)) {
+      alert('この営業先は削除されています');
+      return;
+    }
+    openSalesDetail(leadId, { navigate: true });
+  }
+
+  function openRevenueFormForLead(leadId) {
+    const lead = Storage.getLeads().find(l => l.id === leadId);
+    if (!lead) return;
+    navigateToView('revenue');
+    fillRevenueSelects();
+    document.getElementById('revenue-edit-id').value = '';
+    document.getElementById('revenue-form-title').textContent = '売上登録';
+    document.getElementById('btn-revenue-cancel').classList.add('hidden');
+    document.getElementById('revenue-work-date').value = TODAY();
+    document.getElementById('revenue-customer').value = lead.company || '';
+    document.getElementById('revenue-service').value = matchRevenueService(lead.service);
+    document.getElementById('revenue-source').value = RevenueBrain.SOURCES[0];
+    document.getElementById('revenue-amount').value = '';
+    document.getElementById('revenue-status').value = '予定';
+    document.getElementById('revenue-payment').value = '未入金';
+    document.getElementById('revenue-memo').value = '';
+    fillRevenueLeadSelect(leadId);
+    document.getElementById('revenue-mark-won').checked = true;
+    toggleRevenueLeadOptions();
+    document.getElementById('revenue-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderRevenueLeadLinkHtml(record, leads) {
+    if (!record.leadId) {
+      return `<div class="revenue-lead-cell">
+        <span class="revenue-lead-unlinked">未紐付け</span>
+        <button type="button" class="btn btn-sm btn-secondary" data-create-lead-revenue="${esc(record.id)}">営業先作成</button>
+      </div>`;
+    }
+    const label = RevenueBrain.resolveLeadLabel(record, leads);
+    if (leads.find(l => l.id === record.leadId)) {
+      return `<button type="button" class="revenue-lead-link" data-revenue-open-lead="${esc(record.leadId)}">${esc(label)}</button>`;
+    }
+    return `<span class="revenue-lead-deleted">${esc(label)}</span>`;
+  }
+
+  function bindRevenueLeadListActions() {
+    document.querySelectorAll('[data-revenue-open-lead]').forEach(btn => {
+      btn.addEventListener('click', () => openSalesDetail(btn.dataset.revenueOpenLead, { navigate: true }));
+    });
+    document.querySelectorAll('[data-create-lead-revenue]').forEach(btn => {
+      btn.addEventListener('click', () => createLeadFromRevenueRecord(btn.dataset.createLeadRevenue));
+    });
   }
 
   function updateLeadStatusFromRevenue(leadId) {
@@ -2050,6 +2218,7 @@
     document.getElementById('revenue-mark-won').checked = false;
     fillRevenueLeadSelect('');
     toggleRevenueLeadOptions();
+    toggleRevenueOpenLeadButton();
     document.getElementById('revenue-form-title').textContent = '売上登録';
     document.getElementById('btn-revenue-cancel').classList.add('hidden');
   }
@@ -2140,7 +2309,7 @@
         <tr>
           <td>${esc(r.workDate)}</td>
           <td>${esc(r.customerName)}</td>
-          <td class="revenue-lead-label">${esc(RevenueBrain.resolveLeadLabel(r, leads))}</td>
+          <td class="revenue-lead-label">${renderRevenueLeadLinkHtml(r, leads)}</td>
           <td>${esc(r.service)}</td>
           <td>${esc(r.source)}</td>
           <td>${esc(RevenueBrain.formatYen(r.amount))}</td>
@@ -2151,22 +2320,38 @@
     }
 
     if (cardList) {
-      cardList.innerHTML = records.map(r => `
+      cardList.innerHTML = records.map(r => {
+        let cardLeadHtml;
+        if (!r.leadId) {
+          cardLeadHtml = `<span class="revenue-lead-unlinked">未紐付け</span>
+            <button type="button" class="btn btn-sm btn-secondary" data-create-lead-revenue="${esc(r.id)}">営業先作成</button>`;
+        } else if (leads.find(l => l.id === r.leadId)) {
+          cardLeadHtml = `<span>${esc(RevenueBrain.resolveLeadLabel(r, leads))}</span>
+            <button type="button" class="btn btn-sm btn-secondary" data-revenue-open-lead="${esc(r.leadId)}">営業先を開く</button>`;
+        } else {
+          cardLeadHtml = `<span class="revenue-lead-deleted">${esc(RevenueBrain.resolveLeadLabel(r, leads))}</span>`;
+        }
+        return `
         <div class="revenue-card">
           <div class="revenue-card-header">
             <strong>${esc(r.customerName)}</strong>
             <span class="revenue-card-amount">${esc(RevenueBrain.formatYen(r.amount))}</span>
           </div>
           <p class="revenue-card-meta">${esc(r.workDate)} ｜ ${esc(r.service)} ｜ ${esc(r.source)}</p>
-          <p class="revenue-card-meta">紐付け営業先: ${esc(RevenueBrain.resolveLeadLabel(r, leads))}</p>
+          <div class="revenue-card-meta revenue-card-lead-row">
+            <span>紐付け:</span> ${cardLeadHtml}
+          </div>
           <p class="revenue-card-meta">
             <span class="revenue-status-badge revenue-status-${esc(r.status)}">${esc(r.status)}</span>
             <span class="revenue-status-badge revenue-payment-${esc(r.paymentStatus)}">${esc(r.paymentStatus)}</span>
           </p>
           ${r.memo ? `<p class="revenue-card-meta">${esc(r.memo)}</p>` : ''}
           <div class="revenue-card-actions">${renderRevenueRowActions(r.id)}</div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     }
+
+    bindRevenueLeadListActions();
 
     document.querySelectorAll('[data-edit-revenue]').forEach(btn => {
       btn.addEventListener('click', () => openRevenueEdit(btn.dataset.editRevenue));
@@ -2249,12 +2434,15 @@
     fillRevenueSelects();
     fillRevenueLeadSelect('');
     toggleRevenueLeadOptions();
+    toggleRevenueOpenLeadButton();
     document.getElementById('revenue-form').addEventListener('submit', handleRevenueSubmit);
     document.getElementById('btn-revenue-cancel').addEventListener('click', resetRevenueForm);
     document.getElementById('revenue-lead').addEventListener('change', () => {
       toggleRevenueLeadOptions();
       document.getElementById('revenue-mark-won').checked = false;
     });
+    document.getElementById('btn-revenue-create-lead').addEventListener('click', createLeadFromRevenueForm);
+    document.getElementById('btn-revenue-open-lead').addEventListener('click', openSelectedRevenueLead);
     document.getElementById('btn-revenue-new').addEventListener('click', () => {
       resetRevenueForm();
       document.getElementById('revenue-form').scrollIntoView({ behavior: 'smooth', block: 'start' });

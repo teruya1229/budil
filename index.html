@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v1.9</small>
+          <small>AI経営脳みそ v1.9.1</small>
         </div>
       </div>
       <nav class="nav">
@@ -43,7 +43,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v1.9</small>
+        <small>Budil v1.9.1</small>
       </div>
     </aside>
 
@@ -578,7 +578,10 @@
           <textarea id="msg-phone" class="hidden" readonly></textarea>
 
           <div class="lead-revenue-section">
-            <h3>売上履歴</h3>
+            <div class="lead-revenue-header">
+              <h3>売上履歴</h3>
+              <button type="button" id="btn-lead-add-revenue" class="btn btn-sm btn-primary">この営業先の売上を登録</button>
+            </div>
             <div id="lead-revenue-panel" class="lead-revenue-panel"></div>
           </div>
 
@@ -783,6 +786,11 @@
                     <option value="">未紐付け</option>
                   </select>
                   <small class="field-hint">任意。営業成果の分析に使います</small>
+                  <div class="revenue-lead-actions">
+                    <button type="button" id="btn-revenue-create-lead" class="btn btn-sm btn-secondary">＋営業先を作成して紐付け</button>
+                    <button type="button" id="btn-revenue-open-lead" class="btn btn-sm btn-secondary" disabled>選択中の営業先を開く</button>
+                  </div>
+                  <p id="revenue-lead-notice" class="revenue-lead-notice hidden" role="status"></p>
                 </div>
                 <div class="form-group hidden" id="revenue-mark-won-wrap">
                   <label class="checkbox-label">

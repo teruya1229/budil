@@ -2217,6 +2217,77 @@ body {
   display: none;
 }
 
+.revenue-lead-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.revenue-lead-notice {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  font-size: 0.9rem;
+}
+
+.revenue-lead-notice.hidden {
+  display: none;
+}
+
+.revenue-lead-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent, #60a5fa);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+  text-align: left;
+}
+
+.revenue-lead-link:hover {
+  opacity: 0.85;
+}
+
+.revenue-lead-unlinked {
+  color: var(--text-muted, #8b9cb3);
+  margin-right: 6px;
+}
+
+.revenue-lead-deleted {
+  color: var(--text-muted, #8b9cb3);
+}
+
+.revenue-lead-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.revenue-card-lead-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.lead-revenue-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.lead-revenue-header h3 {
+  margin: 0;
+}
+
 .checkbox-label {
   display: flex;
   align-items: center;
