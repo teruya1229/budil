@@ -262,25 +262,39 @@
     renderDashboard();
   }
 
+  function safeRenderSection(containerId, renderFn, label) {
+    try {
+      renderFn();
+    } catch (err) {
+      console.error('[Budil] render error:', label || containerId || 'section', err);
+      if (containerId) {
+        const el = document.getElementById(containerId);
+        if (el) {
+          el.innerHTML = '<p class="section-render-error">このセクションの表示中にエラーが発生しました。バックアップ後、データ診断を実行してください。</p>';
+        }
+      }
+    }
+  }
+
   function renderDashboard() {
     renderStartGuide();
-    renderExecutiveHome();
-    renderBackupStatus();
-    renderMorningReport();
-    renderDemandInsights();
-    renderSalesInsights();
-    renderDashboardLists();
-    renderDashRevenueSummary();
-    renderManagementComments();
-    renderDashTodayExecutionPlan();
-    renderDashImprovementHints();
-    renderDashWeeklyPerformance();
-    renderDashWeeklyFocus();
-    renderDashStopImprove();
-    renderWeeklyStrategyBoard();
-    renderActionCalendar();
-    renderDailyActionTasks();
-    renderMorningDailyTasksBrief();
+    safeRenderSection('executive-home', () => renderExecutiveHome(), '経営番頭ホーム');
+    safeRenderSection(null, () => renderBackupStatus(), 'バックアップ状況');
+    safeRenderSection('morning-report', () => renderMorningReport(), '朝レポート');
+    safeRenderSection(null, () => renderDemandInsights(), '需要インサイト');
+    safeRenderSection('dash-sales-targets', () => renderSalesInsights(), '営業インサイト');
+    safeRenderSection('dash-followups', () => renderDashboardLists(), 'ダッシュボードリスト');
+    safeRenderSection('dash-revenue-summary', () => renderDashRevenueSummary(), '売上サマリー');
+    safeRenderSection('dash-management-comment', () => renderManagementComments(), '経営番頭コメント');
+    safeRenderSection('dash-today-execution', () => renderDashTodayExecutionPlan(), '今日の投稿・広告予定');
+    safeRenderSection('dash-improvement-hints', () => renderDashImprovementHints(), '改善ヒント');
+    safeRenderSection('dash-weekly-performance', () => renderDashWeeklyPerformance(), '今週の施策成果');
+    safeRenderSection('dash-weekly-focus', () => renderDashWeeklyFocus(), '今週の集中先');
+    safeRenderSection('dash-stop-improve', () => renderDashStopImprove(), '改善・停止候補');
+    safeRenderSection('dash-weekly-strategy', () => renderWeeklyStrategyBoard(), '週間作戦ボード');
+    safeRenderSection('dash-action-calendar', () => renderActionCalendar(), '投稿・広告カレンダー');
+    safeRenderSection('dash-daily-action-tasks', () => renderDailyActionTasks(), '今日やること');
+    safeRenderSection(null, () => renderMorningDailyTasksBrief(), '朝レポートタスク');
   }
 
   function hasExecutiveHomeData() {
@@ -2154,6 +2168,121 @@
     if (taskBtn) taskBtn.addEventListener('click', goToAddDailyTask);
   }
 
+  let lastDiagnosticResult = null;
+
+  function formatDiagnosticDate(iso) {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleString('ja-JP', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit'
+      });
+    } catch {
+      return iso;
+    }
+  }
+
+  function renderDiagnosticCounts(counts) {
+    const el = document.getElementById('data-diagnostics-counts');
+    if (!el || !counts) return;
+    const items = [
+      ['営業先', counts.leads],
+      ['売上', counts.revenue],
+      ['今日やること', counts.dailyTasks],
+      ['需要ピックアップ', counts.pickups],
+      ['活動履歴', counts.activityLogs],
+      ['成果入力済み', counts.performanceEntered],
+      ['dailyChecks', counts.dailyChecks]
+    ];
+    el.innerHTML = items.map(([label, val]) =>
+      `<div class="data-diagnostics-count-item"><span>${esc(label)}</span><strong>${val != null ? val : '—'}</strong></div>`
+    ).join('');
+  }
+
+  function renderDiagnosticBackupKeys(backupKeys) {
+    const el = document.getElementById('data-diagnostics-backup-keys');
+    if (!el) return;
+    const critical = Storage.CRITICAL_BACKUP_KEYS || [];
+    const list = (backupKeys || []).filter(b => critical.includes(b.key));
+    el.innerHTML = `
+      <p class="label-muted">バックアップ対象キー（主要5件）</p>
+      <ul>${list.map(b => {
+        const status = !b.exists ? '未保存' : (b.parseOk ? 'OK' : '読込エラー');
+        return `<li><code>${esc(b.key)}</code> — ${esc(status)}</li>`;
+      }).join('')}</ul>`;
+  }
+
+  function renderDiagnosticLevels(levels) {
+    const el = document.getElementById('data-diagnostics-levels');
+    if (!el || !levels) return;
+    const config = [
+      { key: 'ok', label: '正常', cls: 'ok' },
+      { key: 'caution', label: '注意', cls: 'caution' },
+      { key: 'review', label: '要確認', cls: 'review' },
+      { key: 'critical', label: '重大', cls: 'critical' }
+    ];
+    el.innerHTML = config.map(c => {
+      const items = levels[c.key] || [];
+      if (!items.length) return '';
+      return `
+        <div class="data-diagnostics-level data-diagnostics-level-${c.cls}">
+          <h4>${esc(c.label)}：</h4>
+          <ul>${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>
+        </div>`;
+    }).join('');
+  }
+
+  function renderDataDiagnosticsSummary() {
+    const usage = Storage.getLocalStorageUsage();
+    const usageEl = document.getElementById('data-storage-usage');
+    if (usageEl) usageEl.textContent = '保存データ目安：' + (usage.label || '—');
+
+    const settings = Storage.getSettings();
+    const diagEl = document.getElementById('data-last-diagnostic');
+    if (diagEl) {
+      diagEl.textContent = '最終診断日時：' + formatDiagnosticDate(settings.lastDiagnosticAt);
+    }
+
+    if (lastDiagnosticResult) {
+      renderDiagnosticCounts(lastDiagnosticResult.counts);
+      renderDiagnosticBackupKeys(lastDiagnosticResult.backupKeys);
+      renderDiagnosticLevels(lastDiagnosticResult.levels);
+      const resultWrap = document.getElementById('data-diagnostics-result');
+      if (resultWrap) resultWrap.classList.remove('hidden');
+      const copyBtn = document.getElementById('btn-copy-diagnostics');
+      if (copyBtn) copyBtn.disabled = false;
+    }
+  }
+
+  function runDataDiagnosticsUI() {
+    lastDiagnosticResult = Storage.runDataDiagnostics();
+    renderDataDiagnosticsSummary();
+  }
+
+  function copyDiagnosticReport() {
+    if (!lastDiagnosticResult) {
+      alert('先にデータ診断を実行してください');
+      return;
+    }
+    const text = Storage.buildDiagnosticReportText(lastDiagnosticResult);
+    copyText(text).then(() => {
+      alert('診断結果をコピーしました');
+    }).catch(() => alert('コピーに失敗しました'));
+  }
+
+  function runSafeFormatCorrectionUI() {
+    const ok = confirm(
+      '安全な形式補正を実行します。\n\n' +
+      '実行前に必ずバックアップしてください。\n' +
+      '削除は行わず、足りない配列や項目だけを補います。\n\n続行しますか？'
+    );
+    if (!ok) return;
+    const result = Storage.runSafeFormatCorrection();
+    alert(`補正完了：${result.total}件の項目を補正しました（タスク${result.dailyTasks} / 営業先${result.leads} / 需要${result.pickups}）`);
+    runDataDiagnosticsUI();
+    refreshAllViews();
+  }
+
   function renderDataManagement() {
     renderBackupStatus();
     const summary = DataBackup.getCurrentSummary();
@@ -2162,6 +2291,7 @@
       listEl.innerHTML = buildDataSummaryItems(summary)
         .map(t => '<li>' + esc(t) + '</li>').join('');
     }
+    renderDataDiagnosticsSummary();
   }
 
   function hideImportPreview() {
@@ -2331,6 +2461,13 @@
     if (createTestBtn) createTestBtn.addEventListener('click', createBudilTestData);
     const deleteTestBtn = document.getElementById('btn-delete-test-data');
     if (deleteTestBtn) deleteTestBtn.addEventListener('click', deleteBudilTestData);
+
+    const runDiagBtn = document.getElementById('btn-run-diagnostics');
+    if (runDiagBtn) runDiagBtn.addEventListener('click', runDataDiagnosticsUI);
+    const copyDiagBtn = document.getElementById('btn-copy-diagnostics');
+    if (copyDiagBtn) copyDiagBtn.addEventListener('click', copyDiagnosticReport);
+    const safeNormBtn = document.getElementById('btn-safe-normalize');
+    if (safeNormBtn) safeNormBtn.addEventListener('click', runSafeFormatCorrectionUI);
 
     renderDataManagement();
   }
@@ -4889,17 +5026,25 @@
   }
 
   function renderDemandPickup() {
-    renderPickupTodaySummary();
-    renderPickupDecisionSections();
-    renderPickupPerformanceSections();
-    renderPickupInsightsSections();
-    renderPickupMorningTop3();
-    renderPickupUsedToday();
-    renderPickupBulkPreview();
-    renderPickupContentPanel();
-    renderPickupExecutionManagement();
-    renderPickupCandidates();
-    renderPickupSavedList();
+    try {
+      safeRenderSection(null, () => renderPickupTodaySummary(), '需要番頭サマリー');
+      safeRenderSection('pickup-decision-list', () => renderPickupDecisionSections(), '施策判断');
+      safeRenderSection('pickup-performance-list', () => renderPickupPerformanceSections(), '施策成果');
+      safeRenderSection(null, () => renderPickupInsightsSections(), '効果ふり返り');
+      safeRenderSection(null, () => renderPickupMorningTop3(), '需要朝トップ3');
+      safeRenderSection(null, () => renderPickupUsedToday(), '需要今日採用');
+      safeRenderSection(null, () => renderPickupBulkPreview(), '一括取り込み');
+      safeRenderSection(null, () => renderPickupContentPanel(), '文案パネル');
+      safeRenderSection(null, () => renderPickupExecutionManagement(), '実行管理');
+      safeRenderSection(null, () => renderPickupCandidates(), '候補');
+      safeRenderSection('pickup-saved-list', () => renderPickupSavedList(), '保存済みリスト');
+    } catch (err) {
+      console.error('[Budil] render error: 需要番頭', err);
+      const el = document.getElementById('pickup-saved-list');
+      if (el) {
+        el.innerHTML = '<p class="section-render-error">このセクションの表示中にエラーが発生しました。バックアップ後、データ診断を実行してください。</p>';
+      }
+    }
   }
 
   function hasPickupTestData() {
@@ -6370,12 +6515,20 @@
   }
 
   function renderRevenueView() {
-    fillRevenueSelects();
-    const leadEl = document.getElementById('revenue-lead');
-    fillRevenueLeadSelect(leadEl ? leadEl.value : '');
-    toggleRevenueLeadOptions();
-    renderRevenueSummaryPanel();
-    renderRevenueList();
+    try {
+      fillRevenueSelects();
+      const leadEl = document.getElementById('revenue-lead');
+      fillRevenueLeadSelect(leadEl ? leadEl.value : '');
+      toggleRevenueLeadOptions();
+      safeRenderSection('revenue-summary', () => renderRevenueSummaryPanel(), '売上サマリー');
+      safeRenderSection('revenue-tbody', () => renderRevenueList(), '売上一覧');
+    } catch (err) {
+      console.error('[Budil] render error: 売上番頭', err);
+      const el = document.getElementById('revenue-tbody');
+      if (el) {
+        el.innerHTML = '<p class="section-render-error">このセクションの表示中にエラーが発生しました。バックアップ後、データ診断を実行してください。</p>';
+      }
+    }
   }
 
   function handleRevenueSubmit(e) {

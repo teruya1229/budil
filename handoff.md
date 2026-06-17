@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v3.1 公開済み（実運用安定化・データ診断）
 - Budil v3.0 公開済み（経営番頭ホーム統合）
 - Budil v2.9 公開済み（施策判断・集中先スコアMVP）
 - Budil v2.8 公開済み（施策成果・売上連携MVP）

@@ -3,6 +3,8 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
+  BUDIL_VERSION: 'v3.1',
+
   KEYS: {
     LEADS: 'budil_leads',
     DEMAND_NOTES: 'budil_demandNotes',
@@ -147,7 +149,8 @@ const Storage = {
   },
 
   getLeads() {
-    return this.get(this.KEYS.LEADS, []);
+    const raw = this.get(this.KEYS.LEADS, []);
+    return Array.isArray(raw) ? raw : [];
   },
 
   saveLeads(list) {
@@ -312,7 +315,8 @@ const Storage = {
   },
 
   getRevenueRecords() {
-    return this.get(this.KEYS.REVENUE_RECORDS, []);
+    const raw = this.get(this.KEYS.REVENUE_RECORDS, []);
+    return Array.isArray(raw) ? raw : [];
   },
 
   saveRevenueRecords(list) {
@@ -464,7 +468,8 @@ const Storage = {
   },
 
   getDemandPickups() {
-    return this.get(this.KEYS.DEMAND_PICKUPS, []);
+    const raw = this.get(this.KEYS.DEMAND_PICKUPS, []);
+    return Array.isArray(raw) ? raw : [];
   },
 
   saveDemandPickups(list) {
@@ -493,6 +498,431 @@ const Storage = {
     list[idx] = { ...list[idx], ...data, updatedAt: new Date().toISOString() };
     this.saveDemandPickups(list);
     return list[idx];
+  },
+
+  CRITICAL_BACKUP_KEYS: [
+    'budil_leads',
+    'budil_revenue_records',
+    'budil_revenue_settings',
+    'budil_daily_action_tasks',
+    'budil_demand_pickups'
+  ],
+
+  isValidDateStr(str) {
+    if (!str || typeof str !== 'string') return false;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
+    const d = new Date(str + 'T12:00:00');
+    return !Number.isNaN(d.getTime());
+  },
+
+  getLocalStorageUsage() {
+    let bytes = 0;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        const val = localStorage.getItem(key);
+        bytes += (key ? key.length : 0) + (val ? val.length : 0);
+      }
+    } catch {
+      return { bytes: 0, label: '—' };
+    }
+    const kb = Math.round(bytes / 1024);
+    return { bytes, label: kb + 'KB' };
+  },
+
+  _readRawKey(key) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw === null) return { exists: false, raw: null, parsed: null, parseOk: true };
+      const parsed = JSON.parse(raw);
+      return { exists: true, raw, parsed, parseOk: true };
+    } catch (e) {
+      return { exists: true, raw: localStorage.getItem(key), parsed: null, parseOk: false, error: e.message };
+    }
+  },
+
+  runDataDiagnostics() {
+    const ranAt = new Date().toISOString();
+    const levels = { ok: [], caution: [], review: [], critical: [] };
+    const counts = {
+      leads: 0,
+      revenue: 0,
+      dailyTasks: 0,
+      pickups: 0,
+      activityLogs: 0,
+      performanceEntered: 0,
+      dailyChecks: 0
+    };
+    const keyStatus = [];
+    const backupKeys = [];
+    const usage = this.getLocalStorageUsage();
+
+    const add = (level, msg) => {
+      if (levels[level]) levels[level].push(msg);
+    };
+
+    const backupList = (typeof DataBackup !== 'undefined' && DataBackup.BACKUP_KEYS)
+      ? DataBackup.BACKUP_KEYS
+      : this.CRITICAL_BACKUP_KEYS;
+
+    backupList.forEach(key => {
+      const info = this._readRawKey(key);
+      keyStatus.push({ key, exists: info.exists, parseOk: info.parseOk });
+      backupKeys.push({
+        key,
+        exists: info.exists,
+        inBackupList: true,
+        parseOk: info.parseOk
+      });
+      if (!info.parseOk) {
+        add('critical', `読み込みできないlocalStorageデータ: ${key}`);
+      }
+    });
+
+    this.CRITICAL_BACKUP_KEYS.forEach(key => {
+      if (!backupKeys.some(b => b.key === key)) {
+        const info = this._readRawKey(key);
+        backupKeys.push({ key, exists: info.exists, inBackupList: backupList.includes(key), parseOk: info.parseOk });
+      }
+    });
+
+    const missingCritical = this.CRITICAL_BACKUP_KEYS.filter(k => !backupList.includes(k));
+    if (missingCritical.length) {
+      add('review', 'バックアップ対象に不足キー: ' + missingCritical.join(', '));
+    } else {
+      add('ok', 'バックアップ対象の主要キーはすべて定義済み');
+    }
+
+    const leadIds = new Set();
+    const leadsRaw = this._readRawKey(this.KEYS.LEADS);
+    let leads = [];
+    if (!leadsRaw.parseOk) {
+      add('critical', '営業先データ（budil_leads）を読み込めません');
+    } else if (leadsRaw.exists) {
+      leads = Array.isArray(leadsRaw.parsed) ? leadsRaw.parsed : [];
+      if (!Array.isArray(leadsRaw.parsed)) add('review', '営業先データが配列ではありません');
+      counts.leads = leads.length;
+      add('ok', `営業先 ${counts.leads}件`);
+
+      const VALID_SALES = typeof SalesBrain !== 'undefined' ? SalesBrain.SALES_STATUSES : [];
+      const VALID_LEGACY = ['未接触', 'アプローチ中', '商談中', '成約', '見送り', 'NG'];
+      const VALID_PRIORITY = ['A', 'B', 'C'];
+      let noId = 0; let noName = 0; let dupId = 0; let badLogs = 0;
+      let badNextDate = 0; let badSalesStatus = 0; let badLegacyStatus = 0; let badPriority = 0;
+
+      leads.forEach(lead => {
+        if (!lead || typeof lead !== 'object') return;
+        if (!lead.id) noId++;
+        else if (leadIds.has(lead.id)) dupId++;
+        else leadIds.add(lead.id);
+        if (!(lead.company || '').trim()) noName++;
+        if (lead.activityLogs != null && !Array.isArray(lead.activityLogs)) badLogs++;
+        else if (Array.isArray(lead.activityLogs)) counts.activityLogs += lead.activityLogs.length;
+        const nd = lead.nextActionDate || lead.nextContact;
+        if (nd && !this.isValidDateStr(nd)) badNextDate++;
+        if (lead.salesStatus && VALID_SALES.length && !VALID_SALES.includes(lead.salesStatus)) badSalesStatus++;
+        if (lead.status && !VALID_LEGACY.includes(lead.status)) badLegacyStatus++;
+        if (lead.priority && !VALID_PRIORITY.includes(lead.priority)) badPriority++;
+      });
+
+      if (noId) add('review', `IDなしの営業先 ${noId}件`);
+      if (noName) add('review', `名前なしの営業先 ${noName}件`);
+      if (dupId) add('review', `重複IDの営業先 ${dupId}件`);
+      if (badLogs) add('review', `activityLogsが配列でない営業先 ${badLogs}件`);
+      if (badNextDate) add('review', `nextActionDate形式不正 ${badNextDate}件`);
+      if (badSalesStatus) add('caution', `salesStatusが想定外 ${badSalesStatus}件`);
+      if (badLegacyStatus) add('caution', `statusが想定外 ${badLegacyStatus}件`);
+      if (badPriority) add('caution', `priorityが想定外 ${badPriority}件`);
+    } else {
+      add('ok', '営業先 0件');
+    }
+
+    const revRaw = this._readRawKey(this.KEYS.REVENUE_RECORDS);
+    let revenues = [];
+    if (!revRaw.parseOk) {
+      add('critical', '売上データ（budil_revenue_records）を読み込めません');
+    } else if (revRaw.exists) {
+      revenues = Array.isArray(revRaw.parsed) ? revRaw.parsed : [];
+      if (!Array.isArray(revRaw.parsed)) add('review', '売上データが配列ではありません');
+      counts.revenue = revenues.length;
+      add('ok', `売上 ${counts.revenue}件`);
+
+      const revIds = new Set(revenues.filter(r => r && r.id).map(r => r.id));
+      let noId = 0; let badAmount = 0; let noDate = 0; let badLeadRef = 0;
+      let paymentConcern = 0; let unlinked = 0;
+
+      revenues.forEach(r => {
+        if (!r || typeof r !== 'object') return;
+        if (!r.id) noId++;
+        if (r.amount != null && typeof r.amount !== 'number') badAmount++;
+        if (!r.workDate) noDate++;
+        const lid = r.leadId;
+        if (lid && !leadIds.has(lid)) badLeadRef++;
+        if (!lid) unlinked++;
+        if (r.paymentConcern === true) paymentConcern++;
+      });
+
+      if (noId) add('review', `IDなしの売上 ${noId}件`);
+      if (badAmount) add('review', `売上金額が数値でない ${badAmount}件`);
+      if (noDate) add('caution', `日付なしの売上 ${noDate}件`);
+      if (badLeadRef) add('review', `存在しない営業先に紐付いた売上 ${badLeadRef}件`);
+      if (paymentConcern) add('caution', `入金注意（paymentConcern） ${paymentConcern}件`);
+      if (unlinked) add('caution', `未紐付け売上 ${unlinked}件`);
+    } else {
+      add('ok', '売上 0件');
+    }
+
+    const tasksRaw = this._readRawKey(this.KEYS.DAILY_ACTION_TASKS);
+    if (!tasksRaw.parseOk) {
+      add('critical', '今日やること（budil_daily_action_tasks）を読み込めません');
+    } else if (tasksRaw.exists) {
+      const data = tasksRaw.parsed;
+      if (Array.isArray(data)) {
+        counts.dailyTasks = data.length;
+        add('ok', `今日やること（旧形式配列） ${counts.dailyTasks}件`);
+        add('caution', 'budil_daily_action_tasks が旧形式配列です（読み込みは継続）');
+      } else if (data && typeof data === 'object') {
+        const states = Array.isArray(data.states) ? data.states : null;
+        const manual = Array.isArray(data.manualTasks) ? data.manualTasks : null;
+        const checks = data.dailyChecks && typeof data.dailyChecks === 'object' ? data.dailyChecks : null;
+        if (!states) add('review', 'daily_action_tasks.states が配列ではありません');
+        if (!manual) add('review', 'daily_action_tasks.manualTasks が配列ではありません');
+        if (!checks) add('caution', 'dailyChecks が未設定です');
+        const manualList = manual || [];
+        const stateList = states || [];
+        counts.dailyTasks = manualList.length + stateList.length;
+        counts.dailyChecks = checks ? Object.keys(checks).length : 0;
+        add('ok', `今日やること 手動${manualList.length}件 / 状態${stateList.length}件`);
+        if (counts.dailyChecks) add('ok', `dailyChecks ${counts.dailyChecks}件`);
+
+        let noManualId = 0; let badDue = 0; let doneCount = 0; let snoozedCount = 0;
+        manualList.forEach(t => {
+          if (!t || typeof t !== 'object') return;
+          if (!t.id) noManualId++;
+          if (t.dueDate && !this.isValidDateStr(t.dueDate)) badDue++;
+          if (t.status === 'done') doneCount++;
+          if (t.status === 'snoozed') snoozedCount++;
+        });
+        stateList.forEach(s => {
+          if (s && s.status === 'done') doneCount++;
+          if (s && s.status === 'snoozed') snoozedCount++;
+        });
+        if (noManualId) add('review', `手動タスクIDなし ${noManualId}件`);
+        if (badDue) add('review', `dueDate形式不正 ${badDue}件`);
+        if (doneCount) add('ok', `完了済みタスク ${doneCount}件`);
+        if (snoozedCount) add('ok', `明日に回し/後回し ${snoozedCount}件`);
+      } else {
+        add('review', 'budil_daily_action_tasks の形式が不明です');
+      }
+    } else {
+      add('ok', '今日やること 0件');
+    }
+
+    const pickupRaw = this._readRawKey(this.KEYS.DEMAND_PICKUPS);
+    let pickups = [];
+    const revIdSet = new Set(revenues.filter(r => r && r.id).map(r => r.id));
+    const VALID_PICKUP_STATUS = ['open', 'used', 'ignored', 'archived'];
+    if (!pickupRaw.parseOk) {
+      add('critical', '需要ピックアップ（budil_demand_pickups）を読み込めません');
+    } else if (pickupRaw.exists) {
+      pickups = Array.isArray(pickupRaw.parsed) ? pickupRaw.parsed : [];
+      if (!Array.isArray(pickupRaw.parsed)) add('review', '需要ピックアップが配列ではありません');
+      counts.pickups = pickups.length;
+      add('ok', `需要ピックアップ ${counts.pickups}件`);
+
+      let noId = 0; let noTopic = 0; let badScore = 0; let badStatus = 0;
+      let hasOutputs = 0; let noOutputs = 0; let hasExec = 0; let noExec = 0;
+      let hasMetrics = 0; let badLeadRef = 0; let badRevRef = 0; let badSched = 0;
+      let perfEntered = 0; let perfMissing = 0;
+
+      pickups.forEach(raw => {
+        if (!raw || typeof raw !== 'object') return;
+        if (!raw.id) noId++;
+        if (!(raw.topic || '').trim()) noTopic++;
+        if (raw.demandScore != null && typeof raw.demandScore !== 'number') badScore++;
+        if (raw.status && !VALID_PICKUP_STATUS.includes(raw.status)) badStatus++;
+        if (raw.generatedOutputs && typeof raw.generatedOutputs === 'object') hasOutputs++;
+        else noOutputs++;
+        if (raw.executionStatus && typeof raw.executionStatus === 'object') hasExec++;
+        else noExec++;
+
+        const exec = typeof DemandBrain !== 'undefined'
+          ? DemandBrain.normalizeExecutionStatus(raw)
+          : (raw.executionStatus || {});
+        const types = typeof DemandBrain !== 'undefined' ? DemandBrain.EXECUTION_TYPES : Object.keys(exec);
+
+        types.forEach(type => {
+          const item = exec[type] || {};
+          if (item.metrics && typeof item.metrics === 'object' && Object.keys(item.metrics).length) hasMetrics++;
+          const sched = item.scheduledDate;
+          if (sched && !this.isValidDateStr(sched)) badSched++;
+          if (typeof DemandBrain !== 'undefined') {
+            const done = DemandBrain.isExecutionDone(type, item.status);
+            const hasInput = DemandBrain.hasPerformanceInput(item);
+            if (done && hasInput) perfEntered++;
+            else if (done && !hasInput) perfMissing++;
+          }
+          (item.relatedLeadIds || []).forEach(lid => {
+            if (lid && !leadIds.has(lid)) badLeadRef++;
+          });
+          (item.relatedRevenueIds || []).forEach(rid => {
+            if (rid && !revIdSet.has(rid)) badRevRef++;
+          });
+        });
+      });
+
+      counts.performanceEntered = perfEntered;
+      if (noId) add('review', `IDなしの需要ピックアップ ${noId}件`);
+      if (noTopic) add('review', `topicなしの需要ピックアップ ${noTopic}件`);
+      if (badScore) add('review', `demandScoreが数値でない ${badScore}件`);
+      if (badStatus) add('caution', `statusが想定外 ${badStatus}件`);
+      if (hasOutputs) add('ok', `generatedOutputsあり ${hasOutputs}件`);
+      if (noOutputs) add('caution', `generatedOutputsなし ${noOutputs}件`);
+      if (hasExec) add('ok', `executionStatusあり ${hasExec}件`);
+      if (noExec) add('caution', `executionStatusなし ${noExec}件`);
+      if (hasMetrics) add('ok', `metrics入力あり ${hasMetrics}件`);
+      if (badLeadRef) add('review', `存在しない営業先へのrelatedLeadIds ${badLeadRef}件`);
+      if (badRevRef) add('review', `存在しない売上へのrelatedRevenueIds ${badRevRef}件`);
+      if (badSched) add('review', `scheduledDate形式不正 ${badSched}件`);
+      if (perfEntered) add('ok', `成果入力済み施策 ${perfEntered}件`);
+      if (perfMissing) add('caution', `成果未入力の施策 ${perfMissing}件`);
+    } else {
+      add('ok', '需要ピックアップ 0件');
+    }
+
+    if (!levels.critical.length) {
+      add('critical', '読み込みできないlocalStorageデータはありません');
+    }
+
+    const settings = this.getSettings();
+    settings.lastDiagnosticAt = ranAt;
+    this.saveSettings(settings);
+
+    return {
+      version: this.BUDIL_VERSION,
+      ranAt,
+      counts,
+      usage,
+      keyStatus,
+      backupKeys,
+      levels
+    };
+  },
+
+  buildDiagnosticReportText(result) {
+    if (!result) return '';
+    const lines = [];
+    lines.push('Budil データ診断レポート');
+    lines.push('バージョン: ' + (result.version || this.BUDIL_VERSION));
+    lines.push('診断日時: ' + (result.ranAt || '—'));
+    lines.push('保存データ目安: ' + (result.usage && result.usage.label ? result.usage.label : '—'));
+    lines.push('');
+    lines.push('【件数】');
+    const c = result.counts || {};
+    lines.push(`営業先: ${c.leads ?? '—'}件`);
+    lines.push(`売上: ${c.revenue ?? '—'}件`);
+    lines.push(`今日やること: ${c.dailyTasks ?? '—'}件`);
+    lines.push(`需要ピックアップ: ${c.pickups ?? '—'}件`);
+    lines.push(`活動履歴: ${c.activityLogs ?? '—'}件`);
+    lines.push(`成果入力済み: ${c.performanceEntered ?? '—'}件`);
+    lines.push(`dailyChecks: ${c.dailyChecks ?? '—'}件`);
+    lines.push('');
+    lines.push('【localStorageキー】');
+    (result.keyStatus || []).forEach(k => {
+      lines.push(`${k.key}: ${k.exists ? (k.parseOk ? 'OK' : '読込エラー') : '未保存'}`);
+    });
+    lines.push('');
+    ['ok', 'caution', 'review', 'critical'].forEach(level => {
+      const label = { ok: '正常', caution: '注意', review: '要確認', critical: '重大' }[level];
+      const items = (result.levels && result.levels[level]) || [];
+      if (!items.length) return;
+      lines.push(`【${label}】`);
+      items.forEach(item => lines.push('・' + item));
+      lines.push('');
+    });
+    return lines.join('\n').trim();
+  },
+
+  safeNormalizeDailyActionState() {
+    const raw = localStorage.getItem(this.KEYS.DAILY_ACTION_TASKS);
+    if (!raw) return { fixed: 0 };
+    let data;
+    try { data = JSON.parse(raw); } catch { return { fixed: 0, error: 'parse' }; }
+    if (Array.isArray(data)) return { fixed: 0, legacy: true };
+    if (!data || typeof data !== 'object') return { fixed: 0 };
+    let fixed = 0;
+    const store = { ...data };
+    if (!Array.isArray(store.states)) { store.states = []; fixed++; }
+    if (!Array.isArray(store.manualTasks)) { store.manualTasks = []; fixed++; }
+    if (!store.dailyChecks || typeof store.dailyChecks !== 'object') {
+      store.dailyChecks = {};
+      fixed++;
+    }
+    if (fixed) this.saveDailyActionTasksData(store);
+    return { fixed };
+  },
+
+  safeNormalizeLeads() {
+    const leads = this.getLeads();
+    if (!Array.isArray(leads)) return { fixed: 0 };
+    let fixed = 0;
+    const next = leads.map(l => {
+      if (!l || typeof l !== 'object') return l;
+      if (l.activityLogs != null && !Array.isArray(l.activityLogs)) {
+        fixed++;
+        return { ...l, activityLogs: [] };
+      }
+      return l;
+    });
+    if (fixed) this.saveLeads(next);
+    return { fixed };
+  },
+
+  safeNormalizeDemandPickups() {
+    const list = this.getDemandPickups();
+    if (!Array.isArray(list)) return { fixed: 0 };
+    let fixed = 0;
+    const next = list.map(raw => {
+      if (!raw || typeof raw !== 'object') return raw;
+      const item = { ...raw };
+      let changed = false;
+      if (!item.generatedOutputs || typeof item.generatedOutputs !== 'object') {
+        item.generatedOutputs = {};
+        changed = true;
+      }
+      if (!Array.isArray(item.executionLogs)) { item.executionLogs = []; changed = true; }
+      if (!Array.isArray(item.suggestedActions)) { item.suggestedActions = []; changed = true; }
+      if (!Array.isArray(item.relatedServices)) { item.relatedServices = []; changed = true; }
+      if (typeof DemandBrain !== 'undefined') {
+        const exec = DemandBrain.normalizeExecutionStatus(item);
+        DemandBrain.EXECUTION_TYPES.forEach(type => {
+          if (!exec[type].metrics || typeof exec[type].metrics !== 'object') {
+            exec[type].metrics = DemandBrain.normalizePerformanceMetrics(exec[type].metrics || {});
+            changed = true;
+          }
+        });
+        item.executionStatus = exec;
+      } else if (!item.executionStatus || typeof item.executionStatus !== 'object') {
+        item.executionStatus = {};
+        changed = true;
+      }
+      if (changed) fixed++;
+      return item;
+    });
+    if (fixed) this.saveDemandPickups(next);
+    return { fixed };
+  },
+
+  runSafeFormatCorrection() {
+    const r1 = this.safeNormalizeDailyActionState();
+    const r2 = this.safeNormalizeLeads();
+    const r3 = this.safeNormalizeDemandPickups();
+    return {
+      dailyTasks: r1.fixed || 0,
+      leads: r2.fixed || 0,
+      pickups: r3.fixed || 0,
+      total: (r1.fixed || 0) + (r2.fixed || 0) + (r3.fixed || 0)
+    };
   }
 };
 

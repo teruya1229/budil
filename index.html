@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v3.0</small>
+          <small>AI経営脳みそ v3.1</small>
         </div>
       </div>
       <nav class="nav">
@@ -46,7 +46,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v3.0</small>
+        <small>Budil v3.1</small>
       </div>
     </aside>
 
@@ -61,7 +61,7 @@
         <div id="executive-home" class="card card-wide card-executive-home">
           <div class="exec-home-header">
             <h2>経営番頭ホーム</h2>
-            <span class="exec-home-version">v3.0</span>
+            <span class="exec-home-version">v3.1</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <div id="exec-home-quick-actions" class="exec-home-quick-actions"></div>
@@ -1534,6 +1534,28 @@
           <ul id="data-summary-list" class="data-summary-list"></ul>
         </div>
 
+        <div class="card card-wide card-data-diagnostics">
+          <h2>データ診断</h2>
+          <p class="data-mgmt-desc">localStorageの状態を診断し、紐付け切れや形式の問題を確認できます。実機不具合の報告や原因調査に使えます。</p>
+          <p id="data-storage-usage" class="data-storage-usage">保存データ目安：—</p>
+          <p id="data-last-diagnostic" class="data-last-diagnostic">最終診断日時：—</p>
+          <div id="data-diagnostics-counts" class="data-diagnostics-counts"></div>
+          <div id="data-diagnostics-backup-keys" class="data-diagnostics-backup-keys"></div>
+          <div id="data-diagnostics-result" class="data-diagnostics-result hidden">
+            <h3 class="data-diagnostics-result-title">データ診断結果</h3>
+            <div id="data-diagnostics-levels" class="data-diagnostics-levels"></div>
+          </div>
+          <p class="notice notice-warning data-diagnostics-safe-notice" id="data-diagnostics-safe-notice">
+            実行前に必ずバックアップしてください。<br>
+            この補正は削除を行わず、足りない配列や項目だけを補います。
+          </p>
+          <div class="data-mgmt-actions">
+            <button type="button" id="btn-run-diagnostics" class="btn btn-primary">データ診断を実行</button>
+            <button type="button" id="btn-copy-diagnostics" class="btn btn-secondary" disabled>診断結果をコピー</button>
+            <button type="button" id="btn-safe-normalize" class="btn btn-secondary">安全な形式補正だけ実行</button>
+          </div>
+        </div>
+
         <div class="data-mgmt-grid">
           <div class="card">
             <h2>エクスポート（バックアップ）</h2>
@@ -1568,6 +1590,21 @@
             <button type="button" id="btn-create-test-data" class="btn btn-secondary">テストデータを作成</button>
             <button type="button" id="btn-delete-test-data" class="btn btn-secondary">テストデータを削除</button>
           </div>
+        </div>
+
+        <div class="card card-wide card-mvp-checklist">
+          <h2>v3.1 動作確認チェックリスト</h2>
+          <p class="data-mgmt-desc">実運用安定化・データ診断の確認項目です。</p>
+          <ul class="mvp-checklist">
+            <li>空データでホームが表示される</li>
+            <li>テストデータ作成後も診断できる</li>
+            <li>需要ピックアップ保存後も診断できる</li>
+            <li>売上紐付け後も診断できる</li>
+            <li>存在しない紐付けがあっても画面が落ちない</li>
+            <li>バックアップ対象キーが揃っている</li>
+            <li>診断結果をコピーできる</li>
+            <li>スマホで崩れない</li>
+          </ul>
         </div>
 
         <div class="card card-wide card-mvp-checklist">

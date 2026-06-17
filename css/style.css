@@ -4577,6 +4577,97 @@ body {
   margin-right: 0.5rem;
 }
 
+/* ── v3.1 データ診断 ── */
+.card-data-diagnostics {
+  border-color: #c7d2fe;
+}
+
+.data-storage-usage,
+.data-last-diagnostic {
+  font-size: 0.9rem;
+  margin: 0.35rem 0;
+}
+
+.data-diagnostics-counts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  margin: 0.75rem 0;
+}
+
+@media (min-width: 640px) {
+  .data-diagnostics-counts {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.data-diagnostics-count-item span {
+  display: block;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.data-diagnostics-count-item strong {
+  font-size: 0.95rem;
+}
+
+.data-diagnostics-backup-keys {
+  margin: 0.5rem 0 0.75rem;
+  font-size: 0.8rem;
+  color: #4b5563;
+}
+
+.data-diagnostics-backup-keys ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.data-diagnostics-result {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 0;
+}
+
+.data-diagnostics-result-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.data-diagnostics-level {
+  margin-bottom: 0.65rem;
+}
+
+.data-diagnostics-level h4 {
+  margin: 0 0 0.25rem;
+  font-size: 0.85rem;
+}
+
+.data-diagnostics-level-ok h4 { color: #059669; }
+.data-diagnostics-level-caution h4 { color: #d97706; }
+.data-diagnostics-level-review h4 { color: #2563eb; }
+.data-diagnostics-level-critical h4 { color: #dc2626; }
+
+.data-diagnostics-level ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.section-render-error {
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
 /* ── v3.0 経営番頭ホーム ── */
 .card-executive-home {
   border: 2px solid var(--primary, #2563eb);

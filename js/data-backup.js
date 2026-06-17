@@ -2,7 +2,7 @@
  * Budil v2.2 - データバックアップ・復元
  */
 const DataBackup = {
-  VERSION: '2.2',
+  VERSION: '3.1',
 
   BACKUP_KEYS: [
     'budil_leads',
