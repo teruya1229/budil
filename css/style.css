@@ -3577,3 +3577,105 @@ body {
   background: rgba(100, 116, 139, 0.2);
   color: var(--text-muted);
 }
+
+/* v2.3 需要から投稿・広告文案生成 */
+.card-pickup-content {
+  border-color: rgba(168, 85, 247, 0.35);
+  background: rgba(168, 85, 247, 0.04);
+}
+
+.pickup-content-select-row {
+  margin-bottom: 12px;
+}
+
+.pickup-content-select-row label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.88rem;
+}
+
+.pickup-content-select-row select {
+  width: 100%;
+  max-width: 480px;
+}
+
+.pickup-content-gen-actions,
+.pickup-content-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 14px;
+}
+
+.pickup-content-quick-actions {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.25);
+}
+
+.pickup-content-outputs {
+  display: grid;
+  gap: 14px;
+}
+
+.pickup-content-selected {
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+}
+
+.pickup-content-updated {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: normal;
+}
+
+.pickup-content-block {
+  padding: 12px;
+  background: var(--bg-input);
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.pickup-content-block-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.pickup-content-block-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.pickup-content-block-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pickup-content-text {
+  width: 100%;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  resize: vertical;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 600px) {
+  .pickup-content-block-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pickup-content-gen-actions .btn,
+  .pickup-content-quick-actions .btn {
+    font-size: 0.78rem;
+    padding: 6px 8px;
+  }
+}

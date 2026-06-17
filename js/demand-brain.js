@@ -321,8 +321,266 @@ Budilの需要番頭に入力するため、今日の投稿・営業・広告ア
       memo: item.memo || '',
       status: item.status || 'open',
       isTest: !!item.isTest,
+      generatedOutputs: item.generatedOutputs || null,
       createdAt: item.createdAt || '',
       updatedAt: item.updatedAt || ''
+    };
+  },
+
+  CONTENT_SERVICE_LP: {
+    'エアコン通常': 'エアコンクリーニングLP',
+    'エアコン完全分解': '完全分解エアコンLP',
+    'お掃除機能付きエアコン': 'お掃除機能付きエアコンLP',
+    '洗濯機クリーニング': '洗濯機クリーニングLP',
+    'レンジフード': 'レンジフード清掃LP',
+    'キッチン': 'キッチン清掃LP',
+    '浴室': '浴室クリーニングLP',
+    '法人案件': '法人清掃LP',
+    'その他': 'BCサービス総合LP'
+  },
+
+  _pickupCtx(pickup) {
+    const p = this.normalizePickup(pickup);
+    const mainService = p.relatedServices[0] || '清掃サービス';
+    const subService = p.relatedServices[1] || '';
+    const serviceLabel = p.relatedServices.slice(0, 2).join('・') || mainService;
+    const combined = (p.topic + p.summary + serviceLabel + p.postTitle).toLowerCase();
+    const isAc = /エアコン|冷房|クーラー|カビ|ニオイ|臭い|湿気/.test(combined);
+    const isWasher = /洗濯|ドラム|槽/.test(combined);
+    const isKitchen = /レンジ|キッチン|油汚れ|換気/.test(combined);
+    const isBath = /浴室|風呂|水垢|カビ/.test(combined);
+    const isCorp = /法人|店舗|施設|管理会社/.test(combined);
+    let worryHook = `最近${p.topic}、気になりませんか？`;
+    if (isAc) worryHook = '最近エアコンのニオイ、気になりませんか？';
+    else if (isWasher) worryHook = '洗濯後のニオイ、気になりませんか？';
+    else if (isKitchen) worryHook = 'キッチンの油汚れ、後回しにしていませんか？';
+    else if (isBath) worryHook = '浴室のカビや水垢、気になりませんか？';
+    const evidenceLine = isAc
+      ? '分解中・汚水・洗浄後を見せる。内部のカビ・ホコリの実写で説得力を出す。'
+      : isWasher
+        ? '洗濯槽の裏側・排水口・洗浄後の比較を見せる。'
+        : '施工前後・汚れの実写・作業中の様子を見せる。';
+    const explainLine = p.summary || (
+      isAc ? '内部にカビ・ホコリが溜まっている可能性があります。沖縄の湿気が原因のことも多いです。'
+        : isWasher ? '洗濯槽の裏側にカビや汚れが溜まっている可能性があります。'
+          : `${p.topic}は放置すると再発しやすい状態です。`
+    );
+    return {
+      ...p,
+      mainService,
+      subService,
+      serviceLabel,
+      isAc,
+      isWasher,
+      isKitchen,
+      isBath,
+      isCorp,
+      worryHook,
+      evidenceLine,
+      explainLine
+    };
+  },
+
+  _buildHashtags(ctx) {
+    const tags = ['#沖縄南部', '#BCサービス', '#清掃'];
+    if (ctx.isAc) tags.push('#エアコンクリーニング', '#エアコンカビ', '#沖縄エアコン');
+    if (ctx.isWasher) tags.push('#洗濯機クリーニング', '#洗濯槽カビ');
+    if (ctx.isKitchen) tags.push('#レンジフード清掃', '#キッチン清掃');
+    if (ctx.isBath) tags.push('#浴室クリーニング', '#カビ対策');
+    if (ctx.topic) tags.push('#' + ctx.topic.replace(/[・\s]/g, ''));
+    return [...new Set(tags)].slice(0, 10).join(' ');
+  },
+
+  _recommendLp(ctx) {
+    const svc = ctx.mainService;
+    return this.CONTENT_SERVICE_LP[svc] || this.CONTENT_SERVICE_LP['その他'];
+  },
+
+  _recommendKeywords(ctx) {
+    const kw = [];
+    if (ctx.isAc) kw.push('エアコンクリーニング 沖縄', 'エアコン カビ 臭い', 'エアコン 完全分解 沖縄');
+    if (ctx.isWasher) kw.push('洗濯機クリーニング 沖縄', '洗濯槽 カビ 臭い');
+    if (ctx.isKitchen) kw.push('レンジフード 清掃 沖縄', 'キッチン 油汚れ 清掃');
+    if (ctx.isBath) kw.push('浴室クリーニング 沖縄', '浴室 カビ 除去');
+    if (ctx.isCorp) kw.push('法人 清掃 沖縄', '店舗 清掃 業者');
+    if (!kw.length) kw.push(ctx.mainService + ' 沖縄', ctx.topic + ' 対策');
+    return kw.slice(0, 8);
+  },
+
+  _excludeIntents(ctx) {
+    const ex = ['自分で掃除', '掃除機 購入', '求人', 'DIYのみ'];
+    if (ctx.isAc) ex.push('エアコン 修理', 'エアコン 購入');
+    if (ctx.isWasher) ex.push('洗濯機 修理', '洗濯機 購入');
+    return ex;
+  },
+
+  generateReelPlan(pickup) {
+    const ctx = this._pickupCtx(pickup);
+    const postHint = ctx.postTitle ? `\n（投稿案：${ctx.postTitle}）` : '';
+    return `【リール構成】
+尺：25〜30秒 / ストーリー型 / 実写証拠あり / 照屋アニメ解説キャラあり
+テロップは入れすぎず、吹き出し中心${postHint}
+
+0〜3秒：不安・違和感
+「${ctx.worryHook}」
+
+4〜10秒：原因提示
+${ctx.explainLine}
+
+11〜22秒：実写洗浄
+${ctx.evidenceLine}
+
+23〜28秒：安心・CTA
+気になる方はLINEで写真を送って相談できます。`;
+  },
+
+  generateInstagramCaption(pickup) {
+    const ctx = this._pickupCtx(pickup);
+    const title = `${ctx.topic}｜沖縄南部の${ctx.mainService}`;
+    const body = `沖縄南部は湿気の影響で、${ctx.topic}の相談が増えやすい時期です。
+
+${ctx.explainLine}
+
+${ctx.serviceLabel}は、見えない部分の汚れが原因のこともあります。不安なときは、まず状態を確認するのがおすすめです。
+
+${ctx.postTitle ? '今回のテーマ：' + ctx.postTitle + '\n\n' : ''}押し売りはしません。気になる点があれば、写真を見ながら一緒に整理できます。`;
+    const cta = '気になることがあれば、LINEで写真を送ってもらえれば確認できます。お気軽にご相談ください。';
+    const hashtags = this._buildHashtags(ctx);
+    const fullText = `${title}\n\n${body}\n\n${cta}\n\n${hashtags}`;
+    return { title, body, cta, hashtags, fullText };
+  },
+
+  generateLineMessage(pickup) {
+    const ctx = this._pickupCtx(pickup);
+    const seasonNote = ctx.isAc || /湿気|梅雨|カビ/.test(ctx.topic + ctx.summary)
+      ? '湿気が多い時期は、エアコン内部のカビやニオイの相談が増えます。'
+      : `${ctx.topic}のご相談が増えています。`;
+    const symptomLines = ctx.isAc
+      ? '「最近ニオイが気になる」\n「黒い点が見える」'
+      : ctx.isWasher
+        ? '「洗濯後にニオイがする」\n「黒いカスが出る」'
+        : `「${ctx.topic}が気になる」\n「様子を見てほしい」`;
+    return `こんにちは、BCサービスです。
+${seasonNote}
+
+${symptomLines}
+などあれば、写真を送ってもらえれば確認できます。
+
+気になる方はお気軽にLINEでご相談ください。`;
+  },
+
+  generateGbpPost(pickup) {
+    const ctx = this._pickupCtx(pickup);
+    return `【沖縄南部】${ctx.topic}でお困りの方へ
+
+${ctx.summary || ctx.explainLine}
+
+BCサービスでは、${ctx.serviceLabel}のご相談を沖縄南部を中心に承っています。見えない汚れやニオイの原因は、写真を見るだけでも整理しやすくなります。
+
+まずは状態確認から。施工のご相談・お見積りもお気軽にどうぞ。
+
+${ctx.postTitle ? '今月の注目：' + ctx.postTitle : ''}`;
+  },
+
+  generateAdCopy(pickup) {
+    const ctx = this._pickupCtx(pickup);
+    const lp = this._recommendLp(ctx);
+    const headlines = [];
+    if (ctx.isAc) {
+      headlines.push(
+        'エアコンクリーニング沖縄南部',
+        'エアコンカビ・臭い対策',
+        '完全分解エアコン清掃',
+        '沖縄の湿気対策エアコン掃除',
+        'エアコン内部洗浄のご相談'
+      );
+    }
+    if (ctx.isWasher) {
+      headlines.push('洗濯機クリーニング沖縄', '洗濯槽カビ臭い対策', '縦型洗濯機の内部清掃');
+    }
+    headlines.push(
+      ctx.mainService + 'のご相談',
+      '沖縄南部の清掃はBCサービス',
+      ctx.topic + 'の相談受付中',
+      '写真で状態確認OK',
+      'LINE相談歓迎'
+    );
+    const descriptions = [
+      `${ctx.summary || ctx.explainLine} 沖縄南部対応。まずは写真で状態確認から。`,
+      `${ctx.serviceLabel}のご相談承ります。押し売りなし。LINEで気軽に相談できます。`,
+      ctx.adTitle
+        ? `${ctx.adTitle}。${lp}で詳細をご確認ください。`
+        : `${lp}からサービス内容・料金の目安をご確認いただけます。`
+    ];
+    const uniqueHeadlines = [...new Set(headlines)].slice(0, 10);
+    return {
+      headlines: uniqueHeadlines,
+      descriptions: descriptions.slice(0, 5),
+      recommendedLp: lp,
+      keywords: this._recommendKeywords(ctx),
+      excludeIntents: this._excludeIntents(ctx),
+      fullText: [
+        '【広告見出し案】',
+        uniqueHeadlines.map((h, i) => (i + 1) + '. ' + h).join('\n'),
+        '',
+        '【説明文案】',
+        descriptions.map((d, i) => (i + 1) + '. ' + d).join('\n'),
+        '',
+        '【推奨LP】' + lp,
+        '【推奨キーワード】' + this._recommendKeywords(ctx).join(' / '),
+        '【除外した方がいい検索意図】' + this._excludeIntents(ctx).join(' / ')
+      ].join('\n')
+    };
+  },
+
+  generateAllOutputs(pickup) {
+    const instagram = this.generateInstagramCaption(pickup);
+    const ad = this.generateAdCopy(pickup);
+    return {
+      reel: this.generateReelPlan(pickup),
+      instagram: instagram.fullText,
+      line: this.generateLineMessage(pickup),
+      gbp: this.generateGbpPost(pickup),
+      ad: ad.fullText,
+      updatedAt: new Date().toISOString()
+    };
+  },
+
+  formatGeneratedOutputsForSave(outputs) {
+    if (!outputs) return null;
+    return {
+      reel: outputs.reel || '',
+      instagram: outputs.instagram || '',
+      line: outputs.line || '',
+      gbp: outputs.gbp || '',
+      ad: outputs.ad || '',
+      updatedAt: outputs.updatedAt || new Date().toISOString()
+    };
+  },
+
+  buildContentTaskDedupeKey(date, topic, contentType) {
+    return [date, topic, 'content', contentType].join('|');
+  },
+
+  buildContentDailyTask(pickup, contentType) {
+    const p = this.normalizePickup(pickup);
+    const reason = `今日の需要ピックアップ「${p.topic}」から`;
+    const map = {
+      reel: { title: `リール投稿：${p.topic}`, rawTitle: p.topic },
+      instagram: { title: `投稿する：${p.topic}`, rawTitle: p.topic },
+      line: { title: `LINE配信：${p.topic}`, rawTitle: p.topic },
+      gbp: { title: `GBP投稿：${p.topic}`, rawTitle: p.topic },
+      ad: { title: `広告確認：${p.topic}`, rawTitle: p.topic }
+    };
+    const item = map[contentType];
+    if (!item) return null;
+    return {
+      title: item.title,
+      reason,
+      priority: '中',
+      contentType,
+      rawTitle: item.rawTitle,
+      topic: p.topic
     };
   },
 

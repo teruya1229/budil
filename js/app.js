@@ -10,6 +10,7 @@
   let currentSalesTab = 'email';
   let currentSalesMessages = null;
   let pickupBulkPreview = [];
+  let selectedPickupContentId = null;
 
   const SALES_TAB_FIELDS = { email: 'msg-email', form: 'msg-form', dm: 'msg-dm', phone: 'msg-phone' };
   const SALES_TAB_LOG = { email: 'メール送信', form: 'フォーム送信', dm: 'DM', phone: '電話' };
@@ -2571,6 +2572,201 @@
     renderMorningReport();
   }
 
+  function pickupContentButtonsHtml(id) {
+    if (!id) return '';
+    const types = [
+      ['reel', 'リール案を作る'],
+      ['instagram', '投稿文を作る'],
+      ['line', 'LINE文を作る'],
+      ['gbp', 'GBP投稿を作る'],
+      ['ad', '広告文を作る'],
+      ['all', '全部作る']
+    ];
+    return `<div class="pickup-content-quick-actions">
+      ${types.map(([type, label]) =>
+        `<button type="button" class="btn btn-sm btn-secondary" data-pickup-gen-card="${esc(id)}" data-gen-type="${type}">${label}</button>`
+      ).join('')}
+    </div>`;
+  }
+
+  function getPickupRawById(id) {
+    return Storage.getDemandPickups().find(p => p.id === id) || null;
+  }
+
+  function savePickupGeneratedOutputs(id, outputs) {
+    Storage.updateDemandPickup(id, {
+      generatedOutputs: DemandBrain.formatGeneratedOutputsForSave(outputs)
+    });
+  }
+
+  function generatePickupContentForId(id, type) {
+    const pickup = getPickupRawById(id);
+    if (!pickup) {
+      alert('需要ピックアップが見つかりません。');
+      return;
+    }
+    const prev = pickup.generatedOutputs || {};
+    let outputs = { ...prev };
+    if (type === 'all') {
+      outputs = DemandBrain.generateAllOutputs(pickup);
+    } else if (type === 'reel') {
+      outputs.reel = DemandBrain.generateReelPlan(pickup);
+      outputs.updatedAt = new Date().toISOString();
+    } else if (type === 'instagram') {
+      outputs.instagram = DemandBrain.generateInstagramCaption(pickup).fullText;
+      outputs.updatedAt = new Date().toISOString();
+    } else if (type === 'line') {
+      outputs.line = DemandBrain.generateLineMessage(pickup);
+      outputs.updatedAt = new Date().toISOString();
+    } else if (type === 'gbp') {
+      outputs.gbp = DemandBrain.generateGbpPost(pickup);
+      outputs.updatedAt = new Date().toISOString();
+    } else if (type === 'ad') {
+      outputs.ad = DemandBrain.generateAdCopy(pickup).fullText;
+      outputs.updatedAt = new Date().toISOString();
+    }
+    savePickupGeneratedOutputs(id, outputs);
+    selectedPickupContentId = id;
+    const selectEl = document.getElementById('pickup-content-select');
+    if (selectEl) selectEl.value = id;
+    renderPickupContentPanel();
+    const panel = document.querySelector('.card-pickup-content');
+    if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function isPickupContentTaskDuplicate(date, topic, contentType) {
+    const key = DemandBrain.buildContentTaskDedupeKey(date, topic, contentType);
+    return Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === key);
+  }
+
+  function addPickupContentTask(id, contentType) {
+    const pickup = getPickupRawById(id);
+    if (!pickup) return;
+    const task = DemandBrain.buildContentDailyTask(pickup, contentType);
+    if (!task) return;
+    const date = TODAY();
+    const key = DemandBrain.buildContentTaskDedupeKey(date, task.topic, contentType);
+    if (isPickupContentTaskDuplicate(date, task.topic, contentType)) {
+      alert('すでに今日やることに追加済みです');
+      return;
+    }
+    Storage.addManualDailyTask({
+      title: task.title,
+      targetName: '—',
+      priority: task.priority,
+      action: task.reason,
+      memo: task.reason,
+      dueDate: date,
+      status: 'open',
+      reason: task.reason,
+      pickupDedupeKey: key,
+      pickupTopic: task.topic,
+      pickupActionType: 'content-' + contentType
+    });
+    renderDailyActionTasks();
+    renderMorningDailyTasksBrief();
+    renderMorningReport();
+    alert('今日やることに追加しました。');
+  }
+
+  function copyPickupContentText(text, label) {
+    if (!text) {
+      alert((label || '文案') + 'がまだ生成されていません。');
+      return;
+    }
+    copyText(text)
+      .then(() => alert((label || '文案') + 'をコピーしました。'))
+      .catch(() => alert('コピーに失敗しました。'));
+  }
+
+  function renderPickupContentSelect() {
+    const selectEl = document.getElementById('pickup-content-select');
+    if (!selectEl) return;
+    const today = TODAY();
+    const list = Storage.getDemandPickups()
+      .filter(p => p.date === today && p.status !== 'ignored' && p.status !== 'archived')
+      .map(p => DemandBrain.normalizePickup(p))
+      .sort((a, b) => b.demandScore - a.demandScore);
+    const current = selectedPickupContentId || selectEl.value;
+    selectEl.innerHTML = '<option value="">需要を選択してください</option>' +
+      list.map(p => `<option value="${esc(p.id)}"${p.id === current ? ' selected' : ''}>${esc(p.topic)}（${p.demandScore}点）</option>`).join('');
+    if (!current && list.length) {
+      selectedPickupContentId = list[0].id;
+      selectEl.value = list[0].id;
+    } else if (current) {
+      selectedPickupContentId = current;
+    }
+  }
+
+  function renderPickupContentOutputs() {
+    const el = document.getElementById('pickup-content-outputs');
+    if (!el) return;
+    const id = selectedPickupContentId || document.getElementById('pickup-content-select')?.value;
+    if (!id) {
+      el.innerHTML = '<p class="placeholder-text">需要を選んで「リール案を作る」などを押すと、ここに生成文案が表示されます。</p>';
+      return;
+    }
+    const pickup = getPickupRawById(id);
+    if (!pickup) {
+      el.innerHTML = '<p class="placeholder-text">需要ピックアップが見つかりません。</p>';
+      return;
+    }
+    const p = DemandBrain.normalizePickup(pickup);
+    const out = pickup.generatedOutputs || {};
+    const blocks = [
+      { key: 'reel', title: 'Instagramリール構成', copyLabel: 'リール案コピー', taskType: 'reel' },
+      { key: 'instagram', title: 'Instagram投稿文', copyLabel: '投稿文コピー', taskType: 'instagram' },
+      { key: 'line', title: 'LINE配信文', copyLabel: 'LINE文コピー', taskType: 'line' },
+      { key: 'gbp', title: 'Googleビジネスプロフィール投稿', copyLabel: 'GBP投稿コピー', taskType: 'gbp' },
+      { key: 'ad', title: 'Google広告文案', copyLabel: '広告文コピー', taskType: 'ad' }
+    ];
+    const hasAny = blocks.some(b => out[b.key]);
+    if (!hasAny) {
+      el.innerHTML = `<p class="pickup-content-selected">選択中：<strong>${esc(p.topic)}</strong></p>
+        <p class="placeholder-text">まだ生成文案がありません。上のボタンから作成してください。</p>`;
+      return;
+    }
+    el.innerHTML = `
+      <p class="pickup-content-selected">選択中：<strong>${esc(p.topic)}</strong>
+        ${out.updatedAt ? `<span class="pickup-content-updated">更新：${esc(new Date(out.updatedAt).toLocaleString('ja-JP'))}</span>` : ''}
+      </p>
+      ${blocks.filter(b => out[b.key]).map(b => `
+        <div class="pickup-content-block" data-content-key="${b.key}">
+          <div class="pickup-content-block-header">
+            <h3>${esc(b.title)}</h3>
+            <div class="pickup-content-block-actions">
+              <button type="button" class="btn btn-sm btn-secondary" data-copy-content="${b.key}">${esc(b.copyLabel)}</button>
+              <button type="button" class="btn btn-sm btn-primary" data-add-content-task="${b.taskType}">今日やることへ追加</button>
+            </div>
+          </div>
+          <textarea class="pickup-content-text" readonly rows="8">${esc(out[b.key])}</textarea>
+        </div>`).join('')}`;
+    el.querySelectorAll('[data-copy-content]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.copyContent;
+        const labels = { reel: 'リール案', instagram: '投稿文', line: 'LINE文', gbp: 'GBP投稿', ad: '広告文' };
+        copyPickupContentText(out[key], labels[key]);
+      });
+    });
+    el.querySelectorAll('[data-add-content-task]').forEach(btn => {
+      btn.addEventListener('click', () => addPickupContentTask(id, btn.dataset.addContentTask));
+    });
+  }
+
+  function renderPickupContentPanel() {
+    renderPickupContentSelect();
+    renderPickupContentOutputs();
+  }
+
+  function bindPickupContentGenActions(container) {
+    if (!container) return;
+    container.querySelectorAll('[data-pickup-gen-card]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        generatePickupContentForId(btn.dataset.pickupGenCard, btn.dataset.genType);
+      });
+    });
+  }
+
   function renderPickupTodaySummary() {
     const el = document.getElementById('pickup-today-summary');
     if (!el) return;
@@ -2603,6 +2799,7 @@
             <button type="button" class="btn btn-sm btn-secondary" data-pickup-archive="${idAttr}">保管</button>
           ` : ''}
         </div>
+        ${idAttr ? pickupContentButtonsHtml(idAttr) : ''}
       </div>`;
   }
 
@@ -2616,6 +2813,7 @@
     }
     el.innerHTML = top3.map((p, i) => renderPickupMorningTop3Card(p, i + 1)).join('');
     bindPickupCardActions(el);
+    bindPickupContentGenActions(el);
   }
 
   function renderPickupUsedToday() {
@@ -2687,8 +2885,10 @@
             <button type="button" class="btn btn-sm btn-secondary" data-pickup-archive="${esc(p.id)}">保管</button>
           ` : ''}
         </div>
+        ${pickupContentButtonsHtml(p.id)}
       </div>`).join('');
     bindPickupCardActions(el);
+    bindPickupContentGenActions(el);
   }
 
   function bindPickupCardActions(container) {
@@ -2720,6 +2920,7 @@
     renderPickupMorningTop3();
     renderPickupUsedToday();
     renderPickupBulkPreview();
+    renderPickupContentPanel();
     renderPickupCandidates();
     renderPickupSavedList();
   }
@@ -2803,6 +3004,24 @@
     if (createBtn) createBtn.addEventListener('click', createPickupTestData);
     const deleteBtn = document.getElementById('btn-pickup-delete-test');
     if (deleteBtn) deleteBtn.addEventListener('click', deletePickupTestData);
+
+    const contentSelect = document.getElementById('pickup-content-select');
+    if (contentSelect) {
+      contentSelect.addEventListener('change', () => {
+        selectedPickupContentId = contentSelect.value || null;
+        renderPickupContentOutputs();
+      });
+    }
+    document.querySelectorAll('[data-pickup-gen]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = selectedPickupContentId || document.getElementById('pickup-content-select')?.value;
+        if (!id) {
+          alert('先に需要テーマを選択してください。');
+          return;
+        }
+        generatePickupContentForId(id, btn.dataset.pickupGen);
+      });
+    });
 
     renderDemandPickup();
   }

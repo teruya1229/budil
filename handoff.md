@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v2.3 公開済み（需要から投稿・広告文案生成MVP）
 - Budil v2.2 公開済み（クロクロ3件一括取り込み・毎朝運用強化）
 - Budil v2.1 公開済み（需要ピックアップ受信箱MVP）
 - Budil v2.0 公開済み（実運用MVP仕上げ）
@@ -45,6 +46,13 @@
 | `js/demand-brain.js` | 需要分析・需要ピックアップパース・トップ3 |
 | `js/demand-radar.js` | 需要レーダー分析 |
 | `js/data-backup.js` | バックアップ・復元 |
+
+## v2.3で入ったもの
+
+- 需要ピックアップからの文案生成（リール / Instagram / LINE / GBP / 広告）
+- `generatedOutputs` フィールド（`budil_demand_pickups` 内、任意）
+- 文案コピー・保存・今日やること連携（`pickupDedupeKey` 拡張）
+- 需要番頭「需要から作る投稿・広告文案」セクション
 
 ## v2.2で入ったもの
 

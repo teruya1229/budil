@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v2.2</small>
+          <small>AI経営脳みそ v2.3</small>
         </div>
       </div>
       <nav class="nav">
@@ -46,7 +46,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v2.2</small>
+        <small>Budil v2.3</small>
       </div>
     </aside>
 
@@ -373,6 +373,28 @@
           </div>
           <div id="pickup-morning-top3" class="pickup-morning-top3-list"></div>
           <div id="pickup-used-today" class="pickup-used-today"></div>
+        </div>
+
+        <div class="card card-wide card-pickup-content">
+          <h2>需要から作る投稿・広告文案</h2>
+          <p class="pickup-paste-hint">需要トップ3または保存済みメモから選び、投稿・広告の下書きを生成します（ルールベース）。</p>
+          <div class="pickup-content-select-row">
+            <label for="pickup-content-select">選択中の需要テーマ</label>
+            <select id="pickup-content-select">
+              <option value="">需要を選択してください</option>
+            </select>
+          </div>
+          <div class="pickup-content-gen-actions">
+            <button type="button" class="btn btn-secondary btn-sm" data-pickup-gen="reel">リール案を作る</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-pickup-gen="instagram">投稿文を作る</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-pickup-gen="line">LINE文を作る</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-pickup-gen="gbp">GBP投稿を作る</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-pickup-gen="ad">広告文を作る</button>
+            <button type="button" class="btn btn-primary btn-sm" data-pickup-gen="all">全部作る</button>
+          </div>
+          <div id="pickup-content-outputs" class="pickup-content-outputs">
+            <p class="placeholder-text">需要を選んで「リール案を作る」などを押すと、ここに生成文案が表示されます。</p>
+          </div>
         </div>
 
         <div class="card card-wide card-pickup-prompt">
@@ -1389,6 +1411,19 @@
             <button type="button" id="btn-create-test-data" class="btn btn-secondary">テストデータを作成</button>
             <button type="button" id="btn-delete-test-data" class="btn btn-secondary">テストデータを削除</button>
           </div>
+        </div>
+
+        <div class="card card-wide card-mvp-checklist">
+          <h2>v2.3 動作確認チェックリスト</h2>
+          <p class="data-mgmt-desc">需要から投稿・広告文案の生成と保存を確認してください。</p>
+          <ul class="mvp-checklist">
+            <li>需要トップ3からリール案・投稿文・LINE・GBP・広告文を作れる</li>
+            <li>全部作るが動く</li>
+            <li>生成文案をコピーできる</li>
+            <li>生成文案を保存し、再読み込み後も残る</li>
+            <li>生成文案から今日やることへ追加できる</li>
+            <li>重複タスクが増えない</li>
+          </ul>
         </div>
 
         <div class="card card-wide card-mvp-checklist">
