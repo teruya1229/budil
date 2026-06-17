@@ -314,30 +314,87 @@ const Storage = {
   },
 
   getDailyActionTasks() {
-    return this.get(this.KEYS.DAILY_ACTION_TASKS, []);
+    return this.getDailyActionTasksData().states;
+  },
+
+  getDailyActionTasksData() {
+    const raw = this.get(this.KEYS.DAILY_ACTION_TASKS, null);
+    if (!raw) return { states: [], manualTasks: [] };
+    if (Array.isArray(raw)) return { states: raw, manualTasks: [] };
+    return {
+      states: raw.states || [],
+      manualTasks: raw.manualTasks || []
+    };
+  },
+
+  saveDailyActionTasksData(data) {
+    this.set(this.KEYS.DAILY_ACTION_TASKS, {
+      states: data.states || [],
+      manualTasks: data.manualTasks || []
+    });
   },
 
   saveDailyActionTasks(list) {
-    this.set(this.KEYS.DAILY_ACTION_TASKS, list);
+    const data = this.getDailyActionTasksData();
+    data.states = list;
+    this.saveDailyActionTasksData(data);
   },
 
   upsertDailyActionTaskState(taskId, date, data) {
-    const list = this.getDailyActionTasks();
-    const idx = list.findIndex(item => item.taskId === taskId && item.date === date);
+    const store = this.getDailyActionTasksData();
+    const idx = store.states.findIndex(item => item.taskId === taskId && item.date === date);
+    const prev = idx !== -1 ? store.states[idx] : {};
     const entry = {
       taskId,
       date,
-      status: data.status,
-      memo: data.memo != null ? data.memo : (idx !== -1 ? list[idx].memo : ''),
+      status: data.status != null ? data.status : prev.status,
+      memo: data.memo != null ? data.memo : (prev.memo || ''),
+      snoozedUntil: data.snoozedUntil != null ? data.snoozedUntil : (prev.snoozedUntil || ''),
+      completedAt: data.completedAt != null ? data.completedAt : (prev.completedAt || ''),
+      title: data.title != null ? data.title : prev.title,
+      priority: data.priority != null ? data.priority : prev.priority,
+      targetName: data.targetName != null ? data.targetName : prev.targetName,
+      action: data.action != null ? data.action : prev.action,
+      dueDate: data.dueDate != null ? data.dueDate : prev.dueDate,
       updatedAt: new Date().toISOString()
     };
     if (idx !== -1) {
-      list[idx] = { ...list[idx], ...entry };
+      store.states[idx] = { ...prev, ...entry };
     } else {
-      list.push(entry);
+      store.states.push(entry);
     }
-    this.saveDailyActionTasks(list);
+    this.saveDailyActionTasksData(store);
     return entry;
+  },
+
+  addManualDailyTask(task) {
+    const store = this.getDailyActionTasksData();
+    const now = new Date().toISOString();
+    const record = {
+      ...task,
+      id: task.id || ('manual_' + this.generateId()),
+      type: 'manual',
+      reason: task.reason || '手動追加',
+      status: task.status || 'open',
+      createdAt: task.createdAt || now,
+      updatedAt: now
+    };
+    store.manualTasks.push(record);
+    this.saveDailyActionTasksData(store);
+    return record;
+  },
+
+  updateManualDailyTask(id, data) {
+    const store = this.getDailyActionTasksData();
+    const idx = store.manualTasks.findIndex(t => t.id === id);
+    if (idx === -1) return null;
+    store.manualTasks[idx] = {
+      ...store.manualTasks[idx],
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+    this.saveDailyActionTasksData(store);
+    return store.manualTasks[idx];
   }
 };
 

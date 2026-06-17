@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v1.9.6 公開済み（手動タスク追加・タスク調整）
 - Budil v1.9.5 公開済み（今日やることリスト化）
 - Budil v1.9.4 公開済み（経営番頭コメント）
 - Budil v1.9.3.2 公開済み（入金注意を営業候補から除外・営業保留リスト）
@@ -36,6 +37,12 @@
 | `js/messages.js` | 営業文面テンプレート・プリセット |
 | `js/management-brain.js` | 朝レポート・今日の営業生成 |
 | `js/revenue-brain.js` | 売上集計・番頭コメント |
+
+## v1.9.6で入ったもの
+
+- 手動タスク追加フォーム・編集パネル
+- `budil_daily_action_tasks.manualTasks` / 状態の `snoozedUntil`・`completedAt`
+- 明日に回す・完了済み表示改善
 
 ## v1.9.5で入ったもの
 
@@ -146,7 +153,7 @@
 | `budil_migrated_v17` | v1.7マイグレーション済みフラグ |
 | `budil_revenue_records` | 売上記録 |
 | `budil_revenue_settings` | 月間目標など |
-| `budil_daily_action_tasks` | 今日やることの完了・後回し・メモ |
+| `budil_daily_action_tasks` | 今日やることの完了・後回し・メモ・手動タスク |
 
 ## 次にやると良いこと（v1.8候補）
 

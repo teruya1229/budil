@@ -5,9 +5,16 @@
 ## 現在の公開状態
 
 - 公開URL: https://teruya1229.github.io/budil/
-- 現在バージョン: v1.9.5
-- 最新commit: ace42a7
-- push済み（`e5b45ff..ace42a7 main -> main`）
+- 現在バージョン: v1.9.6
+- 最新commit: （push後に更新）
+
+## v1.9.6 実装内容（手動タスク追加・タスク調整）
+
+- 今日やることに手動タスク追加フォーム
+- タスク編集（自動生成タスクは上書き情報として保存）
+- 明日に回す / 後回し（`snoozedUntil` 対応）
+- 完了済み表示改善（完了時刻・最大3件）
+- `budil_daily_action_tasks` に `manualTasks` を追加（既存配列形式も互換）
 
 ## v1.9.5 実装内容（今日やることリスト化）
 

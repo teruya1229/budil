@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v1.9.5</small>
+          <small>AI経営脳みそ v1.9.6</small>
         </div>
       </div>
       <nav class="nav">
@@ -43,7 +43,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v1.9.5</small>
+        <small>Budil v1.9.6</small>
       </div>
     </aside>
 
@@ -64,6 +64,74 @@
 
         <div class="card card-wide card-daily-action-tasks">
           <h2>今日やること</h2>
+          <form id="daily-task-add-form" class="daily-task-add-form">
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="daily-task-add-title">タスク名</label>
+                <input type="text" id="daily-task-add-title" required placeholder="例：LINE返信する">
+              </div>
+              <div class="form-group">
+                <label for="daily-task-add-target">対象名</label>
+                <input type="text" id="daily-task-add-target" placeholder="例：○○様">
+              </div>
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="daily-task-add-priority">優先度</label>
+                <select id="daily-task-add-priority">
+                  <option value="高">高</option>
+                  <option value="中" selected>中</option>
+                  <option value="低">低</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="daily-task-add-due">期限日</label>
+                <input type="date" id="daily-task-add-due" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="daily-task-add-memo">メモ</label>
+              <input type="text" id="daily-task-add-memo" placeholder="任意">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">タスク追加</button>
+          </form>
+          <div id="daily-task-edit-panel" class="daily-task-edit-panel hidden">
+            <h3 class="daily-task-edit-title">タスク編集</h3>
+            <input type="hidden" id="daily-task-edit-id">
+            <input type="hidden" id="daily-task-edit-kind">
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="daily-task-edit-title">タスク名</label>
+                <input type="text" id="daily-task-edit-title" required>
+              </div>
+              <div class="form-group">
+                <label for="daily-task-edit-target">対象名</label>
+                <input type="text" id="daily-task-edit-target">
+              </div>
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="daily-task-edit-priority">優先度</label>
+                <select id="daily-task-edit-priority">
+                  <option value="高">高</option>
+                  <option value="中">中</option>
+                  <option value="低">低</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="daily-task-edit-due">期限日</label>
+                <input type="date" id="daily-task-edit-due" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="daily-task-edit-memo">メモ</label>
+              <input type="text" id="daily-task-edit-memo" placeholder="任意">
+            </div>
+            <div class="daily-task-edit-actions">
+              <button type="button" id="btn-daily-task-edit-save" class="btn btn-primary btn-sm">保存</button>
+              <button type="button" id="btn-daily-task-edit-cancel" class="btn btn-secondary btn-sm">キャンセル</button>
+            </div>
+          </div>
           <div id="dash-daily-action-tasks" class="daily-action-tasks-list"></div>
         </div>
 

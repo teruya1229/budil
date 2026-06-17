@@ -2559,6 +2559,61 @@ body {
   border-left: 3px solid rgba(52, 211, 153, 0.6);
 }
 
+.daily-task-add-form {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+}
+
+.daily-task-edit-panel {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--surface-2, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+}
+
+.daily-task-edit-panel.hidden {
+  display: none;
+}
+
+.daily-task-edit-title {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+}
+
+.daily-task-edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.daily-task-manual-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+
+.daily-task-snoozed-section {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border, rgba(255, 255, 255, 0.1));
+}
+
+.daily-task-snoozed-heading {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+}
+
+.daily-task-done-time {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted, #8b9cb3);
+}
+
 .daily-action-tasks-list {
   display: flex;
   flex-direction: column;
