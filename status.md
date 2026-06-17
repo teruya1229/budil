@@ -6,6 +6,8 @@
 
 - 公開URL: https://teruya1229.github.io/budil/
 - 現在バージョン: v1.9.2
+- 最新commit: ffb831f
+- push済み（`fc8f7a1..ffb831f main -> main`）
 
 ## v1.9.2 実装内容（営業成果サマリー強化）
 
