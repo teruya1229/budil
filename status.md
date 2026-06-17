@@ -6,6 +6,8 @@
 
 - 公開URL: https://teruya1229.github.io/budil/
 - 現在バージョン: v1.9.1
+- 最新commit: c331ea9
+- push済み（`03746a8..c331ea9 main -> main`）
 
 ## v1.9.1 実装内容（売上×営業先の実用導線改善）
 
