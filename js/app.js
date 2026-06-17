@@ -12,6 +12,8 @@
   let pickupBulkPreview = [];
   let selectedPickupContentId = null;
   let weeklyStrategyPeriod = '7d';
+  let businessReportPeriod = '7d';
+  let lastBusinessReportContext = null;
 
   const SALES_TAB_FIELDS = { email: 'msg-email', form: 'msg-form', dm: 'msg-dm', phone: 'msg-phone' };
   const SALES_TAB_LOG = { email: 'メール送信', form: 'フォーム送信', dm: 'DM', phone: '電話' };
@@ -295,6 +297,7 @@
     safeRenderSection('dash-action-calendar', () => renderActionCalendar(), '投稿・広告カレンダー');
     safeRenderSection('dash-daily-action-tasks', () => renderDailyActionTasks(), '今日やること');
     safeRenderSection(null, () => renderMorningDailyTasksBrief(), '朝レポートタスク');
+    safeRenderSection('business-report-dash', () => renderBusinessReport('compact'), '経営レポート');
   }
 
   function hasExecutiveHomeData() {
@@ -2292,6 +2295,596 @@
         .map(t => '<li>' + esc(t) + '</li>').join('');
     }
     renderDataDiagnosticsSummary();
+    renderBusinessReport('detail');
+  }
+
+  const BUSINESS_REPORT_PERIOD_LABELS = {
+    today: '今日',
+    '7d': '直近7日',
+    month: '今月',
+    all: 'すべて'
+  };
+
+  function resolveBusinessReportPeriod(period, today) {
+    const t = today || TODAY();
+    const p = period || businessReportPeriod || '7d';
+    if (p === 'today') {
+      return { period: 'today', startDate: t, endDate: t, label: BUSINESS_REPORT_PERIOD_LABELS.today };
+    }
+    if (p === 'month') {
+      return { period: 'month', startDate: t.slice(0, 7) + '-01', endDate: t, label: BUSINESS_REPORT_PERIOD_LABELS.month };
+    }
+    if (p === 'all') {
+      return { period: 'all', startDate: null, endDate: null, label: BUSINESS_REPORT_PERIOD_LABELS.all };
+    }
+    return {
+      period: '7d',
+      startDate: DemandBrain._addDays(t, -6),
+      endDate: t,
+      label: BUSINESS_REPORT_PERIOD_LABELS['7d']
+    };
+  }
+
+  function filterRecordsByReportPeriod(records, range) {
+    const list = RevenueBrain.activeRecords(RevenueBrain.normalizeRevenueRecords(records));
+    if (!range.startDate || !range.endDate) return list;
+    return list.filter(r => r.workDate && r.workDate >= range.startDate && r.workDate <= range.endDate);
+  }
+
+  function filterPickupsByReportPeriod(pickups, range, today) {
+    if (range.period === 'all') return pickups || [];
+    if (range.period === 'today') {
+      return (pickups || []).filter(p => (p.date || '') === range.endDate);
+    }
+    return DemandBrain.filterPickupsByPeriod(pickups, today || TODAY(), range.period === 'month' ? 'month' : '7d');
+  }
+
+  function countMissingPerformanceInPickups(pickups) {
+    let count = 0;
+    (pickups || []).forEach(raw => {
+      DemandBrain.EXECUTION_TYPES.forEach(type => {
+        const exec = DemandBrain.normalizeExecutionStatus(raw);
+        const item = exec[type];
+        if (DemandBrain.isExecutionDone(type, item.status) && !DemandBrain.hasPerformanceInput(item)) {
+          count++;
+        }
+      });
+    });
+    return count;
+  }
+
+  function buildBusinessReportDiagnosticNotes() {
+    const notes = [];
+    const records = RevenueBrain.normalizeRevenueRecords(Storage.getRevenueRecords());
+    const leads = Storage.getLeads();
+    const leadIds = new Set(leads.map(l => l.id));
+    const unlinked = records.filter(r => r.status !== 'キャンセル' && !r.leadId).length;
+    const badLeadRef = records.filter(r => r.leadId && !leadIds.has(r.leadId)).length;
+    const missingPerf = countMissingPerformanceInPickups(Storage.getDemandPickups());
+    const usage = Storage.getLocalStorageUsage();
+    const backupOk = Storage.CRITICAL_BACKUP_KEYS.every(key => {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw !== null;
+      } catch {
+        return false;
+      }
+    });
+
+    if (unlinked) notes.push(`未紐付け売上 ${unlinked}件`);
+    if (badLeadRef) notes.push(`紐付け切れ ${badLeadRef}件`);
+    if (missingPerf) notes.push(`成果未入力 ${missingPerf}件`);
+    notes.push(backupOk ? 'バックアップ対象キー確認済み' : 'バックアップ対象キーに未保存あり');
+    notes.push(`localStorage使用量 ${usage.label || '—'}`);
+    return notes;
+  }
+
+  function collectBusinessReportTasks(range) {
+    const today = TODAY();
+    const all = getDailyActionTasksWithState();
+    const inRange = task => {
+      if (!range.startDate || !range.endDate) return true;
+      const due = task.dueDate || today;
+      const doneAt = (task.completedAt || task.updatedAt || '').slice(0, 10);
+      if (task.status === 'done' && doneAt) return doneAt >= range.startDate && doneAt <= range.endDate;
+      return due >= range.startDate && due <= range.endDate;
+    };
+    const scoped = all.filter(inRange);
+    const open = scoped.filter(t => t.status !== 'done' && !isDailyTaskSnoozedAway(t, today) && t.status !== 'snoozed');
+    const done = scoped.filter(t => t.status === 'done');
+    const snoozed = scoped.filter(t => t.status === 'snoozed' || isDailyTaskSnoozedAway(t, today));
+    const important = open.filter(t => t.priority === '高');
+    return { open, done, snoozed, important, all: scoped };
+  }
+
+  function hasBusinessReportData() {
+    return hasExecutiveHomeData();
+  }
+
+  function buildBusinessReportContext(period) {
+    const today = TODAY();
+    const range = resolveBusinessReportPeriod(period, today);
+    const revCtx = getRevenueContext();
+    const perfCtx = getPerformanceContext();
+    const salesCtx = getSalesContext();
+    const pickupsAll = perfCtx.pickups;
+    const pickups = filterPickupsByReportPeriod(pickupsAll, range, today);
+    const periodRecords = filterRecordsByReportPeriod(revCtx.records, range);
+    const periodRevenue = RevenueBrain.sumAmount(periodRecords);
+    const strategy = DemandBrain.buildWeeklyStrategy({
+      today,
+      period: range.period === 'today' ? '7d' : (range.period === 'all' ? 'all' : range.period),
+      pickups: pickupsAll,
+      records: revCtx.records,
+      leads: revCtx.leads,
+      enriched: salesCtx.enriched
+    });
+    const decisionInsights = DemandBrain.getActionDecisionInsights(pickups, revCtx.records, revCtx.leads, today);
+    const focusRecs = DemandBrain.getFocusRecommendations(pickups, revCtx.records, revCtx.leads, 5, today);
+    const stopImprove = DemandBrain.getStopOrImproveCandidates(pickups, revCtx.records, revCtx.leads);
+    const perfSummary = DemandBrain.getWeeklyPerformanceSummary(pickupsAll, today, revCtx.records, revCtx.leads);
+    const execSummary = buildExecutiveHomeSummary();
+    const salesActions = getExecutiveHomeSalesActions();
+    const warnings = getExecutiveHomeWarnings();
+    const tasks = collectBusinessReportTasks(range);
+    const scheduleItems = getTodayScheduleItems();
+    const demandLines = DemandBrain.buildMorningDemandLines(pickupsAll, today);
+    const diagnosticNotes = buildBusinessReportDiagnosticNotes();
+    const improveCount = stopImprove.filter(c => c.decision === 'improve').length
+      + (strategy.improvementCandidates || []).length
+      + (strategy.performanceImprovements || []).length;
+    const growEntries = (decisionInsights.entries || []).filter(e => e.decision === 'grow');
+    const improveEntries = (decisionInsights.entries || []).filter(e => e.decision === 'improve');
+    const stopEntries = (decisionInsights.entries || []).filter(e => e.decision === 'stop');
+    const executedCount = pickups.reduce((n, raw) => {
+      const exec = DemandBrain.normalizeExecutionStatus(raw);
+      return n + DemandBrain.EXECUTION_TYPES.filter(type =>
+        DemandBrain.isExecutionDone(type, exec[type].status)
+      ).length;
+    }, 0);
+    const activeLeads = salesCtx.leads.filter(l => !CLOSED_STATUSES.includes(l.status));
+    const nextLeads = salesActions.map(a => `${a.leadName}：${a.action}`);
+    const revenueLeads = revCtx.records
+      .filter(r => r.leadId && r.workDate && (!range.startDate || (r.workDate >= range.startDate && r.workDate <= range.endDate)))
+      .map(r => RevenueBrain.resolveLeadLabel(r, revCtx.leads))
+      .filter((v, i, arr) => arr.indexOf(v) === i)
+      .slice(0, 5);
+    const paymentConcern = revCtx.records.filter(r =>
+      r.status !== 'キャンセル' && RevenueBrain.recordHasPaymentConcern(r)
+    );
+
+    const context = {
+      today,
+      range,
+      hasData: hasBusinessReportData(),
+      isEmpty: !hasBusinessReportData(),
+      summary: {
+        periodRevenue,
+        monthAchievementRate: revCtx.summary.achievementRate,
+        pickupCount: pickups.length,
+        executedCount,
+        growCount: growEntries.length,
+        improveCount,
+        openTaskCount: tasks.open.length
+      },
+      execSummary,
+      revCtx,
+      periodRecords,
+      perfSummary,
+      decisionInsights,
+      focusRecs,
+      stopImprove,
+      strategy,
+      salesActions,
+      warnings,
+      tasks,
+      scheduleItems,
+      demandLines,
+      diagnosticNotes,
+      growEntries,
+      improveEntries,
+      stopEntries,
+      activeLeads,
+      nextLeads,
+      revenueLeads,
+      paymentConcern,
+      nextActions: []
+    };
+    context.nextActions = buildNextActionsFromReport(context);
+    context.reportText = buildBusinessReportText(context);
+    context.chatGptPrompt = buildChatGptAnalysisPrompt(context);
+    context.nextActionsText = buildNextActionsText(context.nextActions);
+    return context;
+  }
+
+  function buildNextActionsFromReport(context) {
+    const actions = [];
+    const seen = new Set();
+    const push = (title, reason, extra) => {
+      const t = (title || '').trim();
+      if (!t || seen.has(t)) return;
+      seen.add(t);
+      actions.push({ title: t, reason: reason || '', ...(extra || {}) });
+    };
+
+    (context.focusRecs || []).slice(0, 2).forEach(item => {
+      push(item.nextStep || `${item.topic}を${item.decisionLabel || '継続'}`, item.reason, { source: 'focus' });
+    });
+    (context.strategy.actionTasks || []).slice(0, 2).forEach(task => {
+      push(task.title, task.reason, { source: 'weekly' });
+    });
+    (context.salesActions || []).slice(0, 2).forEach(a => {
+      push(a.action, a.reason, { source: 'sales', leadId: a.leadId, leadName: a.leadName });
+    });
+    if (context.revCtx.salesOutcome && context.revCtx.salesOutcome.unlinkedTotal > 0) {
+      const n = context.revCtx.salesOutcome.unlinkedCount || context.revCtx.records.filter(r => !r.leadId).length;
+      push(`未紐付け売上${n}件を営業先に紐付ける`, '売上と営業先の紐付けで次の提案精度が上がります', { source: 'revenue' });
+    }
+    (context.stopImprove || []).slice(0, 2).forEach(c => {
+      push(c.nextStep || `${c.topic}を見直す`, c.reason, { source: 'decision' });
+    });
+    (context.growEntries || []).slice(0, 1).forEach(e => {
+      push(e.nextStep, e.reason, { source: 'grow' });
+    });
+    if (!actions.length && context.execSummary && context.execSummary.lines && context.execSummary.lines[0]) {
+      push('今日やることを1件完了する', context.execSummary.lines[0], { source: 'exec' });
+    }
+    return actions.slice(0, 5);
+  }
+
+  function buildNextActionsText(actions) {
+    const list = actions || [];
+    if (!list.length) return '次の一手はまだありません。';
+    return list.map((a, i) => `${i + 1}. ${a.title}`).join('\n');
+  }
+
+  function lineOrDash(value, fallback) {
+    if (value === 0) return '0';
+    if (value === '' || value == null) return fallback || '—';
+    return String(value);
+  }
+
+  function buildBusinessReportText(context) {
+    if (!context || context.isEmpty) {
+      return [
+        'まだレポートに使えるデータが少ないです。',
+        'まずは以下を保存すると、週次レポートが作れます。',
+        '',
+        '1. 売上を1件登録',
+        '2. クロクロ需要を3件取り込み',
+        '3. 今日やることを1件完了',
+        '4. 投稿・広告の成果メモを1件入力'
+      ].join('\n');
+    }
+
+    const c = context;
+    const r = c.range;
+    const rev = c.revCtx.summary;
+    const periodLabel = r.startDate && r.endDate ? `${r.startDate}〜${r.endDate}` : 'すべて';
+    const lines = [];
+
+    lines.push('【Budil 経営レポート】');
+    lines.push(`期間：${periodLabel}`);
+    lines.push('');
+
+    lines.push('■ 1. 全体まとめ');
+    (c.execSummary.lines || []).forEach(l => lines.push(l));
+    if (rev.monthlyTarget > 0) {
+      lines.push(`売上は${RevenueBrain.formatYen(c.summary.periodRevenue)}、今月達成率は${rev.achievementRate}%です。`);
+    } else {
+      lines.push(`期間内売上は${RevenueBrain.formatYen(c.summary.periodRevenue)}です。`);
+    }
+    const perfBits = [];
+    if (c.growEntries.length) perfBits.push(`${c.growEntries[0].topic}が成果あり`);
+    if (c.improveEntries.length) perfBits.push(`${c.improveEntries[0].topic}は改善候補`);
+    if (perfBits.length) lines.push(`投稿・広告施策では${perfBits.join('、')}です。`);
+    lines.push('');
+
+    lines.push('■ 2. 売上状況');
+    lines.push(`今月売上：${RevenueBrain.formatYen(rev.planned)}`);
+    lines.push(`期間内売上：${RevenueBrain.formatYen(c.summary.periodRevenue)}`);
+    lines.push(`目標：${RevenueBrain.formatYen(rev.monthlyTarget)}`);
+    lines.push(`達成率：${rev.achievementRate}%`);
+    lines.push(`未紐付け売上：${c.revCtx.salesOutcome && c.revCtx.salesOutcome.unlinkedTotal > 0 ? RevenueBrain.formatYen(c.revCtx.salesOutcome.unlinkedTotal) : 'なし'}`);
+    const holdNames = (c.revCtx.salesHoldCandidates || []).map(h => h.leadName).join('、');
+    lines.push(`入金確認・保留：${holdNames || (c.paymentConcern.length ? `${c.paymentConcern.length}件` : 'なし')}`);
+    lines.push('');
+
+    lines.push('■ 3. 営業状況');
+    lines.push(`営業先件数：${c.activeLeads.length}件（全体${c.revCtx.leads.length}件）`);
+    lines.push(`次に動くべき営業先：${c.nextLeads.length ? c.nextLeads.join(' / ') : '—'}`);
+    const holdList = (c.revCtx.salesHoldCandidates || []).map(h => h.leadName);
+    lines.push(`営業保留：${holdList.length ? holdList.join('、') : 'なし'}`);
+    lines.push(`売上につながった営業先：${c.revenueLeads.length ? c.revenueLeads.join('、') : '—'}`);
+    lines.push('');
+
+    lines.push('■ 4. 需要・投稿・広告');
+    lines.push(`需要ピックアップ件数：${c.summary.pickupCount}件`);
+    const demandTop = (c.demandLines || []).slice(0, 3).join(' / ') || '—';
+    lines.push(`需要トップ：${demandTop}`);
+    const focusText = (c.focusRecs || []).map((f, i) => `${i + 1}.${f.topic}（${f.decisionLabel}）`).join(' / ') || '—';
+    lines.push(`今週の集中先：${focusText}`);
+    const scheduleText = (c.scheduleItems || []).map(s => s.label || s.title).join(' / ') || '—';
+    lines.push(`投稿・広告予定：${scheduleText}`);
+    const executed = (c.strategy.postPlan || []).concat(c.strategy.adPlan || []).map(p => p.text).slice(0, 3);
+    lines.push(`実行済み施策：${executed.length ? executed.join(' / ') : `${c.summary.executedCount}件`}`);
+    lines.push('');
+
+    lines.push('■ 5. 施策成果');
+    lines.push(`LINE相談：${lineOrDash(c.perfSummary.lineInquiries, '0')}件`);
+    lines.push(`予約：${lineOrDash(c.perfSummary.reservations, '0')}件`);
+    lines.push(`施策経由売上：${c.perfSummary.salesAmount ? RevenueBrain.formatYen(c.perfSummary.salesAmount) : '—'}`);
+    const growText = c.growEntries.slice(0, 3).map(e => `${e.topic}${e.shortLabel || ''}`).join('、') || '—';
+    lines.push(`成果あり施策：${growText}`);
+    const improveText = c.improveEntries.slice(0, 3).map(e => `${e.topic}${e.shortLabel || ''}`).join('、') || '—';
+    lines.push(`改善必要施策：${improveText}`);
+    const stopText = c.stopEntries.slice(0, 3).map(e => `${e.topic}${e.shortLabel || ''}`).join('、') || '—';
+    lines.push(`停止候補：${stopText}`);
+    lines.push('');
+
+    lines.push('■ 6. 今日やること・完了状況');
+    lines.push(`未完了：${c.tasks.open.map(t => t.title).join('、') || '—'}`);
+    lines.push(`完了：${c.tasks.done.map(t => t.title).join('、') || '—'}`);
+    lines.push(`明日に回したもの：${c.tasks.snoozed.map(t => t.title).join('、') || '—'}`);
+    lines.push(`重要タスク：${c.tasks.important.map(t => t.title).join('、') || '—'}`);
+    lines.push('');
+
+    lines.push('■ 7. 注意点');
+    const warn = [...c.warnings];
+    (c.diagnosticNotes || []).forEach(n => {
+      if (!warn.some(w => w.includes(n.split(' ')[0]))) warn.push(n);
+    });
+    if (!warn.length) {
+      lines.push('特になし');
+    } else {
+      warn.slice(0, 8).forEach(w => lines.push(`・${w}`));
+    }
+    lines.push('');
+
+    lines.push('■ 8. 次の一手');
+    (c.nextActions || []).forEach((a, i) => lines.push(`${i + 1}. ${a.title}`));
+    if (!c.nextActions.length) lines.push('1. データを追加してレポートを再生成してください');
+
+    return lines.join('\n');
+  }
+
+  function buildChatGptAnalysisPrompt(context) {
+    const report = (context && context.reportText) || buildBusinessReportText(context);
+    return [
+      '以下はBudilの経営レポートです。',
+      '沖縄南部の清掃業として、売上・営業・需要・投稿・広告の状況を見て、次の7日間で優先すべき行動を3〜5個に絞って提案してください。',
+      '',
+      '条件：',
+      '- 現場作業があるため、作業量は増やしすぎない',
+      '- 売上につながりやすい順に優先',
+      '- 投稿・広告・営業を分けて提案',
+      '- 無理な値引き前提にしない',
+      '- 営業保留や入金注意の案件には追加営業しない',
+      '',
+      report
+    ].join('\n');
+  }
+
+  function buildReportTaskDedupeKey(date, period, title) {
+    return ['report-action', date, period, title].join('|');
+  }
+
+  function isReportActionTaskDuplicate(date, period, title) {
+    const key = buildReportTaskDedupeKey(date, period, title);
+    return Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === key);
+  }
+
+  function addReportActionTask(actionIndex) {
+    const ctx = lastBusinessReportContext || buildBusinessReportContext(businessReportPeriod);
+    const action = (ctx.nextActions || [])[actionIndex];
+    if (!action) return;
+    const date = TODAY();
+    const key = buildReportTaskDedupeKey(date, ctx.range.period, action.title);
+    if (isReportActionTaskDuplicate(date, ctx.range.period, action.title)) {
+      showBusinessReportToast('すでに今日やることに追加済みです');
+      return;
+    }
+    Storage.addManualDailyTask({
+      title: action.title,
+      targetName: action.leadName || '—',
+      priority: '高',
+      action: action.reason || action.title,
+      memo: action.reason || '',
+      dueDate: date,
+      status: 'open',
+      reason: action.reason || '経営レポートの次の一手から追加',
+      leadId: action.leadId || '',
+      leadName: action.leadName || '',
+      pickupDedupeKey: key
+    });
+    renderDailyActionTasks();
+    renderExecutiveHome();
+    renderMorningDailyTasksBrief();
+    renderBusinessReport(document.getElementById('business-report-data') ? 'detail' : 'compact');
+    showBusinessReportToast('今日やることに追加しました');
+  }
+
+  function addAllReportActionTasks() {
+    const ctx = lastBusinessReportContext || buildBusinessReportContext(businessReportPeriod);
+    let added = 0;
+    let skipped = 0;
+    (ctx.nextActions || []).forEach((action, i) => {
+      const date = TODAY();
+      const key = buildReportTaskDedupeKey(date, ctx.range.period, action.title);
+      if (isReportActionTaskDuplicate(date, ctx.range.period, action.title)) {
+        skipped++;
+        return;
+      }
+      Storage.addManualDailyTask({
+        title: action.title,
+        targetName: action.leadName || '—',
+        priority: '高',
+        action: action.reason || action.title,
+        memo: action.reason || '',
+        dueDate: date,
+        status: 'open',
+        reason: action.reason || '経営レポートの次の一手から追加',
+        leadId: action.leadId || '',
+        leadName: action.leadName || '',
+        pickupDedupeKey: key
+      });
+      added++;
+    });
+    renderDailyActionTasks();
+    renderExecutiveHome();
+    renderMorningDailyTasksBrief();
+    renderBusinessReport(document.getElementById('business-report-data') ? 'detail' : 'compact');
+    showBusinessReportToast(`追加：${added}件${skipped ? ` / スキップ：${skipped}件` : ''}`);
+  }
+
+  function recordBusinessReportGenerated() {
+    const settings = Storage.getSettings();
+    settings.lastReportGeneratedAt = new Date().toISOString();
+    Storage.saveSettings(settings);
+  }
+
+  function generateBusinessReport() {
+    lastBusinessReportContext = buildBusinessReportContext(businessReportPeriod);
+    recordBusinessReportGenerated();
+    renderBusinessReport(document.getElementById('business-report-data') ? 'detail' : 'compact');
+    if (document.getElementById('business-report-data')) renderBusinessReport('detail');
+    if (document.getElementById('business-report-dash')) renderBusinessReport('compact');
+  }
+
+  function showBusinessReportToast(message) {
+    document.querySelectorAll('.business-report-toast').forEach(el => {
+      el.textContent = message;
+      el.classList.add('visible');
+      setTimeout(() => el.classList.remove('visible'), 2200);
+    });
+  }
+
+  function copyBusinessReport() {
+    const ctx = lastBusinessReportContext || buildBusinessReportContext(businessReportPeriod);
+    copyText(ctx.reportText).then(() => showBusinessReportToast('レポートをコピーしました')).catch(() => alert('コピーに失敗しました'));
+  }
+
+  function copyChatGptReportPrompt() {
+    const ctx = lastBusinessReportContext || buildBusinessReportContext(businessReportPeriod);
+    copyText(ctx.chatGptPrompt).then(() => showBusinessReportToast('ChatGPT分析用をコピーしました')).catch(() => alert('コピーに失敗しました'));
+  }
+
+  function copyNextActionsOnly() {
+    const ctx = lastBusinessReportContext || buildBusinessReportContext(businessReportPeriod);
+    copyText(ctx.nextActionsText).then(() => showBusinessReportToast('次の一手をコピーしました')).catch(() => alert('コピーに失敗しました'));
+  }
+
+  function renderBusinessReportSummaryCards(summary) {
+    const s = summary || {};
+    const cards = [
+      { label: '期間内売上', value: RevenueBrain.formatYen(s.periodRevenue || 0) },
+      { label: '今月達成率', value: `${s.monthAchievementRate || 0}%` },
+      { label: '需要ピックアップ数', value: s.pickupCount ?? 0 },
+      { label: '実行済み施策数', value: s.executedCount ?? 0 },
+      { label: '成果あり施策数', value: s.growCount ?? 0 },
+      { label: '改善候補数', value: s.improveCount ?? 0 },
+      { label: '未完了タスク数', value: s.openTaskCount ?? 0 }
+    ];
+    return `<div class="business-report-summary-grid">${cards.map(c =>
+      `<div class="business-report-summary-card"><span>${esc(c.label)}</span><strong>${esc(String(c.value))}</strong></div>`
+    ).join('')}</div>`;
+  }
+
+  function renderBusinessReportNextActions(actions, mode) {
+    const list = actions || [];
+    if (!list.length) {
+      return '<p class="placeholder-text">次の一手はまだありません。レポートを生成すると提案が出ます。</p>';
+    }
+    return `<ol class="business-report-next-actions">${list.map((a, i) => `
+      <li class="business-report-next-item">
+        <span class="business-report-next-title">${esc(a.title)}</span>
+        ${a.reason ? `<span class="business-report-next-reason">${esc(a.reason)}</span>` : ''}
+        <button type="button" class="btn btn-sm btn-secondary" data-report-add-action="${i}">この一手を追加</button>
+      </li>`).join('')}</ol>
+      ${mode === 'detail' ? '<button type="button" class="btn btn-sm btn-primary" id="btn-report-add-all-actions">次の一手を全部追加</button>' : ''}`;
+  }
+
+  function renderBusinessReport(mode) {
+    const isDetail = mode === 'detail';
+    const containerId = isDetail ? 'business-report-data' : 'business-report-dash';
+    const el = document.getElementById(containerId);
+    if (!el) return;
+
+    if (!lastBusinessReportContext || lastBusinessReportContext.range.period !== businessReportPeriod) {
+      lastBusinessReportContext = buildBusinessReportContext(businessReportPeriod);
+    }
+    const ctx = lastBusinessReportContext;
+    const periodBtns = ['today', '7d', 'month', 'all'].map(p =>
+      `<button type="button" class="btn btn-sm ${businessReportPeriod === p ? 'btn-primary' : 'btn-secondary'}" data-report-period="${p}">${esc(BUSINESS_REPORT_PERIOD_LABELS[p])}</button>`
+    ).join('');
+
+    const reportRows = isDetail ? 22 : 10;
+    const reportText = ctx.reportText || buildBusinessReportText(ctx);
+
+    el.innerHTML = `
+      <div class="business-report-header">
+        <h2>経営レポート</h2>
+        <span class="business-report-version">v3.2</span>
+      </div>
+      <p class="business-report-desc">${isDetail
+        ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
+        : '直近の経営状況を要約します。詳細はデータ管理画面の経営レポートをご利用ください。'}</p>
+      <div class="business-report-period-row">
+        <span class="business-report-period-label">レポート期間：</span>
+        ${periodBtns}
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" id="${isDetail ? 'btn-generate-report-detail' : 'btn-generate-report-dash'}">レポート生成</button>
+      ${renderBusinessReportSummaryCards(ctx.summary)}
+      <div class="business-report-next-block">
+        <h3>次の一手</h3>
+        ${renderBusinessReportNextActions(ctx.nextActions, isDetail ? 'detail' : 'compact')}
+      </div>
+      <div class="business-report-body-block">
+        <h3>レポート本文</h3>
+        <textarea class="business-report-text" id="${isDetail ? 'business-report-text-detail' : 'business-report-text-dash'}" readonly rows="${reportRows}">${esc(reportText)}</textarea>
+      </div>
+      <div class="business-report-actions">
+        <button type="button" class="btn btn-secondary btn-sm" data-report-copy="report">レポートをコピー</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-report-copy="chatgpt">ChatGPT分析用にコピー</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-report-copy="actions">次の一手だけコピー</button>
+      </div>
+      <p class="business-report-toast" aria-live="polite"></p>
+      ${isDetail ? '' : '<p class="business-report-detail-link"><button type="button" class="btn btn-sm btn-secondary" id="btn-go-report-detail">データ管理で詳細を見る</button></p>'}`;
+
+    el.querySelectorAll('[data-report-period]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        businessReportPeriod = btn.dataset.reportPeriod;
+        lastBusinessReportContext = buildBusinessReportContext(businessReportPeriod);
+        renderBusinessReport('compact');
+        renderBusinessReport('detail');
+      });
+    });
+
+    const genBtn = el.querySelector(isDetail ? '#btn-generate-report-detail' : '#btn-generate-report-dash');
+    if (genBtn) genBtn.addEventListener('click', generateBusinessReport);
+
+    el.querySelectorAll('[data-report-copy]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.reportCopy === 'report') copyBusinessReport();
+        else if (btn.dataset.reportCopy === 'chatgpt') copyChatGptReportPrompt();
+        else copyNextActionsOnly();
+      });
+    });
+
+    el.querySelectorAll('[data-report-add-action]').forEach(btn => {
+      btn.addEventListener('click', () => addReportActionTask(Number(btn.dataset.reportAddAction)));
+    });
+
+    const addAllBtn = el.querySelector('#btn-report-add-all-actions');
+    if (addAllBtn) addAllBtn.addEventListener('click', addAllReportActionTasks);
+
+    const goDetailBtn = el.querySelector('#btn-go-report-detail');
+    if (goDetailBtn) {
+      goDetailBtn.addEventListener('click', () => {
+        navigateToView('data');
+        setTimeout(() => scrollToElement('#business-report-data'), 120);
+      });
+    }
   }
 
   function hideImportPreview() {
