@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v1.8</small>
+          <small>AI経営脳みそ v1.9</small>
         </div>
       </div>
       <nav class="nav">
@@ -43,7 +43,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v1.8</small>
+        <small>Budil v1.9</small>
       </div>
     </aside>
 
@@ -80,6 +80,7 @@
             <div class="morning-section">
               <h3>今月の売上</h3>
               <div id="mgmt-revenue" class="mgmt-copy-block"></div>
+              <div id="mgmt-sales-outcome" class="revenue-sales-outcome revenue-sales-outcome-compact"></div>
             </div>
             <div class="morning-section">
               <h3>今日の注意点</h3>
@@ -100,6 +101,7 @@
         <div class="card card-wide card-revenue-summary">
           <h2>今月の売上状況</h2>
           <div id="dash-revenue-summary" class="revenue-summary-block"></div>
+          <div id="dash-sales-outcome" class="revenue-sales-outcome"></div>
         </div>
 
         <div class="card card-mission card-wide">
@@ -575,6 +577,11 @@
           <textarea id="msg-dm" class="hidden" readonly></textarea>
           <textarea id="msg-phone" class="hidden" readonly></textarea>
 
+          <div class="lead-revenue-section">
+            <h3>売上履歴</h3>
+            <div id="lead-revenue-panel" class="lead-revenue-panel"></div>
+          </div>
+
           <div class="sales-history-section">
             <h3>営業履歴</h3>
             <div class="sales-history-actions">
@@ -699,6 +706,11 @@
         </div>
 
         <div class="card card-wide">
+          <h2>営業成果（今月）</h2>
+          <div id="revenue-sales-outcome" class="revenue-sales-outcome"></div>
+        </div>
+
+        <div class="card card-wide">
           <h2>月間目標設定</h2>
           <div class="form-row form-row-2 revenue-target-row">
             <div class="form-group">
@@ -764,6 +776,22 @@
                   <input type="text" id="revenue-memo" placeholder="任意">
                 </div>
               </div>
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="revenue-lead">営業先と紐付け</label>
+                  <select id="revenue-lead">
+                    <option value="">未紐付け</option>
+                  </select>
+                  <small class="field-hint">任意。営業成果の分析に使います</small>
+                </div>
+                <div class="form-group hidden" id="revenue-mark-won-wrap">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="revenue-mark-won">
+                    紐付け営業先を成約に更新する
+                  </label>
+                  <small class="field-hint">見送り・成約済みの営業先は上書きしません</small>
+                </div>
+              </div>
               <div class="revenue-form-actions">
                 <button type="submit" class="btn btn-primary btn-sm">保存</button>
                 <button type="button" id="btn-revenue-cancel" class="btn btn-secondary btn-sm hidden">キャンセル</button>
@@ -793,6 +821,7 @@
                 <tr>
                   <th>作業日</th>
                   <th>顧客名</th>
+                  <th>紐付け営業先</th>
                   <th>サービス</th>
                   <th>依頼元</th>
                   <th>金額</th>

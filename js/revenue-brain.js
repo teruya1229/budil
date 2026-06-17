@@ -1,5 +1,5 @@
 /**
- * Budil v1.8 - 売上番頭（経営判断用）
+ * Budil v1.9 - 売上番頭（経営判断用）・営業先連携
  */
 const RevenueBrain = {
   SERVICES: [
@@ -31,6 +31,131 @@ const RevenueBrain = {
 
   activeRecords(records) {
     return (records || []).filter(r => r.status !== 'キャンセル');
+  },
+
+  normalizeRevenueRecord(record) {
+    if (!record) return record;
+    const normalized = { ...record };
+    if (normalized.leadId) {
+      normalized.leadId = String(normalized.leadId);
+      normalized.leadName = normalized.leadName || '';
+    }
+    return normalized;
+  },
+
+  normalizeRevenueRecords(records) {
+    return (records || []).map(r => this.normalizeRevenueRecord(r));
+  },
+
+  getRevenueRecordsByLeadId(leadId, records) {
+    if (!leadId) return [];
+    return this.normalizeRevenueRecords(records).filter(r => r.leadId === leadId);
+  },
+
+  resolveLeadLabel(record, leads) {
+    if (!record || !record.leadId) return '未紐付け';
+    const lead = (leads || []).find(l => l.id === record.leadId);
+    if (lead) return lead.company || record.leadName || '未紐付け';
+    return record.leadName || '削除済み営業先';
+  },
+
+  getLeadRevenueSummary(leadId, records) {
+    const linked = this.getRevenueRecordsByLeadId(leadId, records);
+    const active = this.activeRecords(linked);
+    const paid = this.sumAmount(active.filter(r => r.paymentStatus === '入金済み'));
+    const unpaid = this.sumAmount(active.filter(r => r.paymentStatus === '未入金'));
+    const dates = active.map(r => r.workDate).filter(Boolean).sort();
+    return {
+      total: this.sumAmount(active),
+      paid,
+      unpaid,
+      latestDate: dates.length ? dates[dates.length - 1] : null,
+      records: linked.slice().sort((a, b) => (b.workDate || '').localeCompare(a.workDate || '')),
+      count: active.length
+    };
+  },
+
+  summarizeRevenueByLead(records, leads) {
+    const active = this.activeRecords(this.normalizeRevenueRecords(records));
+    const groups = {};
+    active.forEach(r => {
+      if (!r.leadId) return;
+      if (!groups[r.leadId]) {
+        groups[r.leadId] = { leadId: r.leadId, total: 0, paid: 0, unpaid: 0, latestDate: null, count: 0, leadName: '' };
+      }
+      const g = groups[r.leadId];
+      const amt = Number(r.amount || 0);
+      g.total += amt;
+      g.count += 1;
+      if (r.paymentStatus === '入金済み') g.paid += amt;
+      else g.unpaid += amt;
+      if (r.leadName) g.leadName = r.leadName;
+      if (r.workDate && (!g.latestDate || r.workDate > g.latestDate)) g.latestDate = r.workDate;
+    });
+
+    const leadMap = {};
+    (leads || []).forEach(l => { leadMap[l.id] = l; });
+
+    return Object.values(groups)
+      .map(g => {
+        const lead = leadMap[g.leadId];
+        const salesStatus = lead
+          ? (lead.salesStatus || (typeof SalesBrain !== 'undefined' ? SalesBrain.mapLegacyStatus(lead.status) : lead.status))
+          : null;
+        return {
+          ...g,
+          leadName: lead ? lead.company : (g.leadName || '削除済み営業先'),
+          salesStatus
+        };
+      })
+      .sort((a, b) => b.total - a.total);
+  },
+
+  getLinkedRevenueSummary(records, leads, monthKey) {
+    const monthRecords = monthKey ? this.filterMonthRecords(records, monthKey) : (records || []);
+    const active = this.activeRecords(this.normalizeRevenueRecords(monthRecords));
+    let linkedTotal = 0;
+    let unlinkedTotal = 0;
+    const leadIdsWithRevenue = new Set();
+
+    active.forEach(r => {
+      const amount = Number(r.amount || 0);
+      if (r.leadId) {
+        linkedTotal += amount;
+        leadIdsWithRevenue.add(r.leadId);
+      } else {
+        unlinkedTotal += amount;
+      }
+    });
+
+    const byLead = this.summarizeRevenueByLead(active, leads);
+    const contractedCount = (leads || []).filter(l => {
+      const ss = l.salesStatus || (typeof SalesBrain !== 'undefined' ? SalesBrain.mapLegacyStatus(l.status) : l.status);
+      return ss === '成約' && leadIdsWithRevenue.has(l.id);
+    }).length;
+
+    return {
+      linkedTotal,
+      unlinkedTotal,
+      leadCount: leadIdsWithRevenue.size,
+      contractedCount,
+      topLeads: byLead.slice(0, 3),
+      unpaidLeads: byLead.filter(l => l.unpaid > 0).slice(0, 5)
+    };
+  },
+
+  buildSalesOutcomeComment(outcome) {
+    const lines = [];
+    if (outcome.linkedTotal > 0) {
+      lines.push(`今月、営業先に紐付いた売上は${this.formatYen(outcome.linkedTotal)}です`);
+    }
+    if (outcome.unlinkedTotal > 0) {
+      lines.push('未紐付け売上があります。あとで営業先と紐付けると成果分析がしやすくなります');
+    }
+    if (outcome.contractedCount > 0) {
+      lines.push('成約済み営業先があります。口コミ・次回提案・法人化提案を忘れずに確認してください');
+    }
+    return lines;
   },
 
   sumAmount(list) {

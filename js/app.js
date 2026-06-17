@@ -251,12 +251,48 @@
 
   function getRevenueContext() {
     const today = TODAY();
-    const records = Storage.getRevenueRecords();
+    const records = RevenueBrain.normalizeRevenueRecords(Storage.getRevenueRecords());
     const settings = Storage.getRevenueSettings();
+    const leads = Storage.getLeads();
     const monthKey = RevenueBrain.currentMonthKey(today);
     const summary = RevenueBrain.summarize(records, settings, monthKey);
     const comment = RevenueBrain.buildBantouComment(summary);
-    return { today, records, settings, monthKey, summary, comment };
+    const salesOutcome = RevenueBrain.getLinkedRevenueSummary(records, leads, monthKey);
+    return { today, records, settings, leads, monthKey, summary, comment, salesOutcome };
+  }
+
+  function renderSalesOutcomeHtml(outcome, options) {
+    const opts = options || {};
+    if (!outcome) return '';
+    const lines = [
+      `<div class="revenue-outcome-grid">`,
+      `<div class="revenue-outcome-item"><span>紐付け売上</span><strong>${esc(RevenueBrain.formatYen(outcome.linkedTotal))}</strong></div>`,
+      `<div class="revenue-outcome-item"><span>未紐付け売上</span><strong>${esc(RevenueBrain.formatYen(outcome.unlinkedTotal))}</strong></div>`,
+      `<div class="revenue-outcome-item"><span>売上発生営業先</span><strong>${outcome.leadCount}件</strong></div>`,
+      `<div class="revenue-outcome-item"><span>今月成約営業先</span><strong>${outcome.contractedCount}件</strong></div>`,
+      `</div>`
+    ];
+    if (outcome.topLeads && outcome.topLeads.length) {
+      lines.push('<p class="label-muted">売上上位営業先</p>');
+      lines.push('<ul class="revenue-outcome-list">');
+      outcome.topLeads.forEach(l => {
+        lines.push(`<li><span>${esc(l.leadName)}</span><strong>${esc(RevenueBrain.formatYen(l.total))}</strong></li>`);
+      });
+      lines.push('</ul>');
+    }
+    if (outcome.unpaidLeads && outcome.unpaidLeads.length) {
+      lines.push('<p class="label-muted">未入金がある営業先</p>');
+      lines.push('<ul class="revenue-outcome-list">');
+      outcome.unpaidLeads.forEach(l => {
+        lines.push(`<li><span>${esc(l.leadName)}</span><strong>${esc(RevenueBrain.formatYen(l.unpaid))}</strong></li>`);
+      });
+      lines.push('</ul>');
+    }
+    if (opts.showComments) {
+      const comments = RevenueBrain.buildSalesOutcomeComment(outcome);
+      comments.forEach(c => lines.push(`<p class="revenue-outcome-comment">${esc(c)}</p>`));
+    }
+    return lines.join('');
   }
 
   function renderRevenueSummaryHtml(summary, comment, options) {
@@ -288,10 +324,14 @@
   function renderDashRevenueSummary() {
     const el = document.getElementById('dash-revenue-summary');
     if (!el) return;
-    const { summary, comment } = getRevenueContext();
+    const { summary, comment, salesOutcome } = getRevenueContext();
     el.innerHTML = renderRevenueSummaryHtml(summary, comment, { showLink: true });
     const btn = el.querySelector('#btn-go-revenue');
     if (btn) btn.addEventListener('click', () => navigateToView('revenue'));
+    const outcomeEl = document.getElementById('dash-sales-outcome');
+    if (outcomeEl) {
+      outcomeEl.innerHTML = renderSalesOutcomeHtml(salesOutcome, { showComments: true });
+    }
   }
 
   function renderBackupStatus() {
@@ -590,6 +630,11 @@
       const rev = getRevenueContext();
       revenueEl.innerHTML = renderRevenueSummaryHtml(rev.summary, rev.comment);
     }
+    const mgmtOutcomeEl = document.getElementById('mgmt-sales-outcome');
+    if (mgmtOutcomeEl) {
+      const rev = getRevenueContext();
+      mgmtOutcomeEl.innerHTML = renderSalesOutcomeHtml(rev.salesOutcome, { showComments: true });
+    }
 
     const top3Legacy = document.getElementById('dash-top3');
     if (top3Legacy) {
@@ -647,6 +692,10 @@
     } else {
       targetsEl.innerHTML = targets.map(l => {
         const nextActionWarn = !l.nextAction ? '<span class="sales-priority-warning">次アクション未設定</span>' : '';
+        const revSummary = RevenueBrain.getLeadRevenueSummary(l.id, Storage.getRevenueRecords());
+        const revenueLine = revSummary.count
+          ? `<p class="sales-target-meta">売上: ${esc(RevenueBrain.formatYen(revSummary.total))}${revSummary.latestDate ? '（最新: ' + esc(revSummary.latestDate) + '）' : ''}</p>`
+          : '';
         return `
         <div class="sales-target-card sales-target-clickable" data-open-lead="${esc(l.id)}" role="button" tabindex="0">
           <div class="sales-target-header">
@@ -657,6 +706,7 @@
             <span class="sales-status-badge sales-status-${salesStatusClass(l.salesStatus)}">${esc(l.salesStatus)}</span>
             ${l.nextActionDate ? `<span class="sales-target-date">次アクション日: ${esc(l.nextActionDate)}</span>` : ''}
           </p>
+          ${revenueLine}
           <p class="sales-target-product">${esc(l.productLabel)}</p>
           <p class="sales-target-reason"><span>理由：</span>${esc(l.priorityReason || l.displayReason)}</p>
           <p class="sales-target-action">次アクション: <strong>${esc(l.nextAction || l.suggestedAction || '—')}</strong> ${nextActionWarn}</p>
@@ -1401,10 +1451,19 @@
     tbody.innerHTML = displayList.map(l => {
       const overdue = l.nextActionDate && l.nextActionDate < today && !l.salesPriorityExcluded;
       const nextActionNote = !l.nextAction ? ' <small class="sales-priority-warning">未設定</small>' : '';
+      const revSummary = RevenueBrain.getLeadRevenueSummary(l.id, Storage.getRevenueRecords());
+      const revenueHint = revSummary.count
+        ? `<small class="lead-revenue-hint">売上: ${esc(RevenueBrain.formatYen(revSummary.total))}${revSummary.latestDate ? ' / 最新: ' + esc(revSummary.latestDate) : ''}</small>`
+        : '';
+      const wonBadge = l.salesStatus === '成約'
+        ? ' <span class="sales-status-badge sales-status-won">成約</span>' : '';
       return `
       <tr class="${overdue ? 'row-overdue' : ''}">
         <td><span class="sales-priority-label priority-${l.priorityLevel || 'low'}">${esc(l.priorityLabel || '低')}</span></td>
-        <td><button type="button" class="lead-company-link" data-open-lead="${esc(l.id)}">${esc(l.company)}</button></td>
+        <td>
+          <button type="button" class="lead-company-link" data-open-lead="${esc(l.id)}">${esc(l.company)}</button>${wonBadge}
+          ${revenueHint}
+        </td>
         <td><span class="sales-status-badge sales-status-${salesStatusClass(l.salesStatus)}">${esc(l.salesStatus)}</span></td>
         <td>${esc(l.nextActionDate || '—')}</td>
         <td>${esc(l.recommendedProduct || '—')}</td>
@@ -1658,6 +1717,7 @@
 
     switchSalesTab(currentSalesTab || 'email');
     renderSalesHistory(leadId);
+    renderLeadRevenuePanel(leadId);
 
     if (opts.navigate) navigateToView('sales');
     document.getElementById('sales-detail-panel').classList.remove('hidden');
@@ -1904,6 +1964,72 @@
   }
 
   // ── 売上番頭 ──
+  function fillRevenueLeadSelect(selectedId) {
+    const el = document.getElementById('revenue-lead');
+    if (!el) return;
+    const leads = Storage.getLeads().slice().sort((a, b) => (a.company || '').localeCompare(b.company || '', 'ja'));
+    let options = '<option value="">未紐付け</option>';
+    options += leads.map(l => `<option value="${esc(l.id)}">${esc(l.company)}</option>`).join('');
+    if (selectedId && !leads.find(l => l.id === selectedId)) {
+      const record = Storage.getRevenueRecords().find(r => r.leadId === selectedId);
+      const name = (record && record.leadName) || '削除済み営業先';
+      options += `<option value="${esc(selectedId)}">${esc(name)}（削除済み）</option>`;
+    }
+    el.innerHTML = options;
+    el.value = selectedId || '';
+  }
+
+  function toggleRevenueLeadOptions() {
+    const leadId = document.getElementById('revenue-lead').value;
+    const wrap = document.getElementById('revenue-mark-won-wrap');
+    if (wrap) wrap.classList.toggle('hidden', !leadId);
+  }
+
+  function updateLeadStatusFromRevenue(leadId) {
+    const lead = Storage.getLeads().find(l => l.id === leadId);
+    if (!lead) return false;
+    const normalized = SalesBrain.normalizeLead(lead);
+    if (normalized.salesStatus === '見送り' || normalized.salesStatus === '成約') return false;
+    const today = TODAY();
+    Storage.updateLead(leadId, {
+      salesStatus: '成約',
+      status: '成約',
+      lastContactAt: today,
+      lastContact: today
+    });
+    return true;
+  }
+
+  function renderLeadRevenuePanel(leadId) {
+    const container = document.getElementById('lead-revenue-panel');
+    if (!container) return;
+    const summary = RevenueBrain.getLeadRevenueSummary(leadId, Storage.getRevenueRecords());
+    if (!summary.count) {
+      container.innerHTML = '<p class="placeholder-text">この営業先に紐付いた売上はまだありません</p>';
+      return;
+    }
+    const historyHtml = summary.records
+      .filter(r => r.status !== 'キャンセル')
+      .map(r => `
+        <li>
+          <strong>${esc(RevenueBrain.formatYen(r.amount))}</strong>
+          <div class="lead-revenue-history-meta">
+            <span>${esc(r.workDate || '—')}</span>
+            <span>${esc(r.service || '—')}</span>
+            <span class="revenue-status-badge revenue-status-${esc(r.status)}">${esc(r.status)}</span>
+            <span class="revenue-status-badge revenue-payment-${esc(r.paymentStatus)}">${esc(r.paymentStatus)}</span>
+          </div>
+        </li>`).join('');
+    container.innerHTML = `
+      <div class="lead-revenue-summary">
+        <div class="lead-revenue-summary-item"><span>売上合計</span><strong>${esc(RevenueBrain.formatYen(summary.total))}</strong></div>
+        <div class="lead-revenue-summary-item"><span>入金済み</span><strong>${esc(RevenueBrain.formatYen(summary.paid))}</strong></div>
+        <div class="lead-revenue-summary-item"><span>未入金</span><strong>${esc(RevenueBrain.formatYen(summary.unpaid))}</strong></div>
+        <div class="lead-revenue-summary-item"><span>最新売上日</span><strong>${esc(summary.latestDate || '—')}</strong></div>
+      </div>
+      <ul class="lead-revenue-history">${historyHtml}</ul>`;
+  }
+
   function fillRevenueSelects() {
     const serviceEl = document.getElementById('revenue-service');
     const sourceEl = document.getElementById('revenue-source');
@@ -1921,13 +2047,17 @@
     document.getElementById('revenue-work-date').value = TODAY();
     document.getElementById('revenue-status').value = '予定';
     document.getElementById('revenue-payment').value = '未入金';
+    document.getElementById('revenue-mark-won').checked = false;
+    fillRevenueLeadSelect('');
+    toggleRevenueLeadOptions();
     document.getElementById('revenue-form-title').textContent = '売上登録';
     document.getElementById('btn-revenue-cancel').classList.add('hidden');
   }
 
   function openRevenueEdit(id) {
-    const record = Storage.getRevenueRecords().find(r => r.id === id);
+    const record = RevenueBrain.normalizeRevenueRecord(Storage.getRevenueRecords().find(r => r.id === id));
     if (!record) return;
+    fillRevenueSelects();
     document.getElementById('revenue-edit-id').value = id;
     document.getElementById('revenue-work-date').value = record.workDate || '';
     document.getElementById('revenue-customer').value = record.customerName || '';
@@ -1937,13 +2067,18 @@
     document.getElementById('revenue-status').value = record.status || '予定';
     document.getElementById('revenue-payment').value = record.paymentStatus || '未入金';
     document.getElementById('revenue-memo').value = record.memo || '';
+    fillRevenueLeadSelect(record.leadId || '');
+    document.getElementById('revenue-mark-won').checked = false;
+    toggleRevenueLeadOptions();
     document.getElementById('revenue-form-title').textContent = '売上編集';
     document.getElementById('btn-revenue-cancel').classList.remove('hidden');
     document.getElementById('revenue-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function getRevenueFormData() {
-    return {
+    const leadId = document.getElementById('revenue-lead').value;
+    const leads = Storage.getLeads();
+    const data = {
       workDate: document.getElementById('revenue-work-date').value,
       customerName: document.getElementById('revenue-customer').value.trim(),
       service: document.getElementById('revenue-service').value,
@@ -1953,6 +2088,15 @@
       paymentStatus: document.getElementById('revenue-payment').value,
       memo: document.getElementById('revenue-memo').value.trim()
     };
+    if (leadId) {
+      const lead = leads.find(l => l.id === leadId);
+      data.leadId = leadId;
+      data.leadName = lead ? lead.company : (Storage.getRevenueRecords().find(r => r.leadId === leadId)?.leadName || '');
+    } else {
+      data.leadId = '';
+      data.leadName = '';
+    }
+    return data;
   }
 
   function renderRevenueBreakdown(id, items) {
@@ -1974,8 +2118,9 @@
   }
 
   function renderRevenueList() {
-    const { monthKey } = getRevenueContext();
+    const { monthKey, leads } = getRevenueContext();
     const records = Storage.getRevenueRecords()
+      .map(r => RevenueBrain.normalizeRevenueRecord(r))
       .filter(r => r.workDate && r.workDate.startsWith(monthKey))
       .slice()
       .sort((a, b) => (b.workDate || '').localeCompare(a.workDate || ''));
@@ -1984,7 +2129,7 @@
     const cardList = document.getElementById('revenue-card-list');
 
     if (!records.length) {
-      const empty = '<tr><td colspan="8" class="empty-state">今月の売上がありません</td></tr>';
+      const empty = '<tr><td colspan="9" class="empty-state">今月の売上がありません</td></tr>';
       if (tbody) tbody.innerHTML = empty;
       if (cardList) cardList.innerHTML = '<p class="empty-state">今月の売上がありません</p>';
       return;
@@ -1995,6 +2140,7 @@
         <tr>
           <td>${esc(r.workDate)}</td>
           <td>${esc(r.customerName)}</td>
+          <td class="revenue-lead-label">${esc(RevenueBrain.resolveLeadLabel(r, leads))}</td>
           <td>${esc(r.service)}</td>
           <td>${esc(r.source)}</td>
           <td>${esc(RevenueBrain.formatYen(r.amount))}</td>
@@ -2012,6 +2158,7 @@
             <span class="revenue-card-amount">${esc(RevenueBrain.formatYen(r.amount))}</span>
           </div>
           <p class="revenue-card-meta">${esc(r.workDate)} ｜ ${esc(r.service)} ｜ ${esc(r.source)}</p>
+          <p class="revenue-card-meta">紐付け営業先: ${esc(RevenueBrain.resolveLeadLabel(r, leads))}</p>
           <p class="revenue-card-meta">
             <span class="revenue-status-badge revenue-status-${esc(r.status)}">${esc(r.status)}</span>
             <span class="revenue-status-badge revenue-payment-${esc(r.paymentStatus)}">${esc(r.paymentStatus)}</span>
@@ -2036,10 +2183,11 @@
   }
 
   function renderRevenueSummaryPanel() {
-    const { summary, comment, settings } = getRevenueContext();
+    const { summary, comment, settings, salesOutcome } = getRevenueContext();
     const summaryEl = document.getElementById('revenue-summary');
     const commentEl = document.getElementById('revenue-bantou-comment');
     const targetEl = document.getElementById('revenue-monthly-target');
+    const outcomeEl = document.getElementById('revenue-sales-outcome');
 
     if (summaryEl) {
       summaryEl.innerHTML = [
@@ -2061,12 +2209,16 @@
     }
     if (commentEl) commentEl.textContent = comment;
     if (targetEl) targetEl.value = settings.monthlyTarget || '';
+    if (outcomeEl) outcomeEl.innerHTML = renderSalesOutcomeHtml(salesOutcome);
     renderRevenueBreakdown('revenue-by-service', summary.byService);
     renderRevenueBreakdown('revenue-by-source', summary.bySource);
   }
 
   function renderRevenueView() {
     fillRevenueSelects();
+    const leadEl = document.getElementById('revenue-lead');
+    fillRevenueLeadSelect(leadEl ? leadEl.value : '');
+    toggleRevenueLeadOptions();
     renderRevenueSummaryPanel();
     renderRevenueList();
   }
@@ -2078,18 +2230,31 @@
       alert('顧客名は必須です');
       return;
     }
+    const markWon = document.getElementById('revenue-mark-won').checked;
+    const leadId = data.leadId;
     const id = document.getElementById('revenue-edit-id').value;
     if (id) Storage.updateRevenueRecord(id, data);
     else Storage.addRevenueRecord(data);
+    if (markWon && leadId) {
+      const updated = updateLeadStatusFromRevenue(leadId);
+      if (updated) renderLeadsTable();
+    }
     resetRevenueForm();
     renderRevenueView();
     renderDashboard();
+    if (currentMessageLeadId === leadId) renderLeadRevenuePanel(leadId);
   }
 
   function initRevenue() {
     fillRevenueSelects();
+    fillRevenueLeadSelect('');
+    toggleRevenueLeadOptions();
     document.getElementById('revenue-form').addEventListener('submit', handleRevenueSubmit);
     document.getElementById('btn-revenue-cancel').addEventListener('click', resetRevenueForm);
+    document.getElementById('revenue-lead').addEventListener('change', () => {
+      toggleRevenueLeadOptions();
+      document.getElementById('revenue-mark-won').checked = false;
+    });
     document.getElementById('btn-revenue-new').addEventListener('click', () => {
       resetRevenueForm();
       document.getElementById('revenue-form').scrollIntoView({ behavior: 'smooth', block: 'start' });

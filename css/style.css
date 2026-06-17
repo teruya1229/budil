@@ -2091,6 +2091,140 @@ body {
   margin-top: 10px;
 }
 
+.revenue-sales-outcome {
+  margin-top: 12px;
+}
+
+.revenue-sales-outcome-compact {
+  margin-top: 8px;
+}
+
+.revenue-outcome-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.revenue-outcome-item {
+  background: var(--surface-2, rgba(255, 255, 255, 0.04));
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.revenue-outcome-item span {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted, #8b9cb3);
+  margin-bottom: 4px;
+}
+
+.revenue-outcome-item strong {
+  font-size: 1rem;
+}
+
+.revenue-outcome-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+
+.revenue-outcome-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  font-size: 0.9rem;
+}
+
+.revenue-outcome-list li:last-child {
+  border-bottom: none;
+}
+
+.revenue-outcome-comment {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  color: var(--text-muted, #8b9cb3);
+}
+
+.lead-revenue-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+}
+
+.lead-revenue-panel {
+  margin-top: 8px;
+}
+
+.lead-revenue-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.lead-revenue-summary-item {
+  background: var(--surface-2, rgba(255, 255, 255, 0.04));
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.lead-revenue-summary-item span {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted, #8b9cb3);
+}
+
+.lead-revenue-history {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.lead-revenue-history li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  font-size: 0.9rem;
+}
+
+.lead-revenue-history li:last-child {
+  border-bottom: none;
+}
+
+.lead-revenue-history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--text-muted, #8b9cb3);
+  font-size: 0.85rem;
+}
+
+.lead-revenue-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--text-muted, #8b9cb3);
+}
+
+.revenue-lead-label {
+  font-size: 0.9rem;
+}
+
+#revenue-mark-won-wrap.hidden {
+  display: none;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-top: 24px;
+}
+
 @media (max-width: 1024px) {
   .revenue-layout {
     grid-template-columns: 1fr;

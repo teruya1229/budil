@@ -1,6 +1,6 @@
 # Budil handoff
 
-最終更新: 2026-06-16
+最終更新: 2026-06-17
 
 ## 正本
 
@@ -11,7 +11,8 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
-- Budil v1.8 公開済み（売上番頭MVP）
+- Budil v1.9 公開予定（売上×営業先連携MVP）
+- 売上番頭 v1.8 実装済み
 - 営業プリセット v1.6 実装済み
 - 営業ステータス / 次アクション / 優先度判定 v1.7 実装済み
 - スマホ写真アップロード修正（名刺登録UI）
@@ -31,6 +32,14 @@
 | `js/messages.js` | 営業文面テンプレート・プリセット |
 | `js/management-brain.js` | 朝レポート・今日の営業生成 |
 | `js/revenue-brain.js` | 売上集計・番頭コメント |
+
+## v1.9で入ったもの
+
+- 売上レコードに `leadId` / `leadName`（任意・スナップショット）
+- 売上登録フォームの営業先選択・成約更新チェック
+- 営業先詳細の売上履歴パネル
+- `RevenueBrain.normalizeRevenueRecord()` / `getLinkedRevenueSummary()` 等
+- 既存レコードに leadId が無くてもエラーにならない（読み取り時正規化のみ）
 
 ## v1.8で入ったもの
 
