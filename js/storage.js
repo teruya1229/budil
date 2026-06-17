@@ -15,7 +15,8 @@ const Storage = {
     DEMAND_RADAR: 'budil_demand_radar',
     REVENUE_RECORDS: 'budil_revenue_records',
     REVENUE_SETTINGS: 'budil_revenue_settings',
-    DAILY_ACTION_TASKS: 'budil_daily_action_tasks'
+    DAILY_ACTION_TASKS: 'budil_daily_action_tasks',
+    DEMAND_PICKUPS: 'budil_demand_pickups'
   },
 
   get(key, defaultValue = null) {
@@ -436,6 +437,38 @@ const Storage = {
     };
     this.saveDailyActionTasksData(store);
     return store.manualTasks[idx];
+  },
+
+  getDemandPickups() {
+    return this.get(this.KEYS.DEMAND_PICKUPS, []);
+  },
+
+  saveDemandPickups(list) {
+    this.set(this.KEYS.DEMAND_PICKUPS, list);
+  },
+
+  addDemandPickup(item) {
+    const list = this.getDemandPickups();
+    const now = new Date().toISOString();
+    const record = {
+      ...item,
+      id: item.id || ('demand-' + this.generateId()),
+      status: item.status || 'open',
+      createdAt: item.createdAt || now,
+      updatedAt: now
+    };
+    list.unshift(record);
+    this.saveDemandPickups(list);
+    return record;
+  },
+
+  updateDemandPickup(id, data) {
+    const list = this.getDemandPickups();
+    const idx = list.findIndex(p => p.id === id);
+    if (idx === -1) return null;
+    list[idx] = { ...list[idx], ...data, updatedAt: new Date().toISOString() };
+    this.saveDemandPickups(list);
+    return list[idx];
   }
 };
 

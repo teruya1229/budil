@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v2.1 公開済み（需要ピックアップ受信箱MVP）
 - Budil v2.0 公開済み（実運用MVP仕上げ）
 - Budil v1.9.9 公開済み（営業先詳細の見やすさ整理）
 - Budil v1.9.8 公開済み（活動履歴から次回アクション設定）
@@ -40,7 +41,20 @@
 | `js/sales-brain.js` | 営業分析・優先度・ステータス正規化 |
 | `js/messages.js` | 営業文面テンプレート・プリセット |
 | `js/management-brain.js` | 朝レポート・今日の営業生成 |
-| `js/revenue-brain.js` | 売上集計・番頭コメント |
+| `js/demand-brain.js` | 需要分析・需要ピックアップパース・トップ3 |
+| `js/demand-radar.js` | 需要レーダー分析 |
+| `js/data-backup.js` | バックアップ・復元 |
+
+## v2.1で入ったもの
+
+- 需要番頭画面（需要ピックアップ受信箱）
+- `budil_demand_pickups` — クロクロ調査結果の保存
+- 貼り付け簡易パース → フォーム反映
+- 需要トップ3・投稿/営業/広告候補表示
+- 今日やること連携・採用済み/無視
+- 経営番頭コメントへの需要1行反映
+- 需要テストデータ作成・削除
+- バックアップキーに `budil_demand_pickups` を追加
 
 ## v2.0で入ったもの
 
@@ -191,6 +205,7 @@
 | `budil_revenue_records` | 売上記録 |
 | `budil_revenue_settings` | 月間目標など |
 | `budil_daily_action_tasks` | 今日やることの完了・後回し・メモ・手動タスク |
+| `budil_demand_pickups` | 需要ピックアップ（クロクロ調査結果・アクション案） |
 
 ## 次にやると良いこと（v1.8候補）
 

@@ -158,5 +158,177 @@ const DemandBrain = {
     const todayMove = this.buildTodayMove(recommendedServices[0], keywordScores, postThemes);
 
     return { keywordScores, recommendedServices, postThemes, salesThemes, todayMove };
+  },
+
+  PICKUP_SOURCES: ['クロクロ', '天気', 'ニュース', 'SNS', '検索需要', '手動', 'その他'],
+
+  PICKUP_SERVICES: [
+    'エアコン通常', 'エアコン完全分解', 'お掃除機能付きエアコン',
+    '洗濯機クリーニング', 'レンジフード', 'キッチン', '浴室', '法人案件', 'その他'
+  ],
+
+  PICKUP_LABELS: [
+    { key: 'topic', labels: ['テーマ：', 'テーマ:'] },
+    { key: 'summary', labels: ['要約：', '要約:'] },
+    { key: 'demandScore', labels: ['需要スコア：', '需要スコア:'] },
+    { key: 'relatedServices', labels: ['関連サービス：', '関連サービス:'] },
+    { key: 'postAction', labels: ['投稿案：', '投稿案:'] },
+    { key: 'salesAction', labels: ['営業案：', '営業案:'] },
+    { key: 'adAction', labels: ['広告案：', '広告案:'] }
+  ],
+
+  parseKurokuroPaste(text) {
+    const raw = (text || '').trim();
+    if (!raw) return {};
+    const result = {};
+    const allLabels = this.PICKUP_LABELS.flatMap(f => f.labels);
+    this.PICKUP_LABELS.forEach(field => {
+      for (const label of field.labels) {
+        const idx = raw.indexOf(label);
+        if (idx === -1) continue;
+        const start = idx + label.length;
+        let end = raw.length;
+        for (const other of allLabels) {
+          if (other === label) continue;
+          const pos = raw.indexOf(other, start);
+          if (pos !== -1 && pos < end) end = pos;
+        }
+        const value = raw.slice(start, end).trim().replace(/\n+$/, '').trim();
+        if (field.key === 'demandScore') {
+          const num = parseInt(value.replace(/[^\d]/g, ''), 10);
+          if (!isNaN(num)) result.demandScore = Math.min(100, Math.max(0, num));
+        } else if (field.key === 'relatedServices') {
+          result.relatedServices = this.parseRelatedServices(value);
+        } else {
+          result[field.key] = value;
+        }
+        break;
+      }
+    });
+    return result;
+  },
+
+  parseRelatedServices(text) {
+    if (!text) return [];
+    const parts = text.split(/[、,／/]/).map(s => s.trim()).filter(Boolean);
+    const matched = [];
+    parts.forEach(part => {
+      const found = this.PICKUP_SERVICES.find(s =>
+        part.includes(s) || s.includes(part) ||
+        (part.includes('完全分解') && s === 'エアコン完全分解') ||
+        (part.includes('洗濯機') && s === '洗濯機クリーニング')
+      );
+      if (found && !matched.includes(found)) matched.push(found);
+      else if (!found && part && !matched.includes(part)) matched.push(part);
+    });
+    return matched;
+  },
+
+  normalizePickup(item) {
+    const actions = Array.isArray(item.suggestedActions) ? item.suggestedActions : [];
+    const getAction = type => actions.find(a => a.type === type);
+    const post = getAction('post');
+    const sales = getAction('sales');
+    const ad = getAction('ad');
+    return {
+      id: item.id || '',
+      date: item.date || new Date().toISOString().slice(0, 10),
+      source: item.source || 'クロクロ',
+      topic: item.topic || '',
+      summary: item.summary || '',
+      demandScore: typeof item.demandScore === 'number' ? item.demandScore : 0,
+      relatedServices: Array.isArray(item.relatedServices) ? item.relatedServices : [],
+      suggestedActions: actions,
+      postTitle: post ? post.title : '',
+      salesTitle: sales ? sales.title : '',
+      adTitle: ad ? ad.title : '',
+      memo: item.memo || '',
+      status: item.status || 'open',
+      isTest: !!item.isTest,
+      createdAt: item.createdAt || '',
+      updatedAt: item.updatedAt || ''
+    };
+  },
+
+  buildPickupFromForm(form) {
+    const suggestedActions = [];
+    if (form.postAction) {
+      suggestedActions.push({ type: 'post', title: form.postAction, channel: 'Instagram' });
+    }
+    if (form.salesAction) {
+      suggestedActions.push({ type: 'sales', title: form.salesAction });
+    }
+    if (form.adAction) {
+      suggestedActions.push({ type: 'ad', title: form.adAction });
+    }
+    return {
+      date: form.date,
+      source: form.source,
+      topic: form.topic,
+      summary: form.summary,
+      demandScore: form.demandScore,
+      relatedServices: form.relatedServices,
+      suggestedActions,
+      memo: form.memo,
+      status: 'open',
+      isTest: !!form.isTest
+    };
+  },
+
+  getTodayPickups(pickups, date) {
+    const today = date || new Date().toISOString().slice(0, 10);
+    return (pickups || [])
+      .filter(p => p.date === today && p.status === 'open')
+      .map(p => this.normalizePickup(p))
+      .sort((a, b) => b.demandScore - a.demandScore);
+  },
+
+  getTodayTop3(pickups, date) {
+    return this.getTodayPickups(pickups, date).slice(0, 3);
+  },
+
+  buildManagementDemandLine(pickups, date) {
+    const top3 = this.getTodayTop3(pickups, date);
+    if (!top3.length) return '';
+    const top = top3[0];
+    const services = top.relatedServices.slice(0, 2).join('・') || '関連サービス';
+    const post = top.postTitle;
+    const actionHint = post ? `${services}の投稿を優先してください。` : `${services}の訴求を優先してください。`;
+    return `今日の需要は「${top.topic}」が強めです。${actionHint}`;
+  },
+
+  buildDailyTaskFromPickup(pickup, actionType) {
+    const p = this.normalizePickup(pickup);
+    const reason = `今日の需要ピックアップ「${p.topic}」から`;
+    if (actionType === 'post' && p.postTitle) {
+      return { title: `投稿する：${p.postTitle}`, reason, priority: '中' };
+    }
+    if (actionType === 'sales' && p.salesTitle) {
+      return { title: `営業する：${p.salesTitle}`, reason, priority: '中' };
+    }
+    if (actionType === 'ad' && p.adTitle) {
+      return { title: `広告確認：${p.adTitle}`, reason, priority: '中' };
+    }
+    return null;
+  },
+
+  createTestPickup(date) {
+    const today = date || new Date().toISOString().slice(0, 10);
+    return {
+      date: today,
+      source: 'クロクロ',
+      topic: '湿気・カビ',
+      summary: '沖縄は湿度が高く、エアコン内部のカビ・臭い訴求が合いそう。',
+      demandScore: 82,
+      relatedServices: ['エアコン完全分解', '洗濯機クリーニング'],
+      suggestedActions: [
+        { type: 'post', title: 'エアコン内部のカビ注意リール', channel: 'Instagram' },
+        { type: 'sales', title: '過去の完全分解見込み客へLINE' },
+        { type: 'ad', title: '完全分解LPを強める' }
+      ],
+      memo: 'テストデータ',
+      status: 'open',
+      isTest: true
+    };
   }
 };

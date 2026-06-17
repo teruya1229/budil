@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v2.0</small>
+          <small>AI経営脳みそ v2.1</small>
         </div>
       </div>
       <nav class="nav">
@@ -22,6 +22,9 @@
         </button>
         <button class="nav-item" data-view="radar">
           <span class="nav-icon">📡</span>需要レーダー
+        </button>
+        <button class="nav-item" data-view="pickup">
+          <span class="nav-icon">📥</span>需要番頭
         </button>
         <button class="nav-item" data-view="demand">
           <span class="nav-icon">🔍</span>需要サーチ番頭
@@ -43,7 +46,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v2.0</small>
+        <small>Budil v2.1</small>
       </div>
     </aside>
 
@@ -344,6 +347,124 @@
               <ul id="radar-trend-down" class="radar-trend-list"></ul>
             </div>
           </div>
+        </div>
+      </section>
+
+      </section>
+
+      <!-- 需要番頭（需要ピックアップ受信箱） -->
+      <section id="view-pickup" class="view">
+        <header class="view-header">
+          <h1>需要番頭</h1>
+          <p class="view-subtitle">クロクロ調査結果を受け取り、今日の行動に変換する</p>
+        </header>
+
+        <div class="card card-wide card-pickup-comment">
+          <h2>今日の需要ピックアップ</h2>
+          <div id="pickup-today-summary" class="pickup-today-summary"></div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>クロクロ調査結果を貼り付け</h2>
+          <p class="pickup-paste-hint">クロクロの調査結果をそのまま貼り付けて、フォームに反映できます。</p>
+          <div class="form-group">
+            <textarea id="pickup-paste-area" rows="8" placeholder="テーマ：湿気・カビ&#10;要約：沖縄は湿度が高く、エアコン内部のカビ・臭い訴求が合いそう。&#10;需要スコア：82&#10;関連サービス：エアコン完全分解、洗濯機クリーニング&#10;投稿案：エアコン内部のカビ注意リール&#10;営業案：過去の完全分解見込み客へLINE&#10;広告案：完全分解LPを強める"></textarea>
+          </div>
+          <button type="button" id="btn-pickup-apply-paste" class="btn btn-secondary">貼り付け内容をフォームに反映</button>
+        </div>
+
+        <div class="card card-wide">
+          <h2>クロクロ調査結果入力</h2>
+          <form id="pickup-form">
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="pickup-date">日付</label>
+                <input type="date" id="pickup-date" required>
+              </div>
+              <div class="form-group">
+                <label for="pickup-source">情報元</label>
+                <select id="pickup-source">
+                  <option value="クロクロ">クロクロ</option>
+                  <option value="天気">天気</option>
+                  <option value="ニュース">ニュース</option>
+                  <option value="SNS">SNS</option>
+                  <option value="検索需要">検索需要</option>
+                  <option value="手動">手動</option>
+                  <option value="その他">その他</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="pickup-topic">需要テーマ</label>
+              <input type="text" id="pickup-topic" placeholder="例：湿気・カビ">
+            </div>
+            <div class="form-group">
+              <label for="pickup-summary">要約</label>
+              <textarea id="pickup-summary" rows="3" placeholder="需要の概要を入力"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="pickup-score">需要スコア（0〜100）</label>
+              <input type="number" id="pickup-score" min="0" max="100" value="50">
+            </div>
+            <div class="form-group">
+              <label>関連サービス</label>
+              <div id="pickup-services" class="pickup-service-chips"></div>
+            </div>
+            <div class="form-group">
+              <label for="pickup-post-action">投稿アクション案</label>
+              <input type="text" id="pickup-post-action" placeholder="例：エアコン内部のカビ注意リール">
+            </div>
+            <div class="form-group">
+              <label for="pickup-sales-action">営業アクション案</label>
+              <input type="text" id="pickup-sales-action" placeholder="例：過去の完全分解見込み客へLINE">
+            </div>
+            <div class="form-group">
+              <label for="pickup-ad-action">広告アクション案</label>
+              <input type="text" id="pickup-ad-action" placeholder="例：完全分解LPを強める">
+            </div>
+            <div class="form-group">
+              <label for="pickup-memo">メモ</label>
+              <input type="text" id="pickup-memo" placeholder="任意">
+            </div>
+            <div class="pickup-form-actions">
+              <button type="submit" class="btn btn-primary">保存</button>
+              <button type="button" id="btn-pickup-add-tasks" class="btn btn-secondary">今日やることに追加</button>
+              <button type="button" id="btn-pickup-copy-post" class="btn btn-secondary btn-sm">投稿案コピー</button>
+              <button type="button" id="btn-pickup-copy-ad" class="btn btn-secondary btn-sm">広告案コピー</button>
+              <button type="button" id="btn-pickup-clear" class="btn btn-secondary btn-sm">クリア</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card card-wide">
+          <h2>需要トップ3</h2>
+          <div id="pickup-top3" class="pickup-top3-list"></div>
+        </div>
+
+        <div class="pickup-candidates-grid">
+          <div class="card">
+            <h2>投稿ネタ候補</h2>
+            <div id="pickup-post-candidates" class="pickup-candidates-list"></div>
+          </div>
+          <div class="card">
+            <h2>営業アクション候補</h2>
+            <div id="pickup-sales-candidates" class="pickup-candidates-list"></div>
+          </div>
+          <div class="card">
+            <h2>広告アクション候補</h2>
+            <div id="pickup-ad-candidates" class="pickup-candidates-list"></div>
+          </div>
+        </div>
+
+        <div class="card card-wide">
+          <div class="card-header-row">
+            <h2>保存済み需要メモ</h2>
+            <div class="header-actions">
+              <button type="button" id="btn-pickup-create-test" class="btn btn-secondary btn-sm">需要テストデータ作成</button>
+              <button type="button" id="btn-pickup-delete-test" class="btn btn-secondary btn-sm">需要テストデータ削除</button>
+            </div>
+          </div>
+          <div id="pickup-saved-list" class="pickup-saved-list"></div>
         </div>
       </section>
 
@@ -1205,7 +1326,7 @@
             <li>営業先・活動履歴・売上履歴</li>
             <li>売上記録・売上目標</li>
             <li>今日やること（タスク）</li>
-            <li>設定・需要メモ・朝レポート用データ</li>
+            <li>設定・需要メモ・需要ピックアップ・朝レポート用データ</li>
           </ul>
         </div>
 
@@ -1248,6 +1369,20 @@
             <button type="button" id="btn-create-test-data" class="btn btn-secondary">テストデータを作成</button>
             <button type="button" id="btn-delete-test-data" class="btn btn-secondary">テストデータを削除</button>
           </div>
+        </div>
+
+        <div class="card card-wide card-mvp-checklist">
+          <h2>v2.1 動作確認チェックリスト</h2>
+          <p class="data-mgmt-desc">需要ピックアップ受信箱と既存機能が動くか確認してください。</p>
+          <ul class="mvp-checklist">
+            <li>需要番頭画面が表示される</li>
+            <li>クロクロ調査結果を貼り付けてフォーム反映できる</li>
+            <li>需要ピックアップを保存できる</li>
+            <li>需要トップ3に今日のデータが表示される</li>
+            <li>今日やることに追加できる</li>
+            <li>採用済み / 無視 の状態変更ができる</li>
+            <li>バックアップに需要ピックアップが含まれる</li>
+          </ul>
         </div>
 
         <div class="card card-wide card-mvp-checklist">

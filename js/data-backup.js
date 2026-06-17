@@ -1,8 +1,8 @@
 /**
- * Budil v2.0 - データバックアップ・復元
+ * Budil v2.1 - データバックアップ・復元
  */
 const DataBackup = {
-  VERSION: '2.0',
+  VERSION: '2.1',
 
   BACKUP_KEYS: [
     'budil_leads',
@@ -16,7 +16,8 @@ const DataBackup = {
     'budil_card_draft',
     'budil_revenue_records',
     'budil_revenue_settings',
-    'budil_daily_action_tasks'
+    'budil_daily_action_tasks',
+    'budil_demand_pickups'
   ],
 
   exportPayload() {
@@ -79,10 +80,12 @@ const DataBackup = {
       manualTasks = Array.isArray(dailyTasks.manualTasks) ? dailyTasks.manualTasks.length : 0;
     }
 
+    const demandPickups = Array.isArray(data.budil_demand_pickups) ? data.budil_demand_pickups.length : 0;
+
     return {
       leads, followups, demandLogs, radarKw, messages, hasPosts, hasCardDraft,
       hasDemandNotes, hasSettings, revenueRecords, hasRevenueSettings,
-      dailyTaskStates, manualTasks
+      dailyTaskStates, manualTasks, demandPickups
     };
   },
 
