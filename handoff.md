@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v1.9.3.1 公開済み（未入金判定の現場向け修正・入金注意タグ）
 - Budil v1.9.3 公開済み（次に売るべき営業先・リピート候補）
 - 売上番頭 v1.8 実装済み
 - 営業プリセット v1.6 実装済み
@@ -32,6 +33,13 @@
 | `js/messages.js` | 営業文面テンプレート・プリセット |
 | `js/management-brain.js` | 朝レポート・今日の営業生成 |
 | `js/revenue-brain.js` | 売上集計・番頭コメント |
+
+## v1.9.3.1で入ったもの
+
+- 売上レコード任意フィールド `paymentConcern`（入金注意チェック）
+- `RevenueBrain.formatPaymentStatusLabel()` / `recordHasPaymentConcern()`
+- 未入金の自動警告を廃止し、入金注意タグのみ注意対象に
+- 表示ラベル「入金待ち」（保存値は従来どおり `未入金`）
 
 ## v1.9.3で入ったもの
 

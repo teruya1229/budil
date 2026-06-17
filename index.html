@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v1.9.3</small>
+          <small>AI経営脳みそ v1.9.3.1</small>
         </div>
       </div>
       <nav class="nav">
@@ -43,7 +43,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v1.9.3</small>
+        <small>Budil v1.9.3.1</small>
       </div>
     </aside>
 
@@ -782,16 +782,23 @@
                 <div class="form-group">
                   <label for="revenue-payment">入金状況 *</label>
                   <select id="revenue-payment" required>
-                    <option value="未入金">未入金</option>
+                    <option value="未入金">入金待ち</option>
                     <option value="入金済み">入金済み</option>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label for="revenue-memo">メモ</label>
-                  <input type="text" id="revenue-memo" placeholder="任意">
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="revenue-payment-concern">
+                    入金注意
+                  </label>
+                  <small class="field-hint">個人振込・初回法人・支払いが心配な案件だけON</small>
                 </div>
               </div>
               <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="revenue-memo">メモ</label>
+                  <input type="text" id="revenue-memo" placeholder="任意">
+                </div>
                 <div class="form-group">
                   <label for="revenue-lead">営業先と紐付け</label>
                   <select id="revenue-lead">

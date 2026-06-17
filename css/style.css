@@ -2170,13 +2170,30 @@ body {
   color: #34d399;
 }
 
-.lead-revenue-unpaid-warn {
-  color: #fbbf24 !important;
+.lead-revenue-unpaid-warn,
+.lead-revenue-concern-warn {
+  color: #f87171 !important;
   font-weight: 600;
 }
 
-.lead-revenue-unpaid-cell strong {
-  color: #fbbf24;
+.lead-revenue-unpaid-cell strong,
+.lead-revenue-pending-cell strong {
+  color: var(--text-muted, #8b9cb3);
+}
+
+.lead-revenue-concern-cell strong {
+  color: #f87171;
+}
+
+.revenue-payment-concern-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(248, 113, 113, 0.2);
+  color: #f87171;
 }
 
 .lead-revenue-value-title {
@@ -2423,10 +2440,11 @@ body {
   color: var(--text-muted, #8b9cb3);
 }
 
-.next-sales-unpaid-warn {
+.next-sales-unpaid-warn,
+.next-sales-concern-warn {
   margin: 6px 0;
   font-size: 0.85rem;
-  color: #fbbf24;
+  color: #f87171;
   font-weight: 600;
 }
 

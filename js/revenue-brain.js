@@ -1,5 +1,5 @@
 /**
- * Budil v1.9.3 - 売上番頭（経営判断用）・営業先連携
+ * Budil v1.9.3.1 - 売上番頭（経営判断用）・営業先連携
  */
 const RevenueBrain = {
   SERVICES: [
@@ -15,6 +15,16 @@ const RevenueBrain = {
 
   formatYen(amount) {
     return Number(amount || 0).toLocaleString('ja-JP') + '円';
+  },
+
+  formatPaymentStatusLabel(status) {
+    if (status === '未入金') return '入金待ち';
+    if (status === '入金済み') return '入金済み';
+    return status || '—';
+  },
+
+  recordHasPaymentConcern(record) {
+    return !!(record && record.paymentConcern === true);
   },
 
   monthKeyFromDate(dateStr) {
@@ -64,11 +74,15 @@ const RevenueBrain = {
     const active = this.activeRecords(linked);
     const paid = this.sumAmount(active.filter(r => r.paymentStatus === '入金済み'));
     const unpaid = this.sumAmount(active.filter(r => r.paymentStatus === '未入金'));
+    const concernRecords = active.filter(r => this.recordHasPaymentConcern(r));
     const dates = active.map(r => r.workDate).filter(Boolean).sort();
     return {
       total: this.sumAmount(active),
       paid,
       unpaid,
+      paymentConcern: concernRecords.length > 0,
+      paymentConcernCount: concernRecords.length,
+      paymentConcernAmount: this.sumAmount(concernRecords),
       latestDate: dates.length ? dates[dates.length - 1] : null,
       records: linked.slice().sort((a, b) => (b.workDate || '').localeCompare(a.workDate || '')),
       count: active.length
@@ -81,7 +95,11 @@ const RevenueBrain = {
     active.forEach(r => {
       if (!r.leadId) return;
       if (!groups[r.leadId]) {
-        groups[r.leadId] = { leadId: r.leadId, total: 0, paid: 0, unpaid: 0, latestDate: null, count: 0, leadName: '' };
+        groups[r.leadId] = {
+          leadId: r.leadId, total: 0, paid: 0, unpaid: 0,
+          paymentConcern: false, paymentConcernAmount: 0,
+          latestDate: null, count: 0, leadName: ''
+        };
       }
       const g = groups[r.leadId];
       const amt = Number(r.amount || 0);
@@ -89,6 +107,10 @@ const RevenueBrain = {
       g.count += 1;
       if (r.paymentStatus === '入金済み') g.paid += amt;
       else g.unpaid += amt;
+      if (this.recordHasPaymentConcern(r)) {
+        g.paymentConcern = true;
+        g.paymentConcernAmount += amt;
+      }
       if (r.leadName) g.leadName = r.leadName;
       if (r.workDate && (!g.latestDate || r.workDate > g.latestDate)) g.latestDate = r.workDate;
     });
@@ -140,7 +162,8 @@ const RevenueBrain = {
       leadCount: leadIdsWithRevenue.size,
       contractedCount,
       topLeads: byLead.slice(0, 3),
-      unpaidLeads: byLead.filter(l => l.unpaid > 0).slice(0, 5)
+      unpaidLeads: byLead.filter(l => l.unpaid > 0).slice(0, 5),
+      paymentConcernLeads: byLead.filter(l => l.paymentConcern).slice(0, 5)
     };
   },
 
@@ -166,8 +189,8 @@ const RevenueBrain = {
     } else {
       lines.push('未紐付け売上なし');
     }
-    if (outcome.unpaidLeads && outcome.unpaidLeads.length) {
-      lines.push('未入金あり：' + outcome.unpaidLeads.map(l => l.leadName).join('、'));
+    if (outcome.paymentConcernLeads && outcome.paymentConcernLeads.length) {
+      lines.push('入金注意あり：' + outcome.paymentConcernLeads.map(l => l.leadName).join('、'));
     }
     return lines;
   },
@@ -188,13 +211,14 @@ const RevenueBrain = {
     const hasService = name => services.includes(name);
     const candidates = [];
 
-    if (revSummary.unpaid > 0) {
+    const hasPaymentConcern = activeRecords.some(r => this.recordHasPaymentConcern(r));
+    if (hasPaymentConcern) {
       candidates.push({
         priority: 'high', priorityScore: 3, rule: 1,
-        reason: '未入金があります',
-        action: 'まず入金確認。その後、次回提案へ',
-        actionTitle: '入金確認',
-        shortTag: '未入金確認'
+        reason: '入金注意タグあり',
+        action: '入金予定を確認',
+        actionTitle: '入金予定を確認',
+        shortTag: '入金注意'
       });
     }
     if (!normalized.nextAction && !normalized.nextActionDate) {
@@ -245,7 +269,7 @@ const RevenueBrain = {
         shortTag: '次回提案候補'
       });
     }
-    if (revSummary.unpaid === 0 && (normalized.nextAction || normalized.nextActionDate)) {
+    if (!hasPaymentConcern && (normalized.nextAction || normalized.nextActionDate)) {
       candidates.push({
         priority: 'low', priorityScore: 1, rule: 7,
         reason: '良好な既存営業先',
@@ -269,6 +293,7 @@ const RevenueBrain = {
       priorityLabel: best.priority === 'high' ? '高' : best.priority === 'mid' ? '中' : '低',
       total: revSummary.total,
       unpaid: revSummary.unpaid,
+      paymentConcern: revSummary.paymentConcern,
       latestDate: revSummary.latestDate,
       nextActionUnset: !normalized.nextAction && !normalized.nextActionDate
     };
@@ -301,7 +326,9 @@ const RevenueBrain = {
     candidates.sort((a, b) => {
       const po = (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2);
       if (po !== 0) return po;
-      if ((b.unpaid > 0) !== (a.unpaid > 0)) return (b.unpaid > 0 ? 1 : 0) - (a.unpaid > 0 ? 1 : 0);
+      if ((b.paymentConcern ? 1 : 0) !== (a.paymentConcern ? 1 : 0)) {
+        return (b.paymentConcern ? 1 : 0) - (a.paymentConcern ? 1 : 0);
+      }
       return (b.total || 0) - (a.total || 0);
     });
 
@@ -333,6 +360,7 @@ const RevenueBrain = {
     const completed = this.sumAmount(active.filter(r => r.status === '完了'));
     const paid = this.sumAmount(active.filter(r => r.paymentStatus === '入金済み'));
     const unpaid = this.sumAmount(active.filter(r => r.paymentStatus === '未入金'));
+    const paymentConcernCount = active.filter(r => this.recordHasPaymentConcern(r)).length;
 
     const monthlyTarget = Number(settings && settings.monthlyTarget) || 0;
     const remainingToTarget = Math.max(0, monthlyTarget - planned);
@@ -355,6 +383,7 @@ const RevenueBrain = {
       completed,
       paid,
       unpaid,
+      paymentConcernCount,
       monthlyTarget,
       remainingToTarget,
       achievementRate,
@@ -378,8 +407,8 @@ const RevenueBrain = {
     } else if (summary.monthlyTarget && summary.achievementRate < 60) {
       comments.push('まだ目標まで差があります。高単価メニューを意識してください。');
     }
-    if (summary.unpaid > 0) {
-      comments.push('未入金があります。入金確認をしてください。');
+    if (summary.paymentConcernCount > 0) {
+      comments.push('入金注意タグの案件があります。入金予定を確認してください。');
     }
     const highTicket = (summary.byService || [])
       .filter(s => ['エアコン完全分解', '法人案件'].includes(s.name))
@@ -392,14 +421,14 @@ const RevenueBrain = {
     }
     return comments.length
       ? comments.join(' ')
-      : '今月の売上ペースは安定しています。入金確認と高単価提案を継続してください。';
+      : '今月の売上ペースは安定しています。高単価提案を継続してください。';
   },
 
   buildSummaryText(summary, comment) {
     const lines = [
       `売上予定：${this.formatYen(summary.planned)}`,
       `入金済み：${this.formatYen(summary.paid)}`,
-      `未入金：${this.formatYen(summary.unpaid)}`,
+      `入金待ち：${this.formatYen(summary.unpaid)}`,
       `月間目標：${this.formatYen(summary.monthlyTarget)}`,
       `目標まで残り：${this.formatYen(summary.remainingToTarget)}`,
       `達成率：${summary.achievementRate}%`

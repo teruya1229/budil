@@ -280,7 +280,7 @@
         <p class="next-sales-meta">理由：${esc(c.reason)}</p>
         <p class="next-sales-meta">推奨：${esc(c.action)}</p>
         <p class="next-sales-meta">累計売上：${esc(RevenueBrain.formatYen(c.total))}${c.latestDate ? ' / 最終売上：' + esc(c.latestDate) : ''}</p>
-        ${c.unpaid > 0 ? '<p class="next-sales-unpaid-warn">未入金あり</p>' : ''}
+        ${c.paymentConcern ? '<p class="next-sales-concern-warn">入金注意</p>' : ''}
         <button type="button" class="btn btn-sm btn-secondary" data-outcome-open-lead="${esc(c.leadId)}">営業先を開く</button>
       </div>`).join('');
     bindSalesOutcomeLeadLinks(el);
@@ -297,8 +297,8 @@
       return;
     }
     el.classList.remove('hidden');
-    const reasonDetail = action.unpaid > 0
-      ? `未入金${RevenueBrain.formatYen(action.unpaid)}があります`
+    const reasonDetail = action.paymentConcern
+      ? '入金注意タグがあります'
       : action.reason;
     el.innerHTML = `
       <h3>次の一手</h3>
@@ -369,11 +369,11 @@
       lines.push('</ul>');
     }
 
-    if (outcome.unpaidLeads && outcome.unpaidLeads.length) {
-      lines.push('<p class="revenue-outcome-section-title label-muted">未入金がある営業先</p>');
+    if (outcome.paymentConcernLeads && outcome.paymentConcernLeads.length) {
+      lines.push('<p class="revenue-outcome-section-title label-muted">入金注意がある営業先</p>');
       lines.push('<ul class="revenue-outcome-list revenue-outcome-list-warn">');
-      outcome.unpaidLeads.forEach(l => {
-        lines.push(`<li><span>${renderOutcomeLeadName(l, leads)}</span><strong>${esc(RevenueBrain.formatYen(l.unpaid))}</strong></li>`);
+      outcome.paymentConcernLeads.forEach(l => {
+        lines.push(`<li><span>${renderOutcomeLeadName(l, leads)}</span><strong>${esc(RevenueBrain.formatYen(l.paymentConcernAmount))}</strong></li>`);
       });
       lines.push('</ul>');
     }
@@ -396,7 +396,7 @@
     const lines = [
       `<p class="revenue-summary-line">売上予定：<strong>${esc(RevenueBrain.formatYen(summary.planned))}</strong></p>`,
       `<p class="revenue-summary-line">入金済み：${esc(RevenueBrain.formatYen(summary.paid))}</p>`,
-      `<p class="revenue-summary-line">未入金：${esc(RevenueBrain.formatYen(summary.unpaid))}</p>`,
+      `<p class="revenue-summary-line">入金待ち：${esc(RevenueBrain.formatYen(summary.unpaid))}</p>`,
       `<p class="revenue-summary-line">月間目標：${esc(RevenueBrain.formatYen(summary.monthlyTarget))}</p>`,
       `<p class="revenue-summary-line">目標まで残り：${esc(RevenueBrain.formatYen(summary.remainingToTarget))}</p>`,
       `<p class="revenue-summary-line">達成率：${summary.achievementRate}%</p>`
@@ -1564,8 +1564,8 @@
         if (revSummary.latestDate) {
           revenueHint += `<small class="lead-revenue-hint">最新：${esc(revSummary.latestDate)}</small>`;
         }
-        if (revSummary.unpaid > 0) {
-          revenueHint += `<small class="lead-revenue-hint lead-revenue-unpaid-warn">未入金あり</small>`;
+        if (revSummary.paymentConcern) {
+          revenueHint += `<small class="lead-revenue-hint lead-revenue-concern-warn">入金注意</small>`;
         }
       }
       const salesCandidate = RevenueBrain.getLeadNextSalesAction(l.id, records, allLeads, today);
@@ -2225,6 +2225,14 @@
     openSalesDetail(leadId, { navigate: true });
   }
 
+  function renderPaymentStatusBadge(record) {
+    const status = record.paymentStatus || '未入金';
+    const label = RevenueBrain.formatPaymentStatusLabel(status);
+    const concern = RevenueBrain.recordHasPaymentConcern(record)
+      ? ' <span class="revenue-payment-concern-badge">入金注意</span>' : '';
+    return `<span class="revenue-status-badge revenue-payment-${esc(status)}">${esc(label)}</span>${concern}`;
+  }
+
   function openRevenueFormForLead(leadId) {
     const lead = Storage.getLeads().find(l => l.id === leadId);
     if (!lead) return;
@@ -2240,6 +2248,7 @@
     document.getElementById('revenue-amount').value = '';
     document.getElementById('revenue-status').value = '予定';
     document.getElementById('revenue-payment').value = '未入金';
+    document.getElementById('revenue-payment-concern').checked = false;
     document.getElementById('revenue-memo').value = '';
     fillRevenueLeadSelect(leadId);
     document.getElementById('revenue-mark-won').checked = true;
@@ -2303,7 +2312,7 @@
             <span>${esc(r.workDate || '—')}</span>
             <span>${esc(r.service || '—')}</span>
             <span class="revenue-status-badge revenue-status-${esc(r.status)}">${esc(r.status)}</span>
-            <span class="revenue-status-badge revenue-payment-${esc(r.paymentStatus)}">${esc(r.paymentStatus)}</span>
+            ${renderPaymentStatusBadge(r)}
           </div>
         </li>`).join('');
     container.innerHTML = `
@@ -2311,7 +2320,8 @@
       <div class="lead-revenue-summary">
         <div class="lead-revenue-summary-item"><span>累計売上</span><strong>${esc(RevenueBrain.formatYen(summary.total))}</strong></div>
         <div class="lead-revenue-summary-item"><span>入金済み</span><strong>${esc(RevenueBrain.formatYen(summary.paid))}</strong></div>
-        <div class="lead-revenue-summary-item${summary.unpaid > 0 ? ' lead-revenue-unpaid-cell' : ''}"><span>未入金</span><strong>${esc(RevenueBrain.formatYen(summary.unpaid))}</strong></div>
+        <div class="lead-revenue-summary-item${summary.unpaid > 0 ? ' lead-revenue-pending-cell' : ''}"><span>入金待ち</span><strong>${esc(RevenueBrain.formatYen(summary.unpaid))}</strong></div>
+        ${summary.paymentConcern ? `<div class="lead-revenue-summary-item lead-revenue-concern-cell"><span>入金注意</span><strong>${summary.paymentConcernCount}件</strong></div>` : ''}
         <div class="lead-revenue-summary-item"><span>売上件数</span><strong>${summary.count}件</strong></div>
         <div class="lead-revenue-summary-item"><span>最終売上日</span><strong>${esc(summary.latestDate || '—')}</strong></div>
       </div>
@@ -2337,6 +2347,7 @@
     document.getElementById('revenue-work-date').value = TODAY();
     document.getElementById('revenue-status').value = '予定';
     document.getElementById('revenue-payment').value = '未入金';
+    document.getElementById('revenue-payment-concern').checked = false;
     document.getElementById('revenue-mark-won').checked = false;
     fillRevenueLeadSelect('');
     toggleRevenueLeadOptions();
@@ -2357,6 +2368,7 @@
     document.getElementById('revenue-amount').value = record.amount || '';
     document.getElementById('revenue-status').value = record.status || '予定';
     document.getElementById('revenue-payment').value = record.paymentStatus || '未入金';
+    document.getElementById('revenue-payment-concern').checked = record.paymentConcern === true;
     document.getElementById('revenue-memo').value = record.memo || '';
     fillRevenueLeadSelect(record.leadId || '');
     document.getElementById('revenue-mark-won').checked = false;
@@ -2377,6 +2389,7 @@
       amount: Number(document.getElementById('revenue-amount').value) || 0,
       status: document.getElementById('revenue-status').value,
       paymentStatus: document.getElementById('revenue-payment').value,
+      paymentConcern: document.getElementById('revenue-payment-concern').checked,
       memo: document.getElementById('revenue-memo').value.trim()
     };
     if (leadId) {
@@ -2436,7 +2449,7 @@
           <td>${esc(r.source)}</td>
           <td>${esc(RevenueBrain.formatYen(r.amount))}</td>
           <td><span class="revenue-status-badge revenue-status-${esc(r.status)}">${esc(r.status)}</span></td>
-          <td><span class="revenue-status-badge revenue-payment-${esc(r.paymentStatus)}">${esc(r.paymentStatus)}</span></td>
+          <td>${renderPaymentStatusBadge(r)}</td>
           <td class="actions">${renderRevenueRowActions(r.id)}</td>
         </tr>`).join('');
     }
@@ -2465,7 +2478,7 @@
           </div>
           <p class="revenue-card-meta">
             <span class="revenue-status-badge revenue-status-${esc(r.status)}">${esc(r.status)}</span>
-            <span class="revenue-status-badge revenue-payment-${esc(r.paymentStatus)}">${esc(r.paymentStatus)}</span>
+            ${renderPaymentStatusBadge(r)}
           </p>
           ${r.memo ? `<p class="revenue-card-meta">${esc(r.memo)}</p>` : ''}
           <div class="revenue-card-actions">${renderRevenueRowActions(r.id)}</div>
@@ -2504,7 +2517,7 @@
         { label: '確定', value: RevenueBrain.formatYen(summary.confirmed) },
         { label: '完了', value: RevenueBrain.formatYen(summary.completed) },
         { label: '入金済み', value: RevenueBrain.formatYen(summary.paid) },
-        { label: '未入金', value: RevenueBrain.formatYen(summary.unpaid) },
+        { label: '入金待ち', value: RevenueBrain.formatYen(summary.unpaid) },
         { label: '月間目標', value: RevenueBrain.formatYen(summary.monthlyTarget) },
         { label: '目標まで残り', value: RevenueBrain.formatYen(summary.remainingToTarget) },
         { label: '達成率', value: summary.achievementRate + '%' },

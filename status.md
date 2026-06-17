@@ -5,9 +5,16 @@
 ## 現在の公開状態
 
 - 公開URL: https://teruya1229.github.io/budil/
-- 現在バージョン: v1.9.3
-- 最新commit: 268bd5a
-- push済み（`49e2e57..268bd5a main -> main`）
+- 現在バージョン: v1.9.3.1
+- 最新commit: （push後に更新）
+
+## v1.9.3.1 実装内容（未入金判定の現場向け修正）
+
+- 未入金だけでは「次に売るべき営業先」優先度高にしない
+- 手動 `入金注意` タグ（`paymentConcern`）を売上登録フォームに追加
+- `paymentConcern === true` の案件だけ注意表示（一覧・カード・営業先詳細・成果サマリー・朝レポート）
+- 未入金表示を「入金待ち」に柔らかく変更（localStorage値 `未入金` / `入金済み` は維持）
+- `RevenueBrain.getNextSalesCandidates()` の優先順位を入金注意タグ基準に変更
 
 ## v1.9.3 実装内容（次に売るべき営業先・リピート候補）
 
