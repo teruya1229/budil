@@ -5331,3 +5331,106 @@ body {
     margin-bottom: 0;
   }
 }
+
+/* 受付・予約番頭 v3.4 */
+.card-reception-comment {
+  border-left: 4px solid var(--accent, #3b82f6);
+}
+
+.reception-today-summary,
+.reception-summary-line {
+  margin: 0 0 0.5rem;
+}
+
+.reception-summary-comment {
+  margin: 0;
+  color: var(--text-muted, #64748b);
+}
+
+.reception-next-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.reception-next-item {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--surface-2, #f8fafc);
+}
+
+.reception-next-meta {
+  margin: 0.35rem 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-muted, #64748b);
+}
+
+.reception-saved-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.reception-saved-item {
+  padding: 1rem;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.reception-saved-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.reception-saved-date {
+  font-size: 0.85rem;
+  color: var(--text-muted, #64748b);
+}
+
+.reception-status-badge {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.reception-status-new { background: #dbeafe; color: #1d4ed8; }
+.reception-status-lead_created { background: #dcfce7; color: #15803d; }
+.reception-status-task_created { background: #fef9c3; color: #a16207; }
+.reception-status-revenue_candidate { background: #fce7f3; color: #be185d; }
+.reception-status-done { background: #f1f5f9; color: #475569; }
+.reception-status-archived { background: #f1f5f9; color: #94a3b8; }
+
+.reception-saved-title {
+  margin: 0 0 0.35rem;
+}
+
+.reception-saved-meta {
+  margin: 0.2rem 0;
+  font-size: 0.9rem;
+  color: var(--text-muted, #64748b);
+}
+
+.reception-saved-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+
+.mgmt-reception-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+@media (max-width: 767px) {
+  .reception-saved-actions .btn {
+    flex: 1 1 calc(50% - 0.35rem);
+    min-width: 0;
+  }
+}

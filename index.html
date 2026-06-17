@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v3.3</small>
+          <small>AI経営脳みそ v3.4</small>
         </div>
       </div>
       <nav class="nav">
@@ -32,6 +32,9 @@
         <button class="nav-item" data-view="sales">
           <span class="nav-icon">📋</span>営業番頭
         </button>
+        <button class="nav-item" data-view="reception">
+          <span class="nav-icon">📞</span>受付・予約番頭
+        </button>
         <button class="nav-item" data-view="revenue">
           <span class="nav-icon">💰</span>売上番頭
         </button>
@@ -46,7 +49,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v3.3</small>
+        <small>Budil v3.4</small>
       </div>
     </aside>
 
@@ -61,7 +64,7 @@
         <div id="executive-home" class="card card-wide card-executive-home">
           <div class="exec-home-header">
             <h2>経営番頭ホーム</h2>
-            <span class="exec-home-version">v3.3</span>
+            <span class="exec-home-version">v3.4</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <div id="exec-home-quick-actions" class="exec-home-quick-actions"></div>
@@ -281,6 +284,10 @@
             <div class="morning-section">
               <h3>注意・保留</h3>
               <ul id="mgmt-exec-warnings" class="caution-list"></ul>
+            </div>
+            <div class="morning-section">
+              <h3>受付・予約</h3>
+              <div id="mgmt-reception-intake" class="mgmt-reception-intake-block"></div>
             </div>
             <div class="morning-section morning-section-collapsed">
               <h3>今日の需要</h3>
@@ -1222,6 +1229,94 @@
         </div>
       </section>
 
+      <!-- 受付・予約番頭 -->
+      <section id="view-reception" class="view">
+        <header class="view-header">
+          <h1>受付・予約番頭</h1>
+          <p class="view-subtitle">AI番頭の受付結果を取り込み、営業・タスク・売上へつなげる</p>
+        </header>
+
+        <div class="card card-wide card-reception-comment">
+          <h2>受付番頭コメント</h2>
+          <div id="reception-today-summary" class="reception-today-summary"></div>
+        </div>
+
+        <div class="card card-wide card-reception-next">
+          <h2>受付からの次の一手</h2>
+          <div id="reception-next-actions" class="reception-next-actions-list"></div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>AI番頭の受付結果を貼り付け</h2>
+          <p class="pickup-paste-hint">AI番頭やクロクロから出た受付結果を貼り付けてください。JSON形式にも対応しています。</p>
+          <div class="form-group">
+            <textarea id="reception-paste-area" rows="10" placeholder="依頼元：くらしのマーケット&#10;お客様名：山田様&#10;電話番号：090-0000-0000&#10;住所：沖縄県南城市〇〇&#10;作業内容：お掃除機能付きエアコン1台、完全分解希望&#10;希望日：6/20午前、6/22午後&#10;受付メモ：型番未確認。写真をLINEでもらう必要あり。&#10;概算金額：15000&#10;対応状況：日程調整中"></textarea>
+          </div>
+          <div class="pickup-paste-actions">
+            <button type="button" id="btn-reception-apply-paste" class="btn btn-secondary">貼り付け内容をフォームに反映</button>
+            <button type="button" id="btn-reception-save-paste" class="btn btn-primary">受付データとして保存</button>
+          </div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>受付データ入力</h2>
+          <form id="reception-form">
+            <input type="hidden" id="reception-edit-id">
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="reception-source">依頼元</label>
+                <input type="text" id="reception-source" placeholder="例：くらしのマーケット">
+              </div>
+              <div class="form-group">
+                <label for="reception-customer">お客様名</label>
+                <input type="text" id="reception-customer" placeholder="例：山田様">
+              </div>
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="reception-phone">電話番号</label>
+                <input type="tel" id="reception-phone" placeholder="090-0000-0000">
+              </div>
+              <div class="form-group">
+                <label for="reception-address">住所</label>
+                <input type="text" id="reception-address" placeholder="沖縄県南城市...">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="reception-service">作業内容</label>
+              <textarea id="reception-service" rows="2" placeholder="作業内容・サービス"></textarea>
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="reception-dates">希望日</label>
+                <input type="text" id="reception-dates" placeholder="6/20午前、6/22午後">
+              </div>
+              <div class="form-group">
+                <label for="reception-amount">概算金額（円）</label>
+                <input type="number" id="reception-amount" min="0" step="1" placeholder="15000">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="reception-memo">受付メモ</label>
+              <textarea id="reception-memo" rows="2" placeholder="型番未確認など"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="reception-handling">対応状況</label>
+              <input type="text" id="reception-handling" placeholder="例：日程調整中">
+            </div>
+            <div class="pickup-form-actions">
+              <button type="submit" class="btn btn-primary">保存</button>
+              <button type="button" id="btn-reception-clear" class="btn btn-secondary btn-sm">クリア</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card card-wide">
+          <h2>受付一覧</h2>
+          <div id="reception-saved-list" class="reception-saved-list"></div>
+        </div>
+      </section>
+
       <!-- 売上番頭 -->
       <section id="view-revenue" class="view">
         <header class="view-header">
@@ -1848,6 +1943,7 @@
   <script src="js/sales-brain.js"></script>
   <script src="js/management-brain.js"></script>
   <script src="js/revenue-brain.js"></script>
+  <script src="js/reception-brain.js"></script>
   <script src="js/card-ocr.js"></script>
   <script src="js/data-backup.js"></script>
   <script src="js/app.js"></script>

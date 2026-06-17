@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v3.4 公開済み（AI番頭連携入口MVP）
 - Budil v3.3 公開済み（販売・デモ準備MVP）
 - Budil v3.2 公開済み（週次・月次レポート出力MVP）
 - Budil v3.1 公開済み（実運用安定化・データ診断）
@@ -56,6 +57,14 @@
 | `js/demand-brain.js` | 需要分析・需要ピックアップパース・トップ3・施策成果判定 |
 | `js/demand-radar.js` | 需要レーダー分析 |
 | `js/data-backup.js` | バックアップ・復元 |
+| `js/reception-brain.js` | AI番頭受付パース・営業/タスク/売上変換 |
+
+## v3.4で入ったもの
+
+- 受付・予約番頭画面（AI番頭結果の貼り付け入口）
+- `budil_reception_intakes`（受付データ保存）
+- 受付→営業先・今日やること・売上候補の変換
+- 経営番頭ホーム・朝レポートへの受付反映
 
 ## v2.9で入ったもの
 

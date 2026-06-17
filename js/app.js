@@ -230,6 +230,7 @@
         if (view === 'dashboard') renderDashboard();
         if (view === 'radar') renderDemandRadar();
         if (view === 'pickup') renderDemandPickup();
+        if (view === 'reception') renderReceptionView();
         if (view === 'revenue') renderRevenueView();
         if (view === 'data') renderDataManagement();
       });
@@ -306,6 +307,7 @@
   function hasExecutiveHomeData() {
     const store = Storage.getDailyActionTasksData();
     return Storage.getDemandPickups().length > 0
+      || Storage.getReceptionIntakes().length > 0
       || Storage.getLeads().length > 0
       || Storage.getRevenueRecords().length > 0
       || (store.manualTasks && store.manualTasks.length > 0);
@@ -344,6 +346,7 @@
       if (due < today) return 0;
     }
     if (task.pickupActionType && task.pickupActionType.startsWith('decision-grow')) return 2;
+    if (task.pickupDedupeKey && String(task.pickupDedupeKey).startsWith('intake|')) return 1;
     if (task.pickupActionType && task.pickupActionType.startsWith('decision-improve')) return 3;
     if (task.dueDate === today) return 1;
     if (task.type === 'next-action' || task.type === 'next-sales') return 4;
@@ -455,6 +458,8 @@
       warnings.push('バックアップ未実施です');
     }
 
+    ReceptionBrain.getReceptionWarnings(Storage.getReceptionIntakes()).forEach(w => warnings.push(w));
+
     return warnings;
   }
 
@@ -474,6 +479,9 @@
     }
 
     const lines = [];
+    const intakeComment = ReceptionBrain.buildReceptionHomeCommentFromIntakes(Storage.getReceptionIntakes());
+    if (intakeComment) lines.push(intakeComment);
+
     if (focusRecs.length) {
       const f = focusRecs[0];
       const svc = (f.relatedServices || [])[0] || '';
@@ -654,6 +662,7 @@
     el.innerHTML = `
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="kurokuro">クロクロ調査プロンプト</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="pickup">需要番頭を開く</button>
+      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="reception">受付番頭を開く</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="revenue">売上を登録</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="lead">営業先を登録</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="task">今日やること追加</button>
@@ -666,6 +675,7 @@
   function handleExecutiveHomeQuickAction(action) {
     if (action === 'kurokuro') return goToKurokuroPrompt();
     if (action === 'pickup') return goToDemandPickup();
+    if (action === 'reception') return goToReception();
     if (action === 'revenue') return goToAddRevenue();
     if (action === 'lead') return goToAddLead();
     if (action === 'task') return goToAddDailyTask();
@@ -679,6 +689,11 @@
 
   function goToDemandPickup() {
     navigateToView('pickup');
+  }
+
+  function goToReception() {
+    navigateToView('reception');
+    setTimeout(() => scrollToElement('#reception-paste-area'), 120);
   }
 
   function goToDataBackup() {
@@ -2027,6 +2042,7 @@
     if (summary.dailyTaskStates) items.push('タスク状態 ' + summary.dailyTaskStates + '件');
     if (summary.manualTasks) items.push('手動タスク ' + summary.manualTasks + '件');
     if (summary.demandPickups) items.push('需要ピックアップ ' + summary.demandPickups + '件');
+    if (summary.receptionIntakes) items.push('受付データ ' + summary.receptionIntakes + '件');
     return items;
   }
 
@@ -2073,6 +2089,7 @@
     { key: 'leads', label: '営業先を1件登録', btn: '登録する', action: 'lead' },
     { key: 'revenue', label: '売上を1件登録', btn: '登録する', action: 'revenue' },
     { key: 'pickups', label: 'クロクロ需要を3件取り込み', btn: '開く', action: 'pickup' },
+    { key: 'reception', label: 'AI番頭受付を1件取り込む', btn: '開く', action: 'reception' },
     { key: 'taskCompleted', label: '今日やることを1件完了', btn: '開く', action: 'task' },
     { key: 'reportGenerated', label: '経営レポートをコピー', btn: 'コピーする', action: 'report' }
   ];
@@ -2082,6 +2099,7 @@
     { title: '営業先を管理', desc: '次の一手・保留・活動履歴を整理', action: 'sales' },
     { title: '今日やることを整理', desc: '優先タスクを毎朝確認', action: 'task' },
     { title: '需要を拾う', desc: 'クロクロ調査結果を需要番頭に取り込み', action: 'pickup' },
+    { title: '受付・予約をつなぐ', desc: 'AI番頭の受付結果を営業・タスク・売上へ', action: 'reception' },
     { title: '投稿・広告文案を作る', desc: '需要から投稿・広告案を生成', action: 'pickup' },
     { title: '投稿・広告予定を管理', desc: 'カレンダーで今週の予定を把握', action: 'calendar' },
     { title: '施策成果を見る', desc: 'LINE相談・予約・売上を入力', action: 'pickup' },
@@ -2096,6 +2114,7 @@
     if (action === 'lead') return goToAddLead();
     if (action === 'revenue') return goToAddRevenue();
     if (action === 'pickup') return goToDemandPickup();
+    if (action === 'reception') return goToReception();
     if (action === 'task') return goToAddDailyTask();
     if (action === 'report') {
       generateBusinessReport();
@@ -2109,6 +2128,7 @@
     if (action === 'sales') return navigateToView('sales');
     if (action === 'task') return goToAddDailyTask();
     if (action === 'pickup') return goToDemandPickup();
+    if (action === 'reception') return goToReception();
     if (action === 'calendar') {
       navigateToView('dashboard');
       setTimeout(() => {
@@ -2256,7 +2276,7 @@
         <button type="button" id="btn-delete-demo-data" class="btn btn-secondary" ${hasDemo ? '' : 'disabled'}>デモデータを削除</button>
       </div>
       <div id="demo-data-guide" class="demo-data-guide ${demoGuideVisible ? '' : 'hidden'}">
-        <p class="demo-data-guide-text">デモデータを作成しました。<br>経営番頭ホーム → 需要番頭 → 経営レポート の順で確認すると、Budilの流れが分かります。</p>
+        <p class="demo-data-guide-text">デモデータを作成しました。<br>経営番頭ホーム → 需要番頭 → 受付・予約番頭 → 経営レポート の順で確認すると、Budilの流れが分かります。</p>
         <div class="demo-data-guide-actions">
           <button type="button" class="btn btn-sm btn-primary" data-demo-nav="home">経営番頭ホームを見る</button>
           <button type="button" class="btn btn-sm btn-secondary" data-demo-nav="pickup">需要番頭を見る</button>
@@ -3196,7 +3216,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v3.3</span>
+        <span class="business-report-version">v3.4</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -3486,6 +3506,15 @@
       demandTopEl.innerHTML = demandLines.length
         ? `<p class="mgmt-demand-label">今日の需要：</p><ul class="mgmt-demand-list">${demandLines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
         : '<p class="placeholder-text">需要ピックアップ未登録。需要番頭でクロクロ調査結果を取り込んでください。</p>';
+    }
+
+    const receptionMorningEl = document.getElementById('mgmt-reception-intake');
+    if (receptionMorningEl) {
+      const summary = ReceptionBrain.getReceptionSummary(Storage.getReceptionIntakes(), TODAY());
+      const lines = ReceptionBrain.buildMorningReceptionLines(summary);
+      receptionMorningEl.innerHTML = lines.length
+        ? `<ul class="mgmt-reception-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '<p class="placeholder-text">受付データはありません。受付・予約番頭でAI番頭結果を取り込んでください。</p>';
     }
 
     const improveTodayEl = document.getElementById('mgmt-improvement-today');
@@ -5990,6 +6019,316 @@
     });
   }
 
+  // ── 受付・予約番頭 ──
+  function getReceptionFormData() {
+    return ReceptionBrain.normalizeIntake({
+      id: document.getElementById('reception-edit-id').value || '',
+      source: document.getElementById('reception-source').value,
+      customerName: document.getElementById('reception-customer').value,
+      phone: document.getElementById('reception-phone').value,
+      address: document.getElementById('reception-address').value,
+      serviceText: document.getElementById('reception-service').value,
+      preferredDatesText: document.getElementById('reception-dates').value,
+      memo: document.getElementById('reception-memo').value,
+      estimateAmount: document.getElementById('reception-amount').value,
+      handlingStatus: document.getElementById('reception-handling').value
+    });
+  }
+
+  function setReceptionFormData(data) {
+    const item = ReceptionBrain.normalizeIntake(data || {});
+    document.getElementById('reception-edit-id').value = item.id || '';
+    document.getElementById('reception-source').value = item.source || '';
+    document.getElementById('reception-customer').value = item.customerName || '';
+    document.getElementById('reception-phone').value = item.phone || '';
+    document.getElementById('reception-address').value = item.address || '';
+    document.getElementById('reception-service').value = item.serviceText || '';
+    document.getElementById('reception-dates').value = item.preferredDatesText || '';
+    document.getElementById('reception-memo').value = item.memo || '';
+    document.getElementById('reception-amount').value = item.estimateAmount || '';
+    document.getElementById('reception-handling').value = item.handlingStatus || '';
+  }
+
+  function clearReceptionForm() {
+    setReceptionFormData({});
+  }
+
+  function applyReceptionPaste() {
+    const text = document.getElementById('reception-paste-area').value;
+    const parsed = ReceptionBrain.parseAiBantouPaste(text);
+    setReceptionFormData(parsed);
+  }
+
+  function saveReceptionFromForm() {
+    const data = getReceptionFormData();
+    if (!(data.customerName || data.serviceText || data.source)) {
+      alert('お客様名・作業内容・依頼元のいずれかを入力してください。');
+      return null;
+    }
+    const editId = document.getElementById('reception-edit-id').value;
+    if (editId) {
+      return Storage.updateReceptionIntake(editId, data);
+    }
+    return Storage.addReceptionIntake(data);
+  }
+
+  function saveReceptionFromPaste() {
+    applyReceptionPaste();
+    const saved = saveReceptionFromForm();
+    if (!saved) return;
+    document.getElementById('reception-paste-area').value = '';
+    renderReceptionView();
+    renderDashboard();
+    alert('受付データを保存しました。');
+  }
+
+  function formatReceptionStatus(status) {
+    return ReceptionBrain.STATUS_LABELS[status] || status || '—';
+  }
+
+  function formatReceptionDate(iso) {
+    if (!iso) return '—';
+    return iso.slice(0, 10);
+  }
+
+  function renderReceptionTodaySummary() {
+    const el = document.getElementById('reception-today-summary');
+    if (!el) return;
+    const summary = ReceptionBrain.getReceptionSummary(Storage.getReceptionIntakes(), TODAY());
+    const comment = ReceptionBrain.buildReceptionHomeCommentFromIntakes(Storage.getReceptionIntakes());
+    if (!summary.total) {
+      el.innerHTML = '<p class="placeholder-text">受付データはまだありません。AI番頭の結果を貼り付けて取り込みましょう。</p>';
+      return;
+    }
+    el.innerHTML = `
+      <p class="reception-summary-line">受付 ${summary.active}件（新規 ${summary.newCount}件 / 営業先未作成 ${summary.noLeadCount}件）</p>
+      ${comment ? `<p class="reception-summary-comment">${esc(comment)}</p>` : ''}`;
+  }
+
+  function renderReceptionNextActions() {
+    const el = document.getElementById('reception-next-actions');
+    if (!el) return;
+    const actions = ReceptionBrain.getNextActionsFromIntakes(Storage.getReceptionIntakes(), 5);
+    if (!actions.length) {
+      el.innerHTML = '<p class="placeholder-text">次の一手はありません。新規受付を取り込むと提案が表示されます。</p>';
+      return;
+    }
+    el.innerHTML = actions.map(a => `
+      <div class="reception-next-item">
+        <strong>${esc(a.title)}</strong>
+        <p class="reception-next-meta">理由：${esc(a.reason)}</p>
+        ${a.intakeId ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open="${esc(a.intakeId)}">受付を開く</button>` : ''}
+      </div>`).join('');
+    el.querySelectorAll('[data-reception-open]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const intake = Storage.getReceptionIntakes().find(i => i.id === btn.dataset.receptionOpen);
+        if (intake) setReceptionFormData(intake);
+        scrollToElement('#reception-form');
+      });
+    });
+  }
+
+  function renderReceptionSavedList() {
+    const el = document.getElementById('reception-saved-list');
+    if (!el) return;
+    const intakes = Storage.getReceptionIntakes();
+    const leads = Storage.getLeads();
+    if (!intakes.length) {
+      el.innerHTML = '<p class="placeholder-text">保存済み受付はありません。</p>';
+      return;
+    }
+    el.innerHTML = intakes.map(intake => {
+      const lead = intake.relatedLeadId ? leads.find(l => l.id === intake.relatedLeadId) : null;
+      const leadLabel = lead ? lead.company : (intake.relatedLeadId ? '（削除済み）' : '—');
+      const revLabel = intake.relatedRevenueId ? 'あり' : (intake.status === 'revenue_candidate' ? '候補' : '—');
+      return `
+      <div class="reception-saved-item" data-intake-id="${esc(intake.id)}">
+        <div class="reception-saved-header">
+          <span class="reception-saved-date">${esc(formatReceptionDate(intake.createdAt))}</span>
+          <span class="reception-status-badge reception-status-${esc(intake.status)}">${esc(formatReceptionStatus(intake.status))}</span>
+        </div>
+        <p class="reception-saved-title"><strong>${esc(intake.customerName || '（名前なし）')}</strong> / ${esc(intake.source || '—')}</p>
+        <p class="reception-saved-meta">作業：${esc(intake.serviceText || '—')}</p>
+        <p class="reception-saved-meta">希望日：${esc(intake.preferredDatesText || '—')}</p>
+        <p class="reception-saved-meta">関連営業先：${esc(leadLabel)} / 売上：${esc(revLabel)}</p>
+        <div class="reception-saved-actions">
+          <button type="button" class="btn btn-sm btn-primary" data-reception-create-lead="${esc(intake.id)}">営業先を作成</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-add-task="${esc(intake.id)}">今日やることに追加</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(intake.id)}">売上フォームに反映</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-revenue-candidate="${esc(intake.id)}">売上候補にする</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-done="${esc(intake.id)}">対応済みにする</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-archive="${esc(intake.id)}">保管</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-edit="${esc(intake.id)}">編集</button>
+        </div>
+      </div>`;
+    }).join('');
+    bindReceptionListEvents(el);
+  }
+
+  function bindReceptionListEvents(container) {
+    if (!container) return;
+    container.querySelectorAll('[data-reception-create-lead]').forEach(btn => {
+      btn.addEventListener('click', () => createLeadFromReceptionIntake(btn.dataset.receptionCreateLead));
+    });
+    container.querySelectorAll('[data-reception-add-task]').forEach(btn => {
+      btn.addEventListener('click', () => addTaskFromReceptionIntake(btn.dataset.receptionAddTask));
+    });
+    container.querySelectorAll('[data-reception-fill-revenue]').forEach(btn => {
+      btn.addEventListener('click', () => fillRevenueFromReceptionIntake(btn.dataset.receptionFillRevenue));
+    });
+    container.querySelectorAll('[data-reception-revenue-candidate]').forEach(btn => {
+      btn.addEventListener('click', () => markReceptionRevenueCandidate(btn.dataset.receptionRevenueCandidate));
+    });
+    container.querySelectorAll('[data-reception-done]').forEach(btn => {
+      btn.addEventListener('click', () => updateReceptionIntakeStatus(btn.dataset.receptionDone, 'done'));
+    });
+    container.querySelectorAll('[data-reception-archive]').forEach(btn => {
+      btn.addEventListener('click', () => updateReceptionIntakeStatus(btn.dataset.receptionArchive, 'archived'));
+    });
+    container.querySelectorAll('[data-reception-edit]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const intake = Storage.getReceptionIntakes().find(i => i.id === btn.dataset.receptionEdit);
+        if (intake) {
+          setReceptionFormData(intake);
+          scrollToElement('#reception-form');
+        }
+      });
+    });
+  }
+
+  function updateReceptionIntakeStatus(intakeId, status) {
+    Storage.updateReceptionIntake(intakeId, { status });
+    renderReceptionView();
+    renderDashboard();
+  }
+
+  function createLeadFromReceptionIntake(intakeId) {
+    const intake = Storage.getReceptionIntakes().find(i => i.id === intakeId);
+    if (!intake) return;
+    if (intake.relatedLeadId && Storage.getLeads().some(l => l.id === intake.relatedLeadId)) {
+      alert('すでに営業先が作成済みです。');
+      return;
+    }
+    const today = TODAY();
+    const leadPayload = ReceptionBrain.createLeadFromIntake(intake, today);
+    const lead = Storage.addLead(leadPayload);
+    const normalized = SalesBrain.normalizeLead(lead);
+    const pri = SalesBrain.computeSalesPriority(normalized, today);
+    Storage.updateLead(lead.id, {
+      priorityScore: pri.score,
+      priorityReason: pri.reasons.join('、')
+    });
+    Storage.addLeadActivityLog(lead.id, {
+      type: 'contact',
+      date: today,
+      title: '受付データから作成',
+      memo: ReceptionBrain.buildActivityLogText(intake),
+      targetName: intake.customerName || ''
+    });
+    const nextStatus = intake.status === 'new' ? 'lead_created' : intake.status;
+    Storage.updateReceptionIntake(intakeId, { relatedLeadId: lead.id, status: nextStatus });
+    renderReceptionView();
+    renderLeadsTable();
+    renderDashboard();
+    alert(`営業先「${lead.company}」を作成しました。`);
+  }
+
+  function addTaskFromReceptionIntake(intakeId, variantIndex) {
+    const intake = Storage.getReceptionIntakes().find(i => i.id === intakeId);
+    if (!intake) return;
+    const today = TODAY();
+    const taskPayload = ReceptionBrain.createTaskFromIntake(intake, today, variantIndex);
+    if (!taskPayload) return;
+    const store = Storage.getDailyActionTasksData();
+    if (store.manualTasks.some(t => t.pickupDedupeKey === taskPayload.pickupDedupeKey)) {
+      alert('同じ今日やることはすでに追加済みです。');
+      return;
+    }
+    const task = Storage.addManualDailyTask(taskPayload);
+    const relatedTaskIds = Array.isArray(intake.relatedTaskIds) ? [...intake.relatedTaskIds] : [];
+    if (task && task.id && !relatedTaskIds.includes(task.id)) relatedTaskIds.push(task.id);
+    const nextStatus = ['new', 'lead_created'].includes(intake.status) ? 'task_created' : intake.status;
+    Storage.updateReceptionIntake(intakeId, { relatedTaskIds, status: nextStatus });
+    if (intake.relatedLeadId) {
+      Storage.addLeadActivityLog(intake.relatedLeadId, {
+        type: 'task-created',
+        date: today,
+        title: task.title,
+        memo: task.reason,
+        taskId: task.id,
+        targetName: intake.customerName || ''
+      });
+    }
+    renderReceptionView();
+    renderDailyActionTasks();
+    renderExecutiveHome();
+    renderMorningDailyTasksBrief();
+    alert('今日やることに追加しました。');
+  }
+
+  function fillRevenueFromReceptionIntake(intakeId) {
+    const intake = Storage.getReceptionIntakes().find(i => i.id === intakeId);
+    if (!intake) return;
+    const candidate = ReceptionBrain.buildRevenueCandidate(intake);
+    fillRevenueSelects();
+    navigateToView('revenue');
+    resetRevenueForm();
+    document.getElementById('revenue-customer').value = candidate.customerName || '';
+    const serviceEl = document.getElementById('revenue-service');
+    const serviceVal = ReceptionBrain.matchRevenueService(candidate.service);
+    if (serviceEl) serviceEl.value = serviceVal;
+    const sourceEl = document.getElementById('revenue-source');
+    const sourceVal = ReceptionBrain.matchRevenueSource(candidate.source);
+    if (sourceEl) sourceEl.value = sourceVal;
+    document.getElementById('revenue-amount').value = candidate.amount || '';
+    document.getElementById('revenue-memo').value = candidate.memo || '';
+    document.getElementById('revenue-status').value = '予定';
+    fillRevenueLeadSelect(candidate.leadId || '');
+    toggleRevenueLeadOptions();
+    setTimeout(() => scrollToElement('#revenue-form'), 120);
+    alert('売上フォームに反映しました。内容を確認して保存してください。');
+  }
+
+  function markReceptionRevenueCandidate(intakeId) {
+    Storage.updateReceptionIntake(intakeId, { status: 'revenue_candidate' });
+    renderReceptionView();
+    renderDashboard();
+    alert('売上候補としてマークしました。売上フォームに反映して登録できます。');
+  }
+
+  function renderReceptionView() {
+    try {
+      safeRenderSection(null, () => renderReceptionTodaySummary(), '受付サマリー');
+      safeRenderSection('reception-next-actions', () => renderReceptionNextActions(), '受付次の一手');
+      safeRenderSection('reception-saved-list', () => renderReceptionSavedList(), '受付一覧');
+    } catch (err) {
+      console.error('[Budil] render error: 受付番頭', err);
+      const el = document.getElementById('reception-saved-list');
+      if (el) {
+        el.innerHTML = '<p class="section-render-error">このセクションの表示中にエラーが発生しました。バックアップ後、データ診断を実行してください。</p>';
+      }
+    }
+  }
+
+  function initReception() {
+    const form = document.getElementById('reception-form');
+    if (!form) return;
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const saved = saveReceptionFromForm();
+      if (!saved) return;
+      renderReceptionView();
+      renderDashboard();
+      alert('受付データを保存しました。');
+    });
+    const applyBtn = document.getElementById('btn-reception-apply-paste');
+    if (applyBtn) applyBtn.addEventListener('click', applyReceptionPaste);
+    const savePasteBtn = document.getElementById('btn-reception-save-paste');
+    if (savePasteBtn) savePasteBtn.addEventListener('click', saveReceptionFromPaste);
+    const clearBtn = document.getElementById('btn-reception-clear');
+    if (clearBtn) clearBtn.addEventListener('click', clearReceptionForm);
+  }
+
   function renderDemandPickup() {
     refreshKurokuroPrompt();
     try {
@@ -6655,6 +6994,7 @@
     if (viewName === 'dashboard') renderDashboard();
     if (viewName === 'radar') renderDemandRadar();
     if (viewName === 'pickup') renderDemandPickup();
+    if (viewName === 'reception') renderReceptionView();
     if (viewName === 'revenue') renderRevenueView();
     if (viewName === 'data') renderDataManagement();
   }
@@ -7739,6 +8079,7 @@
     initDailyActionTasks();
     initDemandRadar();
     initDemandPickup();
+    initReception();
     initDemandSearch();
     initLeads();
     initRevenue();

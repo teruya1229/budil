@@ -17,7 +17,8 @@ const DataBackup = {
     'budil_revenue_records',
     'budil_revenue_settings',
     'budil_daily_action_tasks',
-    'budil_demand_pickups'
+    'budil_demand_pickups',
+    'budil_reception_intakes'
   ],
 
   exportPayload() {
@@ -81,11 +82,12 @@ const DataBackup = {
     }
 
     const demandPickups = Array.isArray(data.budil_demand_pickups) ? data.budil_demand_pickups.length : 0;
+    const receptionIntakes = Array.isArray(data.budil_reception_intakes) ? data.budil_reception_intakes.length : 0;
 
     return {
       leads, followups, demandLogs, radarKw, messages, hasPosts, hasCardDraft,
       hasDemandNotes, hasSettings, revenueRecords, hasRevenueSettings,
-      dailyTaskStates, manualTasks, demandPickups
+      dailyTaskStates, manualTasks, demandPickups, receptionIntakes
     };
   },
 

@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v3.3',
+  BUDIL_VERSION: 'v3.4',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -18,7 +18,8 @@ const Storage = {
     REVENUE_RECORDS: 'budil_revenue_records',
     REVENUE_SETTINGS: 'budil_revenue_settings',
     DAILY_ACTION_TASKS: 'budil_daily_action_tasks',
-    DEMAND_PICKUPS: 'budil_demand_pickups'
+    DEMAND_PICKUPS: 'budil_demand_pickups',
+    RECEPTION_INTAKES: 'budil_reception_intakes'
   },
 
   get(key, defaultValue = null) {
@@ -505,8 +506,54 @@ const Storage = {
     'budil_revenue_records',
     'budil_revenue_settings',
     'budil_daily_action_tasks',
-    'budil_demand_pickups'
+    'budil_demand_pickups',
+    'budil_reception_intakes'
   ],
+
+  getReceptionIntakes() {
+    const raw = this.get(this.KEYS.RECEPTION_INTAKES, []);
+    return Array.isArray(raw) ? raw : [];
+  },
+
+  saveReceptionIntakes(list) {
+    this.set(this.KEYS.RECEPTION_INTAKES, list);
+  },
+
+  addReceptionIntake(item) {
+    const list = this.getReceptionIntakes();
+    const now = new Date().toISOString();
+    const normalized = typeof ReceptionBrain !== 'undefined'
+      ? ReceptionBrain.normalizeIntake(item)
+      : { ...item };
+    const record = {
+      ...normalized,
+      id: normalized.id || ('intake-' + this.generateId()),
+      status: normalized.status || 'new',
+      relatedTaskIds: Array.isArray(normalized.relatedTaskIds) ? normalized.relatedTaskIds : [],
+      createdAt: normalized.createdAt || now,
+      updatedAt: now
+    };
+    list.unshift(record);
+    this.saveReceptionIntakes(list);
+    return record;
+  },
+
+  updateReceptionIntake(id, data) {
+    const list = this.getReceptionIntakes();
+    const idx = list.findIndex(i => i.id === id);
+    if (idx === -1) return null;
+    const prev = list[idx];
+    const merged = typeof ReceptionBrain !== 'undefined'
+      ? ReceptionBrain.normalizeIntake({ ...prev, ...data, id: prev.id })
+      : { ...prev, ...data };
+    list[idx] = { ...merged, updatedAt: new Date().toISOString() };
+    this.saveReceptionIntakes(list);
+    return list[idx];
+  },
+
+  deleteDemoReceptionIntakes() {
+    this.saveReceptionIntakes(this.getReceptionIntakes().filter(i => !this.isDemoOrTestFlag(i)));
+  },
 
   isValidDateStr(str) {
     if (!str || typeof str !== 'string') return false;
@@ -549,6 +596,7 @@ const Storage = {
       revenue: 0,
       dailyTasks: 0,
       pickups: 0,
+      receptionIntakes: 0,
       activityLogs: 0,
       performanceEntered: 0,
       dailyChecks: 0
@@ -790,6 +838,58 @@ const Storage = {
       add('ok', '需要ピックアップ 0件');
     }
 
+    const intakeRaw = this._readRawKey(this.KEYS.RECEPTION_INTAKES);
+    let intakes = [];
+    const VALID_INTAKE_STATUS = typeof ReceptionBrain !== 'undefined'
+      ? ReceptionBrain.STATUSES
+      : ['new', 'lead_created', 'task_created', 'revenue_candidate', 'done', 'archived'];
+    if (!intakeRaw.parseOk) {
+      add('critical', '受付データ（budil_reception_intakes）を読み込めません');
+    } else if (intakeRaw.exists) {
+      intakes = Array.isArray(intakeRaw.parsed) ? intakeRaw.parsed : [];
+      if (!Array.isArray(intakeRaw.parsed)) add('review', '受付データが配列ではありません');
+      counts.receptionIntakes = intakes.length;
+      add('ok', `受付データ ${counts.receptionIntakes}件`);
+
+      let noId = 0; let noName = 0; let badStatus = 0;
+      let badLeadRef = 0; let badRevRef = 0; let badTaskIds = 0;
+      let newCount = 0; let noLeadCount = 0;
+      const revIds = new Set(revenues.filter(r => r && r.id).map(r => r.id));
+      const manualIds = new Set();
+      const tasksData = this.getDailyActionTasksData();
+      (tasksData.manualTasks || []).forEach(t => { if (t && t.id) manualIds.add(t.id); });
+      (tasksData.states || []).forEach(s => { if (s && s.taskId) manualIds.add(s.taskId); });
+
+      intakes.forEach(item => {
+        if (!item || typeof item !== 'object') return;
+        if (!item.id) noId++;
+        if (!(item.customerName || '').trim()) noName++;
+        if (item.status && !VALID_INTAKE_STATUS.includes(item.status)) badStatus++;
+        if (item.status === 'new') newCount++;
+        if (!item.relatedLeadId && item.status !== 'archived' && item.status !== 'done') noLeadCount++;
+        if (item.relatedLeadId && !leadIds.has(item.relatedLeadId)) badLeadRef++;
+        if (item.relatedRevenueId && !revIds.has(item.relatedRevenueId)) badRevRef++;
+        if (item.relatedTaskIds != null && !Array.isArray(item.relatedTaskIds)) {
+          badTaskIds++;
+        } else if (Array.isArray(item.relatedTaskIds)) {
+          item.relatedTaskIds.forEach(tid => {
+            if (tid && !manualIds.has(tid)) badTaskIds++;
+          });
+        }
+      });
+
+      if (noId) add('review', `IDなしの受付 ${noId}件`);
+      if (noName) add('review', `お客様名なしの受付 ${noName}件`);
+      if (badStatus) add('caution', `受付statusが想定外 ${badStatus}件`);
+      if (badLeadRef) add('review', `存在しない営業先を指すrelatedLeadId ${badLeadRef}件`);
+      if (badRevRef) add('review', `存在しない売上を指すrelatedRevenueId ${badRevRef}件`);
+      if (badTaskIds) add('review', `relatedTaskIdsの形式不正または参照切れ ${badTaskIds}件`);
+      if (newCount) add('ok', `新規受付 ${newCount}件`);
+      if (noLeadCount) add('caution', `営業先未作成の受付 ${noLeadCount}件`);
+    } else {
+      add('ok', '受付データ 0件');
+    }
+
     if (!levels.critical.length) {
       add('critical', '読み込みできないlocalStorageデータはありません');
     }
@@ -823,6 +923,7 @@ const Storage = {
     lines.push(`売上: ${c.revenue ?? '—'}件`);
     lines.push(`今日やること: ${c.dailyTasks ?? '—'}件`);
     lines.push(`需要ピックアップ: ${c.pickups ?? '—'}件`);
+    lines.push(`受付データ: ${c.receptionIntakes ?? '—'}件`);
     lines.push(`活動履歴: ${c.activityLogs ?? '—'}件`);
     lines.push(`成果入力済み: ${c.performanceEntered ?? '—'}件`);
     lines.push(`dailyChecks: ${c.dailyChecks ?? '—'}件`);
@@ -978,6 +1079,7 @@ const Storage = {
     const leads = this.getLeads().filter(l => !this.isDemoOrTestFlag(l));
     const revenues = this.getRevenueRecords().filter(r => !this.isDemoOrTestFlag(r));
     const pickups = this.getDemandPickups().filter(p => !this.isDemoOrTestFlag(p));
+    const intakes = this.getReceptionIntakes().filter(i => !this.isDemoOrTestFlag(i));
     const store = this.getDailyActionTasksData();
     const manual = (store.manualTasks || []).filter(t => !this.isDemoOrTestFlag(t));
     const states = (store.states || []).filter(t => !this.isDemoOrTestFlag(t));
@@ -990,6 +1092,7 @@ const Storage = {
       leads: leads.length > 0,
       revenue: revenues.length > 0,
       pickups: pickups.length >= 3,
+      reception: intakes.length > 0,
       dailyTasks: manual.length + states.length > 0,
       taskCompleted: doneCount > 0,
       reportGenerated: !!settings.lastReportGeneratedAt
@@ -1002,6 +1105,7 @@ const Storage = {
     return this.getLeads().some(l => this.isDemoOrTestFlag(l))
       || this.getRevenueRecords().some(r => this.isDemoOrTestFlag(r))
       || this.getDemandPickups().some(p => this.isDemoOrTestFlag(p))
+      || this.getReceptionIntakes().some(i => this.isDemoOrTestFlag(i))
       || (store.manualTasks || []).some(t => this.isDemoOrTestFlag(t))
       || (store.states || []).some(t => this.isDemoOrTestFlag(t))
       || demoChecks;
@@ -1180,6 +1284,36 @@ const Storage = {
     };
     this.saveDailyActionTasksData(store);
 
+    const intakeDefs = [
+      {
+        source: 'くらしのマーケット',
+        customerName: 'デモ：山田様',
+        phone: '090-0000-0000',
+        address: '沖縄県南城市〇〇',
+        serviceText: 'お掃除機能付きエアコン1台、完全分解希望',
+        preferredDatesText: '6/20午前、6/22午後',
+        memo: '型番未確認。写真をLINEでもらう必要あり。',
+        estimateAmount: 15000,
+        handlingStatus: '日程調整中',
+        status: 'new'
+      },
+      {
+        source: 'LINE',
+        customerName: 'デモ：佐藤様',
+        phone: '080-1111-2222',
+        address: '沖縄県豊見城市',
+        serviceText: '縦型洗濯機クリーニング',
+        preferredDatesText: '来週平日午前',
+        memo: 'デモ用受付データ',
+        estimateAmount: 12000,
+        handlingStatus: '見積確認中',
+        status: 'new'
+      }
+    ];
+    intakeDefs.forEach(def => {
+      this.addReceptionIntake({ ...def, ...flag });
+    });
+
     return { ok: true, pickupIds, leadIds };
   },
 
@@ -1191,6 +1325,7 @@ const Storage = {
     this.saveLeads(this.getLeads().filter(l => !this.isDemoOrTestFlag(l)));
     this.saveRevenueRecords(this.getRevenueRecords().filter(r => !this.isDemoOrTestFlag(r)));
     this.saveDemandPickups(this.getDemandPickups().filter(p => !this.isDemoOrTestFlag(p)));
+    this.deleteDemoReceptionIntakes();
 
     const store = this.getDailyActionTasksData();
     store.manualTasks = (store.manualTasks || []).filter(t => !this.isDemoOrTestFlag(t));
