@@ -11,6 +11,7 @@
   let currentSalesMessages = null;
   let pickupBulkPreview = [];
   let selectedPickupContentId = null;
+  let weeklyStrategyPeriod = '7d';
 
   const SALES_TAB_FIELDS = { email: 'msg-email', form: 'msg-form', dm: 'msg-dm', phone: 'msg-phone' };
   const SALES_TAB_LOG = { email: 'メール送信', form: 'フォーム送信', dm: 'DM', phone: '電話' };
@@ -272,6 +273,7 @@
     renderManagementComments();
     renderDashTodayExecutionPlan();
     renderDashImprovementHints();
+    renderWeeklyStrategyBoard();
     renderDailyActionTasks();
     renderMorningDailyTasksBrief();
   }
@@ -1803,6 +1805,15 @@
         : '';
     }
 
+    const weeklyTodayEl = document.getElementById('mgmt-weekly-strategy');
+    if (weeklyTodayEl) {
+      const strategy = getWeeklyStrategy();
+      const lines = strategy.morningLines || [];
+      weeklyTodayEl.innerHTML = lines.length
+        ? `<p class="mgmt-weekly-label">今週の作戦：</p><ul class="mgmt-weekly-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '';
+    }
+
     const postEl = document.getElementById('mgmt-post');
     postEl.innerHTML = `
       <p class="mgmt-highlight">${esc(report.todayPost.theme)}</p>
@@ -3024,6 +3035,200 @@
       return;
     }
     el.innerHTML = `<ul class="dash-improvement-hints-list">${hints.map(h => `<li>${esc(h.text)}</li>`).join('')}</ul>`;
+  }
+
+  function getWeeklyStrategyContext() {
+    const today = TODAY();
+    const rev = getRevenueContext();
+    const sales = getSalesContext();
+    return {
+      today,
+      period: weeklyStrategyPeriod,
+      pickups: Storage.getDemandPickups(),
+      records: rev.records,
+      leads: rev.leads,
+      enriched: sales.enriched
+    };
+  }
+
+  function getWeeklyStrategy() {
+    return DemandBrain.buildWeeklyStrategy(getWeeklyStrategyContext());
+  }
+
+  function isWeeklyTaskDuplicate(date, taskKind, title) {
+    const key = DemandBrain.buildWeeklyTaskDedupeKey(date, taskKind, title);
+    return Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === key);
+  }
+
+  function addWeeklyStrategyTask(task) {
+    if (!task || !task.title) return false;
+    const date = TODAY();
+    const key = DemandBrain.buildWeeklyTaskDedupeKey(date, task.taskKind, task.title);
+    if (isWeeklyTaskDuplicate(date, task.taskKind, task.title)) return false;
+    Storage.addManualDailyTask({
+      title: task.title,
+      targetName: '—',
+      priority: task.priority || '中',
+      action: task.reason,
+      memo: task.reason,
+      dueDate: date,
+      status: 'open',
+      reason: task.reason,
+      pickupDedupeKey: key,
+      pickupTopic: task.topic || '',
+      pickupActionType: 'weekly-' + (task.taskKind || 'action')
+    });
+    return true;
+  }
+
+  function addWeeklyStrategyTaskByIndex(index) {
+    const strategy = getWeeklyStrategy();
+    const task = (strategy.actionTasks || [])[index];
+    if (!task) return;
+    if (addWeeklyStrategyTask(task)) {
+      renderDailyActionTasks();
+      renderMorningDailyTasksBrief();
+      renderWeeklyStrategyBoard();
+      alert('今日やることに追加しました。');
+    } else {
+      alert('すでに今日やることに追加済みです');
+    }
+  }
+
+  function addAllWeeklyStrategyTasks() {
+    const strategy = getWeeklyStrategy();
+    let added = 0;
+    let skipped = 0;
+    (strategy.actionTasks || []).forEach(task => {
+      if (addWeeklyStrategyTask(task)) added++;
+      else skipped++;
+    });
+    renderDailyActionTasks();
+    renderMorningDailyTasksBrief();
+    renderWeeklyStrategyBoard();
+    alert(`追加：${added}件${skipped ? ` / スキップ（重複）：${skipped}件` : ''}`);
+  }
+
+  function renderWeeklyStrategyBoard() {
+    const el = document.getElementById('dash-weekly-strategy');
+    if (!el) return;
+    const strategy = getWeeklyStrategy();
+    const periodLabels = { '7d': '直近7日', month: '今月', all: 'すべて' };
+
+    if (!strategy.hasData) {
+      el.innerHTML = `
+        <p class="weekly-strategy-empty">週間作戦を出すには、需要ピックアップ・実行メモ・効果メモを少しずつ保存してください。<br>まずはクロクロ調査結果を3件取り込むところから始めましょう。</p>`;
+      return;
+    }
+
+    const commentHtml = (strategy.comment || []).length
+      ? `<div class="weekly-strategy-comment">${strategy.comment.map(l => `<p>${esc(l)}</p>`).join('')}</div>`
+      : '';
+
+    const serviceHtml = (strategy.serviceFocus || []).length
+      ? `<div class="weekly-strategy-block">
+          <h3>今週の重点サービス</h3>
+          <ol class="weekly-strategy-list">${strategy.serviceFocus.slice(0, 3).map((s, i) =>
+            `<li><strong>${esc(s.service)}</strong><br><span class="weekly-strategy-reason">理由：${esc(s.reasonText)}</span></li>`
+          ).join('')}</ol>
+        </div>`
+      : '';
+
+    const postHtml = (strategy.postPlan || []).length
+      ? `<div class="weekly-strategy-block">
+          <h3>今週の投稿方針</h3>
+          <ul class="weekly-strategy-bullets">${strategy.postPlan.map(p =>
+            `<li>・${esc(p.text)}</li>`
+          ).join('')}</ul>
+        </div>`
+      : '';
+
+    const adHtml = (strategy.adPlan || []).length
+      ? `<div class="weekly-strategy-block">
+          <h3>今週の広告方針</h3>
+          <ul class="weekly-strategy-bullets">${strategy.adPlan.map(a =>
+            `<li>・${esc(a.text)}</li>`
+          ).join('')}</ul>
+        </div>`
+      : '';
+
+    const salesHtml = (strategy.salesPlan || []).length
+      ? `<div class="weekly-strategy-block">
+          <h3>今週の営業方針</h3>
+          <ul class="weekly-strategy-bullets">${strategy.salesPlan.map(s =>
+            `<li>・${esc(s)}</li>`
+          ).join('')}</ul>
+        </div>`
+      : '';
+
+    const winningHtml = (strategy.winningPatterns || []).length
+      ? `<div class="weekly-strategy-block weekly-strategy-sub">
+          <h3>勝ちパターン候補</h3>
+          <ul class="weekly-strategy-bullets">${strategy.winningPatterns.slice(0, 3).map(w =>
+            `<li>・${esc(w.topic)}（${esc(w.channelLabel)}）— ${esc(w.resultMemo || '反応あり')}</li>`
+          ).join('')}</ul>
+        </div>`
+      : '';
+
+    const improveHtml = (strategy.improvementCandidates || []).length
+      ? `<div class="weekly-strategy-block weekly-strategy-sub">
+          <h3>改善が必要なもの</h3>
+          <ul class="weekly-strategy-bullets">${strategy.improvementCandidates.slice(0, 3).map(c =>
+            `<li>・${esc(c.topic)}（${esc(c.channelLabel)}）— ${esc(c.resultMemo || '改善必要')}</li>`
+          ).join('')}</ul>
+        </div>`
+      : '';
+
+    const tasks = strategy.actionTasks || [];
+    const tasksHtml = tasks.length
+      ? `<div class="weekly-strategy-block">
+          <h3>今週やること候補</h3>
+          <ul class="weekly-strategy-tasks">${tasks.map((t, i) => `
+            <li class="weekly-strategy-task-item">
+              <span>${esc(t.title)}</span>
+              <button type="button" class="btn btn-sm btn-secondary" data-weekly-task-add="${i}">今日やることに追加</button>
+            </li>`).join('')}</ul>
+          <button type="button" id="btn-weekly-task-add-all" class="btn btn-sm btn-primary">今週候補を全部追加</button>
+        </div>`
+      : '';
+
+    el.innerHTML = `
+      <div class="weekly-strategy-period-row">
+        <span class="weekly-strategy-period-label">集計期間：</span>
+        ${['7d', 'month', 'all'].map(p =>
+          `<button type="button" class="btn btn-sm ${weeklyStrategyPeriod === p ? 'btn-primary' : 'btn-secondary'}" data-weekly-period="${p}">${esc(periodLabels[p])}</button>`
+        ).join('')}
+      </div>
+      ${commentHtml}
+      <div class="weekly-strategy-grid">
+        ${serviceHtml}
+        ${postHtml}
+        ${adHtml}
+        ${salesHtml}
+        ${winningHtml}
+        ${improveHtml}
+      </div>
+      ${tasksHtml}`;
+
+    el.querySelectorAll('[data-weekly-period]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        weeklyStrategyPeriod = btn.dataset.weeklyPeriod;
+        renderWeeklyStrategyBoard();
+        const weeklyTodayEl = document.getElementById('mgmt-weekly-strategy');
+        if (weeklyTodayEl) {
+          const s = getWeeklyStrategy();
+          const lines = s.morningLines || [];
+          weeklyTodayEl.innerHTML = lines.length
+            ? `<p class="mgmt-weekly-label">今週の作戦：</p><ul class="mgmt-weekly-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+            : '';
+        }
+      });
+    });
+    el.querySelectorAll('[data-weekly-task-add]').forEach(btn => {
+      btn.addEventListener('click', () => addWeeklyStrategyTaskByIndex(parseInt(btn.dataset.weeklyTaskAdd, 10)));
+    });
+    const addAllBtn = document.getElementById('btn-weekly-task-add-all');
+    if (addAllBtn) addAllBtn.addEventListener('click', addAllWeeklyStrategyTasks);
   }
 
   function renderExecutionBadgesHtml(pickup) {

@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v2.5</small>
+          <small>AI経営脳みそ v2.6</small>
         </div>
       </div>
       <nav class="nav">
@@ -46,7 +46,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v2.5</small>
+        <small>Budil v2.6</small>
       </div>
     </aside>
 
@@ -169,6 +169,11 @@
           <div id="dash-daily-action-tasks" class="daily-action-tasks-list"></div>
         </div>
 
+        <div class="card card-wide card-weekly-strategy">
+          <h2>週間作戦ボード</h2>
+          <div id="dash-weekly-strategy" class="dash-weekly-strategy-block"></div>
+        </div>
+
         <div class="card card-wide card-improvement-hints">
           <h2>今日の改善ヒント</h2>
           <div id="dash-improvement-hints" class="dash-improvement-hints-block"></div>
@@ -188,6 +193,7 @@
               <div id="mgmt-demand-top" class="mgmt-demand-top-block"></div>
               <div id="mgmt-execution-today" class="mgmt-execution-today-block"></div>
               <div id="mgmt-improvement-today" class="mgmt-improvement-today-block"></div>
+              <div id="mgmt-weekly-strategy" class="mgmt-weekly-strategy-block"></div>
             </div>
             <div class="morning-section morning-section-hero">
               <h3>今日の経営判断</h3>
@@ -1445,6 +1451,22 @@
             <button type="button" id="btn-create-test-data" class="btn btn-secondary">テストデータを作成</button>
             <button type="button" id="btn-delete-test-data" class="btn btn-secondary">テストデータを削除</button>
           </div>
+        </div>
+
+        <div class="card card-wide card-mvp-checklist">
+          <h2>v2.6 動作確認チェックリスト</h2>
+          <p class="data-mgmt-desc">週間作戦ボードと既存機能の連携を確認してください。</p>
+          <ul class="mvp-checklist">
+            <li>ダッシュボードに「週間作戦ボード」が表示される</li>
+            <li>今週の重点サービス・投稿方針・広告方針・営業方針が出る</li>
+            <li>週間作戦コメントが表示される</li>
+            <li>勝ちパターン候補・改善が必要なものが表示される</li>
+            <li>今週やること候補を今日やることへ追加できる</li>
+            <li>重複タスクが増えない</li>
+            <li>朝レポートに週間作戦が出る</li>
+            <li>集計期間（直近7日/今月/すべて）を切り替えられる</li>
+            <li>データが少ない時も崩れない</li>
+          </ul>
         </div>
 
         <div class="card card-wide card-mvp-checklist">

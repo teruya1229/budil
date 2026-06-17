@@ -4013,3 +4013,114 @@ body {
 .card-pickup-improvement-needed {
   margin-top: 1rem;
 }
+
+/* v2.6 週間作戦ボード */
+.card-weekly-strategy {
+  margin-bottom: 1rem;
+}
+
+.dash-weekly-strategy-block {
+  font-size: 0.92rem;
+}
+
+.weekly-strategy-period-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.weekly-strategy-period-label {
+  font-size: 0.85rem;
+  color: var(--text-muted, #666);
+}
+
+.weekly-strategy-comment {
+  background: #f0f7ff;
+  border-left: 3px solid var(--primary, #2563eb);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 0 6px 6px 0;
+}
+
+.weekly-strategy-comment p {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.weekly-strategy-empty {
+  color: var(--text-muted, #666);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.weekly-strategy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.weekly-strategy-block h3 {
+  font-size: 0.95rem;
+  margin: 0 0 0.5rem;
+}
+
+.weekly-strategy-block.weekly-strategy-sub h3 {
+  font-size: 0.88rem;
+  color: var(--text-muted, #666);
+}
+
+.weekly-strategy-list,
+.weekly-strategy-bullets,
+.weekly-strategy-tasks {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.88rem;
+}
+
+.weekly-strategy-reason {
+  font-size: 0.82rem;
+  color: var(--text-muted, #666);
+}
+
+.weekly-strategy-tasks {
+  list-style: none;
+  padding: 0;
+}
+
+.weekly-strategy-task-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-light, #eee);
+}
+
+.mgmt-weekly-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0.25rem;
+  color: var(--text-muted, #666);
+}
+
+.mgmt-weekly-list {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  font-size: 0.88rem;
+}
+
+@media (max-width: 600px) {
+  .weekly-strategy-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .weekly-strategy-task-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

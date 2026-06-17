@@ -1210,5 +1210,352 @@ ${ctx.postTitle ? '今月の注目：' + ctx.postTitle : ''}`;
       status: 'open',
       isTest: true
     };
+  },
+
+  _addDays(dateStr, offset) {
+    const d = new Date((dateStr || new Date().toISOString().slice(0, 10)) + 'T12:00:00');
+    d.setDate(d.getDate() + offset);
+    return d.toISOString().slice(0, 10);
+  },
+
+  filterPickupsByPeriod(pickups, today, period) {
+    const t = today || new Date().toISOString().slice(0, 10);
+    const list = pickups || [];
+    if (period === 'all') return list;
+    if (period === 'month') {
+      const monthKey = t.slice(0, 7);
+      return list.filter(p => (p.date || '').slice(0, 7) === monthKey);
+    }
+    const start = this._addDays(t, -6);
+    return list.filter(p => {
+      const d = p.date || '';
+      return d >= start && d <= t;
+    });
+  },
+
+  getWeeklyServiceFocus(pickups, today, period) {
+    const filtered = this.filterPickupsByPeriod(pickups, today, period);
+    const scores = {};
+    const reasonMap = {};
+
+    const addScore = (svc, pts, reason) => {
+      if (!svc) return;
+      scores[svc] = (scores[svc] || 0) + pts;
+      if (!reasonMap[svc]) reasonMap[svc] = [];
+      if (reason && !reasonMap[svc].includes(reason)) reasonMap[svc].push(reason);
+    };
+
+    filtered.forEach(raw => {
+      const p = this.normalizePickup(raw);
+      if (p.status === 'ignored' || p.status === 'archived') return;
+      let bonus = 0;
+      if (p.demandScore >= 80) bonus = 3;
+      else if (p.demandScore >= 60) bonus = 2;
+      (p.relatedServices || []).forEach(svc => {
+        addScore(svc, 1 + bonus, null);
+        if (bonus >= 2 && p.topic) {
+          addScore(svc, 0, `「${p.topic}」需要（${p.demandScore}点）`);
+        }
+      });
+    });
+
+    this.getWinningPatterns(filtered).forEach(w => {
+      (w.relatedServices || []).forEach(svc => {
+        addScore(svc, 3, `「${w.topic}」で反応あり`);
+      });
+    });
+
+    return Object.entries(scores)
+      .map(([service, score]) => ({
+        service,
+        score,
+        reasons: reasonMap[service] || [],
+        reasonText: this._buildServiceReason(service, reasonMap[service] || [], filtered)
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+  },
+
+  _buildServiceReason(service, reasons, pickups) {
+    const good = reasons.find(r => r.includes('反応あり'));
+    if (good) {
+      const topic = good.replace(/「|」で反応あり/g, '');
+      return `${topic}需要が強く、反応ありの投稿があります。`;
+    }
+    const demandReasons = reasons.filter(r => r.includes('需要'));
+    if (demandReasons.length >= 2) {
+      return `カビ・臭い系の需要ピックアップが複数あります。`;
+    }
+    if (demandReasons.length === 1) {
+      return demandReasons[0].replace(/需要（\d+点）/, '需要が注目されています。');
+    }
+    const count = pickups.filter(raw => {
+      const p = this.normalizePickup(raw);
+      return (p.relatedServices || []).includes(service);
+    }).length;
+    if (count >= 2) return `今週の需要ピックアップに${count}件含まれています。`;
+    return '今週の需要データから注目されています。';
+  },
+
+  getWeeklyPostPlan(pickups, today, period) {
+    const filtered = this.filterPickupsByPeriod(pickups, today, period);
+    const plan = [];
+    const seen = new Set();
+
+    const addPlan = (text, count, topic, kind) => {
+      const key = text;
+      if (seen.has(key)) return;
+      seen.add(key);
+      plan.push({ text, count: count || 1, topic: topic || '', kind: kind || 'post', short: text });
+    };
+
+    this.getWinningPatterns(filtered)
+      .filter(w => w.type === 'reel' || w.type === 'instagram')
+      .forEach(w => {
+        const isReel = w.type === 'reel';
+        const label = isReel ? `${w.topic}系の実写リール` : `${w.topic}の投稿`;
+        addPlan(`${label}を${isReel ? 2 : 1}本`, isReel ? 2 : 1, w.topic, isReel ? 'reel' : 'instagram');
+      });
+
+    filtered.forEach(raw => {
+      const p = this.normalizePickup(raw);
+      if (p.status === 'ignored' || p.status === 'archived') return;
+      if (p.demandScore < 60 && !p.postTitle) return;
+      const topic = p.topic;
+      if (!topic) return;
+      const postTitle = p.postTitle || '';
+      if (/リール|reel/i.test(postTitle) || /リール|reel/i.test(topic)) {
+        addPlan(`${topic}系の実写リールを1本`, 1, topic, 'reel');
+      } else if (/洗濯|カビ|臭い/i.test(topic + postTitle)) {
+        addPlan(`${topic}のカビ注意投稿を1本`, 1, topic, 'post');
+      } else if (/完全分解|ビフォー|アフター/i.test(topic + postTitle)) {
+        addPlan(`${topic}のビフォーアフター投稿を1本`, 1, topic, 'post');
+      } else if (p.postTitle) {
+        addPlan(`${p.postTitle}を1本`, 1, topic, 'post');
+      }
+    });
+
+    return plan.slice(0, 6);
+  },
+
+  getWeeklyAdPlan(pickups, today, period) {
+    const filtered = this.filterPickupsByPeriod(pickups, today, period);
+    const plan = [];
+    const seen = new Set();
+
+    const addPlan = (text, topic, kind) => {
+      if (seen.has(text)) return;
+      seen.add(text);
+      plan.push({ text, topic: topic || '', kind: kind || 'ad', short: text });
+    };
+
+    this.getImprovementCandidates(filtered)
+      .filter(c => c.type === 'ad')
+      .forEach(c => {
+        const effect = c.resultMemo || '';
+        if (/クリック/.test(effect) && /問い合わせなし|相談なし/.test(effect)) {
+          addPlan(`${c.topic}の広告はCTAを確認`, c.topic, 'cta-check');
+        } else {
+          addPlan(`${c.topic}の広告文を見直す`, c.topic, 'ad-review');
+        }
+      });
+
+    filtered.forEach(raw => {
+      const p = this.normalizePickup(raw);
+      if (!p.adTitle) return;
+      if (/LP|完全分解/i.test(p.adTitle)) {
+        addPlan(`${p.adTitle}を見直す`, p.topic, 'ad-review');
+      } else if (/テスト|訴求/i.test(p.adTitle)) {
+        addPlan(`${p.adTitle}`, p.topic, 'ad-test');
+      } else {
+        addPlan(`${p.adTitle}の訴求をテストする`, p.topic, 'ad-test');
+      }
+    });
+
+    const hasClickNoInquiry = this.getImprovementCandidates(filtered).some(c =>
+      /クリック/.test(c.resultMemo || '') && /問い合わせなし|相談なし|反応薄い/.test(c.resultMemo || '')
+    );
+    if (hasClickNoInquiry && !seen.has('クリックあり問い合わせなしの案件はCTAを確認')) {
+      addPlan('クリックあり問い合わせなしの案件はCTAを確認', '', 'cta-check');
+    }
+
+    return plan.slice(0, 5);
+  },
+
+  getWeeklySalesPlan(ctx) {
+    const today = ctx.today || new Date().toISOString().slice(0, 10);
+    const enriched = ctx.enriched || [];
+    const records = ctx.records || [];
+    const leads = ctx.leads || [];
+    const weekEnd = this._addDays(today, 7);
+    const lines = [];
+    const seen = new Set();
+
+    const addLine = text => {
+      if (!text || seen.has(text)) return;
+      seen.add(text);
+      lines.push(text);
+    };
+
+    const dueSoon = enriched.filter(l => {
+      const nc = l.nextActionDate || l.nextContact || '';
+      return nc && nc >= today && nc <= weekEnd && !['NG', '見送り', '成約'].includes(l.status);
+    });
+    if (dueSoon.length) addLine('次回連絡日が近い営業先を優先');
+
+    const Revenue = typeof RevenueBrain !== 'undefined' ? RevenueBrain : null;
+    if (Revenue) {
+      const holds = Revenue.getSalesHoldCandidates(records, leads, today);
+      if (holds.length) addLine('営業保留中の案件は追加営業しない');
+
+      const nextSales = Revenue.getNextSalesCandidates(records, leads, today);
+      const withRevenue = nextSales.filter(c => (c.total || 0) > 0);
+      if (withRevenue.length) addLine('売上が出た営業先へお礼連絡と次回提案');
+    }
+
+    if (!lines.length) addLine('営業先を登録し、次回連絡日を設定すると方針が出ます');
+
+    return lines;
+  },
+
+  getWeeklyActionTasks(strategy) {
+    const tasks = [];
+    const seen = new Set();
+
+    (strategy.postPlan || []).slice(0, 3).forEach(item => {
+      const title = `今週やる：${item.text}`;
+      const key = title;
+      if (seen.has(key)) return;
+      seen.add(key);
+      tasks.push({
+        title,
+        reason: '週間作戦ボード（投稿方針）',
+        priority: '中',
+        taskKind: 'weekly-post',
+        topic: item.topic || item.text
+      });
+    });
+
+    (strategy.adPlan || []).slice(0, 2).forEach(item => {
+      const title = `今週やる：${item.text}`;
+      if (seen.has(title)) return;
+      seen.add(title);
+      tasks.push({
+        title,
+        reason: '週間作戦ボード（広告方針）',
+        priority: '中',
+        taskKind: 'weekly-ad',
+        topic: item.topic || item.text
+      });
+    });
+
+    (strategy.salesPlan || []).slice(0, 1).forEach(line => {
+      let title = '';
+      if (line.includes('次回連絡日')) title = '今週やる：次回連絡日の営業先を確認する';
+      else if (line.includes('お礼')) title = '今週やる：売上が出た営業先へお礼連絡する';
+      else title = `今週やる：${line}`;
+      if (seen.has(title)) return;
+      seen.add(title);
+      tasks.push({
+        title,
+        reason: '週間作戦ボード（営業方針）',
+        priority: '中',
+        taskKind: 'weekly-sales',
+        topic: line
+      });
+    });
+
+    return tasks;
+  },
+
+  buildWeeklyStrategyComment(strategy) {
+    if (!strategy.hasData) return [];
+    const lines = [];
+    const topSvc = (strategy.serviceFocus || [])[0];
+    const topWin = (strategy.winningPatterns || [])[0];
+
+    if (topSvc) {
+      const topicHint = topWin ? topWin.topic : (strategy.postPlan[0] && strategy.postPlan[0].topic);
+      if (topicHint) {
+        lines.push(`今週は${topicHint}需要が強めです。`);
+      } else {
+        lines.push(`今週は${topSvc.service}需要が強めです。`);
+      }
+    } else if (strategy.postPlan.length) {
+      lines.push(`今週は${strategy.postPlan[0].topic || '投稿'}テーマが注目されています。`);
+    }
+
+    const postHint = (strategy.postPlan || [])[0];
+    const adHint = (strategy.adPlan || [])[0];
+    if (postHint && adHint) {
+      const postShort = postHint.text.replace(/を\d+本$/, '');
+      const adShort = adHint.text.includes('CTA') ? 'CTAの見直し' : adHint.text;
+      lines.push(`${postShort}を優先し、広告は${adShort}を行いましょう。`);
+    } else if (postHint) {
+      lines.push(`${postHint.text}を優先しましょう。`);
+    } else if (adHint) {
+      lines.push(`広告は${adHint.text}を行いましょう。`);
+    }
+
+    const salesLines = strategy.salesPlan || [];
+    if (salesLines.length) {
+      const salesText = salesLines.slice(0, 2).join('。');
+      lines.push(salesText + (salesText.endsWith('。') ? '' : '。') + '次回連絡日のある営業先を優先してください。');
+    }
+
+    return lines.slice(0, 3);
+  },
+
+  buildMorningWeeklyLines(strategy, max) {
+    const limit = max || 3;
+    const lines = [];
+    (strategy.postPlan || []).slice(0, 1).forEach(p => {
+      if (p.kind === 'reel') lines.push(`・${p.topic || p.text}系リールを優先`);
+      else lines.push(`・${p.topic || p.text}投稿を優先`);
+    });
+    (strategy.adPlan || []).slice(0, 1).forEach(a => {
+      if (a.text.includes('CTA')) lines.push(`・${a.topic || '広告'}のCTA確認`);
+      else lines.push(`・${a.text.replace(/を見直す$/, '')}を見直し`);
+    });
+    (strategy.salesPlan || []).slice(0, 1).forEach(s => {
+      if (s.includes('次回連絡日')) lines.push('・次回連絡日の営業先を確認');
+    });
+    return lines.slice(0, limit);
+  },
+
+  buildWeeklyTaskDedupeKey(date, taskKind, title) {
+    return [date, 'weekly', taskKind, title].join('|');
+  },
+
+  buildWeeklyStrategy(context) {
+    const today = context.today || new Date().toISOString().slice(0, 10);
+    const period = context.period || '7d';
+    const pickups = context.pickups || [];
+    const filtered = this.filterPickupsByPeriod(pickups, today, period);
+
+    const serviceFocus = this.getWeeklyServiceFocus(pickups, today, period);
+    const postPlan = this.getWeeklyPostPlan(pickups, today, period);
+    const adPlan = this.getWeeklyAdPlan(pickups, today, period);
+    const salesPlan = this.getWeeklySalesPlan(context);
+    const winningPatterns = this.getWinningPatterns(filtered);
+    const improvementCandidates = this.getImprovementCandidates(filtered);
+
+    const strategy = {
+      period,
+      today,
+      serviceFocus,
+      postPlan,
+      adPlan,
+      salesPlan,
+      winningPatterns,
+      improvementCandidates,
+      hasData: !!(serviceFocus.length || postPlan.length || adPlan.length ||
+        winningPatterns.length || improvementCandidates.length || filtered.length)
+    };
+
+    strategy.comment = this.buildWeeklyStrategyComment(strategy);
+    strategy.actionTasks = this.getWeeklyActionTasks(strategy);
+    strategy.morningLines = this.buildMorningWeeklyLines(strategy, 3);
+    return strategy;
   }
 };
