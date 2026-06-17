@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v2.3</small>
+          <small>AI経営脳みそ v2.4</small>
         </div>
       </div>
       <nav class="nav">
@@ -46,7 +46,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v2.3</small>
+        <small>Budil v2.4</small>
       </div>
     </aside>
 
@@ -169,6 +169,11 @@
           <div id="dash-daily-action-tasks" class="daily-action-tasks-list"></div>
         </div>
 
+        <div class="card card-wide card-today-execution">
+          <h2>今日の投稿・広告予定</h2>
+          <div id="dash-today-execution" class="dash-today-execution-block"></div>
+        </div>
+
         <div id="morning-report" class="card card-morning card-wide">
           <h2>🌅 朝レポート</h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
@@ -176,6 +181,7 @@
             <div class="morning-section">
               <h3>今日の需要</h3>
               <div id="mgmt-demand-top" class="mgmt-demand-top-block"></div>
+              <div id="mgmt-execution-today" class="mgmt-execution-today-block"></div>
             </div>
             <div class="morning-section morning-section-hero">
               <h3>今日の経営判断</h3>
@@ -395,6 +401,12 @@
           <div id="pickup-content-outputs" class="pickup-content-outputs">
             <p class="placeholder-text">需要を選んで「リール案を作る」などを押すと、ここに生成文案が表示されます。</p>
           </div>
+        </div>
+
+        <div class="card card-wide card-pickup-execution">
+          <h2>投稿・広告アクション管理</h2>
+          <p class="pickup-paste-hint">生成済み文案の投稿予定・実行ステータス・効果メモを管理します。予定日が今日以前のものはダッシュボードと朝レポートにも表示されます。</p>
+          <div id="pickup-execution-list" class="pickup-execution-list"></div>
         </div>
 
         <div class="card card-wide card-pickup-prompt">
@@ -1411,6 +1423,23 @@
             <button type="button" id="btn-create-test-data" class="btn btn-secondary">テストデータを作成</button>
             <button type="button" id="btn-delete-test-data" class="btn btn-secondary">テストデータを削除</button>
           </div>
+        </div>
+
+        <div class="card card-wide card-mvp-checklist">
+          <h2>v2.4 動作確認チェックリスト</h2>
+          <p class="data-mgmt-desc">投稿・広告アクションの実行管理を確認してください。</p>
+          <ul class="mvp-checklist">
+            <li>需要番頭に「投稿・広告アクション管理」が表示される</li>
+            <li>各文案にステータス（下書き/予定/済/見送り）を設定できる</li>
+            <li>投稿予定日・配信予定日・反映予定日を設定できる</li>
+            <li>投稿済み・配信済み・反映済みにすると実行ログが残る</li>
+            <li>効果メモ・次回改善メモを保存できる</li>
+            <li>再読み込み後も実行状態が残る</li>
+            <li>ダッシュボードに今日の投稿・広告予定が出る</li>
+            <li>朝レポートに今日の投稿・広告予定が出る</li>
+            <li>今日やることへ追加でき、重複タスクが増えない</li>
+            <li>保存済み需要メモに状態バッジが表示される</li>
+          </ul>
         </div>
 
         <div class="card card-wide card-mvp-checklist">

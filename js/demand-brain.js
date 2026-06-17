@@ -300,6 +300,128 @@ Budilの需要番頭に入力するため、今日の投稿・営業・広告ア
     return matched;
   },
 
+  EXECUTION_TYPES: ['reel', 'instagram', 'line', 'gbp', 'ad'],
+
+  EXECUTION_DEFAULT: {
+    status: 'draft',
+    scheduledDate: '',
+    executedAt: '',
+    memo: '',
+    resultMemo: '',
+    nextImproveMemo: ''
+  },
+
+  EXECUTION_META: {
+    reel: {
+      label: 'Instagramリール',
+      shortLabel: 'リール投稿',
+      taskTitle: 'リール投稿',
+      dashPrefix: 'Instagramリール',
+      doneLog: 'リール投稿済み',
+      statuses: [
+        { value: 'draft', label: '下書き' },
+        { value: 'scheduled', label: '投稿予定' },
+        { value: 'posted', label: '投稿済み' },
+        { value: 'skipped', label: '見送り' }
+      ],
+      scheduledDateLabel: '投稿予定日',
+      doneStatus: 'posted'
+    },
+    instagram: {
+      label: 'Instagram投稿文',
+      shortLabel: 'Instagram投稿',
+      taskTitle: '投稿する',
+      dashPrefix: 'Instagram投稿',
+      doneLog: 'Instagram投稿済み',
+      statuses: [
+        { value: 'draft', label: '下書き' },
+        { value: 'scheduled', label: '投稿予定' },
+        { value: 'posted', label: '投稿済み' },
+        { value: 'skipped', label: '見送り' }
+      ],
+      scheduledDateLabel: '投稿予定日',
+      doneStatus: 'posted'
+    },
+    line: {
+      label: 'LINE配信文',
+      shortLabel: 'LINE配信',
+      taskTitle: 'LINE配信',
+      dashPrefix: 'LINE配信',
+      doneLog: 'LINE配信済み',
+      statuses: [
+        { value: 'draft', label: '下書き' },
+        { value: 'scheduled', label: '配信予定' },
+        { value: 'posted', label: '配信済み' },
+        { value: 'skipped', label: '見送り' }
+      ],
+      scheduledDateLabel: '配信予定日',
+      doneStatus: 'posted'
+    },
+    gbp: {
+      label: 'Googleビジネスプロフィール',
+      shortLabel: 'GBP投稿',
+      taskTitle: 'GBP投稿',
+      dashPrefix: 'GBP投稿',
+      doneLog: 'GBP投稿済み',
+      statuses: [
+        { value: 'draft', label: '下書き' },
+        { value: 'scheduled', label: '投稿予定' },
+        { value: 'posted', label: '投稿済み' },
+        { value: 'skipped', label: '見送り' }
+      ],
+      scheduledDateLabel: '投稿予定日',
+      doneStatus: 'posted'
+    },
+    ad: {
+      label: 'Google広告文',
+      shortLabel: '広告確認',
+      taskTitle: '広告確認',
+      dashPrefix: '広告確認',
+      doneLog: '広告反映済み',
+      statuses: [
+        { value: 'draft', label: '下書き' },
+        { value: 'scheduled', label: '反映予定' },
+        { value: 'posted', label: '反映済み' },
+        { value: 'skipped', label: '見送り' }
+      ],
+      scheduledDateLabel: '反映予定日',
+      doneStatus: 'posted'
+    }
+  },
+
+  normalizeExecutionStatus(pickup) {
+    const existing = (pickup && pickup.executionStatus) || {};
+    const result = {};
+    this.EXECUTION_TYPES.forEach(type => {
+      result[type] = { ...this.EXECUTION_DEFAULT, ...(existing[type] || {}) };
+    });
+    return result;
+  },
+
+  getExecutionStatusLabel(type, status) {
+    const meta = this.EXECUTION_META[type];
+    if (!meta) return status || '';
+    const found = meta.statuses.find(s => s.value === status);
+    return found ? found.label : status || '';
+  },
+
+  isExecutionDone(type, status) {
+    const meta = this.EXECUTION_META[type];
+    return status === (meta ? meta.doneStatus : 'posted');
+  },
+
+  isExecutionPending(type, execItem) {
+    if (!execItem) return false;
+    if (execItem.status === 'skipped') return false;
+    return !this.isExecutionDone(type, execItem.status);
+  },
+
+  hasGeneratedOutput(pickup, type) {
+    const out = pickup && pickup.generatedOutputs;
+    if (!out) return false;
+    return !!(out[type] && String(out[type]).trim());
+  },
+
   normalizePickup(item) {
     const actions = Array.isArray(item.suggestedActions) ? item.suggestedActions : [];
     const getAction = type => actions.find(a => a.type === type);
@@ -322,8 +444,140 @@ Budilの需要番頭に入力するため、今日の投稿・営業・広告ア
       status: item.status || 'open',
       isTest: !!item.isTest,
       generatedOutputs: item.generatedOutputs || null,
+      executionStatus: item.executionStatus || null,
+      executionLogs: Array.isArray(item.executionLogs) ? item.executionLogs : [],
       createdAt: item.createdAt || '',
       updatedAt: item.updatedAt || ''
+    };
+  },
+
+  buildExecutionSummary(pickup) {
+    const p = this.normalizePickup(pickup);
+    const exec = this.normalizeExecutionStatus(pickup);
+    const badges = [];
+    const hasAnyOutput = this.EXECUTION_TYPES.some(t => this.hasGeneratedOutput(pickup, t));
+    if (hasAnyOutput) badges.push({ key: 'has-output', label: '文案あり', className: 'exec-badge-output' });
+
+    let hasScheduled = false;
+    let hasPosted = false;
+    let hasLineDone = false;
+    let hasAdDone = false;
+    let hasResultMemo = false;
+
+    this.EXECUTION_TYPES.forEach(type => {
+      const item = exec[type];
+      if (!item) return;
+      if (item.status === 'scheduled') hasScheduled = true;
+      if (this.isExecutionDone(type, item.status)) {
+        hasPosted = true;
+        if (type === 'line') hasLineDone = true;
+        if (type === 'ad') hasAdDone = true;
+      }
+      if (item.resultMemo && item.resultMemo.trim()) hasResultMemo = true;
+    });
+
+    if (hasScheduled) badges.push({ key: 'scheduled', label: '投稿予定', className: 'exec-badge-scheduled' });
+    if (hasPosted) badges.push({ key: 'posted', label: '投稿済み', className: 'exec-badge-posted' });
+    if (hasLineDone) badges.push({ key: 'line-done', label: 'LINE済み', className: 'exec-badge-line' });
+    if (hasAdDone) badges.push({ key: 'ad-done', label: '広告反映済み', className: 'exec-badge-ad' });
+    if (hasResultMemo) badges.push({ key: 'result', label: '効果メモあり', className: 'exec-badge-result' });
+
+    return badges;
+  },
+
+  getExecutionManagementPickups(pickups, manualTasks) {
+    const taskTopics = new Set();
+    (manualTasks || []).forEach(t => {
+      if (t.pickupTopic) taskTopics.add(t.pickupTopic);
+    });
+    return (pickups || [])
+      .map(p => this.normalizePickup(p))
+      .filter(p => {
+        if (p.status !== 'open' && p.status !== 'used') return false;
+        const raw = pickups.find(x => x.id === p.id) || p;
+        const hasOutputs = this.EXECUTION_TYPES.some(t => this.hasGeneratedOutput(raw, t));
+        const inTasks = taskTopics.has(p.topic);
+        return hasOutputs || inTasks || p.status === 'open' || p.status === 'used';
+      })
+      .sort((a, b) => (b.date + (b.updatedAt || '')).localeCompare(a.date + (a.updatedAt || '')));
+  },
+
+  getTodayExecutionActions(pickups, today) {
+    const t = today || new Date().toISOString().slice(0, 10);
+    const actions = [];
+    (pickups || []).forEach(raw => {
+      const p = this.normalizePickup(raw);
+      if (p.status !== 'open' && p.status !== 'used') return;
+      const exec = this.normalizeExecutionStatus(raw);
+      this.EXECUTION_TYPES.forEach(type => {
+        const item = exec[type];
+        if (!this.isExecutionPending(type, item)) return;
+        if (item.status !== 'draft' && item.status !== 'scheduled') return;
+        const scheduled = item.scheduledDate;
+        if (!scheduled || scheduled > t) return;
+        const meta = this.EXECUTION_META[type];
+        const hasContent = this.hasGeneratedOutput(raw, type) || item.status === 'scheduled';
+        if (!hasContent) return;
+        actions.push({
+          pickupId: p.id,
+          topic: p.topic,
+          type,
+          label: meta.dashPrefix,
+          shortLabel: meta.shortLabel,
+          scheduledDate: scheduled,
+          status: item.status
+        });
+      });
+    });
+    return actions.sort((a, b) => {
+      const d = a.scheduledDate.localeCompare(b.scheduledDate);
+      if (d !== 0) return d;
+      return a.topic.localeCompare(b.topic);
+    });
+  },
+
+  buildMorningExecutionLines(pickups, today) {
+    return this.getTodayExecutionActions(pickups, today).map((a, i) => {
+      return `${i + 1}. ${a.shortLabel}：${a.topic}`;
+    });
+  },
+
+  buildDashboardExecutionLines(pickups, today) {
+    return this.getTodayExecutionActions(pickups, today).map(a => {
+      return `${a.label}：${a.topic}`;
+    });
+  },
+
+  buildExecutionTaskDedupeKey(date, topic, type, title) {
+    return [date, topic, type, title].join('|');
+  },
+
+  createExecutionTaskPayload(pickup, type) {
+    const p = this.normalizePickup(pickup);
+    const meta = this.EXECUTION_META[type];
+    if (!meta) return null;
+    const title = `${meta.taskTitle}：${p.topic}`;
+    return {
+      title,
+      reason: `需要ピックアップ「${p.topic}」の${meta.label}`,
+      priority: '中',
+      contentType: type,
+      rawTitle: p.topic,
+      topic: p.topic
+    };
+  },
+
+  createExecutionLog(pickup, type, memo) {
+    const p = this.normalizePickup(pickup);
+    const meta = this.EXECUTION_META[type];
+    const today = new Date().toISOString().slice(0, 10);
+    return {
+      id: 'execution-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+      date: today,
+      type,
+      title: p.topic,
+      memo: memo || (meta ? meta.doneLog : '実行済み'),
+      createdAt: new Date().toISOString()
     };
   },
 

@@ -270,6 +270,7 @@
     renderDashboardLists();
     renderDashRevenueSummary();
     renderManagementComments();
+    renderDashTodayExecutionPlan();
     renderDailyActionTasks();
     renderMorningDailyTasksBrief();
   }
@@ -1785,6 +1786,14 @@
         : '<p class="placeholder-text">需要ピックアップ未登録。需要番頭でクロクロ調査結果を取り込んでください。</p>';
     }
 
+    const execTodayEl = document.getElementById('mgmt-execution-today');
+    if (execTodayEl) {
+      const execLines = DemandBrain.buildMorningExecutionLines(Storage.getDemandPickups(), TODAY());
+      execTodayEl.innerHTML = execLines.length
+        ? `<p class="mgmt-execution-label">今日の投稿・広告：</p><ol class="mgmt-execution-list">${execLines.map(l => `<li>${esc(l)}</li>`).join('')}</ol>`
+        : '';
+    }
+
     const postEl = document.getElementById('mgmt-post');
     postEl.innerHTML = `
       <p class="mgmt-highlight">${esc(report.todayPost.theme)}</p>
@@ -2570,6 +2579,7 @@
     renderDemandPickup();
     renderManagementComments();
     renderMorningReport();
+    renderDashTodayExecutionPlan();
   }
 
   function pickupContentButtonsHtml(id) {
@@ -2630,6 +2640,8 @@
     const selectEl = document.getElementById('pickup-content-select');
     if (selectEl) selectEl.value = id;
     renderPickupContentPanel();
+    renderPickupExecutionManagement();
+    renderPickupSavedList();
     const panel = document.querySelector('.card-pickup-content');
     if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -2758,6 +2770,220 @@
     renderPickupContentOutputs();
   }
 
+  function isExecutionTaskDuplicate(date, topic, type, title) {
+    const key = DemandBrain.buildExecutionTaskDedupeKey(date, topic, type, title);
+    return Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === key);
+  }
+
+  function addExecutionTask(pickupId, type) {
+    const pickup = getPickupRawById(pickupId);
+    if (!pickup) return;
+    const task = DemandBrain.createExecutionTaskPayload(pickup, type);
+    if (!task) return;
+    const date = TODAY();
+    const key = DemandBrain.buildExecutionTaskDedupeKey(date, task.topic, type, task.title);
+    if (isExecutionTaskDuplicate(date, task.topic, type, task.title)) {
+      alert('すでに今日やることに追加済みです');
+      return;
+    }
+    Storage.addManualDailyTask({
+      title: task.title,
+      targetName: '—',
+      priority: task.priority,
+      action: task.reason,
+      memo: task.reason,
+      dueDate: date,
+      status: 'open',
+      reason: task.reason,
+      pickupDedupeKey: key,
+      pickupTopic: task.topic,
+      pickupActionType: 'execution-' + type
+    });
+    renderDailyActionTasks();
+    renderMorningDailyTasksBrief();
+    renderMorningReport();
+    renderDashTodayExecutionPlan();
+    alert('今日やることに追加しました。');
+  }
+
+  function updatePickupExecution(id, type, patch) {
+    const pickup = getPickupRawById(id);
+    if (!pickup) return;
+    const exec = DemandBrain.normalizeExecutionStatus(pickup);
+    const prev = { ...exec[type] };
+    const next = { ...prev, ...patch };
+    exec[type] = next;
+    const updates = { executionStatus: exec };
+
+    if (patch.status === 'posted' && prev.status !== 'posted') {
+      if (!next.executedAt) {
+        next.executedAt = TODAY();
+        exec[type] = next;
+        updates.executionStatus = exec;
+      }
+      const meta = DemandBrain.EXECUTION_META[type];
+      const logs = Array.isArray(pickup.executionLogs) ? [...pickup.executionLogs] : [];
+      logs.unshift(DemandBrain.createExecutionLog(pickup, type, next.memo || (meta ? meta.doneLog : '')));
+      updates.executionLogs = logs;
+    }
+
+    Storage.updateDemandPickup(id, updates);
+    renderPickupExecutionManagement();
+    renderPickupSavedList();
+    renderDashTodayExecutionPlan();
+    const execTodayEl = document.getElementById('mgmt-execution-today');
+    if (execTodayEl) {
+      const execLines = DemandBrain.buildMorningExecutionLines(Storage.getDemandPickups(), TODAY());
+      execTodayEl.innerHTML = execLines.length
+        ? `<p class="mgmt-execution-label">今日の投稿・広告：</p><ol class="mgmt-execution-list">${execLines.map(l => `<li>${esc(l)}</li>`).join('')}</ol>`
+        : '';
+    }
+  }
+
+  function renderExecutionBadgesHtml(pickup) {
+    const badges = DemandBrain.buildExecutionSummary(pickup);
+    if (!badges.length) return '';
+    return `<div class="pickup-exec-badges">${badges.map(b =>
+      `<span class="pickup-exec-badge ${b.className}">${esc(b.label)}</span>`
+    ).join('')}</div>`;
+  }
+
+  function renderPickupExecutionRow(pickupId, type, pickup, execItem) {
+    const meta = DemandBrain.EXECUTION_META[type];
+    const hasOutput = DemandBrain.hasGeneratedOutput(pickup, type);
+    const statusLabel = DemandBrain.getExecutionStatusLabel(type, execItem.status);
+    const statusOptions = meta.statuses.map(s =>
+      `<option value="${s.value}"${execItem.status === s.value ? ' selected' : ''}>${esc(s.label)}</option>`
+    ).join('');
+    const outputHint = hasOutput
+      ? '<span class="exec-row-has-output">文案あり</span>'
+      : '<span class="exec-row-no-output">文案未生成</span>';
+    const showResultFields = DemandBrain.isExecutionDone(type, execItem.status);
+
+    return `
+      <div class="pickup-exec-row" data-exec-pickup="${esc(pickupId)}" data-exec-type="${type}">
+        <div class="pickup-exec-row-header">
+          <strong>${esc(meta.label)}</strong>
+          ${outputHint}
+        </div>
+        <div class="pickup-exec-row-fields">
+          <div class="pickup-exec-field">
+            <label>実行ステータス</label>
+            <select data-exec-field="status">${statusOptions}</select>
+          </div>
+          <div class="pickup-exec-field">
+            <label>${esc(meta.scheduledDateLabel)}</label>
+            <input type="date" data-exec-field="scheduledDate" value="${esc(execItem.scheduledDate || '')}">
+          </div>
+          <div class="pickup-exec-field pickup-exec-field-wide">
+            <label>実行メモ</label>
+            <input type="text" data-exec-field="memo" value="${esc(execItem.memo || '')}" placeholder="例：午前中に投稿予定">
+          </div>
+          ${showResultFields ? `
+          <div class="pickup-exec-field pickup-exec-field-wide">
+            <label>効果メモ</label>
+            <input type="text" data-exec-field="resultMemo" value="${esc(execItem.resultMemo || '')}" placeholder="例：反応あり、LINE相談1件">
+          </div>
+          <div class="pickup-exec-field pickup-exec-field-wide">
+            <label>次回改善</label>
+            <input type="text" data-exec-field="nextImproveMemo" value="${esc(execItem.nextImproveMemo || '')}" placeholder="例：次回は実写多め">
+          </div>` : ''}
+        </div>
+        <div class="pickup-exec-row-actions">
+          <span class="pickup-exec-status-label">${esc(statusLabel)}</span>
+          ${execItem.executedAt ? `<span class="pickup-exec-done-date">実行日：${esc(execItem.executedAt)}</span>` : ''}
+          <button type="button" class="btn btn-sm btn-primary" data-exec-add-task="${type}">今日やることに追加</button>
+        </div>
+      </div>`;
+  }
+
+  function bindPickupExecutionEvents(container) {
+    if (!container) return;
+    container.querySelectorAll('.pickup-exec-row').forEach(row => {
+      const pickupId = row.dataset.execPickup;
+      const type = row.dataset.execType;
+      const saveField = (field, value) => {
+        const patch = {};
+        patch[field] = value;
+        updatePickupExecution(pickupId, type, patch);
+      };
+      row.querySelectorAll('[data-exec-field]').forEach(input => {
+        const field = input.dataset.execField;
+        const eventName = input.tagName === 'SELECT' ? 'change' : 'change';
+        input.addEventListener(eventName, () => {
+          saveField(field, input.value);
+          if (field === 'status') {
+            renderPickupExecutionManagement();
+          }
+        });
+        if (input.tagName === 'INPUT' && input.type === 'text') {
+          input.addEventListener('blur', () => saveField(field, input.value));
+        }
+      });
+      const taskBtn = row.querySelector('[data-exec-add-task]');
+      if (taskBtn) {
+        taskBtn.addEventListener('click', () => addExecutionTask(pickupId, taskBtn.dataset.execAddTask));
+      }
+    });
+  }
+
+  function renderPickupExecutionManagement() {
+    const el = document.getElementById('pickup-execution-list');
+    if (!el) return;
+    const pickups = Storage.getDemandPickups();
+    const manualTasks = Storage.getDailyActionTasksData().manualTasks;
+    const list = DemandBrain.getExecutionManagementPickups(pickups, manualTasks);
+    if (!list.length) {
+      el.innerHTML = '<p class="placeholder-text">管理対象の需要ピックアップはまだありません。文案を生成するか、需要を保存してください。</p>';
+      return;
+    }
+    el.innerHTML = list.map(p => {
+      const raw = pickups.find(x => x.id === p.id) || p;
+      const exec = DemandBrain.normalizeExecutionStatus(raw);
+      const outputs = raw.generatedOutputs || {};
+      const outputKeys = DemandBrain.EXECUTION_TYPES.filter(t =>
+        DemandBrain.hasGeneratedOutput(raw, t) || exec[t].status !== 'draft' || exec[t].scheduledDate
+      );
+      const typesToShow = outputKeys.length ? outputKeys : DemandBrain.EXECUTION_TYPES.filter(t => outputs[t]);
+      const rows = (typesToShow.length ? typesToShow : DemandBrain.EXECUTION_TYPES).map(type =>
+        renderPickupExecutionRow(p.id, type, raw, exec[type])
+      ).join('');
+      const logs = Array.isArray(raw.executionLogs) ? raw.executionLogs.slice(0, 3) : [];
+      const logsHtml = logs.length
+        ? `<div class="pickup-exec-logs"><p class="pickup-exec-logs-title">実行履歴（直近）</p><ul>${logs.map(l =>
+            `<li>${esc(l.date)} — ${esc(DemandBrain.EXECUTION_META[l.type]?.shortLabel || l.type)}：${esc(l.memo)}</li>`
+          ).join('')}</ul></div>`
+        : '';
+      return `
+        <div class="pickup-exec-card" data-pickup-exec-id="${esc(p.id)}">
+          <div class="pickup-exec-card-header">
+            <strong>${esc(p.topic)}</strong>
+            <span class="pickup-score-badge">${p.demandScore}</span>
+            ${renderExecutionBadgesHtml(raw)}
+          </div>
+          <p class="pickup-meta pickup-meta-sub">関連サービス：${esc(p.relatedServices.join('、') || '—')}</p>
+          <div class="pickup-exec-generated-hint">
+            生成済み：${DemandBrain.EXECUTION_TYPES.filter(t => DemandBrain.hasGeneratedOutput(raw, t))
+              .map(t => DemandBrain.EXECUTION_META[t].label).join('、') || '—'}
+          </div>
+          <div class="pickup-exec-rows">${rows}</div>
+          ${logsHtml}
+        </div>`;
+    }).join('');
+    bindPickupExecutionEvents(el);
+  }
+
+  function renderDashTodayExecutionPlan() {
+    const el = document.getElementById('dash-today-execution');
+    if (!el) return;
+    const lines = DemandBrain.buildDashboardExecutionLines(Storage.getDemandPickups(), TODAY());
+    if (!lines.length) {
+      el.innerHTML = '<p class="placeholder-text">今日の投稿・広告予定はありません。需要番頭で予定日を設定してください。</p>';
+      return;
+    }
+    el.innerHTML = `<ul class="dash-today-execution-list">${lines.map(l => `<li>・${esc(l)}</li>`).join('')}</ul>`;
+  }
+
   function bindPickupContentGenActions(container) {
     if (!container) return;
     container.querySelectorAll('[data-pickup-gen-card]').forEach(btn => {
@@ -2875,6 +3101,7 @@
           <span class="pickup-status-label">${esc(statusLabel[p.status] || p.status)}</span>
           ${p.isTest ? '<span class="pickup-test-badge">テスト</span>' : ''}
         </div>
+        ${renderExecutionBadgesHtml(Storage.getDemandPickups().find(x => x.id === p.id) || p)}
         <p class="pickup-meta">${esc(p.summary)}</p>
         <p class="pickup-meta pickup-meta-sub">情報元：${esc(p.source)} / 関連：${esc(p.relatedServices.join('、') || '—')}</p>
         <div class="pickup-card-actions">
@@ -2921,6 +3148,7 @@
     renderPickupUsedToday();
     renderPickupBulkPreview();
     renderPickupContentPanel();
+    renderPickupExecutionManagement();
     renderPickupCandidates();
     renderPickupSavedList();
   }

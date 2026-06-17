@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v2.4 公開済み（投稿・広告アクションの実行管理）
 - Budil v2.3 公開済み（需要から投稿・広告文案生成MVP）
 - Budil v2.2 公開済み（クロクロ3件一括取り込み・毎朝運用強化）
 - Budil v2.1 公開済み（需要ピックアップ受信箱MVP）
@@ -46,6 +47,17 @@
 | `js/demand-brain.js` | 需要分析・需要ピックアップパース・トップ3 |
 | `js/demand-radar.js` | 需要レーダー分析 |
 | `js/data-backup.js` | バックアップ・復元 |
+
+## v2.4で入ったもの
+
+- 需要番頭「投稿・広告アクション管理」セクション
+- `executionStatus` / `executionLogs`（`budil_demand_pickups` 内、任意フィールド）
+- 文案ごとのステータス・予定日・実行メモ・効果メモ・次回改善
+- 実行済み時の実行ログ自動記録
+- ダッシュボード「今日の投稿・広告予定」
+- 朝レポートに今日の投稿・広告予定
+- 保存済み需要メモの状態バッジ
+- `DemandBrain.normalizeExecutionStatus` / `getTodayExecutionActions` 等
 
 ## v2.3で入ったもの
 

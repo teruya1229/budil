@@ -3679,3 +3679,191 @@ body {
     padding: 6px 8px;
   }
 }
+
+/* v2.4 投稿・広告アクション実行管理 */
+.card-today-execution {
+  margin-bottom: 1rem;
+}
+
+.dash-today-execution-block {
+  font-size: 0.92rem;
+}
+
+.dash-today-execution-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dash-today-execution-list li {
+  padding: 4px 0;
+  color: var(--text, #1a1a1a);
+}
+
+.mgmt-execution-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0.25rem;
+  color: var(--text-muted, #666);
+}
+
+.mgmt-execution-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.88rem;
+}
+
+.mgmt-execution-list li {
+  margin-bottom: 0.2rem;
+}
+
+.card-pickup-execution {
+  margin-top: 1rem;
+}
+
+.pickup-execution-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pickup-exec-card {
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 8px;
+  padding: 1rem;
+  background: var(--card-bg, #fafafa);
+}
+
+.pickup-exec-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.pickup-exec-generated-hint {
+  font-size: 0.82rem;
+  color: var(--text-muted, #666);
+  margin-bottom: 0.75rem;
+}
+
+.pickup-exec-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pickup-exec-row {
+  border: 1px solid var(--border-light, #eee);
+  border-radius: 6px;
+  padding: 0.75rem;
+  background: #fff;
+}
+
+.pickup-exec-row-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.exec-row-has-output {
+  font-size: 0.75rem;
+  color: #2e7d32;
+  background: #e8f5e9;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.exec-row-no-output {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.pickup-exec-row-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.pickup-exec-field-wide {
+  grid-column: 1 / -1;
+}
+
+.pickup-exec-field label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted, #666);
+  margin-bottom: 2px;
+}
+
+.pickup-exec-field select,
+.pickup-exec-field input {
+  width: 100%;
+  font-size: 0.85rem;
+  padding: 4px 6px;
+}
+
+.pickup-exec-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.pickup-exec-status-label {
+  font-weight: 600;
+  color: var(--primary, #2563eb);
+}
+
+.pickup-exec-done-date {
+  color: var(--text-muted, #666);
+}
+
+.pickup-exec-logs {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border, #e0e0e0);
+  font-size: 0.82rem;
+}
+
+.pickup-exec-logs-title {
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+}
+
+.pickup-exec-logs ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.pickup-exec-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0.25rem 0;
+}
+
+.pickup-exec-badge {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.exec-badge-output { background: #e3f2fd; color: #1565c0; }
+.exec-badge-scheduled { background: #fff3e0; color: #e65100; }
+.exec-badge-posted { background: #e8f5e9; color: #2e7d32; }
+.exec-badge-line { background: #f3e5f5; color: #7b1fa2; }
+.exec-badge-ad { background: #fce4ec; color: #c2185b; }
+.exec-badge-result { background: #e0f2f1; color: #00695c; }
+
+@media (max-width: 600px) {
+  .pickup-exec-row-fields {
+    grid-template-columns: 1fr;
+  }
+}
