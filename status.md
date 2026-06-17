@@ -6,6 +6,7 @@
 
 - 公開URL: https://teruya1229.github.io/budil/
 - 現在バージョン: v2.1
+- 最新commit: fa3ed80
 
 ## v2.1 実装内容（需要ピックアップ受信箱MVP）
 
