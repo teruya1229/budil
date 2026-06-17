@@ -5,9 +5,15 @@
 ## 現在の公開状態
 
 - 公開URL: https://teruya1229.github.io/budil/
-- 現在バージョン: v1.9.4
-- 最新commit: 1f44d02
-- push済み（`cf291d6..1f44d02 main -> main`）
+- 現在バージョン: v1.9.5
+- 最新commit: （push後に更新）
+
+## v1.9.5 実装内容（今日やることリスト化）
+
+- `RevenueBrain.buildDailyActionTasks()` — 売上・営業・保留から今日のタスクを自動生成
+- `budil_daily_action_tasks` — 完了・後回し・メモの保存
+- ダッシュボード「今日やること」カード（完了/後回し/開く/メモ）
+- 朝レポートに今日やること上位1〜3件
 
 ## v1.9.4 実装内容（経営番頭コメント）
 

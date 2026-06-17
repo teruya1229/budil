@@ -248,6 +248,8 @@
     renderDashboardLists();
     renderDashRevenueSummary();
     renderManagementComments();
+    renderDailyActionTasks();
+    renderMorningDailyTasksBrief();
   }
 
   function getRevenueContext() {
@@ -283,6 +285,161 @@
     el.innerHTML = managementComment.lines
       .map(line => `<p class="management-comment-line">${esc(line)}</p>`)
       .join('');
+  }
+
+  function getDailyActionTasksWithState() {
+    const ctx = getRevenueContext();
+    const { enriched } = getSalesContext();
+    const generated = RevenueBrain.buildDailyActionTasks({
+      ...ctx,
+      enrichedLeads: enriched
+    });
+    const stored = Storage.getDailyActionTasks();
+    const stateMap = {};
+    stored.filter(s => s.date === ctx.today).forEach(s => { stateMap[s.taskId] = s; });
+    return generated.map(task => ({
+      ...task,
+      status: (stateMap[task.id] && stateMap[task.id].status) || 'active',
+      memo: (stateMap[task.id] && stateMap[task.id].memo) || ''
+    }));
+  }
+
+  function sortDailyTasksForDisplay(tasks) {
+    const priorityOrder = { '高': 0, '中': 1, '低': 2 };
+    return tasks.slice().sort((a, b) => {
+      const statusOrder = { active: 0, snoozed: 1, done: 2 };
+      const so = (statusOrder[a.status] ?? 0) - (statusOrder[b.status] ?? 0);
+      if (so !== 0) return so;
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    });
+  }
+
+  function openDailyActionTask(task) {
+    if (!task) return;
+    if (task.openTarget === 'lead' && task.leadId) {
+      openSalesDetail(task.leadId, { navigate: true });
+      return;
+    }
+    if (task.openTarget === 'revenue') {
+      navigateToView('revenue');
+      const section = document.getElementById('revenue-list-section');
+      if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    if (task.openTarget === 'sales') {
+      navigateToView('sales');
+    }
+  }
+
+  function updateDailyActionTaskState(taskId, status, memo) {
+    const today = TODAY();
+    const stored = Storage.getDailyActionTasks();
+    const existing = stored.find(s => s.taskId === taskId && s.date === today);
+    Storage.upsertDailyActionTaskState(taskId, today, {
+      status,
+      memo: memo != null ? memo : (existing ? existing.memo : '')
+    });
+    renderDailyActionTasks();
+    renderMorningDailyTasksBrief();
+  }
+
+  function renderDailyActionTaskCard(task, options) {
+    const opts = options || {};
+    const isDone = task.status === 'done';
+    const isSnoozed = task.status === 'snoozed';
+    const priorityClass = task.priority === '高' ? 'high' : task.priority === '中' ? 'mid' : 'low';
+    const statusLabel = isDone ? '完了' : isSnoozed ? '後回し' : '';
+    const actionsHtml = isDone ? '' : `
+      <div class="daily-task-actions">
+        <button type="button" class="btn btn-sm btn-secondary" data-daily-task-open="${esc(task.id)}">開く</button>
+        <button type="button" class="btn btn-sm btn-primary" data-daily-task-done="${esc(task.id)}">完了</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-daily-task-snooze="${esc(task.id)}">後回し</button>
+      </div>`;
+    const memoHtml = opts.showMemo && !isDone
+      ? `<input type="text" class="daily-task-memo" data-daily-task-memo="${esc(task.id)}" value="${esc(task.memo)}" placeholder="メモ（任意）">`
+      : (task.memo ? `<p class="daily-task-memo-text">${esc(task.memo)}</p>` : '');
+    return `
+      <div class="daily-task-card daily-task-${priorityClass}${isDone ? ' daily-task-done' : ''}${isSnoozed ? ' daily-task-snoozed' : ''}" data-task-id="${esc(task.id)}">
+        <div class="daily-task-header">
+          <span class="daily-task-priority priority-${priorityClass}">${esc(task.priority)}</span>
+          <strong class="daily-task-title">${esc(task.title)}</strong>
+          ${statusLabel ? `<span class="daily-task-status">${esc(statusLabel)}</span>` : ''}
+        </div>
+        <p class="daily-task-meta">対象：${esc(task.targetName)}</p>
+        <p class="daily-task-meta">理由：${esc(task.reason)}</p>
+        <p class="daily-task-meta">やること：${esc(task.action)}</p>
+        ${memoHtml}
+        ${actionsHtml}
+      </div>`;
+  }
+
+  function bindDailyActionTaskEvents(container) {
+    if (!container) return;
+    container.querySelectorAll('[data-daily-task-open]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const task = getDailyActionTasksWithState().find(t => t.id === btn.dataset.dailyTaskOpen);
+        openDailyActionTask(task);
+      });
+    });
+    container.querySelectorAll('[data-daily-task-done]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const memoInput = container.querySelector(`[data-daily-task-memo="${btn.dataset.dailyTaskDone}"]`);
+        updateDailyActionTaskState(btn.dataset.dailyTaskDone, 'done', memoInput ? memoInput.value.trim() : '');
+      });
+    });
+    container.querySelectorAll('[data-daily-task-snooze]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const memoInput = container.querySelector(`[data-daily-task-memo="${btn.dataset.dailyTaskSnooze}"]`);
+        updateDailyActionTaskState(btn.dataset.dailyTaskSnooze, 'snoozed', memoInput ? memoInput.value.trim() : '');
+      });
+    });
+    container.querySelectorAll('[data-daily-task-memo]').forEach(input => {
+      input.addEventListener('change', () => {
+        const task = getDailyActionTasksWithState().find(t => t.id === input.dataset.dailyTaskMemo);
+        const status = task && task.status !== 'active' ? task.status : 'active';
+        updateDailyActionTaskState(input.dataset.dailyTaskMemo, status, input.value.trim());
+      });
+    });
+  }
+
+  function renderDailyActionTasks() {
+    const el = document.getElementById('dash-daily-action-tasks');
+    if (!el) return;
+    const allTasks = getDailyActionTasksWithState();
+    if (!allTasks.length) {
+      el.innerHTML = '<p class="placeholder-text">今日の重要タスクはありません。売上登録・営業先登録を続けると、ここに自動で出ます。</p>';
+      return;
+    }
+    const sorted = sortDailyTasksForDisplay(allTasks);
+    const active = sorted.filter(t => t.status !== 'done');
+    const done = sorted.filter(t => t.status === 'done');
+    const visible = active.slice(0, 5);
+    const parts = visible.map(t => renderDailyActionTaskCard(t, { showMemo: true }));
+    if (done.length) {
+      parts.push('<div class="daily-task-done-section">');
+      parts.push('<p class="daily-task-done-heading label-muted">完了済み</p>');
+      done.forEach(t => parts.push(renderDailyActionTaskCard(t, { showMemo: false })));
+      parts.push('</div>');
+    }
+    el.innerHTML = parts.join('');
+    bindDailyActionTaskEvents(el);
+  }
+
+  function renderMorningDailyTasksBrief() {
+    const el = document.getElementById('mgmt-daily-tasks');
+    if (!el) return;
+    const tasks = sortDailyTasksForDisplay(
+      getDailyActionTasksWithState().filter(t => t.status !== 'done' && t.status !== 'snoozed')
+    ).slice(0, 3);
+    if (!tasks.length) {
+      el.innerHTML = '';
+      return;
+    }
+    el.innerHTML = `
+      <p class="daily-tasks-brief-title">今日やること：</p>
+      <ol class="daily-tasks-brief-list">
+        ${tasks.map(t => `<li>${esc(t.title)}：${esc(t.targetName)}</li>`).join('')}
+      </ol>`;
   }
 
   function renderManagementComments() {
@@ -803,6 +960,7 @@
       bindSalesOutcomeLeadLinks(mgmtCandidateEl);
     }
     renderManagementComment('mgmt-management-comment', { brief: true });
+    renderMorningDailyTasksBrief();
 
     const top3Legacy = document.getElementById('dash-top3');
     if (top3Legacy) {

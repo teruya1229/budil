@@ -2555,6 +2555,147 @@ body {
   color: var(--text-muted, #8b9cb3);
 }
 
+.card-daily-action-tasks {
+  border-left: 3px solid rgba(52, 211, 153, 0.6);
+}
+
+.daily-action-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.daily-task-card {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--surface-2, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+}
+
+.daily-task-high {
+  border-left: 3px solid #f87171;
+}
+
+.daily-task-mid {
+  border-left: 3px solid #60a5fa;
+}
+
+.daily-task-low {
+  border-left: 3px solid #8b9cb3;
+}
+
+.daily-task-done {
+  opacity: 0.65;
+  border-left-color: rgba(139, 156, 179, 0.4);
+}
+
+.daily-task-snoozed {
+  opacity: 0.85;
+}
+
+.daily-task-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.daily-task-priority {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.daily-task-priority.priority-high {
+  background: rgba(248, 113, 113, 0.2);
+  color: #f87171;
+}
+
+.daily-task-priority.priority-mid {
+  background: rgba(96, 165, 250, 0.2);
+  color: #60a5fa;
+}
+
+.daily-task-priority.priority-low {
+  background: rgba(139, 156, 179, 0.2);
+  color: #8b9cb3;
+}
+
+.daily-task-title {
+  font-size: 0.95rem;
+}
+
+.daily-task-status {
+  font-size: 0.75rem;
+  color: var(--text-muted, #8b9cb3);
+  margin-left: auto;
+}
+
+.daily-task-meta {
+  margin: 2px 0;
+  font-size: 0.88rem;
+  color: var(--text-muted, #8b9cb3);
+}
+
+.daily-task-memo {
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  background: var(--surface-1, rgba(0, 0, 0, 0.2));
+  color: inherit;
+}
+
+.daily-task-memo-text {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted, #8b9cb3);
+}
+
+.daily-task-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.daily-task-done-section {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border, rgba(255, 255, 255, 0.1));
+}
+
+.daily-task-done-heading {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+}
+
+.daily-tasks-brief-block {
+  margin-top: 8px;
+}
+
+.daily-tasks-brief-title {
+  margin: 8px 0 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.daily-tasks-brief-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.88rem;
+  color: var(--text-muted, #8b9cb3);
+}
+
+.daily-tasks-brief-list li {
+  margin: 2px 0;
+}
+
 .checkbox-label {
   display: flex;
   align-items: center;

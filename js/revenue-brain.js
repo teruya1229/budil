@@ -1,5 +1,5 @@
 /**
- * Budil v1.9.4 - 売上番頭（経営判断用）・営業先連携
+ * Budil v1.9.5 - 売上番頭（経営判断用）・営業先連携
  */
 const RevenueBrain = {
   SERVICES: [
@@ -473,6 +473,155 @@ const RevenueBrain = {
       lines: finalLines,
       brief: finalLines.slice(0, 2).join(' ')
     };
+  },
+
+  buildDailyActionTasks(context) {
+    const today = (context && context.today) || new Date().toISOString().slice(0, 10);
+    const summary = (context && context.summary) || {};
+    const salesOutcome = (context && context.salesOutcome) || {};
+    const holdCandidates = (context && context.salesHoldCandidates) || [];
+    const nextCandidates = (context && context.nextSalesCandidates) || [];
+    const records = (context && context.records) || [];
+    const leads = (context && context.leads) || [];
+    const enrichedLeads = (context && context.enrichedLeads) || leads;
+    const tasks = [];
+    const addedLeadIds = new Set();
+    const priorityOrder = { '高': 0, '中': 1, '低': 2 };
+
+    holdCandidates.forEach(h => {
+      tasks.push({
+        id: `sales-hold:${h.leadId}`,
+        priority: '高',
+        type: 'sales-hold',
+        title: '入金予定を確認',
+        targetName: h.leadName,
+        reason: '入金注意タグがあります',
+        action: h.action,
+        leadId: h.leadId,
+        openTarget: 'lead'
+      });
+      addedLeadIds.add(h.leadId);
+    });
+
+    const monthKey = summary.monthKey || this.currentMonthKey(today);
+    const unlinkedRecords = this.activeRecords(this.filterMonthRecords(records, monthKey))
+      .filter(r => !r.leadId);
+    if (salesOutcome.unlinkedTotal > 0) {
+      const first = unlinkedRecords[0];
+      tasks.push({
+        id: 'unlinked-revenue',
+        priority: '高',
+        type: 'unlinked-revenue',
+        title: '売上を営業先に紐付け',
+        targetName: this.formatYen(salesOutcome.unlinkedTotal),
+        reason: '営業成果分析に反映されていない',
+        action: '未紐付け売上を営業先と紐付ける',
+        revenueId: first ? first.id : '',
+        openTarget: 'revenue'
+      });
+    }
+
+    enrichedLeads.forEach(lead => {
+      if (addedLeadIds.has(lead.id)) return;
+      const normalized = typeof SalesBrain !== 'undefined' ? SalesBrain.normalizeLead(lead) : lead;
+      const ss = normalized.salesStatus || normalized.status;
+      if (['成約', '見送り', 'NG'].includes(ss)) return;
+      if (normalized.nextActionDate && normalized.nextActionDate <= today) {
+        tasks.push({
+          id: `next-action:${lead.id}`,
+          priority: '高',
+          type: 'next-action',
+          title: '予定していた営業アクションを実行',
+          targetName: lead.company,
+          reason: normalized.nextAction || `次アクション日：${normalized.nextActionDate}`,
+          action: normalized.nextAction || '予定していた営業アクションを実行',
+          leadId: lead.id,
+          openTarget: 'lead'
+        });
+        addedLeadIds.add(lead.id);
+      }
+    });
+
+    nextCandidates.forEach(c => {
+      if (addedLeadIds.has(c.leadId)) return;
+      tasks.push({
+        id: `next-sales:${c.leadId}`,
+        priority: '中',
+        type: 'next-sales',
+        title: 'お礼連絡・次回提案',
+        targetName: c.leadName,
+        reason: c.reason,
+        action: c.action,
+        leadId: c.leadId,
+        openTarget: 'lead'
+      });
+      addedLeadIds.add(c.leadId);
+    });
+
+    if (summary.monthlyTarget > 0 && summary.remainingToTarget > 0) {
+      tasks.push({
+        id: 'target-remaining',
+        priority: '中',
+        type: 'target-remaining',
+        title: '売上候補を増やす',
+        targetName: this.formatYen(summary.remainingToTarget),
+        reason: `目標まで残り${this.formatYen(summary.remainingToTarget)}`,
+        action: '営業先への追加提案または新規売上登録を進める',
+        openTarget: 'sales'
+      });
+    }
+
+    const normalizedRecords = this.normalizeRevenueRecords(records);
+    const byLead = this.summarizeRevenueByLead(normalizedRecords, leads);
+    byLead.forEach(item => {
+      if (addedLeadIds.has(item.leadId)) return;
+      if (!item.latestDate) return;
+      const days = this.daysSince(item.latestDate, today);
+      if (days === null || days < 30) return;
+      const lead = leads.find(l => l.id === item.leadId);
+      tasks.push({
+        id: `repeat:${item.leadId}`,
+        priority: '中',
+        type: 'repeat',
+        title: 'リピート提案',
+        targetName: lead ? lead.company : item.leadName,
+        reason: `前回売上から${days}日以上`,
+        action: 'お礼＋次回提案',
+        leadId: item.leadId,
+        openTarget: 'lead'
+      });
+      addedLeadIds.add(item.leadId);
+    });
+
+    if (summary.recordCount === 0) {
+      tasks.push({
+        id: 'register-revenue',
+        priority: '低',
+        type: 'register-revenue',
+        title: '直近の作業・予約・見込み客を登録',
+        targetName: '売上番頭',
+        reason: '今月の売上登録がまだありません',
+        action: '売上登録から状況を見える化する',
+        openTarget: 'revenue'
+      });
+    }
+
+    const hasHold = holdCandidates.length > 0;
+    if (summary.recordCount > 0 && salesOutcome.linkedTotal > 0 && salesOutcome.unlinkedTotal === 0 && !hasHold) {
+      tasks.push({
+        id: 'maintain-relationship',
+        priority: '低',
+        type: 'maintain-relationship',
+        title: '既存営業先の関係維持',
+        targetName: '営業番頭',
+        reason: '紐付け売上あり・保留なし・未紐付けなし',
+        action: '定期的なお礼・フォローを継続する',
+        openTarget: 'sales'
+      });
+    }
+
+    tasks.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+    return tasks;
   },
 
   buildBantouComment(summary) {

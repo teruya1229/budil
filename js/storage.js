@@ -14,7 +14,8 @@ const Storage = {
     DAILY_DEMAND_LOGS: 'budil_daily_demand_logs',
     DEMAND_RADAR: 'budil_demand_radar',
     REVENUE_RECORDS: 'budil_revenue_records',
-    REVENUE_SETTINGS: 'budil_revenue_settings'
+    REVENUE_SETTINGS: 'budil_revenue_settings',
+    DAILY_ACTION_TASKS: 'budil_daily_action_tasks'
   },
 
   get(key, defaultValue = null) {
@@ -310,6 +311,33 @@ const Storage = {
 
   deleteRevenueRecord(id) {
     this.saveRevenueRecords(this.getRevenueRecords().filter(r => r.id !== id));
+  },
+
+  getDailyActionTasks() {
+    return this.get(this.KEYS.DAILY_ACTION_TASKS, []);
+  },
+
+  saveDailyActionTasks(list) {
+    this.set(this.KEYS.DAILY_ACTION_TASKS, list);
+  },
+
+  upsertDailyActionTaskState(taskId, date, data) {
+    const list = this.getDailyActionTasks();
+    const idx = list.findIndex(item => item.taskId === taskId && item.date === date);
+    const entry = {
+      taskId,
+      date,
+      status: data.status,
+      memo: data.memo != null ? data.memo : (idx !== -1 ? list[idx].memo : ''),
+      updatedAt: new Date().toISOString()
+    };
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...entry };
+    } else {
+      list.push(entry);
+    }
+    this.saveDailyActionTasks(list);
+    return entry;
   }
 };
 
