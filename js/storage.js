@@ -359,19 +359,43 @@ const Storage = {
 
   getDailyActionTasksData() {
     const raw = this.get(this.KEYS.DAILY_ACTION_TASKS, null);
-    if (!raw) return { states: [], manualTasks: [] };
-    if (Array.isArray(raw)) return { states: raw, manualTasks: [] };
+    if (!raw) return { states: [], manualTasks: [], dailyChecks: {} };
+    if (Array.isArray(raw)) return { states: raw, manualTasks: [], dailyChecks: {} };
     return {
       states: raw.states || [],
-      manualTasks: raw.manualTasks || []
+      manualTasks: raw.manualTasks || [],
+      dailyChecks: raw.dailyChecks || {}
     };
   },
 
   saveDailyActionTasksData(data) {
-    this.set(this.KEYS.DAILY_ACTION_TASKS, {
-      states: data.states || [],
-      manualTasks: data.manualTasks || []
-    });
+    const existing = this.getDailyActionTasksData();
+    const payload = {
+      states: data.states != null ? data.states : existing.states,
+      manualTasks: data.manualTasks != null ? data.manualTasks : existing.manualTasks
+    };
+    const checks = data.dailyChecks != null ? data.dailyChecks : existing.dailyChecks;
+    if (checks && Object.keys(checks).length) payload.dailyChecks = checks;
+    this.set(this.KEYS.DAILY_ACTION_TASKS, payload);
+  },
+
+  getTodayCheckState(date) {
+    const store = this.getDailyActionTasksData();
+    const d = date || new Date().toISOString().slice(0, 10);
+    return (store.dailyChecks && store.dailyChecks[d]) || null;
+  },
+
+  saveTodayCheckState(date, checkData) {
+    const store = this.getDailyActionTasksData();
+    const d = date || new Date().toISOString().slice(0, 10);
+    store.dailyChecks = store.dailyChecks || {};
+    store.dailyChecks[d] = {
+      checkedAt: (checkData && checkData.checkedAt) || new Date().toISOString(),
+      memo: (checkData && checkData.memo) || '',
+      version: (checkData && checkData.version) || 'v3.0'
+    };
+    this.saveDailyActionTasksData(store);
+    return store.dailyChecks[d];
   },
 
   saveDailyActionTasks(list) {

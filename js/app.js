@@ -264,6 +264,7 @@
 
   function renderDashboard() {
     renderStartGuide();
+    renderExecutiveHome();
     renderBackupStatus();
     renderMorningReport();
     renderDemandInsights();
@@ -280,6 +281,591 @@
     renderActionCalendar();
     renderDailyActionTasks();
     renderMorningDailyTasksBrief();
+  }
+
+  function hasExecutiveHomeData() {
+    const store = Storage.getDailyActionTasksData();
+    return Storage.getDemandPickups().length > 0
+      || Storage.getLeads().length > 0
+      || Storage.getRevenueRecords().length > 0
+      || (store.manualTasks && store.manualTasks.length > 0);
+  }
+
+  function formatDailyTaskTypeLabel(task) {
+    if (!task) return 'その他';
+    if (task.type === 'manual') return '手動';
+    const map = {
+      'sales-hold': '営業保留',
+      'unlinked-revenue': '売上紐付け',
+      'next-action': '営業連絡',
+      'next-sales': '営業提案',
+      'target-remaining': '売上目標',
+      repeat: 'リピート',
+      'register-revenue': '売上登録',
+      'maintain-relationship': '関係維持'
+    };
+    if (task.pickupActionType) {
+      if (task.pickupActionType.startsWith('decision-grow')) return '増やす';
+      if (task.pickupActionType.startsWith('decision-improve')) return '改善';
+      if (task.pickupActionType.startsWith('calendar-')) return '投稿・広告';
+      if (task.pickupActionType.startsWith('weekly-')) return '週間作戦';
+      if (task.pickupActionType.startsWith('improve-')) return '改善';
+    }
+    return map[task.type] || 'その他';
+  }
+
+  function getExecutiveHomeTaskBucket(task, today) {
+    if (!task || task.status === 'done' || task.status === 'snoozed' || isDailyTaskSnoozedAway(task, today)) {
+      return 99;
+    }
+    if (task.dueDate && task.dueDate < today) return 0;
+    if (task.type === 'next-action') {
+      const due = task.dueDate || today;
+      if (due < today) return 0;
+    }
+    if (task.pickupActionType && task.pickupActionType.startsWith('decision-grow')) return 2;
+    if (task.pickupActionType && task.pickupActionType.startsWith('decision-improve')) return 3;
+    if (task.dueDate === today) return 1;
+    if (task.type === 'next-action' || task.type === 'next-sales') return 4;
+    if (task.type === 'unlinked-revenue') return 5;
+    if (task.type === 'manual') return 6;
+    return 7;
+  }
+
+  function sortExecutiveHomeTasks(tasks) {
+    const today = TODAY();
+    const priorityOrder = { '高': 0, '中': 1, '低': 2 };
+    return tasks.slice().sort((a, b) => {
+      const ba = getExecutiveHomeTaskBucket(a, today) - getExecutiveHomeTaskBucket(b, today);
+      if (ba !== 0) return ba;
+      const po = priorityOrder[a.priority] - priorityOrder[b.priority];
+      if (po !== 0) return po;
+      return (a.dueDate || '').localeCompare(b.dueDate || '');
+    });
+  }
+
+  function getExecutiveHomeTasks(limit) {
+    const today = TODAY();
+    const tasks = getDailyActionTasksWithState().filter(t =>
+      t.status !== 'done' && !isDailyTaskSnoozedAway(t, today) && t.status !== 'snoozed'
+    );
+    return sortExecutiveHomeTasks(tasks).slice(0, limit || 5);
+  }
+
+  function getExecutiveHomeFocusItems() {
+    const ctx = getPerformanceContext();
+    return DemandBrain.getFocusRecommendations(ctx.pickups, ctx.revenues, ctx.leads, 3, ctx.today);
+  }
+
+  function getExecutiveHomeSalesActions() {
+    const today = TODAY();
+    const rev = getRevenueContext();
+    const actions = [];
+    const seen = new Set();
+
+    getSalesContext().enriched.forEach(lead => {
+      if (seen.has(lead.id)) return;
+      const nextDate = lead.nextActionDate || lead.nextContact;
+      if (!nextDate || nextDate > today) return;
+      if (CLOSED_STATUSES.includes(lead.status)) return;
+      const hold = RevenueBrain.getLeadSalesHold(lead.id, rev.records, rev.leads);
+      if (hold) return;
+      seen.add(lead.id);
+      actions.push({
+        leadId: lead.id,
+        leadName: lead.company,
+        action: lead.nextAction || '予定していた営業アクションを実行',
+        reason: nextDate < today ? `次回連絡日が過ぎています（${nextDate}）` : '次回連絡日が今日です',
+        kind: 'next-contact'
+      });
+    });
+
+    (rev.nextSalesCandidates || []).forEach(c => {
+      if (seen.has(c.leadId) || actions.length >= 3) return;
+      seen.add(c.leadId);
+      actions.push({
+        leadId: c.leadId,
+        leadName: c.leadName,
+        action: c.action,
+        reason: c.reason,
+        kind: 'next-sales'
+      });
+    });
+
+    return actions.slice(0, 3);
+  }
+
+  function getExecutiveHomeWarnings() {
+    const warnings = [];
+    const today = TODAY();
+    const rev = getRevenueContext();
+    const perfCtx = getPerformanceContext();
+
+    (rev.salesHoldCandidates || []).forEach(h => {
+      warnings.push(`営業保留：${h.leadName}（入金確認）`);
+    });
+
+    if (rev.salesOutcome && rev.salesOutcome.unlinkedTotal > 0) {
+      warnings.push('未紐付け売上があります');
+    }
+
+    DemandBrain.getStopOrImproveCandidates(perfCtx.pickups, perfCtx.revenues, perfCtx.leads)
+      .slice(0, 3)
+      .forEach(c => {
+        const label = c.type === 'ad' ? c.channelLabel : c.shortLabel;
+        warnings.push(`${c.topic}${label}は${c.decisionLabel}です`);
+      });
+
+    let missingPerf = 0;
+    (perfCtx.pickups || []).forEach(raw => {
+      DemandBrain.EXECUTION_TYPES.forEach(type => {
+        const exec = DemandBrain.normalizeExecutionStatus(raw);
+        const item = exec[type];
+        if (DemandBrain.isExecutionDone(type, item.status) && !DemandBrain.hasPerformanceInput(item)) {
+          missingPerf++;
+        }
+      });
+    });
+    if (missingPerf) warnings.push(`成果未入力の投稿が${missingPerf}件あります`);
+
+    const overdueCount = getTodayScheduleItems().filter(i => i.overdue).length;
+    if (overdueCount) warnings.push(`予定日超過の投稿・広告が${overdueCount}件あります`);
+
+    if (!Storage.getSettings().lastBackupAt) {
+      warnings.push('バックアップ未実施です');
+    }
+
+    return warnings;
+  }
+
+  function buildExecutiveHomeSummary() {
+    const today = TODAY();
+    const rev = getRevenueContext();
+    const perfCtx = getPerformanceContext();
+    const focusRecs = getExecutiveHomeFocusItems();
+    const tasks = getExecutiveHomeTasks(3);
+
+    if (!hasExecutiveHomeData()) {
+      return {
+        isEmpty: true,
+        lines: ['まずはクロクロ調査結果を3件取り込み、今日やることを1件作りましょう。'],
+        emptyGuide: true
+      };
+    }
+
+    const lines = [];
+    if (focusRecs.length) {
+      const f = focusRecs[0];
+      const svc = (f.relatedServices || [])[0] || '';
+      const svcPart = svc ? `×${svc}` : '';
+      lines.push(`今週は「${f.topic}${svcPart}」を${f.decisionLabel || '増やす'}判断です。`);
+    } else {
+      const demandLine = DemandBrain.buildManagementDemandLine(perfCtx.pickups, today);
+      if (demandLine) lines.push(demandLine);
+    }
+
+    if (tasks.length) {
+      const names = tasks.slice(0, 2).map(t => t.title).join('と');
+      lines.push(`今日は${names}を優先してください。`);
+    }
+
+    const revParts = [];
+    if (rev.summary.monthlyTarget > 0 && rev.summary.remainingToTarget > 0) {
+      revParts.push(`売上目標まではあと${RevenueBrain.formatYen(rev.summary.remainingToTarget)}です`);
+    }
+    const hasNextContact = getSalesContext().enriched.some(l => {
+      const d = l.nextActionDate || l.nextContact;
+      return d && d <= today && !CLOSED_STATUSES.includes(l.status);
+    });
+    if (hasNextContact || (rev.nextSalesCandidates && rev.nextSalesCandidates.length)) {
+      revParts.push('次回連絡日の営業先も確認しましょう');
+    }
+    if (revParts.length) lines.push(revParts.join('。') + '。');
+
+    if (!lines.length) {
+      const mgmt = rev.managementComment;
+      if (mgmt && mgmt.lines && mgmt.lines.length) {
+        return { isEmpty: false, lines: mgmt.lines.slice(0, 3), emptyGuide: false };
+      }
+    }
+
+    return {
+      isEmpty: false,
+      lines: lines.slice(0, 3),
+      emptyGuide: false
+    };
+  }
+
+  function formatCheckTimeLabel(isoStr) {
+    if (!isoStr) return '';
+    const d = new Date(isoStr);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function getTodayCheckState() {
+    return Storage.getTodayCheckState(TODAY());
+  }
+
+  function saveTodayCheckState(memo) {
+    return Storage.saveTodayCheckState(TODAY(), {
+      checkedAt: new Date().toISOString(),
+      memo: memo || '',
+      version: 'v3.0'
+    });
+  }
+
+  function renderExecutiveHomeTaskCard(task) {
+    const typeLabel = formatDailyTaskTypeLabel(task);
+    const openBtn = task.openTarget
+      ? `<button type="button" class="btn btn-sm btn-secondary" data-daily-task-open="${esc(task.id)}">詳細へ</button>`
+      : `<button type="button" class="btn btn-sm btn-secondary" data-exec-scroll-tasks>詳細へ</button>`;
+    return `
+      <div class="exec-home-task-item">
+        <div class="exec-home-task-header">
+          <span class="exec-home-task-type">${esc(typeLabel)}</span>
+          <strong class="exec-home-task-title">${esc(task.title)}</strong>
+        </div>
+        <p class="exec-home-task-meta">理由：${esc(task.reason)}</p>
+        <div class="exec-home-task-actions">
+          <button type="button" class="btn btn-sm btn-primary" data-daily-task-done="${esc(task.id)}">完了</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-daily-task-tomorrow="${esc(task.id)}">明日に回す</button>
+          ${openBtn}
+        </div>
+      </div>`;
+  }
+
+  function renderExecutiveHomeRevenueHtml() {
+    const rev = getRevenueContext();
+    const { summary, salesOutcome, comment } = rev;
+  const outcomeComment = salesOutcome && salesOutcome.unlinkedTotal > 0
+      ? '未紐付け売上があるため、営業先との紐付けを確認してください。'
+      : (comment || '');
+    return `
+      <div class="exec-home-revenue-grid">
+        <div><span>今月売上</span><strong>${esc(RevenueBrain.formatYen(summary.planned))}</strong></div>
+        <div><span>月間目標</span><strong>${esc(RevenueBrain.formatYen(summary.monthlyTarget))}</strong></div>
+        <div><span>達成率</span><strong>${summary.achievementRate}%</strong></div>
+        <div><span>目標まで残り</span><strong>${esc(RevenueBrain.formatYen(summary.remainingToTarget))}</strong></div>
+        <div><span>紐付け売上</span><strong>${esc(RevenueBrain.formatYen((salesOutcome && salesOutcome.linkedTotal) || 0))}</strong></div>
+        <div><span>未紐付け売上</span><strong>${salesOutcome && salesOutcome.unlinkedTotal > 0 ? esc(RevenueBrain.formatYen(salesOutcome.unlinkedTotal)) : 'なし ✓'}</strong></div>
+      </div>
+      ${outcomeComment ? `<p class="exec-home-revenue-comment">${esc(outcomeComment)}</p>` : ''}
+      <button type="button" class="btn btn-sm btn-secondary exec-home-revenue-link">売上番頭を開く</button>`;
+  }
+
+  function renderExecutiveHomeScheduleHtml() {
+    const items = getTodayScheduleItems();
+    if (!items.length) {
+      return `<p class="placeholder-text">今日の投稿・広告予定はありません。<br>週間作戦から1件予定化すると、ここに表示されます。</p>`;
+    }
+    return items.map(item => `
+      <div class="exec-home-schedule-item">
+        <strong>${esc(item.label || item.title)}</strong>
+        <span class="exec-home-schedule-meta">ステータス：${esc(item.statusLabel || '—')}</span>
+        ${item.topic ? `<p class="exec-home-schedule-meta">${esc(item.topic)}</p>` : ''}
+        <div class="exec-home-schedule-actions">
+          ${!item.completed ? `<button type="button" class="btn btn-sm btn-primary" data-cal-add-daily="${esc(item.id)}">今日やることに追加</button>` : ''}
+        </div>
+      </div>`).join('');
+  }
+
+  function renderExecutiveHomeFocusHtml() {
+    const recs = getExecutiveHomeFocusItems();
+    if (!recs.length) {
+      return '<p class="placeholder-text">投稿・広告の成果を入力すると、今週の集中先が表示されます。</p>';
+    }
+    return recs.map((item, i) => {
+      const svc = (item.relatedServices || [])[0] || '';
+      const svcPart = svc ? ` × ${svc}` : '';
+      return `
+      <div class="exec-home-focus-item">
+        <span class="exec-home-focus-rank">${i + 1}.</span>
+        <strong>${esc(item.topic)}${esc(svcPart)}</strong>
+        <p class="exec-home-focus-meta">判断：${esc(item.decisionLabel)}</p>
+        <p class="exec-home-focus-meta">次：${esc(item.nextStep)}</p>
+        <div class="exec-home-focus-actions">
+          <button type="button" class="btn btn-sm btn-secondary" data-exec-go-pickup>需要番頭で見る</button>
+          ${item.pickupId ? `<button type="button" class="btn btn-sm btn-primary" data-exec-focus-task="${esc(item.pickupId)}" data-exec-focus-type="${esc(item.type)}">今日やることに追加</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderExecutiveHomeSalesHtml() {
+    const actions = getExecutiveHomeSalesActions();
+    if (!actions.length) {
+      return '<p class="placeholder-text">次に動く営業先はまだありません。売上を営業先に紐付けて登録すると、ここに提案が出ます。</p>';
+    }
+    return actions.map(a => `
+      <div class="exec-home-sales-item">
+        <strong>${esc(a.leadName)}</strong>
+        <p class="exec-home-sales-meta">次の一手：${esc(a.action)}</p>
+        <p class="exec-home-sales-meta">理由：${esc(a.reason)}</p>
+        <div class="exec-home-sales-actions">
+          <button type="button" class="btn btn-sm btn-secondary" data-outcome-open-lead="${esc(a.leadId)}">営業先詳細へ</button>
+          <button type="button" class="btn btn-sm btn-primary" data-exec-sales-task="${esc(a.leadId)}">今日やることに追加</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function renderExecutiveHomeCheckHtml() {
+    const check = getTodayCheckState();
+    if (check && check.checkedAt) {
+      const timeLabel = formatCheckTimeLabel(check.checkedAt);
+      return `
+        <p class="exec-home-check-done">今日 ${esc(timeLabel)} 確認済み</p>
+        ${check.memo ? `<p class="exec-home-task-meta">メモ：${esc(check.memo)}</p>` : ''}
+        <button type="button" class="btn btn-sm btn-secondary" id="btn-exec-check-again">再確認を記録</button>`;
+    }
+    return `
+      <div class="exec-home-check-form">
+        <div class="form-group">
+          <label for="exec-check-memo">メモ（任意）</label>
+          <input type="text" id="exec-check-memo" placeholder="朝の確認メモ">
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-exec-check-done">今日の確認完了</button>
+      </div>`;
+  }
+
+  function renderExecutiveHomeQuickActions() {
+    const el = document.getElementById('exec-home-quick-actions');
+    if (!el) return;
+    el.innerHTML = `
+      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="kurokuro">クロクロ調査プロンプト</button>
+      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="pickup">需要番頭を開く</button>
+      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="revenue">売上を登録</button>
+      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="lead">営業先を登録</button>
+      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="task">今日やること追加</button>
+      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="backup">バックアップ</button>`;
+    el.querySelectorAll('[data-exec-quick]').forEach(btn => {
+      btn.addEventListener('click', () => handleExecutiveHomeQuickAction(btn.dataset.execQuick));
+    });
+  }
+
+  function handleExecutiveHomeQuickAction(action) {
+    if (action === 'kurokuro') return goToKurokuroPrompt();
+    if (action === 'pickup') return goToDemandPickup();
+    if (action === 'revenue') return goToAddRevenue();
+    if (action === 'lead') return goToAddLead();
+    if (action === 'task') return goToAddDailyTask();
+    if (action === 'backup') return goToDataBackup();
+  }
+
+  function goToKurokuroPrompt() {
+    navigateToView('pickup');
+    setTimeout(() => scrollToElement('#pickup-cloclo-prompt'), 120);
+  }
+
+  function goToDemandPickup() {
+    navigateToView('pickup');
+  }
+
+  function goToDataBackup() {
+    navigateToView('data');
+    setTimeout(() => scrollToElement('#btn-export-data'), 120);
+  }
+
+  function addExecutiveSalesTask(leadId) {
+    const lead = Storage.getLeads().find(l => l.id === leadId);
+    if (!lead) return;
+    const rev = getRevenueContext();
+    const candidate = (rev.nextSalesCandidates || []).find(c => c.leadId === leadId);
+    const today = TODAY();
+    const title = candidate ? candidate.action : (lead.nextAction || '営業アクションを実行');
+    const key = ['exec-sales', today, leadId, title].join('|');
+    if (Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === key)) {
+      alert('すでに今日やることに追加済みです');
+      return;
+    }
+    Storage.addManualDailyTask({
+      title,
+      targetName: lead.company,
+      priority: '高',
+      action: candidate ? candidate.action : (lead.nextAction || title),
+      memo: candidate ? candidate.reason : '',
+      dueDate: today,
+      status: 'open',
+      reason: candidate ? candidate.reason : '営業の次の一手から追加',
+      leadId: lead.id,
+      leadName: lead.company,
+      pickupDedupeKey: key
+    });
+    renderExecutiveHome();
+    renderDailyActionTasks();
+    renderMorningDailyTasksBrief();
+    alert('今日やることに追加しました。');
+  }
+
+  function bindExecutiveHomeEvents() {
+    const root = document.getElementById('executive-home');
+    if (!root) return;
+
+    bindDailyActionTaskEvents(root);
+
+    root.querySelectorAll('[data-exec-scroll-tasks]').forEach(btn => {
+      btn.addEventListener('click', () => scrollToElement('.card-daily-action-tasks'));
+    });
+
+    root.querySelectorAll('[data-cal-add-daily]').forEach(btn => {
+      btn.addEventListener('click', () => addCalendarItemToDailyById(btn.dataset.calAddDaily));
+    });
+
+    bindSalesOutcomeLeadLinks(root);
+
+    root.querySelectorAll('[data-exec-go-pickup]').forEach(btn => {
+      btn.addEventListener('click', goToDemandPickup);
+    });
+
+    root.querySelectorAll('[data-exec-focus-task]').forEach(btn => {
+      btn.addEventListener('click', () => addDecisionTask(btn.dataset.execFocusTask, btn.dataset.execFocusType));
+    });
+
+    root.querySelectorAll('[data-exec-sales-task]').forEach(btn => {
+      btn.addEventListener('click', () => addExecutiveSalesTask(btn.dataset.execSalesTask));
+    });
+
+    const revLink = root.querySelector('.exec-home-revenue-link');
+    if (revLink) revLink.addEventListener('click', () => navigateToView('revenue'));
+
+    const checkBtn = root.querySelector('#btn-exec-check-done');
+    if (checkBtn) {
+      checkBtn.addEventListener('click', () => {
+        const memoEl = document.getElementById('exec-check-memo');
+        saveTodayCheckState(memoEl ? memoEl.value.trim() : '');
+        renderExecutiveHomeCheck();
+      });
+    }
+
+    const checkAgainBtn = root.querySelector('#btn-exec-check-again');
+    if (checkAgainBtn) {
+      checkAgainBtn.addEventListener('click', () => {
+        const memoEl = document.getElementById('exec-check-memo');
+        saveTodayCheckState(memoEl ? memoEl.value.trim() : '');
+        renderExecutiveHomeCheck();
+      });
+    }
+  }
+
+  function renderExecutiveHomeCheck() {
+    const el = document.getElementById('exec-home-check');
+    if (!el) return;
+    el.innerHTML = renderExecutiveHomeCheckHtml();
+    bindExecutiveHomeEvents();
+  }
+
+  function renderExecutiveHome() {
+    const summary = buildExecutiveHomeSummary();
+    const emptyEl = document.getElementById('exec-home-empty-guide');
+    if (emptyEl) {
+      if (summary.emptyGuide) {
+        emptyEl.classList.remove('hidden');
+        emptyEl.innerHTML = `
+          <p>まだ判断材料が少ないです。まずは以下の順で使い始めましょう。</p>
+          <ol>
+            <li>クロクロ調査結果を3件取り込む</li>
+            <li>今日やることを1件追加する</li>
+            <li>売上または営業先を1件登録する</li>
+          </ol>`;
+      } else {
+        emptyEl.classList.add('hidden');
+        emptyEl.innerHTML = '';
+      }
+    }
+
+    renderExecutiveHomeQuickActions();
+
+    const conclusionEl = document.getElementById('exec-home-conclusion');
+    if (conclusionEl) {
+      conclusionEl.innerHTML = summary.lines
+        .map(line => `<p>${esc(line)}</p>`)
+        .join('');
+    }
+
+    const tasksEl = document.getElementById('exec-home-tasks');
+    if (tasksEl) {
+      const tasks = getExecutiveHomeTasks(5);
+      tasksEl.innerHTML = tasks.length
+        ? tasks.map(t => renderExecutiveHomeTaskCard(t)).join('')
+        : '<p class="placeholder-text">今日のタスクはまだありません。下の「今日やること追加」から1件追加しましょう。</p>';
+    }
+
+    const focusEl = document.getElementById('exec-home-focus');
+    if (focusEl) focusEl.innerHTML = renderExecutiveHomeFocusHtml();
+
+    const revenueEl = document.getElementById('exec-home-revenue');
+    if (revenueEl) revenueEl.innerHTML = renderExecutiveHomeRevenueHtml();
+
+    const scheduleEl = document.getElementById('exec-home-schedule');
+    if (scheduleEl) scheduleEl.innerHTML = renderExecutiveHomeScheduleHtml();
+
+    const salesEl = document.getElementById('exec-home-sales');
+    if (salesEl) salesEl.innerHTML = renderExecutiveHomeSalesHtml();
+
+    const warningsEl = document.getElementById('exec-home-warnings');
+    if (warningsEl) {
+      const warnings = getExecutiveHomeWarnings();
+      warningsEl.innerHTML = warnings.length
+        ? `<ul>${warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul>`
+        : '<p class="placeholder-text">今のところ注意・保留はありません。</p>';
+    }
+
+    renderExecutiveHomeCheck();
+    bindExecutiveHomeEvents();
+  }
+
+  function renderMorningExecutiveSections() {
+    const summary = buildExecutiveHomeSummary();
+    const conclusionEl = document.getElementById('mgmt-exec-conclusion');
+    if (conclusionEl) {
+      conclusionEl.innerHTML = summary.lines.map(line => `<p>${esc(line)}</p>`).join('');
+    }
+
+    const tasksEl = document.getElementById('mgmt-tasks');
+    if (tasksEl) {
+      const tasks = getExecutiveHomeTasks(3);
+      tasksEl.innerHTML = tasks.length
+        ? tasks.map((t, i) => `<li><span class="top3-num">${i + 1}</span> ${esc(t.title)}：${esc(t.reason)}</li>`).join('')
+        : '<li class="placeholder-text">今日のタスクはまだありません</li>';
+    }
+
+    const focusTodayEl = document.getElementById('mgmt-focus-today');
+    if (focusTodayEl) {
+      const recs = getExecutiveHomeFocusItems();
+      focusTodayEl.innerHTML = recs.length
+        ? `<ul class="mgmt-focus-list">${recs.map((item, i) => {
+          const svc = (item.relatedServices || [])[0] || '';
+          return `<li>${i + 1}. ${esc(item.topic)}${svc ? ' × ' + esc(svc) : ''}（${esc(item.decisionLabel)}）次：${esc(item.nextStep)}</li>`;
+        }).join('')}</ul>`
+        : '<p class="placeholder-text">集中先はまだありません</p>';
+    }
+
+    const execTodayEl = document.getElementById('mgmt-execution-today');
+    if (execTodayEl) {
+      const scheduleItems = getTodayScheduleItems();
+      const execLines = DemandBrain.buildMorningScheduleLines(scheduleItems);
+      execTodayEl.innerHTML = execLines.length
+        ? `<ol class="mgmt-execution-list">${execLines.map(l => `<li>${esc(l)}</li>`).join('')}</ol>`
+        : '<p class="placeholder-text">今日の投稿・広告予定はありません</p>';
+    }
+
+    const salesExecEl = document.getElementById('mgmt-exec-sales');
+    if (salesExecEl) {
+      const actions = getExecutiveHomeSalesActions();
+      salesExecEl.innerHTML = actions.length
+        ? `<ul class="mgmt-exec-sales-list">${actions.map(a =>
+          `<li><strong>${esc(a.leadName)}</strong>：${esc(a.action)}（${esc(a.reason)}）</li>`
+        ).join('')}</ul>`
+        : '<p class="placeholder-text">営業の次の一手はありません</p>';
+    }
+
+    const warningsEl = document.getElementById('mgmt-exec-warnings');
+    if (warningsEl) {
+      const warnings = getExecutiveHomeWarnings();
+      warningsEl.innerHTML = warnings.length
+        ? warnings.map(w => `<li class="caution-item">⚠ ${esc(w)}</li>`).join('')
+        : '<li class="placeholder-text">注意・保留はありません</li>';
+    }
   }
 
   function getRevenueContext() {
@@ -787,6 +1373,7 @@
     const today = TODAY();
     Storage.upsertDailyActionTaskState(taskId, today, data);
     renderDailyActionTasks();
+    renderExecutiveHome();
     renderMorningDailyTasksBrief();
     if (currentMessageLeadId) renderLeadDailyTasks(currentMessageLeadId);
   }
@@ -837,6 +1424,7 @@
       memo: memo || ''
     });
     renderDailyActionTasks();
+    renderExecutiveHome();
     renderMorningDailyTasksBrief();
     if (currentMessageLeadId) renderLeadDailyTasks(currentMessageLeadId);
   }
@@ -867,6 +1455,7 @@
       recordTaskCompletionActivity(task);
     }
     renderDailyActionTasks();
+    renderExecutiveHome();
     renderMorningDailyTasksBrief();
     renderMorningRecentActivities();
     if (currentMessageLeadId) renderLeadDailyTasks(currentMessageLeadId);
@@ -879,6 +1468,7 @@
       memo: memo || ''
     });
     renderDailyActionTasks();
+    renderExecutiveHome();
     renderMorningDailyTasksBrief();
   }
 
@@ -913,6 +1503,7 @@
     });
     resetDailyTaskAddForm();
     renderDailyActionTasks();
+    renderExecutiveHome();
     renderMorningDailyTasksBrief();
   }
 
@@ -1763,27 +2354,29 @@
     const { report } = getManagementContext();
 
     const greeting = document.getElementById('budil-greeting');
-    greeting.innerHTML = `
-      <div class="budil-avatar">B</div>
-      <div class="budil-message">
-        <strong>Budilからのメッセージ</strong>
-        <p>${esc(report.budilMessage).replace(/\n/g, '<br>')}</p>
-      </div>`;
+    if (greeting) {
+      greeting.innerHTML = `
+        <div class="budil-avatar">B</div>
+        <div class="budil-message">
+          <strong>Budilからのメッセージ</strong>
+          <p>${esc(report.budilMessage).replace(/\n/g, '<br>')}</p>
+        </div>`;
+    }
+
+    renderMorningExecutiveSections();
 
     const decisionsEl = document.getElementById('mgmt-decisions');
-    decisionsEl.innerHTML = report.decisions.map(d => `
-      <li class="mgmt-decision-item">
-        <span class="mgmt-rank">${d.rank}</span>
-        <div class="mgmt-decision-body">
-          <strong>${esc(d.title)}</strong>
-          <span class="mgmt-action-badge">${esc(d.action)}</span>
-          ${d.detail ? `<small>${esc(d.detail)}</small>` : ''}
-        </div>
-      </li>`).join('');
-
-    const tasksEl = document.getElementById('mgmt-tasks');
-    tasksEl.innerHTML = report.tasks.map((t, i) => `
-      <li><span class="top3-num">${i + 1}</span> ${esc(t)}</li>`).join('');
+    if (decisionsEl) {
+      decisionsEl.innerHTML = report.decisions.map(d => `
+        <li class="mgmt-decision-item">
+          <span class="mgmt-rank">${d.rank}</span>
+          <div class="mgmt-decision-body">
+            <strong>${esc(d.title)}</strong>
+            <span class="mgmt-action-badge">${esc(d.action)}</span>
+            ${d.detail ? `<small>${esc(d.detail)}</small>` : ''}
+          </div>
+        </li>`).join('');
+    }
 
     const demandTopEl = document.getElementById('mgmt-demand-top');
     if (demandTopEl) {
@@ -1791,15 +2384,6 @@
       demandTopEl.innerHTML = demandLines.length
         ? `<p class="mgmt-demand-label">今日の需要：</p><ul class="mgmt-demand-list">${demandLines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
         : '<p class="placeholder-text">需要ピックアップ未登録。需要番頭でクロクロ調査結果を取り込んでください。</p>';
-    }
-
-    const execTodayEl = document.getElementById('mgmt-execution-today');
-    if (execTodayEl) {
-      const scheduleItems = getTodayScheduleItems();
-      const execLines = DemandBrain.buildMorningScheduleLines(scheduleItems);
-      execTodayEl.innerHTML = execLines.length
-        ? `<p class="mgmt-execution-label">今日の投稿・広告：</p><ol class="mgmt-execution-list">${execLines.map(l => `<li>${esc(l)}</li>`).join('')}</ol>`
-        : '';
     }
 
     const improveTodayEl = document.getElementById('mgmt-improvement-today');
@@ -1819,15 +2403,6 @@
         : '';
     }
 
-    const focusTodayEl = document.getElementById('mgmt-focus-today');
-    if (focusTodayEl) {
-      const ctx = getPerformanceContext();
-      const focusLines = DemandBrain.buildMorningFocusLines(ctx.pickups, ctx.revenues, ctx.leads, 3);
-      focusTodayEl.innerHTML = focusLines.length
-        ? `<p class="mgmt-focus-label">今週の集中先：</p><ul class="mgmt-focus-list">${focusLines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
-        : '';
-    }
-
     const weeklyTodayEl = document.getElementById('mgmt-weekly-strategy');
     if (weeklyTodayEl) {
       const strategy = getWeeklyStrategy();
@@ -1838,44 +2413,53 @@
     }
 
     const postEl = document.getElementById('mgmt-post');
-    postEl.innerHTML = `
-      <p class="mgmt-highlight">${esc(report.todayPost.theme)}</p>
-      <textarea class="mgmt-copy-text" id="mgmt-post-text" readonly rows="4">${esc(report.todayPost.copyText)}</textarea>
-      <button class="btn btn-sm btn-copy" data-copy-target="mgmt-post-text">コピー</button>`;
+    if (postEl) {
+      postEl.innerHTML = `
+        <p class="mgmt-highlight">${esc(report.todayPost.theme)}</p>
+        <textarea class="mgmt-copy-text" id="mgmt-post-text" readonly rows="4">${esc(report.todayPost.copyText)}</textarea>
+        <button class="btn btn-sm btn-copy" data-copy-target="mgmt-post-text">コピー</button>`;
+      postEl.querySelector('[data-copy-target]').addEventListener('click', handleMgmtCopy);
+    }
 
     const salesEl = document.getElementById('mgmt-sales');
-    const topTarget = SalesBrain.getTodayTargets(getSalesContext().enriched)[0];
-    const salesOpenBtn = topTarget
-      ? `<button type="button" class="btn btn-sm btn-primary mgmt-sales-open" data-open-lead="${esc(topTarget.id)}">営業文面を開く</button>`
-      : '';
-    const ts = report.todaySales;
-    const priClass = topTarget ? 'priority-' + (topTarget.priorityLevel || 'low') : 'priority-low';
-    salesEl.innerHTML = `
-      <p class="mgmt-highlight">
-        <span class="sales-priority-label ${priClass}">優先度${esc(ts.priorityLabel || '—')}</span>：
-        <strong>${esc(ts.company)}</strong>
-      </p>
-      <p class="mgmt-meta">理由：${esc(ts.priorityReason || '—')}</p>
-      <p class="mgmt-meta">次アクション：${esc(ts.nextAction || ts.action || '—')}</p>
-      ${ts.presetLabel ? `<p class="mgmt-meta">プリセット：${esc(ts.presetLabel)}</p>` : ''}
-      ${ts.salesStatus ? `<p class="mgmt-meta">営業ステータス：${esc(ts.salesStatus)}</p>` : ''}
-      <textarea class="mgmt-copy-text" id="mgmt-sales-text" readonly rows="4">${esc(ts.copyText)}</textarea>
-      <div class="mgmt-sales-actions">
-        <button class="btn btn-sm btn-copy" data-copy-target="mgmt-sales-text">コピー</button>
-        ${salesOpenBtn}
-      </div>`;
+    if (salesEl) {
+      const topTarget = SalesBrain.getTodayTargets(getSalesContext().enriched)[0];
+      const salesOpenBtn = topTarget
+        ? `<button type="button" class="btn btn-sm btn-primary mgmt-sales-open" data-open-lead="${esc(topTarget.id)}">営業文面を開く</button>`
+        : '';
+      const ts = report.todaySales;
+      const priClass = topTarget ? 'priority-' + (topTarget.priorityLevel || 'low') : 'priority-low';
+      salesEl.innerHTML = `
+        <p class="mgmt-highlight">
+          <span class="sales-priority-label ${priClass}">優先度${esc(ts.priorityLabel || '—')}</span>：
+          <strong>${esc(ts.company)}</strong>
+        </p>
+        <p class="mgmt-meta">理由：${esc(ts.priorityReason || '—')}</p>
+        <p class="mgmt-meta">次アクション：${esc(ts.nextAction || ts.action || '—')}</p>
+        ${ts.presetLabel ? `<p class="mgmt-meta">プリセット：${esc(ts.presetLabel)}</p>` : ''}
+        ${ts.salesStatus ? `<p class="mgmt-meta">営業ステータス：${esc(ts.salesStatus)}</p>` : ''}
+        <textarea class="mgmt-copy-text" id="mgmt-sales-text" readonly rows="4">${esc(ts.copyText)}</textarea>
+        <div class="mgmt-sales-actions">
+          <button class="btn btn-sm btn-copy" data-copy-target="mgmt-sales-text">コピー</button>
+          ${salesOpenBtn}
+        </div>`;
+      salesEl.querySelector('[data-copy-target]').addEventListener('click', handleMgmtCopy);
+      const mgmtOpen = salesEl.querySelector('.mgmt-sales-open');
+      if (mgmtOpen) {
+        mgmtOpen.addEventListener('click', () => openSalesDetail(mgmtOpen.dataset.openLead, { navigate: true }));
+      }
+    }
 
-    document.getElementById('mgmt-cautions').innerHTML = report.cautions.map(c =>
-      `<li class="caution-item">⚠ ${esc(c)}</li>`).join('');
+    const cautionsEl = document.getElementById('mgmt-cautions');
+    if (cautionsEl) {
+      cautionsEl.innerHTML = report.cautions.map(c =>
+        `<li class="caution-item">⚠ ${esc(c)}</li>`).join('');
+    }
 
-    document.getElementById('mgmt-skip').innerHTML = report.skipList.map(s =>
-      `<li class="skip-item"><strong>${esc(s.item)}</strong><span>理由: ${esc(s.reason)}</span></li>`).join('');
-
-    postEl.querySelector('[data-copy-target]').addEventListener('click', handleMgmtCopy);
-    salesEl.querySelector('[data-copy-target]').addEventListener('click', handleMgmtCopy);
-    const mgmtOpen = salesEl.querySelector('.mgmt-sales-open');
-    if (mgmtOpen) {
-      mgmtOpen.addEventListener('click', () => openSalesDetail(mgmtOpen.dataset.openLead, { navigate: true }));
+    const skipEl = document.getElementById('mgmt-skip');
+    if (skipEl) {
+      skipEl.innerHTML = report.skipList.map(s =>
+        `<li class="skip-item"><strong>${esc(s.item)}</strong><span>理由: ${esc(s.reason)}</span></li>`).join('');
     }
 
     const revenueEl = document.getElementById('mgmt-revenue');
@@ -1899,8 +2483,10 @@
 
     const top3Legacy = document.getElementById('dash-top3');
     if (top3Legacy) {
-      top3Legacy.innerHTML = report.tasks.map((t, i) =>
-        `<li><span class="top3-num">${i + 1}</span> ${esc(t)}</li>`).join('');
+      const tasks = getExecutiveHomeTasks(3);
+      top3Legacy.innerHTML = tasks.length
+        ? tasks.map((t, i) => `<li><span class="top3-num">${i + 1}</span> ${esc(t.title)}</li>`).join('')
+        : report.tasks.map((t, i) => `<li><span class="top3-num">${i + 1}</span> ${esc(t)}</li>`).join('');
     }
 
     const settings = Storage.getSettings();

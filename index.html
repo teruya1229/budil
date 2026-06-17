@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v2.9</small>
+          <small>AI経営脳みそ v3.0</small>
         </div>
       </div>
       <nav class="nav">
@@ -46,7 +46,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v2.9</small>
+        <small>Budil v3.0</small>
       </div>
     </aside>
 
@@ -55,8 +55,51 @@
       <section id="view-dashboard" class="view active">
         <header class="view-header">
           <h1>経営番頭</h1>
-          <p class="view-subtitle">朝Budilを開いて、今日やるべきことを把握する</p>
+          <p class="view-subtitle">毎朝5分で、今日の判断と優先アクションを把握する</p>
         </header>
+
+        <div id="executive-home" class="card card-wide card-executive-home">
+          <div class="exec-home-header">
+            <h2>経営番頭ホーム</h2>
+            <span class="exec-home-version">v3.0</span>
+          </div>
+          <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
+          <div id="exec-home-quick-actions" class="exec-home-quick-actions"></div>
+          <div class="exec-home-grid">
+            <div class="exec-home-block exec-home-block-hero">
+              <h3>今日の結論</h3>
+              <div id="exec-home-conclusion" class="exec-home-conclusion"></div>
+            </div>
+            <div class="exec-home-block exec-home-block-tasks">
+              <h3>今日やること</h3>
+              <div id="exec-home-tasks" class="exec-home-tasks"></div>
+            </div>
+            <div class="exec-home-block">
+              <h3>今週の集中先</h3>
+              <div id="exec-home-focus" class="exec-home-focus"></div>
+            </div>
+            <div class="exec-home-block">
+              <h3>売上・目標状況</h3>
+              <div id="exec-home-revenue" class="exec-home-revenue"></div>
+            </div>
+            <div class="exec-home-block">
+              <h3>投稿・広告予定</h3>
+              <div id="exec-home-schedule" class="exec-home-schedule"></div>
+            </div>
+            <div class="exec-home-block">
+              <h3>営業の次の一手</h3>
+              <div id="exec-home-sales" class="exec-home-sales"></div>
+            </div>
+            <div class="exec-home-block exec-home-block-warnings">
+              <h3>注意・保留</h3>
+              <div id="exec-home-warnings" class="exec-home-warnings"></div>
+            </div>
+            <div class="exec-home-block exec-home-block-check">
+              <h3>今日の確認完了</h3>
+              <div id="exec-home-check" class="exec-home-check"></div>
+            </div>
+          </div>
+        </div>
 
         <div id="dash-start-guide" class="card card-wide card-start-guide hidden">
           <h2>はじめての方へ</h2>
@@ -72,6 +115,9 @@
             <button type="button" id="btn-start-add-task" class="btn btn-secondary btn-sm">今日やることを追加</button>
           </div>
         </div>
+
+        <details class="dash-detail-sections">
+          <summary class="dash-detail-summary">詳細ダッシュボードを開く</summary>
 
         <div id="budil-greeting" class="card card-budil card-wide"></div>
 
@@ -208,22 +254,40 @@
           <h2>🌅 朝レポート</h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid">
+            <div class="morning-section morning-section-exec-summary">
+              <h3>今日の結論</h3>
+              <div id="mgmt-exec-conclusion" class="mgmt-exec-conclusion"></div>
+            </div>
             <div class="morning-section">
+              <h3>今日やること（上位3件）</h3>
+              <ol id="mgmt-tasks" class="top3-list"></ol>
+            </div>
+            <div class="morning-section">
+              <h3>今週の集中先</h3>
+              <div id="mgmt-focus-today" class="mgmt-focus-today-block"></div>
+            </div>
+            <div class="morning-section">
+              <h3>投稿・広告予定</h3>
+              <div id="mgmt-execution-today" class="mgmt-execution-today-block"></div>
+            </div>
+            <div class="morning-section">
+              <h3>営業の次の一手</h3>
+              <div id="mgmt-exec-sales" class="mgmt-exec-sales-block"></div>
+            </div>
+            <div class="morning-section">
+              <h3>注意・保留</h3>
+              <ul id="mgmt-exec-warnings" class="caution-list"></ul>
+            </div>
+            <div class="morning-section morning-section-collapsed">
               <h3>今日の需要</h3>
               <div id="mgmt-demand-top" class="mgmt-demand-top-block"></div>
-              <div id="mgmt-execution-today" class="mgmt-execution-today-block"></div>
               <div id="mgmt-improvement-today" class="mgmt-improvement-today-block"></div>
               <div id="mgmt-performance-today" class="mgmt-performance-today-block"></div>
-              <div id="mgmt-focus-today" class="mgmt-focus-today-block"></div>
               <div id="mgmt-weekly-strategy" class="mgmt-weekly-strategy-block"></div>
             </div>
-            <div class="morning-section morning-section-hero">
+            <div class="morning-section morning-section-collapsed">
               <h3>今日の経営判断</h3>
               <ol id="mgmt-decisions" class="mgmt-decisions-list"></ol>
-            </div>
-            <div class="morning-section">
-              <h3>今日やること3つ</h3>
-              <ol id="mgmt-tasks" class="top3-list"></ol>
             </div>
             <div class="morning-section">
               <h3>今日の投稿</h3>
@@ -243,8 +307,8 @@
               <div id="mgmt-recent-activities" class="daily-tasks-brief-block"></div>
               <div id="mgmt-sales-candidate" class="sales-candidate-block"></div>
             </div>
-            <div class="morning-section">
-              <h3>今日の注意点</h3>
+            <div class="morning-section morning-section-collapsed">
+              <h3>今日の注意点（詳細）</h3>
               <ul id="mgmt-cautions" class="caution-list"></ul>
             </div>
             <div class="morning-section">
@@ -315,8 +379,7 @@
             <textarea id="dash-memo" class="card-input" rows="4" placeholder="自由メモ..."></textarea>
           </div>
         </div>
-      </section>
-
+        </details>
       </section>
 
       <!-- 需要レーダー -->
