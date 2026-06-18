@@ -397,6 +397,7 @@
         if (view === 'work-order') renderWorkOrderView();
         if (view === 'follow-up') renderFollowUpView();
         if (view === 'profit') renderProfitView();
+        if (view === 'analytics') renderAnalyticsView();
         if (view === 'area') renderAreaView();
         if (view === 'revenue') renderRevenueView();
         if (view === 'data') renderDataManagement();
@@ -647,6 +648,8 @@
 
     ProfitBrain.buildWarnings(getProfitContext()).forEach(w => warnings.push(w));
 
+    AnalyticsBrain.buildWarnings(getAnalyticsContext()).forEach(w => warnings.push(w));
+
     const mapCtx = getMapContext();
     mapCtx.warnings.forEach(w => {
       if (w.type === 'far' && w.items && w.items[0]) {
@@ -688,6 +691,9 @@
 
     const profitComment = ProfitBrain.buildHomeComment(getProfitContext());
     if (profitComment) lines.push(profitComment);
+
+    const analyticsComment = AnalyticsBrain.buildHomeComment(getAnalyticsContext());
+    if (analyticsComment) lines.push(analyticsComment);
 
     const mapCtx = getMapContext();
     MapBrain.buildAreaHomeComment(mapCtx.summary, mapCtx.warnings).forEach(l => lines.push(l));
@@ -897,6 +903,7 @@
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="work-order">作業予定番頭を開く</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="follow-up">作業後フォロー</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="profit">利益番頭</button>
+      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="analytics">アナリティクス</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="area">エリア番頭を開く</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="revenue">売上を登録</button>
       <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="lead">営業先を登録</button>
@@ -914,6 +921,7 @@
     if (action === 'work-order') return goToWorkOrder();
     if (action === 'follow-up') return goToFollowUp();
     if (action === 'profit') return goToProfit();
+    if (action === 'analytics') return goToAnalytics();
     if (action === 'area') return goToAreaView();
     if (action === 'revenue') return goToAddRevenue();
     if (action === 'lead') return goToAddLead();
@@ -948,6 +956,11 @@
   function goToProfit() {
     navigateToView('profit');
     setTimeout(() => scrollToElement('#profit-summary'), 120);
+  }
+
+  function goToAnalytics() {
+    navigateToView('analytics');
+    setTimeout(() => scrollToElement('#analytics-summary'), 120);
   }
 
   function goToDataBackup() {
@@ -2305,6 +2318,7 @@
     if (summary.receptionIntakes) items.push('受付データ ' + summary.receptionIntakes + '件');
     if (summary.workOrders) items.push('作業予定 ' + summary.workOrders + '件');
     if (summary.expenseRecords) items.push('支出記録 ' + summary.expenseRecords + '件');
+    if (summary.analyticsRecords) items.push('アナリティクス ' + summary.analyticsRecords + '件');
     return items;
   }
 
@@ -2856,6 +2870,7 @@
       ['受付データ', counts.receptionIntakes],
       ['作業予定', counts.workOrders],
       ['支出', counts.expenseRecords],
+      ['アナリティクス', counts.analyticsRecords],
       ['活動履歴', counts.activityLogs],
       ['成果入力済み', counts.performanceEntered],
       ['dailyChecks', counts.dailyChecks]
@@ -3117,6 +3132,7 @@
       r.status !== 'キャンセル' && RevenueBrain.recordHasPaymentConcern(r)
     );
     const profitCtx = getProfitContext({ period: range });
+    const analyticsCtx = getAnalyticsContext({ period: range });
 
     const context = {
       today,
@@ -3131,7 +3147,8 @@
         growCount: growEntries.length,
         improveCount,
         openTaskCount: tasks.open.length,
-        profitGrossProfit: profitCtx.summary ? profitCtx.summary.monthGrossProfit : 0
+        profitGrossProfit: profitCtx.summary ? profitCtx.summary.monthGrossProfit : 0,
+        analyticsCount: (analyticsCtx.records || []).length
       },
       execSummary,
       revCtx,
@@ -3155,6 +3172,7 @@
       revenueLeads,
       paymentConcern,
       profitCtx,
+      analyticsCtx,
       nextActions: []
     };
     context.nextActions = buildNextActionsFromReport(context);
@@ -3276,6 +3294,14 @@
       }
     }
 
+    if (c.analyticsCtx) {
+      const analyticsSection = AnalyticsBrain.buildReportSection(c.analyticsCtx, periodLabel);
+      if (analyticsSection) {
+        lines.push(analyticsSection);
+        lines.push('');
+      }
+    }
+
     lines.push('■ 3. 営業状況');
     lines.push(`営業先件数：${c.activeLeads.length}件（全体${c.revCtx.leads.length}件）`);
     lines.push(`次に動くべき営業先：${c.nextLeads.length ? c.nextLeads.join(' / ') : '—'}`);
@@ -3344,7 +3370,8 @@
     const intro = [
       '以下はBudilの経営レポートです。',
       `${areaIndustry}として、売上・営業・需要・投稿・広告の状況を見て、次の7日間で優先すべき行動を3〜5個に絞って提案してください。`,
-      '売上だけでなく、粗利・支出・広告費・遠方案件も見て、次の7日間の優先行動を提案してください。'
+      '売上だけでなく、粗利・支出・広告費・遠方案件も見て、次の7日間の優先行動を提案してください。',
+      'GA4/Search Consoleの手入力データから、どのLPを改善すべきか、どの記事・SNS投稿を出すべきか、広告を使うべきかを判断してください。'
     ];
     if (profileBlock) {
       intro.push('');
@@ -3483,7 +3510,8 @@
       { label: '成果あり施策数', value: s.growCount ?? 0 },
       { label: '改善候補数', value: s.improveCount ?? 0 },
       { label: '未完了タスク数', value: s.openTaskCount ?? 0 },
-      { label: '概算粗利', value: ProfitBrain.formatYen((s.profitGrossProfit != null ? s.profitGrossProfit : 0)) }
+      { label: '概算粗利', value: ProfitBrain.formatYen((s.profitGrossProfit != null ? s.profitGrossProfit : 0)) },
+      { label: 'アナリティクス件数', value: s.analyticsCount ?? 0 }
     ];
     return `<div class="business-report-summary-grid">${cards.map(c =>
       `<div class="business-report-summary-card"><span>${esc(c.label)}</span><strong>${esc(String(c.value))}</strong></div>`
@@ -3524,7 +3552,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v3.8</span>
+        <span class="business-report-version">v3.9</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -3852,6 +3880,14 @@
       profitMorningEl.innerHTML = lines.length
         ? `<p class="mgmt-profit-label">利益状況：</p><ul class="mgmt-profit-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
         : '<p class="placeholder-text">支出を登録すると利益状況が表示されます。</p>';
+    }
+
+    const analyticsMorningEl = document.getElementById('mgmt-analytics');
+    if (analyticsMorningEl) {
+      const lines = AnalyticsBrain.buildMorningLines(getAnalyticsContext());
+      analyticsMorningEl.innerHTML = lines.length
+        ? `<p class="mgmt-analytics-label">アナリティクス：</p><ul class="mgmt-analytics-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '<p class="placeholder-text">GA4データを入力するとアナリティクス判断が表示されます。</p>';
     }
 
     const areaMorningEl = document.getElementById('mgmt-area-warnings');
@@ -7407,6 +7443,355 @@
     }
   }
 
+  // ── アナリティクス番頭 ──
+  let selectedAnalyticsId = null;
+
+  function getAnalyticsContext(opts) {
+    const today = TODAY();
+    let records = Storage.getAnalyticsRecords();
+    const range = opts && opts.period;
+    if (range && range.startDate && range.endDate) {
+      records = records.filter(r =>
+        r && r.date && r.date >= range.startDate && r.date <= range.endDate
+      );
+    }
+    return AnalyticsBrain.buildContext(records, today);
+  }
+
+  function findAnalyticsRecord(id) {
+    if (!id) return null;
+    const raw = Storage.getAnalyticsRecords().find(r => r && r.id === id);
+    if (!raw) return null;
+    return AnalyticsBrain.enrichRecord(raw);
+  }
+
+  function populateAnalyticsFormSelects() {
+    const typeEl = document.getElementById('analytics-page-type');
+    if (typeEl && typeEl.options.length <= 1) {
+      typeEl.innerHTML = AnalyticsBrain.PAGE_TYPES.map(t =>
+        `<option value="${esc(t)}">${esc(t)}</option>`
+      ).join('');
+    }
+    const svcEl = document.getElementById('analytics-service-tag');
+    if (svcEl && svcEl.options.length <= 1) {
+      svcEl.innerHTML = AnalyticsBrain.SERVICE_TAGS.map(s =>
+        `<option value="${esc(s)}">${esc(s)}</option>`
+      ).join('');
+    }
+  }
+
+  function clearAnalyticsForm() {
+    const today = TODAY();
+    const dateEl = document.getElementById('analytics-date');
+    if (dateEl) dateEl.value = today;
+    const editId = document.getElementById('analytics-edit-id');
+    if (editId) editId.value = '';
+    selectedAnalyticsId = null;
+    ['analytics-page-name', 'analytics-url', 'analytics-source-memo', 'analytics-memo', 'analytics-search-queries'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    ['analytics-views', 'analytics-active-users', 'analytics-engagement', 'analytics-events',
+      'analytics-bounce', 'analytics-cta', 'analytics-line', 'analytics-booking', 'analytics-phone'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '0';
+    });
+    const panel = document.getElementById('analytics-detail-panel');
+    if (panel) panel.classList.add('hidden');
+  }
+
+  function fillAnalyticsForm(id) {
+    const record = findAnalyticsRecord(id);
+    if (!record) return;
+    selectedAnalyticsId = id;
+    populateAnalyticsFormSelects();
+    const set = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val != null ? val : ''; };
+    document.getElementById('analytics-edit-id').value = record.id;
+    set('analytics-date', record.date);
+    set('analytics-page-name', record.pageName);
+    set('analytics-url', record.url);
+    set('analytics-page-type', record.pageType);
+    set('analytics-service-tag', record.serviceTag);
+    set('analytics-views', record.views);
+    set('analytics-active-users', record.activeUsers);
+    set('analytics-engagement', record.avgEngagementSeconds);
+    set('analytics-events', record.eventCount);
+    set('analytics-bounce', record.bounceRate);
+    set('analytics-cta', record.ctaClicks);
+    set('analytics-line', record.lineClicks);
+    set('analytics-booking', record.bookingClicks);
+    set('analytics-phone', record.phoneClicks);
+    set('analytics-search-queries', record.searchQueriesText);
+    set('analytics-source-memo', record.sourceMemo);
+    set('analytics-memo', record.memo);
+    renderAnalyticsDetail(record);
+    scrollToElement('#analytics-record-form');
+  }
+
+  function readAnalyticsFormPayload() {
+    const val = id => {
+      const el = document.getElementById(id);
+      return el ? el.value : '';
+    };
+    return {
+      date: val('analytics-date') || TODAY(),
+      pageName: val('analytics-page-name').trim(),
+      url: val('analytics-url').trim(),
+      pageType: val('analytics-page-type'),
+      serviceTag: val('analytics-service-tag'),
+      views: Number(val('analytics-views')) || 0,
+      activeUsers: Number(val('analytics-active-users')) || 0,
+      avgEngagementSeconds: Number(val('analytics-engagement')) || 0,
+      eventCount: Number(val('analytics-events')) || 0,
+      bounceRate: Number(val('analytics-bounce')) || 0,
+      ctaClicks: Number(val('analytics-cta')) || 0,
+      lineClicks: Number(val('analytics-line')) || 0,
+      bookingClicks: Number(val('analytics-booking')) || 0,
+      phoneClicks: Number(val('analytics-phone')) || 0,
+      searchQueriesText: val('analytics-search-queries').trim(),
+      sourceMemo: val('analytics-source-memo').trim(),
+      memo: val('analytics-memo').trim(),
+      status: 'open'
+    };
+  }
+
+  function saveAnalyticsFromForm(e) {
+    if (e) e.preventDefault();
+    const payload = readAnalyticsFormPayload();
+    if (!payload.pageName) {
+      alert('ページ名を入力してください。');
+      return;
+    }
+    const editId = document.getElementById('analytics-edit-id')?.value || '';
+    if (editId) Storage.updateAnalyticsRecord(editId, payload);
+    else Storage.addAnalyticsRecord(payload);
+    clearAnalyticsForm();
+    renderAnalyticsView();
+    renderDashboard();
+    alert('アナリティクスデータを保存しました。');
+  }
+
+  function renderAnalyticsSummary(ctx) {
+    const el = document.getElementById('analytics-summary');
+    if (!el) return;
+    const ad = ctx.adReadiness || {};
+    el.innerHTML = `
+      <div class="analytics-summary-item"><span>登録ページ</span><strong>${(ctx.records || []).length}件</strong></div>
+      <div class="analytics-summary-item"><span>需要強い</span><strong>${ctx.strongCount || 0}件</strong></div>
+      <div class="analytics-summary-item"><span>離脱注意</span><strong>${ctx.bounceCount || 0}件</strong></div>
+      <div class="analytics-summary-item"><span>広告判断</span><strong>${esc(ad.label || '—')}</strong></div>
+      ${ctx.priority ? `<p class="analytics-summary-priority">${esc(ctx.priority.actionSummary || ctx.priority.pageName)}</p>` : ''}`;
+  }
+
+  function renderAnalyticsRecordsList(ctx) {
+    const el = document.getElementById('analytics-records-list');
+    if (!el) return;
+    const list = (ctx.records || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    if (!list.length) {
+      el.innerHTML = '<p class="placeholder-text">ページ別データはまだありません。GA4から手入力してください。</p>';
+      return;
+    }
+    el.innerHTML = `<table class="analytics-table"><thead><tr>
+      <th>日付</th><th>ページ</th><th>表示</th><th>直帰率</th><th>スコア</th><th>ラベル</th><th></th>
+    </tr></thead><tbody>${list.map(r => `<tr class="${selectedAnalyticsId === r.id ? 'selected' : ''}">
+      <td>${esc(r.date || '—')}</td>
+      <td>${esc(r.pageName)}</td>
+      <td>${r.views}</td>
+      <td>${r.bounceRate}%</td>
+      <td>${r.demandScore}</td>
+      <td><span class="analytics-score-label">${esc(r.scoreLabel || '—')}</span></td>
+      <td><button type="button" class="btn btn-sm btn-secondary" data-analytics-open="${esc(r.id)}">詳細</button></td>
+    </tr>`).join('')}</tbody></table>`;
+    el.querySelectorAll('[data-analytics-open]').forEach(btn => {
+      btn.addEventListener('click', () => fillAnalyticsForm(btn.dataset.analyticsOpen));
+    });
+  }
+
+  function renderAnalyticsDetail(record) {
+    const panel = document.getElementById('analytics-detail-panel');
+    const el = document.getElementById('analytics-detail');
+    if (!panel || !el || !record) {
+      if (panel) panel.classList.add('hidden');
+      return;
+    }
+    panel.classList.remove('hidden');
+    const clicks = AnalyticsBrain.totalClicks(record);
+    el.innerHTML = `
+      <p class="analytics-meta"><strong>${esc(record.pageName)}</strong> / ${esc(record.pageType)} / ${esc(record.serviceTag)}</p>
+      <p class="analytics-meta">URL：${record.url ? `<a href="${esc(record.url)}" target="_blank" rel="noopener noreferrer">${esc(record.url)}</a>` : '—'}</p>
+      <p class="analytics-meta">表示${record.views} / ユーザー${record.activeUsers} / エンゲージ${record.avgEngagementSeconds}秒 / イベント${record.eventCount} / クリック${clicks}</p>
+      <div class="analytics-detail-block">
+        <h3>需要スコア：${record.demandScore}点（${esc(record.scoreLabel)}）</h3>
+      </div>
+      <div class="analytics-detail-block">
+        <h3>ページ別診断</h3>
+        <p class="analytics-diagnosis">${esc(record.diagnosis || '').replace(/\n/g, '<br>')}</p>
+      </div>
+      <div class="analytics-detail-block">
+        <h3>次の打ち手</h3>
+        <p>${esc(record.actionSummary || '')}</p>
+        <ul class="analytics-action-btns">${(record.recommendedActions || []).map((a, i) =>
+          `<li><button type="button" class="btn btn-sm btn-secondary" data-analytics-task="${esc(record.id)}" data-analytics-action="${i}">${esc(a.text)}を今日やることに</button></li>`
+        ).join('')}</ul>
+      </div>
+      <div class="analytics-detail-actions">
+        <button type="button" class="btn btn-sm btn-primary" data-analytics-pickup="${esc(record.id)}">需要番頭に送る</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-analytics-status="${esc(record.id)}" data-status="actioned">打ち手実行済み</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-analytics-status="${esc(record.id)}" data-status="watching">様子見</button>
+      </div>`;
+    bindAnalyticsDetailEvents(record);
+  }
+
+  function bindAnalyticsDetailEvents(record) {
+    const root = document.getElementById('analytics-detail');
+    if (!root) return;
+    root.querySelectorAll('[data-analytics-task]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        addAnalyticsTask(btn.dataset.analyticsTask, Number(btn.dataset.analyticsAction));
+      });
+    });
+    const pickupBtn = root.querySelector('[data-analytics-pickup]');
+    if (pickupBtn) pickupBtn.addEventListener('click', () => sendAnalyticsToPickup(pickupBtn.dataset.analyticsPickup));
+    root.querySelectorAll('[data-analytics-status]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        Storage.updateAnalyticsRecord(btn.dataset.analyticsStatus, { status: btn.dataset.status });
+        renderAnalyticsView();
+        renderDashboard();
+        alert('ステータスを更新しました。');
+      });
+    });
+  }
+
+  function addAnalyticsTask(recordId, actionIndex) {
+    const record = findAnalyticsRecord(recordId);
+    if (!record) return;
+    const action = (record.recommendedActions || [])[actionIndex];
+    if (!action) return;
+    const payload = AnalyticsBrain.createTaskPayload(record, action, TODAY());
+    const exists = Storage.getDailyActionTasksData().manualTasks.some(
+      t => t.pickupDedupeKey === payload.pickupDedupeKey
+    );
+    if (exists) {
+      alert('同じタスクは既に今日やることにあります。');
+      return;
+    }
+    Storage.addManualDailyTask({ id: 'manual_' + Storage.generateId(), ...payload });
+    renderDashboard();
+    alert('今日やることに追加しました。');
+  }
+
+  function sendAnalyticsToPickup(recordId) {
+    const record = findAnalyticsRecord(recordId);
+    if (!record) return;
+    const payload = AnalyticsBrain.createDemandPickupPayload(record);
+    const exists = Storage.getDemandPickups().some(p =>
+      p.memo && p.memo.includes(record.id) && p.source === 'GA4手入力'
+    );
+    if (exists) {
+      alert('同じページの需要ピックアップが既にあります。');
+      return;
+    }
+    Storage.addDemandPickup({ ...payload, isDemo: record.isDemo, isTest: record.isTest });
+    renderAnalyticsView();
+    renderDashboard();
+    alert('需要番頭に送りました。');
+  }
+
+  function renderAnalyticsTopDemand(ctx) {
+    const el = document.getElementById('analytics-top-demand');
+    if (!el) return;
+    const top = ctx.topDemand || [];
+    if (!top.length) {
+      el.innerHTML = '<p class="placeholder-text">需要スコア上位はまだありません。</p>';
+      return;
+    }
+    el.innerHTML = top.map(r => `
+      <div class="analytics-top-card">
+        <strong>${esc(r.pageName)}</strong>
+        <span class="analytics-score-badge">${r.demandScore}点</span>
+        <span class="analytics-score-label">${esc(r.scoreLabel)}</span>
+        <p class="analytics-meta">表示${r.views} / 直帰${r.bounceRate}%</p>
+      </div>`).join('');
+  }
+
+  function renderAnalyticsActionsList(ctx) {
+    const el = document.getElementById('analytics-actions-list');
+    if (!el) return;
+    const items = (ctx.records || []).filter(r => r.status === 'open').slice(0, 8);
+    if (!items.length) {
+      el.innerHTML = '<p class="placeholder-text">次の打ち手はありません。</p>';
+      return;
+    }
+    el.innerHTML = items.map(r => `
+      <div class="analytics-action-card">
+        <p><strong>${esc(r.pageName)}</strong></p>
+        <p class="analytics-meta">${esc(r.actionSummary || '')}</p>
+        <button type="button" class="btn btn-sm btn-secondary" data-analytics-open-action="${esc(r.id)}">詳細・タスク追加</button>
+      </div>`).join('');
+    el.querySelectorAll('[data-analytics-open-action]').forEach(btn => {
+      btn.addEventListener('click', () => fillAnalyticsForm(btn.dataset.analyticsOpenAction));
+    });
+  }
+
+  function renderAnalyticsPickupBridge(ctx) {
+    const el = document.getElementById('analytics-pickup-bridge');
+    if (!el) return;
+    const candidates = (ctx.highBounce || []).concat(ctx.topDemand || []).slice(0, 4);
+    const unique = [];
+    const seen = new Set();
+    candidates.forEach(r => {
+      if (r && r.id && !seen.has(r.id)) { seen.add(r.id); unique.push(r); }
+    });
+    if (!unique.length) {
+      el.innerHTML = '<p class="placeholder-text">需要番頭に送れるページはまだありません。</p>';
+      return;
+    }
+    el.innerHTML = unique.map(r => `
+      <div class="analytics-pickup-card">
+        <strong>${esc(r.pageName)}</strong>
+        <p class="analytics-meta">${esc(r.actionSummary || r.diagnosis || '')}</p>
+        <button type="button" class="btn btn-sm btn-primary" data-analytics-pickup-bridge="${esc(r.id)}">需要番頭に送る</button>
+      </div>`).join('');
+    el.querySelectorAll('[data-analytics-pickup-bridge]').forEach(btn => {
+      btn.addEventListener('click', () => sendAnalyticsToPickup(btn.dataset.analyticsPickupBridge));
+    });
+  }
+
+  function renderAnalyticsView() {
+    try {
+      const policyEl = document.getElementById('analytics-policy-text');
+      if (policyEl) policyEl.textContent = AnalyticsBrain.POLICY_TEXT;
+      populateAnalyticsFormSelects();
+      const dateEl = document.getElementById('analytics-date');
+      if (dateEl && !dateEl.value) dateEl.value = TODAY();
+      const ctx = getAnalyticsContext();
+      renderAnalyticsSummary(ctx);
+      renderAnalyticsRecordsList(ctx);
+      if (selectedAnalyticsId) {
+        const rec = findAnalyticsRecord(selectedAnalyticsId);
+        if (rec) renderAnalyticsDetail(rec);
+      }
+      renderAnalyticsTopDemand(ctx);
+      renderAnalyticsActionsList(ctx);
+      renderAnalyticsPickupBridge(ctx);
+    } catch (err) {
+      console.error('[Budil] renderAnalyticsView', err);
+    }
+  }
+
+  function initAnalytics() {
+    const form = document.getElementById('analytics-record-form');
+    if (form && !form.dataset.bound) {
+      form.dataset.bound = '1';
+      form.addEventListener('submit', saveAnalyticsFromForm);
+    }
+    const clearBtn = document.getElementById('analytics-form-clear');
+    if (clearBtn && !clearBtn.dataset.bound) {
+      clearBtn.dataset.bound = '1';
+      clearBtn.addEventListener('click', clearAnalyticsForm);
+    }
+  }
+
   // ── エリア番頭 ──
   function renderAreaTodaySummary() {
     const el = document.getElementById('area-today-summary');
@@ -8684,6 +9069,7 @@
     if (viewName === 'work-order') renderWorkOrderView();
     if (viewName === 'follow-up') renderFollowUpView();
     if (viewName === 'profit') renderProfitView();
+    if (viewName === 'analytics') renderAnalyticsView();
     if (viewName === 'area') renderAreaView();
     if (viewName === 'revenue') renderRevenueView();
     if (viewName === 'data') renderDataManagement();
@@ -9834,6 +10220,7 @@
     initWorkOrder();
     initFollowUp();
     initProfit();
+    initAnalytics();
     initDemandSearch();
     initLeads();
     initRevenue();

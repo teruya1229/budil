@@ -5972,3 +5972,140 @@ body {
   gap: 0.5rem;
   margin-top: 0.75rem;
 }
+
+/* v3.9 アナリティクス番頭 */
+.card-analytics-comment {
+  border-left: 4px solid #6366f1;
+}
+
+.card-analytics-policy {
+  border-left: 4px solid #94a3b8;
+  background: #f8fafc;
+}
+
+.analytics-policy-text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.analytics-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.analytics-summary-item {
+  padding: 0.65rem 0.75rem;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+}
+
+.analytics-summary-item span {
+  display: block;
+  font-size: 0.78rem;
+  color: #4338ca;
+  margin-bottom: 0.2rem;
+}
+
+.analytics-summary-priority {
+  grid-column: 1 / -1;
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  color: #334155;
+}
+
+.analytics-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.analytics-table th,
+.analytics-table td {
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.analytics-table tr.selected {
+  background: #eef2ff;
+}
+
+.analytics-meta {
+  margin: 0.25rem 0;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.analytics-detail-block {
+  margin: 0.75rem 0;
+  padding: 0.65rem;
+  background: #f8fafc;
+  border-radius: 6px;
+}
+
+.analytics-diagnosis {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+}
+
+.analytics-score-label {
+  font-size: 0.75rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.analytics-score-badge {
+  font-weight: 700;
+  color: #4338ca;
+  margin-left: 0.5rem;
+}
+
+.analytics-top-card,
+.analytics-action-card,
+.analytics-pickup-card {
+  padding: 0.65rem;
+  margin-bottom: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.analytics-action-btns {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.analytics-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+
+.mgmt-analytics-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.mgmt-analytics-label {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0 0 0.25rem;
+}
+
+.analytics-record-form .form-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}

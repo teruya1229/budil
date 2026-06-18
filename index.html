@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v3.8</small>
+          <small>AI経営脳みそ v3.9</small>
         </div>
       </div>
       <nav class="nav">
@@ -50,6 +50,9 @@
         <button class="nav-item" data-view="profit">
           <span class="nav-icon">📊</span>利益番頭
         </button>
+        <button class="nav-item" data-view="analytics">
+          <span class="nav-icon">📈</span>アナリティクス番頭
+        </button>
         <button class="nav-item" data-view="card">
           <span class="nav-icon">🪪</span>名刺解析
         </button>
@@ -61,7 +64,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v3.8</small>
+        <small>Budil v3.9</small>
       </div>
     </aside>
 
@@ -76,7 +79,7 @@
         <div id="executive-home" class="card card-wide card-executive-home">
           <div class="exec-home-header">
             <h2>経営番頭ホーム</h2>
-            <span class="exec-home-version">v3.8</span>
+            <span class="exec-home-version">v3.9</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <div id="exec-home-quick-actions" class="exec-home-quick-actions"></div>
@@ -316,6 +319,10 @@
             <div class="morning-section">
               <h3>利益状況</h3>
               <div id="mgmt-profit" class="mgmt-profit-block"></div>
+            </div>
+            <div class="morning-section">
+              <h3>アナリティクス</h3>
+              <div id="mgmt-analytics" class="mgmt-analytics-block"></div>
             </div>
             <div class="morning-section morning-section-collapsed">
               <h3>今日の需要</h3>
@@ -1857,6 +1864,139 @@
         </div>
       </section>
 
+      <!-- アナリティクス番頭 -->
+      <section id="view-analytics" class="view">
+        <header class="view-header">
+          <h1>アナリティクス番頭</h1>
+          <p class="view-subtitle">GA4・Search Consoleの手入力データから、自然需要とLP改善の優先順位を読む</p>
+        </header>
+
+        <div class="card card-wide card-analytics-policy">
+          <p id="analytics-policy-text" class="analytics-policy-text"></p>
+        </div>
+
+        <div class="card card-wide card-analytics-comment">
+          <h2>今日のページ需要サマリー</h2>
+          <div id="analytics-summary" class="analytics-summary-grid"></div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>GA4ページ別データ登録</h2>
+          <form id="analytics-record-form" class="analytics-record-form">
+            <input type="hidden" id="analytics-edit-id" value="">
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="analytics-date">日付</label>
+                <input type="date" id="analytics-date" required>
+              </div>
+              <div class="form-group">
+                <label for="analytics-page-name">ページ名</label>
+                <input type="text" id="analytics-page-name" required placeholder="例：家庭向けエアコンLP">
+              </div>
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="analytics-url">URL</label>
+                <input type="url" id="analytics-url" placeholder="https://...">
+              </div>
+              <div class="form-group">
+                <label for="analytics-page-type">ページ種別</label>
+                <select id="analytics-page-type" required></select>
+              </div>
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="analytics-service-tag">関連サービス</label>
+                <select id="analytics-service-tag" required></select>
+              </div>
+              <div class="form-group">
+                <label for="analytics-source-memo">流入元メモ</label>
+                <input type="text" id="analytics-source-memo" placeholder="GA4ページ別データから手入力">
+              </div>
+            </div>
+            <div class="form-row form-row-3">
+              <div class="form-group">
+                <label for="analytics-views">表示回数</label>
+                <input type="number" id="analytics-views" min="0" step="1" value="0">
+              </div>
+              <div class="form-group">
+                <label for="analytics-active-users">アクティブユーザー</label>
+                <input type="number" id="analytics-active-users" min="0" step="1" value="0">
+              </div>
+              <div class="form-group">
+                <label for="analytics-engagement">平均エンゲージメント（秒）</label>
+                <input type="number" id="analytics-engagement" min="0" step="1" value="0">
+              </div>
+            </div>
+            <div class="form-row form-row-3">
+              <div class="form-group">
+                <label for="analytics-events">イベント数</label>
+                <input type="number" id="analytics-events" min="0" step="1" value="0">
+              </div>
+              <div class="form-group">
+                <label for="analytics-bounce">直帰率（%）</label>
+                <input type="number" id="analytics-bounce" min="0" max="100" step="0.1" value="0">
+              </div>
+              <div class="form-group">
+                <label for="analytics-cta">CTAクリック</label>
+                <input type="number" id="analytics-cta" min="0" step="1" value="0">
+              </div>
+            </div>
+            <div class="form-row form-row-3">
+              <div class="form-group">
+                <label for="analytics-line">LINEクリック</label>
+                <input type="number" id="analytics-line" min="0" step="1" value="0">
+              </div>
+              <div class="form-group">
+                <label for="analytics-booking">予約クリック</label>
+                <input type="number" id="analytics-booking" min="0" step="1" value="0">
+              </div>
+              <div class="form-group">
+                <label for="analytics-phone">電話クリック</label>
+                <input type="number" id="analytics-phone" min="0" step="1" value="0">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="analytics-search-queries">Search Consoleクエリ（カンマ区切り）</label>
+              <textarea id="analytics-search-queries" rows="2" placeholder="沖縄 エアコンクリーニング, 南城市 エアコン掃除"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="analytics-memo">メモ</label>
+              <input type="text" id="analytics-memo" placeholder="任意メモ">
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">保存</button>
+              <button type="button" class="btn btn-secondary" id="analytics-form-clear">クリア</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card card-wide">
+          <h2>ページ別データ一覧</h2>
+          <div id="analytics-records-list" class="analytics-records-list"></div>
+        </div>
+
+        <div class="card card-wide hidden" id="analytics-detail-panel">
+          <h2>ページ別診断・次の打ち手</h2>
+          <div id="analytics-detail" class="analytics-detail"></div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>需要スコア上位</h2>
+          <div id="analytics-top-demand" class="analytics-top-list"></div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>次の打ち手</h2>
+          <div id="analytics-actions-list" class="analytics-actions-list"></div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>需要番頭への反映</h2>
+          <div id="analytics-pickup-bridge" class="analytics-pickup-bridge"></div>
+        </div>
+      </section>
+
       <!-- 追客管理 -->
       <section id="view-followup" class="view">
         <header class="view-header">
@@ -2313,6 +2453,7 @@
   <script src="js/work-order-brain.js"></script>
   <script src="js/follow-up-brain.js"></script>
   <script src="js/profit-brain.js"></script>
+  <script src="js/analytics-brain.js"></script>
   <script src="js/card-ocr.js"></script>
   <script src="js/data-backup.js"></script>
   <script src="js/app.js"></script>

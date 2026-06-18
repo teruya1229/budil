@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v3.8',
+  BUDIL_VERSION: 'v3.9',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -21,7 +21,8 @@ const Storage = {
     DEMAND_PICKUPS: 'budil_demand_pickups',
     RECEPTION_INTAKES: 'budil_reception_intakes',
     WORK_ORDERS: 'budil_work_orders',
-    EXPENSE_RECORDS: 'budil_expense_records'
+    EXPENSE_RECORDS: 'budil_expense_records',
+    ANALYTICS_RECORDS: 'budil_analytics_records'
   },
 
   get(key, defaultValue = null) {
@@ -511,7 +512,8 @@ const Storage = {
     'budil_demand_pickups',
     'budil_reception_intakes',
     'budil_work_orders',
-    'budil_expense_records'
+    'budil_expense_records',
+    'budil_analytics_records'
   ],
 
   getWorkOrders() {
@@ -605,6 +607,54 @@ const Storage = {
     this.saveExpenseRecords(this.getExpenseRecords().filter(e => !this.isDemoOrTestFlag(e)));
   },
 
+  getAnalyticsRecords() {
+    const raw = this.get(this.KEYS.ANALYTICS_RECORDS, []);
+    return Array.isArray(raw) ? raw : [];
+  },
+
+  saveAnalyticsRecords(list) {
+    this.set(this.KEYS.ANALYTICS_RECORDS, list);
+  },
+
+  addAnalyticsRecord(item) {
+    const list = this.getAnalyticsRecords();
+    const now = new Date().toISOString();
+    const normalized = typeof AnalyticsBrain !== 'undefined'
+      ? AnalyticsBrain.enrichRecord(item)
+      : { ...item };
+    const record = {
+      ...normalized,
+      id: normalized.id || ('analytics-' + this.generateId()),
+      status: normalized.status || 'open',
+      createdAt: normalized.createdAt || now,
+      updatedAt: now
+    };
+    list.unshift(record);
+    this.saveAnalyticsRecords(list);
+    return record;
+  },
+
+  updateAnalyticsRecord(id, data) {
+    const list = this.getAnalyticsRecords();
+    const idx = list.findIndex(r => r.id === id);
+    if (idx === -1) return null;
+    const prev = list[idx];
+    const merged = typeof AnalyticsBrain !== 'undefined'
+      ? AnalyticsBrain.enrichRecord({ ...prev, ...data, id: prev.id })
+      : { ...prev, ...data };
+    list[idx] = { ...merged, updatedAt: new Date().toISOString() };
+    this.saveAnalyticsRecords(list);
+    return list[idx];
+  },
+
+  deleteAnalyticsRecord(id) {
+    this.saveAnalyticsRecords(this.getAnalyticsRecords().filter(r => r.id !== id));
+  },
+
+  deleteDemoAnalyticsRecords() {
+    this.saveAnalyticsRecords(this.getAnalyticsRecords().filter(r => !this.isDemoOrTestFlag(r)));
+  },
+
   getReceptionIntakes() {
     const raw = this.get(this.KEYS.RECEPTION_INTAKES, []);
     return Array.isArray(raw) ? raw : [];
@@ -694,6 +744,7 @@ const Storage = {
       receptionIntakes: 0,
       workOrders: 0,
       expenseRecords: 0,
+      analyticsRecords: 0,
       activityLogs: 0,
       performanceEntered: 0,
       dailyChecks: 0
@@ -1077,6 +1128,33 @@ const Storage = {
       add('ok', '支出 0件');
     }
 
+    const analyticsRaw = this._readRawKey(this.KEYS.ANALYTICS_RECORDS);
+    let analyticsRecords = [];
+    if (!analyticsRaw.parseOk) {
+      add('critical', 'アナリティクスデータ（budil_analytics_records）を読み込めません');
+    } else if (analyticsRaw.exists) {
+      analyticsRecords = Array.isArray(analyticsRaw.parsed) ? analyticsRaw.parsed : [];
+      if (!Array.isArray(analyticsRaw.parsed)) add('review', 'アナリティクスデータが配列ではありません');
+      counts.analyticsRecords = analyticsRecords.length;
+      add('ok', `アナリティクス ${counts.analyticsRecords}件`);
+
+      if (typeof AnalyticsBrain !== 'undefined') {
+        const aDiag = AnalyticsBrain.getDiagnosticsCounts(analyticsRecords);
+        if (aDiag.noId) add('review', `IDなしのアナリティクス ${aDiag.noId}件`);
+        if (aDiag.noDate) add('caution', `日付なしのアナリティクス ${aDiag.noDate}件`);
+        if (aDiag.noName) add('caution', `ページ名なしのアナリティクス ${aDiag.noName}件`);
+        if (aDiag.noUrl) add('caution', `URLなしのアナリティクス ${aDiag.noUrl}件`);
+        if (aDiag.badNumeric) add('review', `数値項目が数値でないアナリティクス ${aDiag.badNumeric}件`);
+        if (aDiag.badBounce) add('caution', `直帰率が0〜100外 ${aDiag.badBounce}件`);
+        if (aDiag.badScore) add('caution', `需要スコアが0〜100外 ${aDiag.badScore}件`);
+        if (aDiag.badStatus) add('caution', `status想定外 ${aDiag.badStatus}件`);
+        if (aDiag.highBounce) add('caution', `高直帰率ページ ${aDiag.highBounce}件`);
+        if (aDiag.noCta) add('caution', `CTAなしページ ${aDiag.noCta}件`);
+      }
+    } else {
+      add('ok', 'アナリティクス 0件');
+    }
+
     if (typeof MapBrain !== 'undefined') {
       const mapDiag = MapBrain.getDiagnosticsCounts(leads, intakes, revenues, workOrders);
       if (mapDiag.leadsNoAddress) add('caution', `住所未入力の営業先 ${mapDiag.leadsNoAddress}件`);
@@ -1124,6 +1202,7 @@ const Storage = {
     lines.push(`受付データ: ${c.receptionIntakes ?? '—'}件`);
     lines.push(`作業予定: ${c.workOrders ?? '—'}件`);
     lines.push(`支出: ${c.expenseRecords ?? '—'}件`);
+    lines.push(`アナリティクス: ${c.analyticsRecords ?? '—'}件`);
     lines.push(`活動履歴: ${c.activityLogs ?? '—'}件`);
     lines.push(`成果入力済み: ${c.performanceEntered ?? '—'}件`);
     lines.push(`dailyChecks: ${c.dailyChecks ?? '—'}件`);
@@ -1312,6 +1391,7 @@ const Storage = {
       || this.getReceptionIntakes().some(i => this.isDemoOrTestFlag(i))
       || this.getWorkOrders().some(w => this.isDemoOrTestFlag(w))
       || this.getExpenseRecords().some(e => this.isDemoOrTestFlag(e))
+      || this.getAnalyticsRecords().some(a => this.isDemoOrTestFlag(a))
       || (store.manualTasks || []).some(t => this.isDemoOrTestFlag(t))
       || (store.states || []).some(t => this.isDemoOrTestFlag(t))
       || demoChecks;
@@ -1681,6 +1761,64 @@ const Storage = {
       source: 'manual'
     });
 
+    const demoAnalytics = [
+      {
+        pageName: '家庭向けエアコンLP',
+        url: 'https://teruya1229.github.io/cursor-test/',
+        pageType: '家庭LP',
+        serviceTag: 'エアコンクリーニング',
+        views: 120, activeUsers: 85, avgEngagementSeconds: 42, eventCount: 34,
+        bounceRate: 52, ctaClicks: 6, lineClicks: 4, bookingClicks: 1, phoneClicks: 1,
+        searchQueriesText: '沖縄 エアコンクリーニング, 南城市 エアコン掃除',
+        sourceMemo: 'GA4ページ別データから手入力',
+        memo: 'デモ：需要強い'
+      },
+      {
+        pageName: '完全分解LP',
+        url: 'https://example.com/kanzen/',
+        pageType: '完全分解LP',
+        serviceTag: '完全分解',
+        views: 68, activeUsers: 45, avgEngagementSeconds: 78, eventCount: 22,
+        bounceRate: 48, ctaClicks: 4, lineClicks: 2, bookingClicks: 0, phoneClicks: 1,
+        searchQueriesText: 'エアコン 完全分解 沖縄',
+        sourceMemo: 'GA4手入力',
+        memo: 'デモ：伸ばす価値あり'
+      },
+      {
+        pageName: 'FAQページ',
+        url: 'https://example.com/faq/',
+        pageType: 'FAQ',
+        serviceTag: 'エアコンクリーニング',
+        views: 18, activeUsers: 14, avgEngagementSeconds: 55, eventCount: 8,
+        bounceRate: 38, ctaClicks: 1, lineClicks: 1, bookingClicks: 0, phoneClicks: 0,
+        searchQueriesText: 'エアコン 臭い 原因',
+        memo: 'デモ：不安解消ページとして良好'
+      },
+      {
+        pageName: 'AI帳票番頭LP',
+        url: 'https://example.com/ai-chohyo/',
+        pageType: 'AI帳票番頭LP',
+        serviceTag: 'AI帳票番頭',
+        views: 42, activeUsers: 31, avgEngagementSeconds: 22, eventCount: 12,
+        bounceRate: 68, ctaClicks: 1, lineClicks: 0, bookingClicks: 0, phoneClicks: 0,
+        searchQueriesText: 'AI 帳票 自動化',
+        memo: 'デモ：LP改善優先'
+      },
+      {
+        pageName: '洗濯機クリーニング記事',
+        url: 'https://example.com/blog/sentakuki/',
+        pageType: '記事',
+        serviceTag: '洗濯機クリーニング',
+        views: 12, activeUsers: 9, avgEngagementSeconds: 48, eventCount: 3,
+        bounceRate: 44, ctaClicks: 0, lineClicks: 0, bookingClicks: 0, phoneClicks: 0,
+        searchQueriesText: '洗濯機 クリーニング 沖縄',
+        memo: 'デモ：SNS/記事追加候補'
+      }
+    ];
+    demoAnalytics.forEach(def => {
+      this.addAnalyticsRecord({ ...def, ...flag, date: today, sourceMemo: def.sourceMemo || 'GA4手入力' });
+    });
+
     return { ok: true, pickupIds, leadIds };
   },
 
@@ -1695,6 +1833,7 @@ const Storage = {
     this.deleteDemoReceptionIntakes();
     this.deleteDemoWorkOrders();
     this.deleteDemoExpenseRecords();
+    this.deleteDemoAnalyticsRecords();
 
     const store = this.getDailyActionTasksData();
     store.manualTasks = (store.manualTasks || []).filter(t => !this.isDemoOrTestFlag(t));
