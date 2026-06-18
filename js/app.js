@@ -449,7 +449,7 @@
 
   function renderDashboard() {
     renderStartGuide();
-    safeRenderSection('executive-home', () => renderExecutiveHome(), '経営番頭ホーム');
+    safeRenderSection('executive-home', () => renderExecutiveHome(), '経営司令塔ホーム');
     safeRenderSection(null, () => renderBackupStatus(), 'バックアップ状況');
     safeRenderSection('morning-report', () => renderMorningReport(), '朝レポート');
     safeRenderSection(null, () => renderDemandInsights(), '需要インサイト');
@@ -473,12 +473,49 @@
   }
 
   function hasExecutiveHomeData() {
-    const store = Storage.getDailyActionTasksData();
-    return Storage.getDemandPickups().length > 0
-      || Storage.getReceptionIntakes().length > 0
-      || Storage.getLeads().length > 0
-      || Storage.getRevenueRecords().length > 0
-      || (store.manualTasks && store.manualTasks.length > 0);
+    if (typeof ExecutiveBrain === 'undefined') {
+      const store = Storage.getDailyActionTasksData();
+      return Storage.getDemandPickups().length > 0
+        || Storage.getReceptionIntakes().length > 0
+        || Storage.getLeads().length > 0
+        || Storage.getRevenueRecords().length > 0
+        || (store.manualTasks && store.manualTasks.length > 0);
+    }
+    return ExecutiveBrain.hasHomeData({
+      workOrders: Storage.getWorkOrders(),
+      intakes: Storage.getReceptionIntakes(),
+      revenues: Storage.getRevenueRecords(),
+      expenses: Storage.getExpenseRecords(),
+      pickups: Storage.getDemandPickups(),
+      analyticsRecords: Storage.getAnalyticsRecords(),
+      leads: Storage.getLeads(),
+      dailyTasks: getDailyActionTasksWithState()
+    });
+  }
+
+  function buildExecutiveContext() {
+    const today = TODAY();
+    const followCtx = getFollowUpContext();
+    return ExecutiveBrain.buildContext({
+      today,
+      workOrders: Storage.getWorkOrders(),
+      intakes: Storage.getReceptionIntakes(),
+      revenues: Storage.getRevenueRecords(),
+      expenses: Storage.getExpenseRecords(),
+      leads: Storage.getLeads(),
+      pickups: Storage.getDemandPickups(),
+      analyticsRecords: Storage.getAnalyticsRecords(),
+      dailyTasks: getDailyActionTasksWithState(),
+      revCtx: getRevenueContext(),
+      profitCtx: getProfitContext(),
+      analyticsCtx: getAnalyticsContext(),
+      followUpTargets: followCtx.targets,
+      mapCtx: getMapContext(),
+      perfCtx: getPerformanceContext(),
+      settings: Storage.getSettings(),
+      checkState: Storage.getTodayCheckState(today),
+      diagnosticLevels: lastDiagnosticResult ? lastDiagnosticResult.levels : null
+    });
   }
 
   function formatDailyTaskTypeLabel(task) {
@@ -595,149 +632,12 @@
   }
 
   function getExecutiveHomeWarnings() {
-    const warnings = [];
-    const today = TODAY();
-    const rev = getRevenueContext();
-    const perfCtx = getPerformanceContext();
-
-    (rev.salesHoldCandidates || []).forEach(h => {
-      warnings.push(`営業保留：${h.leadName}（入金確認）`);
-    });
-
-    if (rev.salesOutcome && rev.salesOutcome.unlinkedTotal > 0) {
-      warnings.push('未紐付け売上があります');
-    }
-
-    DemandBrain.getStopOrImproveCandidates(perfCtx.pickups, perfCtx.revenues, perfCtx.leads)
-      .slice(0, 3)
-      .forEach(c => {
-        const label = c.type === 'ad' ? c.channelLabel : c.shortLabel;
-        warnings.push(`${c.topic}${label}は${c.decisionLabel}です`);
-      });
-
-    let missingPerf = 0;
-    (perfCtx.pickups || []).forEach(raw => {
-      DemandBrain.EXECUTION_TYPES.forEach(type => {
-        const exec = DemandBrain.normalizeExecutionStatus(raw);
-        const item = exec[type];
-        if (DemandBrain.isExecutionDone(type, item.status) && !DemandBrain.hasPerformanceInput(item)) {
-          missingPerf++;
-        }
-      });
-    });
-    if (missingPerf) warnings.push(`成果未入力の投稿が${missingPerf}件あります`);
-
-    const overdueCount = getTodayScheduleItems().filter(i => i.overdue).length;
-    if (overdueCount) warnings.push(`予定日超過の投稿・広告が${overdueCount}件あります`);
-
-    if (!Storage.getSettings().lastBackupAt) {
-      warnings.push('バックアップ未実施です');
-    }
-
-    ReceptionBrain.getReceptionWarnings(Storage.getReceptionIntakes()).forEach(w => warnings.push(w));
-
-    WorkOrderBrain.buildWorkOrderWarnings(
-      Storage.getWorkOrders(),
-      Storage.getLeads(),
-      Storage.getReceptionIntakes(),
-      Storage.getRevenueRecords(),
-      today
-    ).forEach(w => warnings.push(w));
-
-    FollowUpBrain.buildWarnings(getFollowUpContext().targets, today).forEach(w => warnings.push(w));
-
-    ProfitBrain.buildWarnings(getProfitContext()).forEach(w => warnings.push(w));
-
-    AnalyticsBrain.buildWarnings(getAnalyticsContext()).forEach(w => warnings.push(w));
-
-    const mapCtx = getMapContext();
-    mapCtx.warnings.forEach(w => {
-      if (w.type === 'far' && w.items && w.items[0]) {
-        warnings.push(`遠方・移動注意：${w.items[0].area} ${w.items[0].name}`);
-      }
-      if (w.type === 'no-address' && w.items) {
-        const leadCount = w.items.filter(i => i.kind === 'lead').length;
-        if (leadCount) warnings.push(`住所未入力の営業先が${leadCount}件あります`);
-      }
-    });
-
-    return warnings;
+    const ctx = buildExecutiveContext();
+    return (ctx.warnings || []).map(w => w.text);
   }
 
   function buildExecutiveHomeSummary() {
-    const today = TODAY();
-    const rev = getRevenueContext();
-    const perfCtx = getPerformanceContext();
-    const focusRecs = getExecutiveHomeFocusItems();
-    const tasks = getExecutiveHomeTasks(3);
-
-    if (!hasExecutiveHomeData()) {
-      return {
-        isEmpty: true,
-        lines: ['まずはクロクロ調査結果を3件取り込み、今日やることを1件作りましょう。'],
-        emptyGuide: true
-      };
-    }
-
-    const lines = [];
-    const intakeComment = ReceptionBrain.buildReceptionHomeCommentFromIntakes(Storage.getReceptionIntakes());
-    if (intakeComment) lines.push(intakeComment);
-
-    const workOrderComment = WorkOrderBrain.buildHomeComment(Storage.getWorkOrders(), today);
-    if (workOrderComment) lines.push(workOrderComment);
-
-    const followUpComment = FollowUpBrain.buildHomeComment(getFollowUpContext().targets);
-    if (followUpComment) lines.push(followUpComment);
-
-    const profitComment = ProfitBrain.buildHomeComment(getProfitContext());
-    if (profitComment) lines.push(profitComment);
-
-    const analyticsComment = AnalyticsBrain.buildHomeComment(getAnalyticsContext());
-    if (analyticsComment) lines.push(analyticsComment);
-
-    const mapCtx = getMapContext();
-    MapBrain.buildAreaHomeComment(mapCtx.summary, mapCtx.warnings).forEach(l => lines.push(l));
-
-    if (focusRecs.length) {
-      const f = focusRecs[0];
-      const svc = (f.relatedServices || [])[0] || '';
-      const svcPart = svc ? `×${svc}` : '';
-      lines.push(`今週は「${f.topic}${svcPart}」を${f.decisionLabel || '増やす'}判断です。`);
-    } else {
-      const demandLine = DemandBrain.buildManagementDemandLine(perfCtx.pickups, today);
-      if (demandLine) lines.push(demandLine);
-    }
-
-    if (tasks.length) {
-      const names = tasks.slice(0, 2).map(t => t.title).join('と');
-      lines.push(`今日は${names}を優先してください。`);
-    }
-
-    const revParts = [];
-    if (rev.summary.monthlyTarget > 0 && rev.summary.remainingToTarget > 0) {
-      revParts.push(`売上目標まではあと${RevenueBrain.formatYen(rev.summary.remainingToTarget)}です`);
-    }
-    const hasNextContact = getSalesContext().enriched.some(l => {
-      const d = l.nextActionDate || l.nextContact;
-      return d && d <= today && !CLOSED_STATUSES.includes(l.status);
-    });
-    if (hasNextContact || (rev.nextSalesCandidates && rev.nextSalesCandidates.length)) {
-      revParts.push('次回連絡日の営業先も確認しましょう');
-    }
-    if (revParts.length) lines.push(revParts.join('。') + '。');
-
-    if (!lines.length) {
-      const mgmt = rev.managementComment;
-      if (mgmt && mgmt.lines && mgmt.lines.length) {
-        return { isEmpty: false, lines: mgmt.lines.slice(0, 3), emptyGuide: false };
-      }
-    }
-
-    return {
-      isEmpty: false,
-      lines: lines.slice(0, 3),
-      emptyGuide: false
-    };
+    return buildExecutiveContext().summary;
   }
 
   function formatCheckTimeLabel(isoStr) {
@@ -751,182 +651,202 @@
     return Storage.getTodayCheckState(TODAY());
   }
 
-  function saveTodayCheckState(memo) {
-    return Storage.saveTodayCheckState(TODAY(), {
-      checkedAt: new Date().toISOString(),
-      memo: memo || '',
-      version: 'v3.0'
+  function saveTodayCheckState(memo, checkUpdates) {
+    const today = TODAY();
+    const existing = Storage.getTodayCheckState(today);
+    const payload = ExecutiveBrain.buildCheckPayload(existing, {
+      memo: memo != null ? memo : (existing && existing.memo) || '',
+      items: checkUpdates || (existing && existing.items) || {}
     });
+    return Storage.saveTodayCheckState(today, payload);
   }
 
-  function renderExecutiveHomeTaskCard(task) {
-    const typeLabel = formatDailyTaskTypeLabel(task);
-    const openBtn = task.openTarget
-      ? `<button type="button" class="btn btn-sm btn-secondary" data-daily-task-open="${esc(task.id)}">詳細へ</button>`
-      : `<button type="button" class="btn btn-sm btn-secondary" data-exec-scroll-tasks>詳細へ</button>`;
+  function renderExecutiveTopPriorityCard(item, index) {
+    const p = item || {};
+    const taskBtn = p.taskId
+      ? `<button type="button" class="btn btn-sm btn-primary" data-exec-priority-done="${esc(p.taskId)}">完了</button>`
+      : `<button type="button" class="btn btn-sm btn-primary" data-exec-priority-add-task="${esc(p.id)}">今日やることに追加</button>`;
     return `
-      <div class="exec-home-task-item">
-        <div class="exec-home-task-header">
-          <span class="exec-home-task-type">${esc(typeLabel)}</span>
-          <strong class="exec-home-task-title">${esc(task.title)}</strong>
+      <div class="exec-priority-item" data-priority-id="${esc(p.id)}">
+        <div class="exec-priority-header">
+          <span class="exec-priority-rank">${index + 1}</span>
+          <strong class="exec-priority-title">${esc(p.title)}</strong>
+          <span class="exec-priority-source">${esc(p.source)}</span>
         </div>
-        <p class="exec-home-task-meta">理由：${esc(task.reason)}</p>
-        <div class="exec-home-task-actions">
-          <button type="button" class="btn btn-sm btn-primary" data-daily-task-done="${esc(task.id)}">完了</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-daily-task-tomorrow="${esc(task.id)}">明日に回す</button>
-          ${openBtn}
+        <p class="exec-priority-reason">理由：${esc(p.reason)}</p>
+        <div class="exec-priority-actions">
+          ${taskBtn}
+          <button type="button" class="btn btn-sm btn-secondary" data-exec-priority-nav="${esc(p.sourceKey)}">詳細へ</button>
         </div>
       </div>`;
   }
 
-  function renderExecutiveHomeRevenueHtml() {
-    const rev = getRevenueContext();
-    const { summary, salesOutcome, comment } = rev;
-    const forecast = WorkOrderBrain.getSalesForecast(Storage.getWorkOrders(), rev.records, TODAY());
-    const profitCtx = getProfitContext();
-    const ps = profitCtx.summary;
-    const forecastComment = forecast.weekAmount > 0
-      ? `今週の作業予定見込みは${WorkOrderBrain.formatYen(forecast.weekAmount)}です。作業完了後に売上登録して反映してください。`
-      : '';
-  const outcomeComment = salesOutcome && salesOutcome.unlinkedTotal > 0
-      ? '未紐付け売上があるため、営業先との紐付けを確認してください。'
-      : (comment || '');
-    return `
-      <div class="exec-home-revenue-grid">
-        <div><span>今月売上</span><strong>${esc(RevenueBrain.formatYen(summary.planned))}</strong></div>
-        <div><span>今月支出</span><strong>${esc(ProfitBrain.formatYen(ps.monthExpense))}</strong></div>
-        <div><span>概算粗利</span><strong>${esc(ProfitBrain.formatYen(ps.monthGrossProfit))}</strong></div>
-        <div><span>粗利率</span><strong>${esc(ProfitBrain.formatRate(ps.monthGrossRate))}</strong></div>
-        <div><span>見込み利益</span><strong>${esc(ProfitBrain.formatYen(ps.forecastProfit))}</strong></div>
-        <div><span>月間目標</span><strong>${esc(RevenueBrain.formatYen(summary.monthlyTarget))}</strong></div>
-        <div><span>達成率</span><strong>${summary.achievementRate}%</strong></div>
-        <div><span>目標まで残り</span><strong>${esc(RevenueBrain.formatYen(summary.remainingToTarget))}</strong></div>
-        <div><span>紐付け売上</span><strong>${esc(RevenueBrain.formatYen((salesOutcome && salesOutcome.linkedTotal) || 0))}</strong></div>
-        <div><span>未紐付け売上</span><strong>${salesOutcome && salesOutcome.unlinkedTotal > 0 ? esc(RevenueBrain.formatYen(salesOutcome.unlinkedTotal)) : 'なし ✓'}</strong></div>
-      </div>
-      ${forecastComment ? `<p class="exec-home-revenue-comment">${esc(forecastComment)}</p>` : ''}
-      ${outcomeComment ? `<p class="exec-home-revenue-comment">${esc(outcomeComment)}</p>` : ''}
-      <button type="button" class="btn btn-sm btn-secondary exec-home-profit-link">利益番頭を開く</button>
-      <button type="button" class="btn btn-sm btn-secondary exec-home-revenue-link">売上番頭を開く</button>`;
-  }
-
-  function renderExecutiveHomeScheduleHtml() {
-    const items = getTodayScheduleItems();
-    if (!items.length) {
-      return `<p class="placeholder-text">今日の投稿・広告予定はありません。<br>週間作戦から1件予定化すると、ここに表示されます。</p>`;
+  function renderExecutiveWorkOrdersHtml(section) {
+    const sec = section || { items: [] };
+    if (!sec.items.length) {
+      return '<p class="placeholder-text">今日の作業予定はありません。</p>';
     }
-    return items.map(item => `
-      <div class="exec-home-schedule-item">
-        <strong>${esc(item.label || item.title)}</strong>
-        <span class="exec-home-schedule-meta">ステータス：${esc(item.statusLabel || '—')}</span>
-        ${item.topic ? `<p class="exec-home-schedule-meta">${esc(item.topic)}</p>` : ''}
-        <div class="exec-home-schedule-actions">
-          ${!item.completed ? `<button type="button" class="btn btn-sm btn-primary" data-cal-add-daily="${esc(item.id)}">今日やることに追加</button>` : ''}
+    return sec.items.map(wo => `
+      <div class="exec-work-item" data-work-order-id="${esc(wo.id)}">
+        <div class="exec-work-header">
+          <strong>${esc(wo.startTime || '—')} ${esc(wo.customerName)}</strong>
+          <span class="exec-work-status">${esc(wo.statusLabel)}</span>
+        </div>
+        <p class="exec-work-meta">${esc(wo.serviceText || '—')} / ${esc(wo.area)} / 見込み${WorkOrderBrain.formatYen(wo.estimateAmount)}</p>
+        ${wo.warnings.length ? `<p class="exec-work-warn">${wo.warnings.map(w => esc(w)).join(' · ')}</p>` : ''}
+        <div class="exec-work-actions">
+          ${renderMapActionsHtml(wo.address, { area: wo.area, showNoAddress: true })}
+          ${wo.calendarReady ? `<a class="btn btn-sm btn-secondary" href="${esc(wo.calendarUrl)}" target="_blank" rel="noopener noreferrer">Googleカレンダー</a>` : ''}
+          <button type="button" class="btn btn-sm btn-secondary" data-exec-wo-complete="${esc(wo.id)}">作業完了</button>
+          <button type="button" class="btn btn-sm btn-primary" data-exec-wo-revenue="${esc(wo.id)}">売上フォームへ</button>
         </div>
       </div>`).join('');
   }
 
-  function renderExecutiveHomeFocusHtml() {
-    const recs = getExecutiveHomeFocusItems();
-    if (!recs.length) {
-      return '<p class="placeholder-text">投稿・広告の成果を入力すると、今週の集中先が表示されます。</p>';
+  function renderExecutiveReceptionHtml(section) {
+    const sec = section || { items: [] };
+    if (!sec.items.length) {
+      return '<p class="placeholder-text">未対応の受付はありません。</p>';
     }
-    return recs.map((item, i) => {
-      const svc = (item.relatedServices || [])[0] || '';
-      const svcPart = svc ? ` × ${svc}` : '';
-      return `
-      <div class="exec-home-focus-item">
-        <span class="exec-home-focus-rank">${i + 1}.</span>
-        <strong>${esc(item.topic)}${esc(svcPart)}</strong>
-        <p class="exec-home-focus-meta">判断：${esc(item.decisionLabel)}</p>
-        <p class="exec-home-focus-meta">次：${esc(item.nextStep)}</p>
-        <div class="exec-home-focus-actions">
-          <button type="button" class="btn btn-sm btn-secondary" data-exec-go-pickup>需要番頭で見る</button>
-          ${item.pickupId ? `<button type="button" class="btn btn-sm btn-primary" data-exec-focus-task="${esc(item.pickupId)}" data-exec-focus-type="${esc(item.type)}">今日やることに追加</button>` : ''}
+    return sec.items.slice(0, 5).map(intake => `
+      <div class="exec-reception-item" data-intake-id="${esc(intake.id)}">
+        <strong>${esc(intake.customerName || '（名前なし）')}</strong>
+        <span class="exec-reception-source">${esc(intake.source || '—')}</span>
+        <p class="exec-work-meta">${esc(intake.serviceText || '—')} / 希望：${esc(intake.preferredDatesText || '—')} / ${esc(intake.area)}</p>
+        <p class="exec-work-meta">次の一手：${esc(intake.nextAction)}</p>
+        <div class="exec-work-actions">
+          <button type="button" class="btn btn-sm btn-primary" data-exec-intake-lead="${esc(intake.id)}">営業先作成</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-exec-intake-wo="${esc(intake.id)}">作業予定作成</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-exec-intake-task="${esc(intake.id)}">今日やること追加</button>
         </div>
-      </div>`;
-    }).join('');
+      </div>`).join('');
   }
 
-  function renderExecutiveHomeSalesHtml() {
-    const actions = getExecutiveHomeSalesActions();
-    if (!actions.length) {
-      return '<p class="placeholder-text">次に動く営業先はまだありません。売上を営業先に紐付けて登録すると、ここに提案が出ます。</p>';
-    }
-    return actions.map(a => {
-      const lead = Storage.getLeads().find(l => l.id === a.leadId);
-      const addr = lead ? MapBrain.getLeadAddress(lead) : '';
-      const area = lead ? MapBrain.getLeadArea(lead) : '';
-      const mapHtml = addr ? renderMapActionsHtml(addr, { area, showNoAddress: false }) : '';
-      return `
-      <div class="exec-home-sales-item">
-        <strong>${esc(a.leadName)}</strong>
-        ${area ? `<span class="area-label-badge">${esc(area)}</span>` : ''}
-        ${lead ? renderAreaDistanceBadge(area, addr) : ''}
-        <p class="exec-home-sales-meta">次の一手：${esc(a.action)}</p>
-        <p class="exec-home-sales-meta">理由：${esc(a.reason)}</p>
-        <div class="exec-home-sales-actions">
-          ${mapHtml}
-          <button type="button" class="btn btn-sm btn-secondary" data-outcome-open-lead="${esc(a.leadId)}">営業先詳細へ</button>
-          <button type="button" class="btn btn-sm btn-primary" data-exec-sales-task="${esc(a.leadId)}">今日やることに追加</button>
-        </div>
+  function renderExecutiveRevenueProfitHtml(section) {
+    const s = section || {};
+    return `
+      <div class="exec-home-revenue-grid">
+        <div><span>今月売上</span><strong>${esc(RevenueBrain.formatYen(s.monthRevenue))}</strong></div>
+        <div><span>月間目標</span><strong>${esc(RevenueBrain.formatYen(s.monthlyTarget))}</strong></div>
+        <div><span>達成率</span><strong>${s.achievementRate}%</strong></div>
+        <div><span>今月支出</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
+        <div><span>概算粗利</span><strong>${esc(ProfitBrain.formatYen(s.grossProfit))}</strong></div>
+        <div><span>粗利率</span><strong>${esc(ProfitBrain.formatRate(s.grossRate))}</strong></div>
+        <div><span>今週見込み</span><strong>${esc(WorkOrderBrain.formatYen(s.weekForecast))}</strong></div>
+        <div><span>売上未登録</span><strong>${s.completedNoRevenue || 0}件</strong></div>
+      </div>
+      ${(s.cautions || []).map(c => `<p class="exec-work-warn">${esc(c)}</p>`).join('')}
+      <div class="exec-work-actions">
+        <button type="button" class="btn btn-sm btn-secondary exec-home-revenue-link">売上番頭</button>
+        <button type="button" class="btn btn-sm btn-secondary exec-home-profit-link">利益番頭</button>
       </div>`;
-    }).join('');
+  }
+
+  function renderExecutiveFollowUpHtml(section) {
+    const s = section || {};
+    if (!s.thanksCount && !s.reviewCount && !s.repeatCount) {
+      return '<p class="placeholder-text">対応が必要なフォローはありません。</p>';
+    }
+    const summary = [
+      s.thanksCount ? `お礼未送信 ${s.thanksCount}件` : '',
+      s.reviewCount ? `口コミ依頼未送信 ${s.reviewCount}件` : '',
+      s.repeatCount ? `リピート確認 ${s.repeatCount}件` : ''
+    ].filter(Boolean).join(' / ');
+    const items = (s.todayItems || []).slice(0, 3).map(t => `
+      <div class="exec-follow-item" data-follow-target="${esc(t.id)}">
+        <strong>${esc(t.customerName || t.leadName || 'お客様')}</strong>
+        <p class="exec-work-meta">${t.needsThanks ? 'お礼未送信' : ''}${t.needsReview ? '口コミ依頼未送信' : ''}</p>
+        <div class="exec-work-actions">
+          ${t.needsThanks ? `<button type="button" class="btn btn-sm btn-secondary" data-exec-follow-thanks="${esc(t.id)}">お礼文コピー</button>` : ''}
+          ${t.needsReview ? `<button type="button" class="btn btn-sm btn-secondary" data-exec-follow-review="${esc(t.id)}">口コミ依頼文コピー</button>` : ''}
+          <button type="button" class="btn btn-sm btn-secondary" data-exec-follow-task="${esc(t.id)}">今日やること追加</button>
+        </div>
+      </div>`).join('');
+    return `
+      <p class="exec-follow-summary">${esc(summary)}</p>
+      ${items}
+      <button type="button" class="btn btn-sm btn-secondary exec-home-follow-link">フォロー番頭へ</button>`;
+  }
+
+  function renderExecutiveAnalyticsDemandHtml(section) {
+    const s = section || {};
+    const lines = s.lines || [];
+    if (!lines.length && !(s.demandLines || []).length) {
+      return '<p class="placeholder-text">アナリティクスデータを入力すると判断が表示されます。</p>';
+    }
+    return `
+      ${lines.length ? `<div class="exec-analytics-lines">${lines.map(l => `<p>${esc(l)}</p>`).join('')}</div>` : ''}
+      ${(s.demandLines || []).length ? `<ul class="exec-demand-lines">${s.demandLines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
+      <div class="exec-work-actions">
+        <button type="button" class="btn btn-sm btn-secondary exec-home-analytics-link">アナリティクス番頭</button>
+        <button type="button" class="btn btn-sm btn-secondary exec-home-pickup-link">需要番頭</button>
+        <button type="button" class="btn btn-sm btn-secondary" id="btn-exec-browser-prompt">ブラウザー番頭プロンプトをコピー</button>
+      </div>`;
+  }
+
+  function renderExecutiveWarningsHtml(warnings) {
+    const list = warnings || [];
+    if (!list.length) {
+      return '<p class="placeholder-text">今のところ注意・保留はありません。</p>';
+    }
+    return `<ul class="exec-warnings-list">${list.map(w => `
+      <li class="exec-warning exec-warning-${w.level === '重大' ? 'critical' : (w.level === '確認' ? 'review' : 'caution')}">
+        <span class="exec-warning-level">${esc(w.level)}</span>
+        <span class="exec-warning-text">${esc(w.text)}</span>
+        ${w.sourceKey === 'diagnostic' ? '<button type="button" class="btn btn-sm btn-secondary exec-home-diagnostic-link">データ診断</button>' : ''}
+        ${w.sourceKey === 'backup' ? '<button type="button" class="btn btn-sm btn-secondary exec-home-backup-link">バックアップ</button>' : ''}
+      </li>`).join('')}</ul>`;
   }
 
   function renderExecutiveHomeCheckHtml() {
-    const check = getTodayCheckState();
-    if (check && check.checkedAt) {
-      const timeLabel = formatCheckTimeLabel(check.checkedAt);
-      return `
-        <p class="exec-home-check-done">今日 ${esc(timeLabel)} 確認済み</p>
-        ${check.memo ? `<p class="exec-home-task-meta">メモ：${esc(check.memo)}</p>` : ''}
-        <button type="button" class="btn btn-sm btn-secondary" id="btn-exec-check-again">再確認を記録</button>`;
-    }
+    const check = ExecutiveBrain.normalizeCheckState(getTodayCheckState());
+    const allDone = ExecutiveBrain.CHECK_ITEMS.every(item => check.items[item.id]);
+    const checksHtml = ExecutiveBrain.CHECK_ITEMS.map(item => `
+      <label class="exec-check-item">
+        <input type="checkbox" class="exec-check-box" data-check-item="${esc(item.id)}"${check.items[item.id] ? ' checked' : ''}>
+        <span>${esc(item.label)}</span>
+      </label>`).join('');
+    const timeLabel = check.checkedAt ? formatCheckTimeLabel(check.checkedAt) : '';
     return `
       <div class="exec-home-check-form">
+        <div class="exec-check-list">${checksHtml}</div>
         <div class="form-group">
           <label for="exec-check-memo">メモ（任意）</label>
-          <input type="text" id="exec-check-memo" placeholder="朝の確認メモ">
+          <input type="text" id="exec-check-memo" value="${esc(check.memo)}" placeholder="朝の確認メモ">
         </div>
-        <button type="button" class="btn btn-primary btn-sm" id="btn-exec-check-done">今日の確認完了</button>
+        ${allDone && timeLabel ? `<p class="exec-home-check-done">今日 ${esc(timeLabel)} 確認済み</p>` : ''}
+        <button type="button" class="btn btn-primary btn-sm" id="btn-exec-check-save">確認状態を保存</button>
       </div>`;
   }
 
   function renderExecutiveHomeQuickActions() {
     const el = document.getElementById('exec-home-quick-actions');
     if (!el) return;
-    el.innerHTML = `
-      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="kurokuro">クロクロ調査プロンプト</button>
-      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="pickup">需要番頭を開く</button>
-      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="reception">受付番頭を開く</button>
-      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="work-order">作業予定番頭を開く</button>
-      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="follow-up">作業後フォロー</button>
-      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="profit">利益番頭</button>
-      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="analytics">アナリティクス</button>
-      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="area">エリア番頭を開く</button>
-      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="revenue">売上を登録</button>
-      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="lead">営業先を登録</button>
-      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="task">今日やること追加</button>
-      <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="backup">バックアップ</button>`;
+    el.innerHTML = ExecutiveBrain.getQuickLinks().map(link =>
+      `<button type="button" class="btn btn-sm btn-secondary" data-exec-quick="${esc(link.id)}">${esc(link.label)}</button>`
+    ).join('');
     el.querySelectorAll('[data-exec-quick]').forEach(btn => {
       btn.addEventListener('click', () => handleExecutiveHomeQuickAction(btn.dataset.execQuick));
     });
   }
 
   function handleExecutiveHomeQuickAction(action) {
-    if (action === 'kurokuro') return goToKurokuroPrompt();
-    if (action === 'pickup') return goToDemandPickup();
-    if (action === 'reception') return goToReception();
-    if (action === 'work-order') return goToWorkOrder();
-    if (action === 'follow-up') return goToFollowUp();
-    if (action === 'profit') return goToProfit();
-    if (action === 'analytics') return goToAnalytics();
-    if (action === 'area') return goToAreaView();
-    if (action === 'revenue') return goToAddRevenue();
-    if (action === 'lead') return goToAddLead();
-    if (action === 'task') return goToAddDailyTask();
-    if (action === 'backup') return goToDataBackup();
+    const map = {
+      reception: goToReception,
+      'work-order': goToWorkOrder,
+      revenue: goToAddRevenue,
+      profit: goToProfit,
+      'follow-up': goToFollowUp,
+      analytics: goToAnalytics,
+      pickup: goToDemandPickup,
+      area: goToAreaView,
+      sales: () => navigateToView('sales'),
+      report: () => scrollToElement('#business-report-dash'),
+      diagnostic: () => { navigateToView('data'); setTimeout(() => scrollToElement('#btn-run-diagnostic'), 120); },
+      backup: goToDataBackup
+    };
+    const fn = map[action];
+    if (fn) fn();
   }
 
   function goToKurokuroPrompt() {
@@ -999,59 +919,152 @@
     alert('今日やることに追加しました。');
   }
 
+  let lastExecutiveContext = null;
+
+  function completeExecutivePriorityTask(taskId) {
+    const task = getDailyActionTasksWithState().find(t => t.id === taskId);
+    if (!task) return;
+    if (task.type === 'manual') {
+      completeManualDailyTask(task.id, '');
+    } else {
+      updateDailyActionTaskState(taskId, 'done', '');
+    }
+    renderExecutiveHome();
+    renderDailyActionTasks();
+    renderMorningDailyTasksBrief();
+  }
+
+  function addExecutivePriorityTask(priorityId) {
+    const item = (lastExecutiveContext && lastExecutiveContext.topPriorities || [])
+      .find(p => p.id === priorityId);
+    if (!item) return;
+    const today = TODAY();
+    const key = item.taskDedupeKey || item.dedupeKey;
+    if (Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === key)) {
+      alert('すでに今日やることに追加済みです');
+      return;
+    }
+    Storage.addManualDailyTask({
+      id: 'manual_' + Storage.generateId(),
+      title: item.title,
+      targetName: item.source,
+      priority: item.rank <= 2 ? '高' : '中',
+      action: item.title,
+      memo: item.reason,
+      dueDate: today,
+      status: 'open',
+      reason: item.source + 'から追加',
+      pickupDedupeKey: key,
+      workOrderId: item.workOrderId || '',
+      intakeId: item.intakeId || ''
+    });
+    renderExecutiveHome();
+    renderDailyActionTasks();
+    alert('今日やることに追加しました。');
+  }
+
+  function navigateExecutivePriority(sourceKey) {
+    const nav = {
+      'work-order': goToWorkOrder,
+      reception: goToReception,
+      'follow-up': goToFollowUp,
+      analytics: goToAnalytics,
+      profit: goToProfit,
+      pickup: goToDemandPickup,
+      task: () => scrollToElement('.card-daily-action-tasks')
+    };
+    const fn = nav[sourceKey];
+    if (fn) fn();
+  }
+
+  function copyExecutiveFollowMessage(targetId, kind) {
+    const target = findFollowUpTarget(targetId);
+    if (!target) return;
+    const profile = Storage.getBusinessProfile() || {};
+    const text = kind === 'thanks'
+      ? FollowUpBrain.generateThanksMessage(target, profile)
+      : FollowUpBrain.generateReviewRequest(target, profile);
+    copyText(text).then(() => alert('コピーしました')).catch(() => alert('コピーに失敗しました'));
+  }
+
   function bindExecutiveHomeEvents() {
     const root = document.getElementById('executive-home');
     if (!root) return;
 
     bindDailyActionTaskEvents(root);
-
-    root.querySelectorAll('[data-exec-scroll-tasks]').forEach(btn => {
-      btn.addEventListener('click', () => scrollToElement('.card-daily-action-tasks'));
-    });
-
-    root.querySelectorAll('[data-cal-add-daily]').forEach(btn => {
-      btn.addEventListener('click', () => addCalendarItemToDailyById(btn.dataset.calAddDaily));
-    });
-
+    bindMapActionEvents(root);
     bindSalesOutcomeLeadLinks(root);
 
-    root.querySelectorAll('[data-exec-go-pickup]').forEach(btn => {
-      btn.addEventListener('click', goToDemandPickup);
+    root.querySelectorAll('[data-exec-priority-add-task]').forEach(btn => {
+      btn.addEventListener('click', () => addExecutivePriorityTask(btn.dataset.execPriorityAddTask));
     });
-
-    root.querySelectorAll('[data-exec-focus-task]').forEach(btn => {
-      btn.addEventListener('click', () => addDecisionTask(btn.dataset.execFocusTask, btn.dataset.execFocusType));
+    root.querySelectorAll('[data-exec-priority-done]').forEach(btn => {
+      btn.addEventListener('click', () => completeExecutivePriorityTask(btn.dataset.execPriorityDone));
     });
-
-    root.querySelectorAll('[data-exec-sales-task]').forEach(btn => {
-      btn.addEventListener('click', () => addExecutiveSalesTask(btn.dataset.execSalesTask));
+    root.querySelectorAll('[data-exec-priority-nav]').forEach(btn => {
+      btn.addEventListener('click', () => navigateExecutivePriority(btn.dataset.execPriorityNav));
+    });
+    root.querySelectorAll('[data-exec-wo-complete]').forEach(btn => {
+      btn.addEventListener('click', () => completeWorkOrder(btn.dataset.execWoComplete));
+    });
+    root.querySelectorAll('[data-exec-wo-revenue]').forEach(btn => {
+      btn.addEventListener('click', () => fillRevenueFromWorkOrder(btn.dataset.execWoRevenue));
+    });
+    root.querySelectorAll('[data-exec-intake-lead]').forEach(btn => {
+      btn.addEventListener('click', () => createLeadFromReceptionIntake(btn.dataset.execIntakeLead));
+    });
+    root.querySelectorAll('[data-exec-intake-wo]').forEach(btn => {
+      btn.addEventListener('click', () => createWorkOrderFromIntake(btn.dataset.execIntakeWo));
+    });
+    root.querySelectorAll('[data-exec-intake-task]').forEach(btn => {
+      btn.addEventListener('click', () => addTaskFromReceptionIntake(btn.dataset.execIntakeTask));
+    });
+    root.querySelectorAll('[data-exec-follow-thanks]').forEach(btn => {
+      btn.addEventListener('click', () => copyExecutiveFollowMessage(btn.dataset.execFollowThanks, 'thanks'));
+    });
+    root.querySelectorAll('[data-exec-follow-review]').forEach(btn => {
+      btn.addEventListener('click', () => copyExecutiveFollowMessage(btn.dataset.execFollowReview, 'review'));
+    });
+    root.querySelectorAll('[data-exec-follow-task]').forEach(btn => {
+      btn.addEventListener('click', () => addFollowUpTask(btn.dataset.execFollowTask, 'thanks'));
     });
 
     const revLink = root.querySelector('.exec-home-revenue-link');
     if (revLink) revLink.addEventListener('click', () => navigateToView('revenue'));
-
     const profitLink = root.querySelector('.exec-home-profit-link');
     if (profitLink) profitLink.addEventListener('click', goToProfit);
-
-    const checkBtn = root.querySelector('#btn-exec-check-done');
-    if (checkBtn) {
-      checkBtn.addEventListener('click', () => {
-        const memoEl = document.getElementById('exec-check-memo');
-        saveTodayCheckState(memoEl ? memoEl.value.trim() : '');
-        renderExecutiveHomeCheck();
+    const followLink = root.querySelector('.exec-home-follow-link');
+    if (followLink) followLink.addEventListener('click', goToFollowUp);
+    const analyticsLink = root.querySelector('.exec-home-analytics-link');
+    if (analyticsLink) analyticsLink.addEventListener('click', goToAnalytics);
+    const pickupLink = root.querySelector('.exec-home-pickup-link');
+    if (pickupLink) pickupLink.addEventListener('click', goToDemandPickup);
+    const diagnosticLink = root.querySelector('.exec-home-diagnostic-link');
+    if (diagnosticLink) diagnosticLink.addEventListener('click', () => handleExecutiveHomeQuickAction('diagnostic'));
+    const backupLink = root.querySelector('.exec-home-backup-link');
+    if (backupLink) backupLink.addEventListener('click', goToDataBackup);
+    const browserPromptBtn = root.querySelector('#btn-exec-browser-prompt');
+    if (browserPromptBtn) {
+      browserPromptBtn.addEventListener('click', () => {
+        copyText(AnalyticsBrain.buildBrowserBantouPrompt(Storage.getSettings()))
+          .then(() => alert('ブラウザー番頭プロンプトをコピーしました'))
+          .catch(() => alert('コピーに失敗しました'));
       });
     }
 
-    const checkAgainBtn = root.querySelector('#btn-exec-check-again');
-    if (checkAgainBtn) {
-      checkAgainBtn.addEventListener('click', () => {
+    const saveCheckBtn = root.querySelector('#btn-exec-check-save');
+    if (saveCheckBtn) {
+      saveCheckBtn.addEventListener('click', () => {
         const memoEl = document.getElementById('exec-check-memo');
-        saveTodayCheckState(memoEl ? memoEl.value.trim() : '');
+        const items = {};
+        root.querySelectorAll('.exec-check-box').forEach(box => {
+          items[box.dataset.checkItem] = box.checked;
+        });
+        saveTodayCheckState(memoEl ? memoEl.value.trim() : '', items);
         renderExecutiveHomeCheck();
+        alert('確認状態を保存しました');
       });
     }
-
-    bindMapActionEvents(root);
   }
 
   function renderExecutiveHomeCheck() {
@@ -1062,18 +1075,14 @@
   }
 
   function renderExecutiveHome() {
-    const summary = buildExecutiveHomeSummary();
+    const ctx = buildExecutiveContext();
+    lastExecutiveContext = ctx;
+    const summary = ctx.summary;
     const emptyEl = document.getElementById('exec-home-empty-guide');
     if (emptyEl) {
-      if (summary.emptyGuide) {
+      if (summary.isEmpty) {
         emptyEl.classList.remove('hidden');
-        emptyEl.innerHTML = `
-          <p>まだ判断材料が少ないです。まずは以下の順で使い始めましょう。</p>
-          <ol>
-            <li>クロクロ調査結果を3件取り込む</li>
-            <li>今日やることを1件追加する</li>
-            <li>売上または営業先を1件登録する</li>
-          </ol>`;
+        emptyEl.innerHTML = `<p>${esc((summary.lines || [])[0] || '')}</p>`;
       } else {
         emptyEl.classList.add('hidden');
         emptyEl.innerHTML = '';
@@ -1084,93 +1093,127 @@
 
     const conclusionEl = document.getElementById('exec-home-conclusion');
     if (conclusionEl) {
-      conclusionEl.innerHTML = summary.lines
+      conclusionEl.innerHTML = (summary.lines || [])
         .map(line => `<p>${esc(line)}</p>`)
         .join('');
     }
 
-    const tasksEl = document.getElementById('exec-home-tasks');
-    if (tasksEl) {
-      const tasks = getExecutiveHomeTasks(5);
-      tasksEl.innerHTML = tasks.length
-        ? tasks.map(t => renderExecutiveHomeTaskCard(t)).join('')
-        : '<p class="placeholder-text">今日のタスクはまだありません。下の「今日やること追加」から1件追加しましょう。</p>';
+    const prioritiesEl = document.getElementById('exec-home-top-priorities');
+    if (prioritiesEl) {
+      const priorities = ctx.topPriorities || [];
+      prioritiesEl.innerHTML = priorities.length
+        ? priorities.map((p, i) => renderExecutiveTopPriorityCard(p, i)).join('')
+        : '<p class="placeholder-text">今日の最優先はまだありません。作業予定・受付・フォローを登録すると表示されます。</p>';
     }
 
-    const focusEl = document.getElementById('exec-home-focus');
-    if (focusEl) focusEl.innerHTML = renderExecutiveHomeFocusHtml();
+    const workEl = document.getElementById('exec-home-work-orders');
+    if (workEl) workEl.innerHTML = renderExecutiveWorkOrdersHtml(ctx.workSection);
 
-    const revenueEl = document.getElementById('exec-home-revenue');
-    if (revenueEl) revenueEl.innerHTML = renderExecutiveHomeRevenueHtml();
+    const receptionEl = document.getElementById('exec-home-reception');
+    if (receptionEl) receptionEl.innerHTML = renderExecutiveReceptionHtml(ctx.receptionSection);
 
-    const scheduleEl = document.getElementById('exec-home-schedule');
-    if (scheduleEl) scheduleEl.innerHTML = renderExecutiveHomeScheduleHtml();
+    const revenueEl = document.getElementById('exec-home-revenue-profit');
+    if (revenueEl) revenueEl.innerHTML = renderExecutiveRevenueProfitHtml(ctx.revenueProfitSection);
 
-    const salesEl = document.getElementById('exec-home-sales');
-    if (salesEl) salesEl.innerHTML = renderExecutiveHomeSalesHtml();
+    const followEl = document.getElementById('exec-home-follow-up');
+    if (followEl) followEl.innerHTML = renderExecutiveFollowUpHtml(ctx.followUpSection);
+
+    const analyticsEl = document.getElementById('exec-home-analytics-demand');
+    if (analyticsEl) analyticsEl.innerHTML = renderExecutiveAnalyticsDemandHtml(ctx.analyticsDemandSection);
 
     const warningsEl = document.getElementById('exec-home-warnings');
-    if (warningsEl) {
-      const warnings = getExecutiveHomeWarnings();
-      warningsEl.innerHTML = warnings.length
-        ? `<ul>${warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul>`
-        : '<p class="placeholder-text">今のところ注意・保留はありません。</p>';
-    }
+    if (warningsEl) warningsEl.innerHTML = renderExecutiveWarningsHtml(ctx.warnings);
 
     renderExecutiveHomeCheck();
     bindExecutiveHomeEvents();
   }
 
   function renderMorningExecutiveSections() {
-    const summary = buildExecutiveHomeSummary();
+    const ctx = buildExecutiveContext();
+    lastExecutiveContext = ctx;
+
     const conclusionEl = document.getElementById('mgmt-exec-conclusion');
     if (conclusionEl) {
-      conclusionEl.innerHTML = summary.lines.map(line => `<p>${esc(line)}</p>`).join('');
+      conclusionEl.innerHTML = (ctx.summary.lines || []).map(line => `<p>${esc(line)}</p>`).join('');
     }
 
     const tasksEl = document.getElementById('mgmt-tasks');
     if (tasksEl) {
-      const tasks = getExecutiveHomeTasks(3);
-      tasksEl.innerHTML = tasks.length
-        ? tasks.map((t, i) => `<li><span class="top3-num">${i + 1}</span> ${esc(t.title)}：${esc(t.reason)}</li>`).join('')
-        : '<li class="placeholder-text">今日のタスクはまだありません</li>';
+      const priorities = ctx.topPriorities || [];
+      tasksEl.innerHTML = priorities.length
+        ? priorities.map((p, i) => `<li><span class="top3-num">${i + 1}</span> <strong>${esc(p.title)}</strong> — ${esc(p.reason)}</li>`).join('')
+        : '<li class="placeholder-text">今日の最優先はまだありません</li>';
     }
 
-    const focusTodayEl = document.getElementById('mgmt-focus-today');
-    if (focusTodayEl) {
-      const recs = getExecutiveHomeFocusItems();
-      focusTodayEl.innerHTML = recs.length
-        ? `<ul class="mgmt-focus-list">${recs.map((item, i) => {
-          const svc = (item.relatedServices || [])[0] || '';
-          return `<li>${i + 1}. ${esc(item.topic)}${svc ? ' × ' + esc(svc) : ''}（${esc(item.decisionLabel)}）次：${esc(item.nextStep)}</li>`;
-        }).join('')}</ul>`
-        : '<p class="placeholder-text">集中先はまだありません</p>';
-    }
-
-    const execTodayEl = document.getElementById('mgmt-execution-today');
-    if (execTodayEl) {
-      const scheduleItems = getTodayScheduleItems();
-      const execLines = DemandBrain.buildMorningScheduleLines(scheduleItems);
-      execTodayEl.innerHTML = execLines.length
-        ? `<ol class="mgmt-execution-list">${execLines.map(l => `<li>${esc(l)}</li>`).join('')}</ol>`
-        : '<p class="placeholder-text">今日の投稿・広告予定はありません</p>';
-    }
-
-    const salesExecEl = document.getElementById('mgmt-exec-sales');
-    if (salesExecEl) {
-      const actions = getExecutiveHomeSalesActions();
-      salesExecEl.innerHTML = actions.length
-        ? `<ul class="mgmt-exec-sales-list">${actions.map(a =>
-          `<li><strong>${esc(a.leadName)}</strong>：${esc(a.action)}（${esc(a.reason)}）</li>`
+    const workOrderMorningEl = document.getElementById('mgmt-work-orders');
+    if (workOrderMorningEl) {
+      const items = ctx.workSection.items || [];
+      workOrderMorningEl.innerHTML = items.length
+        ? `<ul class="mgmt-work-orders-list">${items.map(wo =>
+          `<li>${esc(wo.startTime || '—')} ${esc(wo.customerName)} ${esc(wo.serviceText)}（${esc(wo.area)}）</li>`
         ).join('')}</ul>`
-        : '<p class="placeholder-text">営業の次の一手はありません</p>';
+        : '<p class="placeholder-text">今日の作業予定はありません</p>';
+    }
+
+    const receptionMorningEl = document.getElementById('mgmt-reception-intake');
+    if (receptionMorningEl) {
+      const items = ctx.receptionSection.items || [];
+      receptionMorningEl.innerHTML = items.length
+        ? `<ul class="mgmt-reception-list">${items.slice(0, 5).map(i =>
+          `<li>${esc(i.customerName)}：${esc(i.serviceText || '—')}（${esc(i.nextAction)}）</li>`
+        ).join('')}</ul>`
+        : '<p class="placeholder-text">未対応の受付はありません</p>';
+    }
+
+    const profitMorningEl = document.getElementById('mgmt-profit');
+    if (profitMorningEl) {
+      const rp = ctx.revenueProfitSection || {};
+      profitMorningEl.innerHTML = `
+        <p class="mgmt-profit-label">売上・利益：</p>
+        <ul class="mgmt-profit-list">
+          <li>今月売上 ${esc(RevenueBrain.formatYen(rp.monthRevenue))} / 目標 ${esc(RevenueBrain.formatYen(rp.monthlyTarget))}（${rp.achievementRate}%）</li>
+          <li>支出 ${esc(ProfitBrain.formatYen(rp.monthExpense))} / 粗利 ${esc(ProfitBrain.formatYen(rp.grossProfit))}（${esc(ProfitBrain.formatRate(rp.grossRate))}）</li>
+          ${rp.completedNoRevenue ? `<li>作業完了・売上未登録 ${rp.completedNoRevenue}件</li>` : ''}
+        </ul>`;
+    }
+
+    const revenueMorningEl = document.getElementById('mgmt-revenue');
+    if (revenueMorningEl) {
+      const rev = getRevenueContext();
+      revenueMorningEl.innerHTML = `<p>今月売上：${esc(RevenueBrain.formatYen(rev.summary.planned))} / 達成率 ${rev.summary.achievementRate}%</p>`;
+    }
+
+    const followUpMorningEl = document.getElementById('mgmt-follow-up');
+    if (followUpMorningEl) {
+      const fu = ctx.followUpSection || {};
+      const lines = FollowUpBrain.buildMorningLines(ctx.followTargets);
+      followUpMorningEl.innerHTML = lines.length
+        ? `<ul class="mgmt-follow-up-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '<p class="placeholder-text">フォロー対応はありません</p>';
+    }
+
+    const analyticsMorningEl = document.getElementById('mgmt-analytics');
+    if (analyticsMorningEl) {
+      const ad = ctx.analyticsDemandSection || {};
+      const lines = ad.lines || [];
+      analyticsMorningEl.innerHTML = lines.length
+        ? `<p class="mgmt-analytics-label">アナリティクス：</p><ul class="mgmt-analytics-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '<p class="placeholder-text">アナリティクス判断はまだありません</p>';
+    }
+
+    const demandTopEl = document.getElementById('mgmt-demand-top');
+    if (demandTopEl) {
+      const demandLines = (ctx.analyticsDemandSection.demandLines || [])
+        .concat(DemandBrain.buildMorningDemandLines(ctx.pickups, ctx.today).slice(0, 2));
+      demandTopEl.innerHTML = demandLines.length
+        ? `<p class="mgmt-demand-label">需要：</p><ul class="mgmt-demand-list">${[...new Set(demandLines)].map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '';
     }
 
     const warningsEl = document.getElementById('mgmt-exec-warnings');
     if (warningsEl) {
-      const warnings = getExecutiveHomeWarnings();
-      warningsEl.innerHTML = warnings.length
-        ? warnings.map(w => `<li class="caution-item">⚠ ${esc(w)}</li>`).join('')
+      warningsEl.innerHTML = (ctx.warnings || []).length
+        ? ctx.warnings.map(w => `<li class="caution-item">[${esc(w.level)}] ${esc(w.text)}</li>`).join('')
         : '<li class="placeholder-text">注意・保留はありません</li>';
     }
   }
@@ -3387,7 +3430,8 @@
       `${areaIndustry}として、売上・営業・需要・投稿・広告の状況を見て、次の7日間で優先すべき行動を3〜5個に絞って提案してください。`,
       '売上だけでなく、粗利・支出・広告費・遠方案件も見て、次の7日間の優先行動を提案してください。',
       'GA4/Search Consoleの手入力データから、どのLPを改善すべきか、どの記事・SNS投稿を出すべきか、広告を使うべきかを判断してください。',
-      'ブラウザー番頭が確認したGA4/Search Console/GBPの出力も踏まえて、LP改善・記事/SNS・広告判断をしてください。'
+      'ブラウザー番頭が確認したGA4/Search Console/GBPの出力も踏まえて、LP改善・記事/SNS・広告判断をしてください。',
+      '毎朝5分で見るべき優先順位として、作業予定・受付・売上/利益・フォロー・アナリティクス需要・注意点を統合して判断してください。'
     ];
     if (profileBlock) {
       intro.push('');
@@ -3568,7 +3612,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v3.9.1</span>
+        <span class="business-report-version">v4.0</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -3856,56 +3900,6 @@
         </li>`).join('');
     }
 
-    const demandTopEl = document.getElementById('mgmt-demand-top');
-    if (demandTopEl) {
-      const demandLines = DemandBrain.buildMorningDemandLines(Storage.getDemandPickups(), TODAY());
-      demandTopEl.innerHTML = demandLines.length
-        ? `<p class="mgmt-demand-label">今日の需要：</p><ul class="mgmt-demand-list">${demandLines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
-        : '<p class="placeholder-text">需要ピックアップ未登録。需要番頭でクロクロ調査結果を取り込んでください。</p>';
-    }
-
-    const receptionMorningEl = document.getElementById('mgmt-reception-intake');
-    if (receptionMorningEl) {
-      const summary = ReceptionBrain.getReceptionSummary(Storage.getReceptionIntakes(), TODAY());
-      const lines = ReceptionBrain.buildMorningReceptionLines(summary);
-      receptionMorningEl.innerHTML = lines.length
-        ? `<ul class="mgmt-reception-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
-        : '<p class="placeholder-text">受付データはありません。受付・予約番頭でAI番頭結果を取り込んでください。</p>';
-    }
-
-    const workOrderMorningEl = document.getElementById('mgmt-work-orders');
-    if (workOrderMorningEl) {
-      const lines = WorkOrderBrain.buildMorningLines(Storage.getWorkOrders(), TODAY());
-      workOrderMorningEl.innerHTML = lines.length
-        ? `<ul class="mgmt-work-orders-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
-        : '<p class="placeholder-text">作業予定はありません。予約・作業予定番頭で登録してください。</p>';
-    }
-
-    const followUpMorningEl = document.getElementById('mgmt-follow-up');
-    if (followUpMorningEl) {
-      const lines = FollowUpBrain.buildMorningLines(getFollowUpContext().targets);
-      followUpMorningEl.innerHTML = lines.length
-        ? `<ul class="mgmt-follow-up-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
-        : '<p class="placeholder-text">作業後フォローはありません。</p>';
-    }
-
-    const profitMorningEl = document.getElementById('mgmt-profit');
-    if (profitMorningEl) {
-      const profitCtx = getProfitContext();
-      const lines = ProfitBrain.buildMorningLines(profitCtx);
-      profitMorningEl.innerHTML = lines.length
-        ? `<p class="mgmt-profit-label">利益状況：</p><ul class="mgmt-profit-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
-        : '<p class="placeholder-text">支出を登録すると利益状況が表示されます。</p>';
-    }
-
-    const analyticsMorningEl = document.getElementById('mgmt-analytics');
-    if (analyticsMorningEl) {
-      const lines = AnalyticsBrain.buildMorningLines(getAnalyticsContext());
-      analyticsMorningEl.innerHTML = lines.length
-        ? `<p class="mgmt-analytics-label">アナリティクス：</p><ul class="mgmt-analytics-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
-        : '<p class="placeholder-text">GA4データを入力するとアナリティクス判断が表示されます。</p>';
-    }
-
     const areaMorningEl = document.getElementById('mgmt-area-warnings');
     if (areaMorningEl) {
       const mapCtx = getMapContext();
@@ -3992,7 +3986,7 @@
     }
 
     const revenueEl = document.getElementById('mgmt-revenue');
-    if (revenueEl) {
+    if (revenueEl && !revenueEl.innerHTML.trim()) {
       const rev = getRevenueContext();
       revenueEl.innerHTML = renderRevenueSummaryHtml(rev.summary, rev.comment);
     }

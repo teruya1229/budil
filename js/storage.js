@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v3.9.1',
+  BUDIL_VERSION: 'v4.0',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -397,10 +397,15 @@ const Storage = {
     const store = this.getDailyActionTasksData();
     const d = date || new Date().toISOString().slice(0, 10);
     store.dailyChecks = store.dailyChecks || {};
+    const prev = store.dailyChecks[d] || {};
+    const items = (checkData && checkData.items)
+      ? { ...(prev.items || {}), ...checkData.items }
+      : (prev.items || {});
     store.dailyChecks[d] = {
-      checkedAt: (checkData && checkData.checkedAt) || new Date().toISOString(),
-      memo: (checkData && checkData.memo) || '',
-      version: (checkData && checkData.version) || 'v3.0'
+      checkedAt: (checkData && checkData.checkedAt) || prev.checkedAt || '',
+      memo: (checkData && checkData.memo != null) ? checkData.memo : (prev.memo || ''),
+      version: (checkData && checkData.version) || prev.version || 'v4.0',
+      items
     };
     this.saveDailyActionTasksData(store);
     return store.dailyChecks[d];

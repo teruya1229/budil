@@ -6255,3 +6255,208 @@ body {
   cursor: pointer;
   color: #6366f1;
 }
+
+/* v4.0 経営司令塔ホーム */
+.card-command-tower {
+  border-left: 4px solid #0f766e;
+}
+
+.exec-home-subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: normal;
+}
+
+.exec-tower-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.exec-tower-span-full {
+  grid-column: 1 / -1;
+}
+
+.exec-home-block-priority {
+  border-left: 3px solid #f59e0b;
+}
+
+.exec-priority-item {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.exec-priority-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.exec-priority-rank {
+  background: #0f766e;
+  color: #fff;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.exec-priority-source {
+  font-size: 0.75rem;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  margin-left: auto;
+}
+
+.exec-priority-reason {
+  font-size: 0.85rem;
+  color: #475569;
+  margin: 0.35rem 0;
+}
+
+.exec-priority-actions,
+.exec-work-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.exec-work-item,
+.exec-reception-item,
+.exec-follow-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+.exec-work-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.exec-work-status {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.exec-work-meta {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: 0.25rem 0;
+}
+
+.exec-work-warn {
+  font-size: 0.8rem;
+  color: #b45309;
+  margin: 0.25rem 0;
+}
+
+.exec-warnings-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.exec-warning {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.85rem;
+}
+
+.exec-warning-level {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.exec-warning-critical .exec-warning-level {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.exec-warning-caution .exec-warning-level {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.exec-warning-review .exec-warning-level {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.exec-check-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.exec-check-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.exec-analytics-lines p {
+  margin: 0.25rem 0;
+  font-size: 0.88rem;
+}
+
+.exec-demand-lines {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+  font-size: 0.85rem;
+}
+
+.morning-version-badge {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: normal;
+}
+
+.morning-details-more summary {
+  cursor: pointer;
+  color: #0f766e;
+  font-size: 0.9rem;
+}
+
+@media (min-width: 768px) {
+  .exec-tower-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .exec-home-quick-actions .btn {
+    font-size: 0.78rem;
+    padding: 0.35rem 0.5rem;
+  }
+
+  .exec-priority-actions .btn,
+  .exec-work-actions .btn {
+    min-height: 2.25rem;
+  }
+}
