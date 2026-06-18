@@ -872,10 +872,11 @@ const Storage = {
 
       if (typeof RevenueSummaryBrain !== 'undefined') {
         const revWarnings = RevenueSummaryBrain.getRevenueWarnings(revenues);
-        if (revWarnings.noDate) add('caution', `日付不明の売上 ${revWarnings.noDate}件`);
+        if (revWarnings.noDate) add('caution', `日付不明の確定売上 ${revWarnings.noDate}件`);
         if (revWarnings.badAmount) add('caution', `金額不明/数値不正の売上 ${revWarnings.badAmount}件`);
-        if (revWarnings.unknownSource) add('caution', `依頼元不明の売上 ${revWarnings.unknownSource}件`);
-        if (revWarnings.unknownService) add('caution', `サービス不明の売上 ${revWarnings.unknownService}件`);
+        if (revWarnings.plannedCount) add('caution', `未確定の売上予定 ${revWarnings.plannedCount}件（集計対象外）`);
+        if (revWarnings.unknownSource) add('caution', `依頼元不明の確定売上 ${revWarnings.unknownSource}件`);
+        if (revWarnings.unknownService) add('caution', `サービス不明の確定売上 ${revWarnings.unknownService}件`);
       }
     } else {
       add('ok', '売上 0件');

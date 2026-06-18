@@ -1,10 +1,13 @@
 /**
  * Budil v4.2 - 売上集計（月別・年別・依頼元別・サービス別）
+ * 集計対象は budil_revenue_records の確定売上（確定・完了）のみ。
+ * 作業予定の見込み・受付候補・未確定予定は混ぜない。
  */
 const RevenueSummaryBrain = {
   UNKNOWN_DATE_KEY: 'unknown',
   UNKNOWN_SOURCE: '不明',
   UNKNOWN_SERVICE: '不明',
+  CONFIRMED_STATUSES: ['確定', '完了'],
 
   SOURCE_ALIASES: {
     '直受け': '直予約',
@@ -68,7 +71,42 @@ const RevenueSummaryBrain = {
   getRevenueAmount(record) {
     if (!record || record.amount == null || record.amount === '') return null;
     const amt = Number(record.amount);
-    return Number.isFinite(amt) ? amt : null;
+    return Number.isFinite(amt) && amt >= 0 ? amt : null;
+  },
+
+  isRevenueCandidateRecord(record) {
+    if (!record) return false;
+    if (record.isCandidate === true || record.isRevenueCandidate === true || record.revenueCandidate === true) {
+      return true;
+    }
+    if (record.candidateStatus === 'revenue_candidate' || record.status === 'revenue_candidate') {
+      return true;
+    }
+    return false;
+  },
+
+  isConfirmedRevenueRecord(record) {
+    if (!record || typeof record !== 'object') return false;
+    if (record.status === 'キャンセル') return false;
+    if (this.isRevenueCandidateRecord(record)) return false;
+    if (!this.CONFIRMED_STATUSES.includes(record.status)) return false;
+    return this.getRevenueAmount(record) != null;
+  },
+
+  isPlannedRevenueRecord(record) {
+    if (!record || record.status === 'キャンセル') return false;
+    if (this.isRevenueCandidateRecord(record)) return true;
+    if (record.status === '予定') return this.getRevenueAmount(record) != null;
+    return false;
+  },
+
+  confirmedRecords(records) {
+    return this.normalizeRevenueRecords(records).filter(r => this.isConfirmedRevenueRecord(r));
+  },
+
+  /** @deprecated 売上集計では confirmedRecords を使う */
+  activeRecords(records) {
+    return this.confirmedRecords(records);
   },
 
   getRevenueSource(record) {
@@ -87,17 +125,13 @@ const RevenueSummaryBrain = {
     return raw;
   },
 
-  activeRecords(records) {
-    return RevenueBrain.activeRecords(this.normalizeRevenueRecords(records));
-  },
-
   normalizeRevenueRecords(records) {
     return RevenueBrain.normalizeRevenueRecords(records);
   },
 
   filterRecords(records, filter) {
     const f = filter || {};
-    let list = this.activeRecords(records);
+    let list = this.confirmedRecords(records);
     if (f.year) {
       list = list.filter(r => this.getYearKey(r) === String(f.year));
     }
@@ -209,19 +243,19 @@ const RevenueSummaryBrain = {
   },
 
   buildSourceSummary(records, filter) {
-    const list = filter ? this.filterRecords(records, filter) : this.activeRecords(records);
+    const list = filter ? this.filterRecords(records, filter) : this.confirmedRecords(records);
     return this.buildDimensionSummary(list, r => this.getRevenueSource(r), 'source');
   },
 
   buildServiceSummary(records, filter) {
-    const list = filter ? this.filterRecords(records, filter) : this.activeRecords(records);
+    const list = filter ? this.filterRecords(records, filter) : this.confirmedRecords(records);
     return this.buildDimensionSummary(list, r => this.getRevenueService(r), 'service');
   },
 
   buildMonthlySourceSummary(records) {
-    const active = this.activeRecords(records);
+    const confirmed = this.confirmedRecords(records);
     const byMonth = {};
-    active.forEach(r => {
+    confirmed.forEach(r => {
       const amount = this.getRevenueAmount(r);
       if (amount == null) return;
       const mk = this.getMonthKey(r);
@@ -242,9 +276,9 @@ const RevenueSummaryBrain = {
   },
 
   buildMonthlyServiceSummary(records) {
-    const active = this.activeRecords(records);
+    const confirmed = this.confirmedRecords(records);
     const byMonth = {};
-    active.forEach(r => {
+    confirmed.forEach(r => {
       const amount = this.getRevenueAmount(r);
       if (amount == null) return;
       const mk = this.getMonthKey(r);
@@ -265,9 +299,9 @@ const RevenueSummaryBrain = {
   },
 
   buildYearlySourceSummary(records) {
-    const active = this.activeRecords(records);
+    const confirmed = this.confirmedRecords(records);
     const byYear = {};
-    active.forEach(r => {
+    confirmed.forEach(r => {
       const amount = this.getRevenueAmount(r);
       if (amount == null) return;
       const yk = this.getYearKey(r);
@@ -284,9 +318,9 @@ const RevenueSummaryBrain = {
   },
 
   buildYearlyServiceSummary(records) {
-    const active = this.activeRecords(records);
+    const confirmed = this.confirmedRecords(records);
     const byYear = {};
-    active.forEach(r => {
+    confirmed.forEach(r => {
       const amount = this.getRevenueAmount(r);
       if (amount == null) return;
       const yk = this.getYearKey(r);
@@ -314,11 +348,11 @@ const RevenueSummaryBrain = {
     const currentMonth = t.slice(0, 7);
     const currentYear = t.slice(0, 4);
     const prevMonth = this.shiftMonthKey(currentMonth, -1);
-    const active = this.activeRecords(records);
+    const confirmed = this.confirmedRecords(records);
 
-    const thisMonthRecords = active.filter(r => this.getMonthKey(r) === currentMonth);
-    const prevMonthRecords = prevMonth ? active.filter(r => this.getMonthKey(r) === prevMonth) : [];
-    const yearRecords = active.filter(r => this.getYearKey(r) === currentYear);
+    const thisMonthRecords = confirmed.filter(r => this.getMonthKey(r) === currentMonth);
+    const prevMonthRecords = prevMonth ? confirmed.filter(r => this.getMonthKey(r) === prevMonth) : [];
+    const yearRecords = confirmed.filter(r => this.getYearKey(r) === currentYear);
 
     const thisMonthTotal = this.sumAmount(thisMonthRecords);
     const prevMonthTotal = this.sumAmount(prevMonthRecords);
@@ -381,7 +415,7 @@ const RevenueSummaryBrain = {
     const compact = summary.compact || {};
 
     const lines = [
-      '【売上集計】',
+      '【売上集計】（確定売上のみ）',
       `対象期間：${periodLabel}`,
       '',
       `売上合計：${this.formatYen(total)}`,
@@ -403,33 +437,110 @@ const RevenueSummaryBrain = {
   },
 
   getRevenueWarnings(records) {
-    const list = records || [];
+    const list = this.normalizeRevenueRecords(records || []);
     let noDate = 0;
     let badAmount = 0;
     let unknownSource = 0;
     let unknownService = 0;
+    let plannedCount = 0;
+    let plannedTotal = 0;
+    let candidateCount = 0;
+    let noDateConfirmedCount = 0;
+    let noDateConfirmedTotal = 0;
 
     list.forEach(r => {
       if (!r || r.status === 'キャンセル') return;
-      if (!this.getRevenueDate(r)) noDate++;
-      if (this.getRevenueAmount(r) == null) badAmount++;
+      if (this.isPlannedRevenueRecord(r)) {
+        plannedCount += 1;
+        plannedTotal += this.getRevenueAmount(r) || 0;
+        if (this.isRevenueCandidateRecord(r)) candidateCount += 1;
+        return;
+      }
+      if (!this.isConfirmedRevenueRecord(r)) {
+        if (this.getRevenueAmount(r) == null) badAmount++;
+        return;
+      }
+      if (!this.getRevenueDate(r)) {
+        noDate += 1;
+        noDateConfirmedCount += 1;
+        noDateConfirmedTotal += this.getRevenueAmount(r) || 0;
+      }
       if (this.getRevenueSource(r) === this.UNKNOWN_SOURCE) unknownSource++;
       if (this.getRevenueService(r) === this.UNKNOWN_SERVICE) unknownService++;
     });
 
-    return { noDate, badAmount, unknownSource, unknownService };
+    return {
+      noDate, badAmount, unknownSource, unknownService,
+      plannedCount, plannedTotal, candidateCount,
+      noDateConfirmedCount, noDateConfirmedTotal
+    };
   },
 
-  buildFullSummary(records, filter, today) {
+  buildWorkOrderForecastSummary(workOrders, today) {
+    const t = today || new Date().toISOString().slice(0, 10);
+    const monthKey = t.slice(0, 7);
+    const list = (workOrders || []).filter(w => {
+      if (!w || w.status === 'キャンセル') return false;
+      if (w.actualRevenueId) return false;
+      const amt = Number(w.estimateAmount || 0);
+      if (!Number.isFinite(amt) || amt <= 0) return false;
+      const date = String(w.workDate || w.date || '').slice(0, 10);
+      return date && date.startsWith(monthKey);
+    });
+    return {
+      count: list.length,
+      total: list.reduce((sum, w) => sum + Number(w.estimateAmount || 0), 0),
+      label: '作業予定の見込み（今月）'
+    };
+  },
+
+  buildReceptionCandidateSummary(intakes) {
+    const list = (intakes || []).filter(i => {
+      if (!i) return false;
+      if (i.status === 'revenue_candidate') return true;
+      const amt = Number(i.estimateAmount || 0);
+      return amt > 0 && !i.relatedRevenueId && i.status !== 'done' && i.status !== 'archived';
+    });
+    return {
+      count: list.length,
+      total: list.reduce((sum, i) => sum + Number(i.estimateAmount || 0), 0),
+      label: '受付の売上候補'
+    };
+  },
+
+  buildSeparateDisplays(records, extra, today) {
+    const warnings = this.getRevenueWarnings(records);
+    const workOrders = (extra && extra.workOrders) || [];
+    const intakes = (extra && extra.intakes) || [];
+    return {
+      scopeNote: '確定売上（売上番頭で確定・完了登録済み）のみ集計。見込み・候補は含みません。',
+      forecast: this.buildWorkOrderForecastSummary(workOrders, today),
+      receptionCandidates: this.buildReceptionCandidateSummary(intakes),
+      plannedRevenue: {
+        count: warnings.plannedCount,
+        total: warnings.plannedTotal,
+        label: '未確定の売上予定（ステータス：予定）'
+      },
+      noDateConfirmed: {
+        count: warnings.noDateConfirmedCount,
+        total: warnings.noDateConfirmedTotal,
+        label: '日付不明の確定売上'
+      }
+    };
+  },
+
+  buildFullSummary(records, filter, today, extra) {
     const filtered = this.filterRecords(records, filter);
     const compact = this.buildCompactSummary(records, today);
+    const confirmed = this.confirmedRecords(records);
+    const baseRecords = filtered.length ? filtered : confirmed;
     return {
       compact,
       filteredRecords: filtered,
       periodTotal: this.sumAmount(filtered),
       periodCount: filtered.length,
-      monthly: this.buildMonthlySummary(filtered.length ? filtered : this.activeRecords(records)),
-      yearly: this.buildYearlySummary(filtered.length ? filtered : this.activeRecords(records)),
+      monthly: this.buildMonthlySummary(baseRecords),
+      yearly: this.buildYearlySummary(baseRecords),
       sources: this.buildSourceSummary(records, filter),
       services: this.buildServiceSummary(records, filter),
       monthlySources: this.buildMonthlySourceSummary(filtered.length ? filtered : records),
@@ -437,16 +548,17 @@ const RevenueSummaryBrain = {
       yearlySources: this.buildYearlySourceSummary(filtered.length ? filtered : records),
       yearlyServices: this.buildYearlyServiceSummary(filtered.length ? filtered : records),
       warnings: this.getRevenueWarnings(records),
+      separate: this.buildSeparateDisplays(records, extra, today),
       filter: filter || {}
     };
   },
 
   getFilterOptions(records) {
-    const active = this.activeRecords(records);
-    const years = [...new Set(active.map(r => this.getYearKey(r)).filter(y => y !== this.UNKNOWN_DATE_KEY))].sort((a, b) => b.localeCompare(a));
-    const months = [...new Set(active.map(r => this.getMonthKey(r)).filter(m => m !== this.UNKNOWN_DATE_KEY))].sort((a, b) => b.localeCompare(a));
-    const sources = [...new Set(active.map(r => this.getRevenueSource(r)))].sort();
-    const services = [...new Set(active.map(r => this.getRevenueService(r)))].sort();
+    const confirmed = this.confirmedRecords(records);
+    const years = [...new Set(confirmed.map(r => this.getYearKey(r)).filter(y => y !== this.UNKNOWN_DATE_KEY))].sort((a, b) => b.localeCompare(a));
+    const months = [...new Set(confirmed.map(r => this.getMonthKey(r)).filter(m => m !== this.UNKNOWN_DATE_KEY))].sort((a, b) => b.localeCompare(a));
+    const sources = [...new Set(confirmed.map(r => this.getRevenueSource(r)))].sort();
+    const services = [...new Set(confirmed.map(r => this.getRevenueService(r)))].sort();
     return { years, months, sources, services };
   }
 };

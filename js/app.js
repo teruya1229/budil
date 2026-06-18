@@ -743,8 +743,10 @@
         <div><span>売上未登録</span><strong>${s.completedNoRevenue || 0}件</strong></div>
       </div>
       <div class="exec-home-revenue-summary">
+        <p class="exec-home-revenue-scope">売上集計（確定売上のみ）</p>
+        <p>今月確定売上：${esc(RevenueBrain.formatYen(compact.thisMonthTotal || 0))}</p>
         <p>先月比：<span class="${diffClass}">${diffSign}${esc(RevenueBrain.formatYen(compact.monthDiff || 0))}</span></p>
-        <p>今年売上：${esc(RevenueBrain.formatYen(compact.yearTotal || 0))}</p>
+        <p>今年確定売上：${esc(RevenueBrain.formatYen(compact.yearTotal || 0))}</p>
         <p>今月の主力：${esc(topSource ? topSource.name : '—')} / ${esc(topService ? topService.name : '—')}</p>
       </div>
       ${(s.cautions || []).map(c => `<p class="exec-work-warn">${esc(c)}</p>`).join('')}
@@ -1324,6 +1326,13 @@
     }
   }
 
+  function getRevenueSummaryExtra() {
+    return {
+      workOrders: Storage.getWorkOrders(),
+      intakes: Storage.getReceptionIntakes()
+    };
+  }
+
   function getRevenueContext() {
     const today = TODAY();
     const records = RevenueBrain.normalizeRevenueRecords(Storage.getRevenueRecords());
@@ -1339,7 +1348,7 @@
       summary, salesOutcome, nextSalesCandidates, salesHoldCandidates
     });
     const revenueSummary = typeof RevenueSummaryBrain !== 'undefined'
-      ? RevenueSummaryBrain.buildFullSummary(records, getRevenueAggregationFilter(), today)
+      ? RevenueSummaryBrain.buildFullSummary(records, getRevenueAggregationFilter(), today, getRevenueSummaryExtra())
       : null;
     return { today, records, settings, leads, monthKey, summary, comment, salesOutcome, nextSalesCandidates, salesHoldCandidates, managementComment, revenueSummary };
   }
@@ -3286,8 +3295,9 @@
     if (unlinked) notes.push(`未紐付け売上 ${unlinked}件`);
     if (badLeadRef) notes.push(`紐付け切れ ${badLeadRef}件`);
     if (revWarnings) {
-      if (revWarnings.noDate) notes.push(`日付不明の売上 ${revWarnings.noDate}件`);
+      if (revWarnings.noDate) notes.push(`日付不明の確定売上 ${revWarnings.noDate}件`);
       if (revWarnings.badAmount) notes.push(`金額不明/数値不正の売上 ${revWarnings.badAmount}件`);
+      if (revWarnings.plannedCount) notes.push(`未確定の売上予定 ${revWarnings.plannedCount}件（集計対象外）`);
       if (revWarnings.unknownSource) notes.push(`依頼元不明の売上 ${revWarnings.unknownSource}件`);
       if (revWarnings.unknownService) notes.push(`サービス不明の売上 ${revWarnings.unknownService}件`);
     }
@@ -3373,7 +3383,7 @@
     const profitCtx = getProfitContext({ period: range });
     const analyticsCtx = getAnalyticsContext({ period: range });
     const revenueSummary = typeof RevenueSummaryBrain !== 'undefined'
-      ? RevenueSummaryBrain.buildFullSummary(revCtx.records, { year: today.slice(0, 4) }, today)
+      ? RevenueSummaryBrain.buildFullSummary(revCtx.records, { year: today.slice(0, 4) }, today, getRevenueSummaryExtra())
       : null;
 
     const context = {
@@ -3525,21 +3535,23 @@
       const agg = c.revenueSummary;
       const compact = agg.compact;
       const diffSign = compact.monthDiff > 0 ? '+' : '';
+      lines.push('（売上集計：確定売上のみ。見込み・候補は含みません）');
+      lines.push(`今月確定売上：${RevenueBrain.formatYen(compact.thisMonthTotal)}`);
       lines.push(`先月比：${diffSign}${RevenueBrain.formatYen(compact.monthDiff)}`);
-      lines.push(`今年売上：${RevenueBrain.formatYen(compact.yearTotal)}`);
+      lines.push(`今年確定売上：${RevenueBrain.formatYen(compact.yearTotal)}`);
       lines.push(`今年月平均：${RevenueBrain.formatYen(compact.yearMonthAvg)}`);
       const topSrc = (compact.topSources || [])[0];
       const topSvc = (compact.topServices || [])[0];
       lines.push(`今月の主力依頼元：${topSrc ? topSrc.name : '—'}`);
       lines.push(`今月の主力サービス：${topSvc ? topSvc.name : '—'}`);
       if (agg.monthly && agg.monthly.length) {
-        lines.push('月別売上：');
+        lines.push('月別確定売上：');
         agg.monthly.slice(0, 6).forEach(m => {
           lines.push(`  ${m.label}：${RevenueBrain.formatYen(m.total)} / ${m.count}件`);
         });
       }
       if (agg.yearly && agg.yearly.length) {
-        lines.push('年別売上：');
+        lines.push('年別確定売上：');
         agg.yearly.slice(0, 3).forEach(y => {
           lines.push(`  ${y.label}：${RevenueBrain.formatYen(y.total)} / ${y.count}件`);
         });
@@ -3802,9 +3814,9 @@
     const compact = revenueSummary && revenueSummary.compact ? revenueSummary.compact : {};
     const cards = [
       { label: '期間内売上', value: RevenueBrain.formatYen(s.periodRevenue || 0) },
-      { label: '今月売上', value: RevenueBrain.formatYen(compact.thisMonthTotal || 0) },
+      { label: '今月確定売上', value: RevenueBrain.formatYen(compact.thisMonthTotal || 0) },
       { label: '先月比', value: (compact.monthDiff > 0 ? '+' : '') + RevenueBrain.formatYen(compact.monthDiff || 0) },
-      { label: '今年売上', value: RevenueBrain.formatYen(compact.yearTotal || 0) },
+      { label: '今年確定売上', value: RevenueBrain.formatYen(compact.yearTotal || 0) },
       { label: '今月達成率', value: `${s.monthAchievementRate || 0}%` },
       { label: '需要ピックアップ数', value: s.pickupCount ?? 0 },
       { label: '実行済み施策数', value: s.executedCount ?? 0 },
@@ -7367,10 +7379,10 @@
     let monthlyBrief = '';
     if (typeof RevenueSummaryBrain !== 'undefined') {
       const monthly = RevenueSummaryBrain.buildMonthlySummary(
-        RevenueSummaryBrain.activeRecords(Storage.getRevenueRecords())
+        RevenueSummaryBrain.confirmedRecords(Storage.getRevenueRecords())
       ).slice(0, 3);
       if (monthly.length) {
-        monthlyBrief = `<div class="profit-monthly-brief"><p class="profit-monthly-brief-title">月別売上（直近）</p>${monthly.map(m =>
+        monthlyBrief = `<div class="profit-monthly-brief"><p class="profit-monthly-brief-title">月別確定売上（直近）</p>${monthly.map(m =>
           `<p class="profit-monthly-brief-line">${esc(m.label)}：${esc(RevenueSummaryBrain.formatYen(m.total))} / ${m.count}件</p>`
         ).join('')}</div>`;
       }
@@ -10502,15 +10514,33 @@
       </div>`).join('');
   }
 
+  function renderRevenueAggSeparateHtml(separate) {
+    const s = separate || {};
+    const rows = [
+      { label: s.forecast && s.forecast.label, count: s.forecast && s.forecast.count, total: s.forecast && s.forecast.total },
+      { label: s.receptionCandidates && s.receptionCandidates.label, count: s.receptionCandidates && s.receptionCandidates.count, total: s.receptionCandidates && s.receptionCandidates.total },
+      { label: s.plannedRevenue && s.plannedRevenue.label, count: s.plannedRevenue && s.plannedRevenue.count, total: s.plannedRevenue && s.plannedRevenue.total },
+      { label: s.noDateConfirmed && s.noDateConfirmed.label, count: s.noDateConfirmed && s.noDateConfirmed.count, total: s.noDateConfirmed && s.noDateConfirmed.total }
+    ].filter(r => r.label && ((r.count > 0) || (r.total > 0)));
+    if (!rows.length) return '';
+    return `<div class="revenue-agg-separate">
+      <p class="revenue-agg-separate-title">集計対象外（別表示）</p>
+      ${rows.map(r =>
+        `<p class="revenue-agg-separate-line"><span>${esc(r.label)}</span><strong>${r.count}件 / ${esc(RevenueSummaryBrain.formatYen(r.total))}</strong></p>`
+      ).join('')}
+    </div>`;
+  }
+
   function renderRevenueAggregationPanel() {
     const el = document.getElementById('revenue-aggregation-panel');
     if (!el || typeof RevenueSummaryBrain === 'undefined') return;
 
     const { records, today } = getRevenueContext();
     const filter = getRevenueAggregationFilter();
-    const summary = RevenueSummaryBrain.buildFullSummary(records, filter, today);
+    const summary = RevenueSummaryBrain.buildFullSummary(records, filter, today, getRevenueSummaryExtra());
     const options = RevenueSummaryBrain.getFilterOptions(records);
     const compact = summary.compact;
+    const separate = summary.separate || {};
 
     const yearOpts = ['<option value="">すべて</option>']
       .concat(options.years.map(y => `<option value="${esc(y)}"${filter.year === y ? ' selected' : ''}>${esc(y)}年</option>`));
@@ -10527,17 +10557,18 @@
     const topServiceNames = (compact.topServices || []).map(s => s.name).join(' / ') || '—';
 
     el.innerHTML = `
+      <p class="revenue-agg-scope-note">確定売上のみ集計（売上番頭で「確定」「完了」登録済み）。見込み・候補は含みません。</p>
       <div class="revenue-agg-compact">
         <div class="revenue-agg-compact-item revenue-agg-highlight">
-          <span>今月売上</span>
+          <span>今月確定売上</span>
           <strong>${esc(RevenueSummaryBrain.formatYen(compact.thisMonthTotal))}</strong>
         </div>
         <div class="revenue-agg-compact-item">
-          <span>先月売上</span>
+          <span>先月確定売上</span>
           <strong>${esc(RevenueSummaryBrain.formatYen(compact.prevMonthTotal))}</strong>
         </div>
         <div class="revenue-agg-compact-item revenue-agg-highlight">
-          <span>今年売上</span>
+          <span>今年確定売上</span>
           <strong>${esc(RevenueSummaryBrain.formatYen(compact.yearTotal))}</strong>
         </div>
         <div class="revenue-agg-compact-item">
@@ -10553,6 +10584,8 @@
           <p class="revenue-agg-top-list">${esc(topServiceNames)}</p>
         </div>
       </div>
+
+      ${renderRevenueAggSeparateHtml(separate)}
 
       <div class="revenue-agg-filters">
         <div class="form-group">

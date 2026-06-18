@@ -606,7 +606,7 @@ const ProfitBrain = {
 
   buildMonthlyRevenueProfitLines(revenues, expenses) {
     if (typeof RevenueSummaryBrain === 'undefined') return [];
-    const active = RevenueSummaryBrain.activeRecords(revenues);
+    const active = RevenueSummaryBrain.confirmedRecords(revenues);
     const monthly = RevenueSummaryBrain.buildMonthlySummary(active).slice(0, 3);
     const expenseList = this.normalizeExpenses(expenses);
     return monthly.map(m => {
