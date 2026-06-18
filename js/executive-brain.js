@@ -357,7 +357,10 @@ const ExecutiveBrain = {
       cautions.push('未紐付け売上あり');
     }
     const revenueAggregation = rev.revenueSummary || (typeof RevenueSummaryBrain !== 'undefined'
-      ? RevenueSummaryBrain.buildFullSummary(rev.records || [], { year: (ctx.today || '').slice(0, 4) }, ctx.today)
+      ? RevenueSummaryBrain.buildFullSummary(rev.records || [], { year: (ctx.today || '').slice(0, 4) }, ctx.today, {
+        workOrders: ctx.workOrders || [],
+        intakes: ctx.intakes || []
+      })
       : null);
     return {
       monthRevenue: summary.planned || 0,
