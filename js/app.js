@@ -671,9 +671,9 @@
         <div class="exec-priority-header">
           <span class="exec-priority-rank">${index + 1}</span>
           <strong class="exec-priority-title">${esc(p.title)}</strong>
-          <span class="exec-priority-source">${esc(p.source)}</span>
+          <span class="exec-source-badge">${esc(p.source)}</span>
         </div>
-        <p class="exec-priority-reason">理由：${esc(p.reason)}</p>
+        <p class="exec-priority-reason">${esc(p.reason)}</p>
         <div class="exec-priority-actions">
           ${taskBtn}
           <button type="button" class="btn btn-sm btn-secondary" data-exec-priority-nav="${esc(p.sourceKey)}">詳細へ</button>
@@ -785,17 +785,26 @@
   }
 
   function renderExecutiveWarningsHtml(warnings) {
-    const list = warnings || [];
-    if (!list.length) {
+    const split = ExecutiveBrain.splitWarningsForDisplay(warnings);
+    const { visible, more, review } = split;
+    if (!visible.length && !more.length && !review.length) {
       return '<p class="placeholder-text">今のところ注意・保留はありません。</p>';
     }
-    return `<ul class="exec-warnings-list">${list.map(w => `
+    const renderItem = w => `
       <li class="exec-warning exec-warning-${w.level === '重大' ? 'critical' : (w.level === '確認' ? 'review' : 'caution')}">
         <span class="exec-warning-level">${esc(w.level)}</span>
         <span class="exec-warning-text">${esc(w.text)}</span>
         ${w.sourceKey === 'diagnostic' ? '<button type="button" class="btn btn-sm btn-secondary exec-home-diagnostic-link">データ診断</button>' : ''}
         ${w.sourceKey === 'backup' ? '<button type="button" class="btn btn-sm btn-secondary exec-home-backup-link">バックアップ</button>' : ''}
-      </li>`).join('')}</ul>`;
+      </li>`;
+    let html = `<ul class="exec-warnings-list">${visible.map(renderItem).join('')}</ul>`;
+    if (more.length || review.length) {
+      html += `<details class="exec-warnings-more">
+        <summary>すべて見る（${more.length + review.length}件）</summary>
+        <ul class="exec-warnings-list">${more.map(renderItem).join('')}${review.map(renderItem).join('')}</ul>
+      </details>`;
+    }
+    return html;
   }
 
   function renderExecutiveHomeCheckHtml() {
@@ -819,15 +828,36 @@
       </div>`;
   }
 
-  function renderExecutiveHomeQuickActions() {
-    const el = document.getElementById('exec-home-quick-actions');
-    if (!el) return;
-    el.innerHTML = ExecutiveBrain.getQuickLinks().map(link =>
-      `<button type="button" class="btn btn-sm btn-secondary" data-exec-quick="${esc(link.id)}">${esc(link.label)}</button>`
+  function renderExecutiveQuickActionButtons(links, btnClass) {
+    return (links || []).map(link =>
+      `<button type="button" class="btn btn-sm ${btnClass || 'btn-secondary'}" data-exec-quick="${esc(link.id)}">${esc(link.label)}</button>`
     ).join('');
-    el.querySelectorAll('[data-exec-quick]').forEach(btn => {
+  }
+
+  function bindExecutiveQuickActionButtons(container) {
+    if (!container) return;
+    container.querySelectorAll('[data-exec-quick]').forEach(btn => {
       btn.addEventListener('click', () => handleExecutiveHomeQuickAction(btn.dataset.execQuick));
     });
+  }
+
+  function renderExecutiveHomeQuickActions() {
+    const primaryEl = document.getElementById('exec-home-quick-actions-primary');
+    const secondaryEl = document.getElementById('exec-home-quick-actions-secondary');
+    if (primaryEl) {
+      primaryEl.innerHTML = renderExecutiveQuickActionButtons(
+        ExecutiveBrain.getPrimaryQuickLinks(),
+        'btn-primary exec-quick-btn-primary'
+      );
+      bindExecutiveQuickActionButtons(primaryEl);
+    }
+    if (secondaryEl) {
+      secondaryEl.innerHTML = renderExecutiveQuickActionButtons(
+        ExecutiveBrain.getSecondaryQuickLinks(),
+        'btn-secondary'
+      );
+      bindExecutiveQuickActionButtons(secondaryEl);
+    }
   }
 
   function handleExecutiveHomeQuickAction(action) {
@@ -835,6 +865,7 @@
       reception: goToReception,
       'work-order': goToWorkOrder,
       revenue: goToAddRevenue,
+      tasks: () => scrollToElement('.card-daily-action-tasks'),
       profit: goToProfit,
       'follow-up': goToFollowUp,
       analytics: goToAnalytics,
@@ -843,7 +874,8 @@
       sales: () => navigateToView('sales'),
       report: () => scrollToElement('#business-report-dash'),
       diagnostic: () => { navigateToView('data'); setTimeout(() => scrollToElement('#btn-run-diagnostic'), 120); },
-      backup: goToDataBackup
+      backup: goToDataBackup,
+      kurokuro: goToKurokuroPrompt
     };
     const fn = map[action];
     if (fn) fn();
@@ -1074,6 +1106,66 @@
     bindExecutiveHomeEvents();
   }
 
+  function renderExecutiveHomeStartGuide(isEmpty) {
+    const el = document.getElementById('exec-home-start-guide');
+    if (!el) return;
+    const status = Storage.getOnboardingStatus();
+    const doneCount = ONBOARDING_STEPS.filter(s => status[s.key]).length;
+    const showGuide = isEmpty || doneCount < 3;
+    if (!showGuide) {
+      el.classList.add('hidden');
+      el.innerHTML = '';
+      return;
+    }
+    el.classList.remove('hidden');
+    const quickSteps = [
+      { n: 1, text: 'デモデータを作成して全体の流れを確認', action: 'demo', btn: 'デモ作成' },
+      { n: 2, text: '経営司令塔ホームで今日の結論と最優先3つを見る', action: 'home', btn: 'この画面を見る' },
+      { n: 3, text: '受付を1件入れて、作業予定・売上登録まで試す', action: 'reception', btn: '受付へ' }
+    ];
+    el.innerHTML = `
+      <div class="exec-start-guide-inner">
+        <h3 class="exec-start-guide-title">はじめの3ステップ</h3>
+        <ol class="exec-start-guide-steps">
+          ${quickSteps.map(s => `<li><span class="exec-start-num">${s.n}</span><span>${esc(s.text)}</span>
+            <button type="button" class="btn btn-sm btn-secondary" data-exec-start="${esc(s.action)}">${esc(s.btn)}</button></li>`).join('')}
+        </ol>
+        <details class="exec-start-guide-more">
+          <summary>詳しい使い方を見る</summary>
+          <ol class="exec-start-guide-full" start="4">
+            <li>作業予定を作る → 作業完了後に売上登録</li>
+            <li>フォロー・口コミ依頼を確認</li>
+            <li>利益・アクセス分析で改善点を見る</li>
+          </ol>
+        </details>
+      </div>`;
+    el.querySelectorAll('[data-exec-start]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const a = btn.dataset.execStart;
+        if (a === 'demo') scrollToElement('#demo-data-panel');
+        else if (a === 'home') scrollToElement('#executive-home');
+        else if (a === 'reception') goToReception();
+      });
+    });
+  }
+
+  function updateExecutiveSectionBadges(ctx) {
+    const followBadge = document.getElementById('exec-follow-badge');
+    const analyticsBadge = document.getElementById('exec-analytics-badge');
+    const follow = ctx.followUpSection || {};
+    const followCount = (follow.thanksCount || 0) + (follow.reviewCount || 0);
+    if (followBadge) {
+      followBadge.textContent = followCount ? ` ${followCount}件` : '';
+      followBadge.classList.toggle('exec-section-badge-active', followCount > 0);
+    }
+    const analyticsLines = (ctx.analyticsDemandSection && ctx.analyticsDemandSection.lines || []).length
+      + (ctx.analyticsDemandSection && ctx.analyticsDemandSection.demandLines || []).length;
+    if (analyticsBadge) {
+      analyticsBadge.textContent = analyticsLines ? ' あり' : '';
+      analyticsBadge.classList.toggle('exec-section-badge-active', analyticsLines > 0);
+    }
+  }
+
   function renderExecutiveHome() {
     const ctx = buildExecutiveContext();
     lastExecutiveContext = ctx;
@@ -1089,7 +1181,9 @@
       }
     }
 
+    renderExecutiveHomeStartGuide(summary.isEmpty);
     renderExecutiveHomeQuickActions();
+    updateExecutiveSectionBadges(ctx);
 
     const conclusionEl = document.getElementById('exec-home-conclusion');
     if (conclusionEl) {
@@ -1927,6 +2021,16 @@
     return '';
   }
 
+  function getDailyTaskSourceLabel(task) {
+    if (!task) return 'タスク';
+    if (task.intakeId) return '受付';
+    if (task.workOrderId) return '作業予定';
+    if (task.leadId) return '営業';
+    if (task.pickupDedupeKey) return '需要';
+    if (task.type === 'manual') return '手動';
+    return '売上';
+  }
+
   function renderDailyActionTaskCard(task, options) {
     const opts = options || {};
     const today = TODAY();
@@ -1936,15 +2040,16 @@
     const priorityClass = task.priority === '高' ? 'high' : task.priority === '中' ? 'mid' : 'low';
     const statusLabel = getDailyTaskStatusLabel(task, today);
     const showActions = !isDone && !isSnoozedAway && opts.showActions !== false;
+    const sourceLabel = getDailyTaskSourceLabel(task);
+    const reasonLine = (task.reason || task.action || '').slice(0, 80);
     const openBtn = task.type !== 'manual' && task.openTarget
       ? `<button type="button" class="btn btn-sm btn-secondary" data-daily-task-open="${esc(task.id)}">開く</button>` : '';
     const actionsHtml = showActions ? `
       <div class="daily-task-actions">
+        <button type="button" class="btn btn-sm btn-primary" data-daily-task-done="${esc(task.id)}">完了</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-daily-task-tomorrow="${esc(task.id)}">明日</button>
         ${openBtn}
         <button type="button" class="btn btn-sm btn-secondary" data-daily-task-edit="${esc(task.id)}">編集</button>
-        <button type="button" class="btn btn-sm btn-primary" data-daily-task-done="${esc(task.id)}">完了</button>
-        <button type="button" class="btn btn-sm btn-secondary" data-daily-task-snooze="${esc(task.id)}">後回し</button>
-        <button type="button" class="btn btn-sm btn-secondary" data-daily-task-tomorrow="${esc(task.id)}">明日に回す</button>
       </div>` : '';
     const memoHtml = opts.compact
       ? (task.memo ? `<p class="daily-task-memo-text">${esc(task.memo)}</p>` : '')
@@ -1954,16 +2059,14 @@
     const doneMeta = isDone && opts.showCompletedAt
       ? `<p class="daily-task-done-time">完了：${esc(formatTaskCompletedAt(task.completedAt))}</p>` : '';
     return `
-      <div class="daily-task-card daily-task-${priorityClass}${isDone ? ' daily-task-done' : ''}${isSnoozed || isSnoozedAway ? ' daily-task-snoozed' : ''}" data-task-id="${esc(task.id)}">
+      <div class="daily-task-card daily-task-v2 daily-task-${priorityClass}${isDone ? ' daily-task-done' : ''}${isSnoozed || isSnoozedAway ? ' daily-task-snoozed' : ''}" data-task-id="${esc(task.id)}">
         <div class="daily-task-header">
-          <span class="daily-task-priority priority-${priorityClass}">${esc(task.priority)}</span>
           <strong class="daily-task-title">${esc(task.title)}</strong>
-          ${task.type === 'manual' ? '<span class="daily-task-manual-badge">手動</span>' : ''}
+          <span class="exec-source-badge daily-task-source-badge">${esc(sourceLabel)}</span>
           ${statusLabel ? `<span class="daily-task-status">${esc(statusLabel)}</span>` : ''}
         </div>
-        <p class="daily-task-meta">対象：${esc(task.targetName)}</p>
-        <p class="daily-task-meta">理由：${esc(task.reason)}</p>
-        <p class="daily-task-meta">やること：${esc(task.action)}</p>
+        ${reasonLine ? `<p class="daily-task-reason">${esc(reasonLine)}</p>` : ''}
+        ${task.targetName ? `<p class="daily-task-target">対象：${esc(task.targetName)}</p>` : ''}
         ${memoHtml}
         ${doneMeta}
         ${actionsHtml}
@@ -2051,26 +2154,33 @@
       parts.push('<p class="placeholder-text">今日のタスクはまだありません。上のフォームから1件追加するか、売上・営業先を登録すると自動で出ます。</p>');
     } else {
       if (active.length) {
-        active.slice(0, 8).forEach(t => parts.push(renderDailyActionTaskCard(t, { showActions: true })));
+        const visible = active.slice(0, 5);
+        const hidden = active.slice(5);
+        visible.forEach(t => parts.push(renderDailyActionTaskCard(t, { showActions: true })));
+        if (hidden.length) {
+          parts.push(`<details class="daily-tasks-more"><summary>すべて見る（あと${hidden.length}件）</summary>`);
+          hidden.forEach(t => parts.push(renderDailyActionTaskCard(t, { showActions: true })));
+          parts.push('</details>');
+        }
       } else if (!snoozedToday.length && !snoozedAway.length && !done.length) {
         parts.push('<p class="placeholder-text">今日対応のタスクはありません。期限が来たタスクや手動追加がここに表示されます。</p>');
       }
       if (snoozedToday.length || snoozedAway.length) {
+        parts.push('<details class="daily-tasks-snoozed-collapse"><summary>後回し / 明日に回し済み</summary>');
         parts.push('<div class="daily-task-snoozed-section">');
-        parts.push('<p class="daily-task-snoozed-heading label-muted">後回し / 明日に回し済み</p>');
         snoozedToday.forEach(t => parts.push(renderDailyActionTaskCard(t, { showActions: true })));
         snoozedAway.forEach(t => parts.push(renderDailyActionTaskCard(t, { showActions: false, compact: true })));
-        parts.push('</div>');
+        parts.push('</div></details>');
       }
       if (done.length) {
+        parts.push('<details class="daily-tasks-done-collapse"><summary>完了済み（' + done.length + '件）</summary>');
         parts.push('<div class="daily-task-done-section">');
-        parts.push('<p class="daily-task-done-heading label-muted">完了済み</p>');
-        done.slice(0, 3).forEach(t => parts.push(renderDailyActionTaskCard(t, {
+        done.slice(0, 5).forEach(t => parts.push(renderDailyActionTaskCard(t, {
           showActions: false,
           compact: true,
           showCompletedAt: true
         })));
-        parts.push('</div>');
+        parts.push('</div></details>');
       }
     }
     el.innerHTML = parts.join('');
@@ -2490,8 +2600,8 @@
         ? 'Budilを初めて使う方・デモを見る方向けのセットアップ手順です。'
         : 'まずはこの順番で進めると、Budilの流れがつかめます。'}</p>
       ${profileHint}
-      <h3 class="onboarding-subtitle">まずやること</h3>
-      <ol class="onboarding-steps">${ONBOARDING_STEPS.map((step, i) => {
+      <h3 class="onboarding-subtitle">まずやること（3ステップ）</h3>
+      <ol class="onboarding-steps">${ONBOARDING_STEPS.slice(0, 3).map((step, i) => {
         const done = status[step.key];
         return `<li class="onboarding-step ${done ? 'onboarding-step-done' : ''}">
           <span class="onboarding-step-num">${i + 1}</span>
@@ -2500,6 +2610,26 @@
           ${done ? '' : `<button type="button" class="btn btn-sm ${i === 0 ? 'btn-primary' : 'btn-secondary'}" data-onboarding-action="${esc(step.action)}">${esc(step.btn)}</button>`}
         </li>`;
       }).join('')}</ol>
+      ${mode !== 'detail' ? `<details class="onboarding-more-steps">
+        <summary>残りのステップを見る</summary>
+        <ol class="onboarding-steps" start="4">${ONBOARDING_STEPS.slice(3).map((step, i) => {
+          const done = status[step.key];
+          return `<li class="onboarding-step ${done ? 'onboarding-step-done' : ''}">
+            <span class="onboarding-step-num">${i + 4}</span>
+            <span class="onboarding-step-label">${esc(step.label)}</span>
+            <span class="onboarding-step-status">${done ? '完了 ✓' : '未完了'}</span>
+            ${done ? '' : `<button type="button" class="btn btn-sm btn-secondary" data-onboarding-action="${esc(step.action)}">${esc(step.btn)}</button>`}
+          </li>`;
+        }).join('')}</ol>
+      </details>` : `<ol class="onboarding-steps" start="4">${ONBOARDING_STEPS.slice(3).map((step, i) => {
+        const done = status[step.key];
+        return `<li class="onboarding-step ${done ? 'onboarding-step-done' : ''}">
+          <span class="onboarding-step-num">${i + 4}</span>
+          <span class="onboarding-step-label">${esc(step.label)}</span>
+          <span class="onboarding-step-status">${done ? '完了 ✓' : '未完了'}</span>
+          ${done ? '' : `<button type="button" class="btn btn-sm btn-secondary" data-onboarding-action="${esc(step.action)}">${esc(step.btn)}</button>`}
+        </li>`;
+      }).join('')}</ol>`}
       <div class="onboarding-workflow-hint">
         <h3 class="onboarding-subtitle">受付〜売上の流れ</h3>
         <ul class="onboarding-workflow-list">
@@ -3612,7 +3742,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.0</span>
+        <span class="business-report-version">v4.0.1</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'

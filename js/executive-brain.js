@@ -1,8 +1,8 @@
 /**
- * Budil v4.0 - 経営司令塔ホーム（毎朝5分・全番頭統合）
+ * Budil v4.0.1 - 経営司令塔ホーム（毎朝5分・全番頭統合）
  */
 const ExecutiveBrain = {
-  VERSION: 'v4.0',
+  VERSION: 'v4.0.1',
 
   CHECK_ITEMS: [
     { id: 'workOrders', label: '作業予定を確認した' },
@@ -15,18 +15,20 @@ const ExecutiveBrain = {
   ],
 
   QUICK_LINKS: [
-    { id: 'reception', label: '受付・予約番頭', view: 'reception' },
-    { id: 'work-order', label: '予約・作業予定番頭', view: 'work-order' },
-    { id: 'revenue', label: '売上番頭', view: 'revenue' },
-    { id: 'profit', label: '利益番頭', view: 'profit' },
-    { id: 'follow-up', label: '作業後フォロー番頭', view: 'follow-up' },
-    { id: 'analytics', label: 'アナリティクス番頭', view: 'analytics' },
-    { id: 'pickup', label: '需要番頭', view: 'pickup' },
-    { id: 'area', label: 'エリア番頭', view: 'area' },
-    { id: 'sales', label: '営業番頭', view: 'sales' },
-    { id: 'report', label: '経営レポート', action: 'report' },
-    { id: 'diagnostic', label: 'データ診断', action: 'diagnostic' },
-    { id: 'backup', label: 'バックアップ', action: 'backup' }
+    { id: 'reception', label: '受付番頭を開く', view: 'reception', tier: 'primary' },
+    { id: 'work-order', label: '作業予定番頭を開く', view: 'work-order', tier: 'primary' },
+    { id: 'revenue', label: '売上を登録', view: 'revenue', tier: 'primary' },
+    { id: 'tasks', label: '今日やることを開く', action: 'tasks', tier: 'primary' },
+    { id: 'profit', label: '利益番頭を開く', view: 'profit', tier: 'primary' },
+    { id: 'analytics', label: 'アナリティクス番頭', view: 'analytics', tier: 'primary' },
+    { id: 'pickup', label: '需要番頭', view: 'pickup', tier: 'secondary' },
+    { id: 'area', label: 'エリア番頭', view: 'area', tier: 'secondary' },
+    { id: 'sales', label: '営業番頭', view: 'sales', tier: 'secondary' },
+    { id: 'follow-up', label: '作業後フォロー', view: 'follow-up', tier: 'secondary' },
+    { id: 'report', label: '経営レポート', action: 'report', tier: 'secondary' },
+    { id: 'diagnostic', label: 'データ診断', action: 'diagnostic', tier: 'secondary' },
+    { id: 'backup', label: 'バックアップ', action: 'backup', tier: 'secondary' },
+    { id: 'kurokuro', label: 'クロクロ調査プロンプト', action: 'kurokuro', tier: 'secondary' }
   ],
 
   hasHomeData(ctx) {
@@ -540,6 +542,25 @@ const ExecutiveBrain = {
 
   getQuickLinks() {
     return this.QUICK_LINKS.slice();
+  },
+
+  getPrimaryQuickLinks() {
+    return this.QUICK_LINKS.filter(l => l.tier === 'primary');
+  },
+
+  getSecondaryQuickLinks() {
+    return this.QUICK_LINKS.filter(l => l.tier !== 'primary');
+  },
+
+  splitWarningsForDisplay(warnings) {
+    const list = warnings || [];
+    const primary = list.filter(w => w.level === '重大' || w.level === '注意');
+    const review = list.filter(w => w.level === '確認');
+    return {
+      visible: primary.slice(0, 3),
+      more: primary.slice(3),
+      review
+    };
   },
 
   normalizeCheckState(raw) {

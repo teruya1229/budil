@@ -7,7 +7,7 @@
   --bg-input: #0d1117;
   --border: #2d3a4d;
   --text: #e6edf3;
-  --text-muted: #8b9cb3;
+  --text-muted: #a8b8cc;
   --primary: #3b82f6;
   --primary-hover: #2563eb;
   --accent: #10b981;
@@ -6449,14 +6449,360 @@ body {
   }
 }
 
+/* v4.0.1 見やすさ・操作性改善 */
+.card-executive-home.card-command-tower {
+  border: 2px solid rgba(59, 130, 246, 0.55);
+  background: var(--bg-card);
+  color: var(--text);
+}
+
+.card-command-tower .exec-home-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.card-command-tower .exec-home-subtitle {
+  color: #b8c9dc;
+  font-size: 0.9rem;
+}
+
+.card-command-tower .exec-home-version {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.18);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+.card-command-tower .exec-home-block {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.card-command-tower .exec-home-block h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.card-command-tower .exec-home-block-hero {
+  border-color: rgba(59, 130, 246, 0.45);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.card-command-tower .exec-home-block-priority {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.card-command-tower .exec-home-block-warnings {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.card-command-tower .exec-home-conclusion p {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.card-command-tower .exec-home-empty {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed var(--border);
+  color: #c5d3e3;
+}
+
+.card-command-tower .placeholder-text {
+  color: #a8b8cc;
+}
+
+.exec-quick-section {
+  margin-bottom: 1rem;
+}
+
+.exec-quick-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #b8c9dc;
+  margin: 0 0 0.5rem;
+  text-transform: none;
+}
+
+.exec-home-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.exec-quick-primary .exec-quick-btn-primary {
+  min-height: 2.75rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.exec-quick-secondary {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.exec-source-badge {
+  font-size: 0.72rem;
+  color: #bfdbfe;
+  background: rgba(59, 130, 246, 0.2);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.exec-priority-item,
+.exec-work-item,
+.exec-reception-item,
+.exec-follow-item {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.card-command-tower .exec-priority-title {
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.card-command-tower .exec-priority-reason,
+.card-command-tower .exec-work-meta,
+.card-command-tower .exec-work-status,
+.card-command-tower .exec-follow-summary {
+  color: #b8c9dc;
+  font-size: 0.88rem;
+}
+
+.card-command-tower .exec-work-warn {
+  color: #fbbf24;
+  font-weight: 500;
+}
+
+.card-command-tower .exec-home-revenue-grid span {
+  color: #a8b8cc;
+  font-size: 0.82rem;
+}
+
+.card-command-tower .exec-home-revenue-grid strong {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 0.15rem;
+}
+
+.card-command-tower .exec-warning-text {
+  color: var(--text);
+  flex: 1 1 160px;
+}
+
+.exec-collapse {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+
+.exec-collapse summary {
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.exec-collapse summary::-webkit-details-marker {
+  display: none;
+}
+
+.exec-collapse summary::before {
+  content: '▸';
+  color: #60a5fa;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.exec-collapse[open] summary::before {
+  content: '▾';
+}
+
+.exec-collapse-body {
+  padding: 0 1rem 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.exec-section-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.exec-section-badge-active {
+  color: #fbbf24;
+}
+
+.exec-warnings-more {
+  margin-top: 0.5rem;
+}
+
+.exec-warnings-more summary {
+  cursor: pointer;
+  color: #60a5fa;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 0.35rem 0;
+}
+
+.exec-home-start-guide {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.exec-start-guide-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.exec-start-guide-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.exec-start-guide-steps li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  font-size: 0.9rem;
+  color: #d1dce8;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.exec-start-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background: #10b981;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.exec-start-guide-more {
+  margin-top: 0.5rem;
+}
+
+.exec-start-guide-more summary {
+  cursor: pointer;
+  color: #60a5fa;
+  font-size: 0.85rem;
+}
+
+.exec-start-guide-full {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+  color: #b8c9dc;
+  font-size: 0.88rem;
+}
+
+/* 今日やること v4.0.1 */
+.daily-task-v2 .daily-task-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.daily-task-v2 .daily-task-reason {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+  color: #b8c9dc;
+  line-height: 1.45;
+}
+
+.daily-task-v2 .daily-task-target {
+  margin: 0.15rem 0;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.daily-task-source-badge {
+  margin-left: auto;
+}
+
+.daily-tasks-more summary,
+.daily-tasks-snoozed-collapse summary,
+.daily-tasks-done-collapse summary,
+.onboarding-more-steps summary {
+  cursor: pointer;
+  color: #60a5fa;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 0.5rem 0;
+}
+
+.card-daily-action-tasks .placeholder-text {
+  color: #a8b8cc;
+}
+
+.card-daily-action-towers .daily-task-meta,
+.daily-task-v2 .daily-task-memo-text {
+  color: #a8b8cc;
+}
+
+.label-muted {
+  color: #a8b8cc !important;
+}
+
+@media (min-width: 640px) {
+  .exec-home-quick-actions.exec-quick-primary {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 900px) {
+  .exec-home-quick-actions.exec-quick-primary {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
 @media (max-width: 767px) {
-  .exec-home-quick-actions .btn {
-    font-size: 0.78rem;
-    padding: 0.35rem 0.5rem;
+  .exec-home-quick-actions {
+    grid-template-columns: 1fr;
   }
 
+  .exec-quick-primary .exec-quick-btn-primary,
   .exec-priority-actions .btn,
-  .exec-work-actions .btn {
-    min-height: 2.25rem;
+  .exec-work-actions .btn,
+  .daily-task-actions .btn {
+    min-height: 2.75rem;
+    font-size: 0.9rem;
+  }
+
+  .card-command-tower .exec-home-revenue-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .card-command-tower .exec-home-revenue-grid strong {
+    font-size: 1.05rem;
   }
 }

@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.0</small>
+          <small>AI経営脳みそ v4.0.1</small>
         </div>
       </div>
       <nav class="nav">
@@ -64,7 +64,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.0</small>
+        <small>Budil v4.0.1</small>
       </div>
     </aside>
 
@@ -82,47 +82,63 @@
               <h2>経営司令塔ホーム</h2>
               <p class="exec-home-subtitle">毎朝5分で、今日やること・売上・利益・需要・受付・作業予定を確認</p>
             </div>
-            <span class="exec-home-version">v4.0</span>
+            <span class="exec-home-version">v4.0.1</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
-          <div id="exec-home-quick-actions" class="exec-home-quick-actions"></div>
+          <div id="exec-home-start-guide" class="exec-home-start-guide hidden"></div>
+          <div class="exec-quick-section">
+            <p class="exec-quick-label">よく使うメニュー</p>
+            <div id="exec-home-quick-actions-primary" class="exec-home-quick-actions exec-quick-primary"></div>
+          </div>
           <div class="exec-tower-grid">
             <div class="exec-home-block exec-home-block-hero exec-tower-span-full">
               <h3>今日の結論</h3>
               <div id="exec-home-conclusion" class="exec-home-conclusion"></div>
             </div>
             <div class="exec-home-block exec-home-block-priority exec-tower-span-full">
-              <h3>今日の最優先3つ</h3>
+              <h3>最優先3つ</h3>
               <div id="exec-home-top-priorities" class="exec-home-top-priorities"></div>
             </div>
             <div class="exec-home-block exec-tower-block-work">
-              <h3>今日の作業・予約</h3>
+              <h3>今日の作業</h3>
               <div id="exec-home-work-orders" class="exec-home-work-orders"></div>
             </div>
             <div class="exec-home-block exec-tower-block-reception">
-              <h3>新規受付・日程調整</h3>
+              <h3>新規受付</h3>
               <div id="exec-home-reception" class="exec-home-reception"></div>
             </div>
             <div class="exec-home-block exec-tower-block-revenue">
-              <h3>売上・利益状況</h3>
+              <h3>売上と利益</h3>
               <div id="exec-home-revenue-profit" class="exec-home-revenue-profit"></div>
             </div>
-            <div class="exec-home-block exec-tower-block-followup">
-              <h3>作業後フォロー・口コミ</h3>
-              <div id="exec-home-follow-up" class="exec-home-follow-up"></div>
-            </div>
-            <div class="exec-home-block exec-tower-block-analytics exec-tower-span-full">
-              <h3>需要・アナリティクス</h3>
-              <div id="exec-home-analytics-demand" class="exec-home-analytics-demand"></div>
-            </div>
             <div class="exec-home-block exec-home-block-warnings exec-tower-span-full">
-              <h3>注意・保留</h3>
+              <h3>注意が必要なこと</h3>
               <div id="exec-home-warnings" class="exec-home-warnings"></div>
             </div>
-            <div class="exec-home-block exec-home-block-check exec-tower-span-full">
-              <h3>今日の確認完了</h3>
-              <div id="exec-home-check" class="exec-home-check"></div>
-            </div>
+            <details class="exec-collapse exec-tower-span-full" id="exec-collapse-follow">
+              <summary>作業後フォロー・口コミ<span id="exec-follow-badge" class="exec-section-badge"></span></summary>
+              <div class="exec-collapse-body">
+                <div id="exec-home-follow-up" class="exec-home-follow-up"></div>
+              </div>
+            </details>
+            <details class="exec-collapse exec-tower-span-full" id="exec-collapse-analytics">
+              <summary>需要・アクセス分析<span id="exec-analytics-badge" class="exec-section-badge"></span></summary>
+              <div class="exec-collapse-body">
+                <div id="exec-home-analytics-demand" class="exec-home-analytics-demand"></div>
+              </div>
+            </details>
+            <details class="exec-collapse exec-tower-span-full" id="exec-collapse-quick-more">
+              <summary>その他のメニュー</summary>
+              <div class="exec-collapse-body">
+                <div id="exec-home-quick-actions-secondary" class="exec-home-quick-actions exec-quick-secondary"></div>
+              </div>
+            </details>
+            <details class="exec-collapse exec-tower-span-full" id="exec-collapse-check">
+              <summary>今日の確認完了</summary>
+              <div class="exec-collapse-body">
+                <div id="exec-home-check" class="exec-home-check"></div>
+              </div>
+            </details>
           </div>
         </div>
 
@@ -280,7 +296,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.0</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.0.1</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
