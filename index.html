@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v3.9</small>
+          <small>AI経営脳みそ v3.9.1</small>
         </div>
       </div>
       <nav class="nav">
@@ -64,7 +64,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v3.9</small>
+        <small>Budil v3.9.1</small>
       </div>
     </aside>
 
@@ -79,7 +79,7 @@
         <div id="executive-home" class="card card-wide card-executive-home">
           <div class="exec-home-header">
             <h2>経営番頭ホーム</h2>
-            <span class="exec-home-version">v3.9</span>
+            <span class="exec-home-version">v3.9.1</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <div id="exec-home-quick-actions" class="exec-home-quick-actions"></div>
@@ -1875,8 +1875,46 @@
           <p id="analytics-policy-text" class="analytics-policy-text"></p>
         </div>
 
+        <div class="card card-wide card-browser-bantou">
+          <h2>ブラウザー番頭連携</h2>
+          <p class="browser-bantou-lead">ブラウザー番頭にGA4/Search Console/GBPを確認させ、出力を貼り付けて複数ページをまとめて取り込みます。</p>
+
+          <div class="browser-bantou-section">
+            <h3>今日の確認プロンプト</h3>
+            <pre id="browser-bantou-prompt-preview" class="browser-bantou-prompt-preview"></pre>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-browser-bantou-copy-prompt">ブラウザー番頭プロンプトをコピー</button>
+          </div>
+
+          <div class="browser-bantou-section">
+            <h3>ブラウザー番頭レポートを貼り付け</h3>
+            <textarea id="browser-bantou-paste" class="browser-bantou-paste" rows="12" placeholder="ブラウザー番頭の日次アナリティクスレポートをここに貼り付け"></textarea>
+            <div class="browser-bantou-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-browser-bantou-parse">レポートを解析</button>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-browser-bantou-save" disabled>解析結果をまとめて保存</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-browser-bantou-clear-paste">貼り付け欄をクリア</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-browser-bantou-sample">サンプルを入れる</button>
+            </div>
+          </div>
+
+          <div id="browser-bantou-errors" class="browser-bantou-errors hidden"></div>
+
+          <div id="browser-bantou-preview" class="browser-bantou-preview hidden">
+            <h3>レポート解析プレビュー</h3>
+            <div id="browser-bantou-preview-summary" class="browser-bantou-preview-summary"></div>
+            <div id="browser-bantou-preview-pages" class="browser-bantou-preview-pages"></div>
+            <div id="browser-bantou-preview-tasks" class="browser-bantou-preview-tasks"></div>
+            <div id="browser-bantou-preview-demand" class="browser-bantou-preview-demand"></div>
+          </div>
+
+          <details class="browser-bantou-sample-details">
+            <summary>サンプル出力表示</summary>
+            <pre id="browser-bantou-sample-text" class="browser-bantou-sample-text"></pre>
+          </details>
+        </div>
+
         <div class="card card-wide card-analytics-comment">
           <h2>今日のページ需要サマリー</h2>
+          <div id="analytics-today-conclusion" class="analytics-today-conclusion"></div>
           <div id="analytics-summary" class="analytics-summary-grid"></div>
         </div>
 

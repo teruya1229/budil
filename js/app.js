@@ -3298,6 +3298,21 @@
       const analyticsSection = AnalyticsBrain.buildReportSection(c.analyticsCtx, periodLabel);
       if (analyticsSection) {
         lines.push(analyticsSection);
+        const browserPickups = (Storage.getDemandPickups() || []).filter(p =>
+          p.source === 'ブラウザー番頭/アナリティクス'
+        );
+        const browserTasks = (Storage.getDailyActionTasksData().manualTasks || []).filter(t =>
+          (t.pickupDedupeKey || '').startsWith('browser-bantou|')
+          || (t.reason || '') === 'ブラウザー番頭/アナリティクス'
+        );
+        if (browserPickups.length) {
+          lines.push('需要番頭へ送った候補（ブラウザー番頭）：');
+          browserPickups.slice(0, 5).forEach(p => lines.push(`・${p.topic}`));
+        }
+        if (browserTasks.length) {
+          lines.push('今日やること化した候補（ブラウザー番頭）：');
+          browserTasks.slice(0, 5).forEach(t => lines.push(`・${t.title}`));
+        }
         lines.push('');
       }
     }
@@ -3371,7 +3386,8 @@
       '以下はBudilの経営レポートです。',
       `${areaIndustry}として、売上・営業・需要・投稿・広告の状況を見て、次の7日間で優先すべき行動を3〜5個に絞って提案してください。`,
       '売上だけでなく、粗利・支出・広告費・遠方案件も見て、次の7日間の優先行動を提案してください。',
-      'GA4/Search Consoleの手入力データから、どのLPを改善すべきか、どの記事・SNS投稿を出すべきか、広告を使うべきかを判断してください。'
+      'GA4/Search Consoleの手入力データから、どのLPを改善すべきか、どの記事・SNS投稿を出すべきか、広告を使うべきかを判断してください。',
+      'ブラウザー番頭が確認したGA4/Search Console/GBPの出力も踏まえて、LP改善・記事/SNS・広告判断をしてください。'
     ];
     if (profileBlock) {
       intro.push('');
@@ -3552,7 +3568,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v3.9</span>
+        <span class="business-report-version">v3.9.1</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -7445,17 +7461,35 @@
 
   // ── アナリティクス番頭 ──
   let selectedAnalyticsId = null;
+  let lastBrowserBantouPreview = null;
 
   function getAnalyticsContext(opts) {
     const today = TODAY();
-    let records = Storage.getAnalyticsRecords();
+    const allRecords = Storage.getAnalyticsRecords();
+    let records = allRecords;
     const range = opts && opts.period;
     if (range && range.startDate && range.endDate) {
-      records = records.filter(r =>
+      records = allRecords.filter(r =>
         r && r.date && r.date >= range.startDate && r.date <= range.endDate
       );
     }
-    return AnalyticsBrain.buildContext(records, today);
+    const activeAll = AnalyticsBrain.filterActive(range ? records : allRecords);
+    const ctx = AnalyticsBrain.buildContext(activeAll, today);
+    ctx.browserBantou = AnalyticsBrain.getBrowserBantouMeta(
+      range ? records : allRecords, today
+    );
+    if (!range) {
+      const displayRecords = AnalyticsBrain.selectRecordsForDisplay(allRecords, today);
+      const displayCtx = AnalyticsBrain.buildContext(displayRecords, today);
+      ctx.todayConclusion = displayCtx.todayConclusion;
+      ctx.strongCount = displayCtx.strongCount;
+      ctx.bounceCount = displayCtx.bounceCount;
+      ctx.priority = displayCtx.priority;
+      ctx.adReadiness = displayCtx.adReadiness;
+      ctx.topDemand = displayCtx.topDemand;
+      ctx.highBounce = displayCtx.highBounce;
+    }
+    return ctx;
   }
 
   function findAnalyticsRecord(id) {
@@ -7572,15 +7606,256 @@
   }
 
   function renderAnalyticsSummary(ctx) {
+    const conclusionEl = document.getElementById('analytics-today-conclusion');
+    if (conclusionEl) {
+      const conclusion = ctx.todayConclusion || '';
+      conclusionEl.innerHTML = conclusion
+        ? `<strong>今日の結論：</strong>${esc(conclusion)}`
+        : '';
+    }
     const el = document.getElementById('analytics-summary');
     if (!el) return;
     const ad = ctx.adReadiness || {};
+    const bb = ctx.browserBantou || {};
+    const adLabel = bb.adDecision || ad.label || '—';
     el.innerHTML = `
       <div class="analytics-summary-item"><span>登録ページ</span><strong>${(ctx.records || []).length}件</strong></div>
       <div class="analytics-summary-item"><span>需要強い</span><strong>${ctx.strongCount || 0}件</strong></div>
       <div class="analytics-summary-item"><span>離脱注意</span><strong>${ctx.bounceCount || 0}件</strong></div>
-      <div class="analytics-summary-item"><span>広告判断</span><strong>${esc(ad.label || '—')}</strong></div>
+      <div class="analytics-summary-item"><span>広告判断</span><strong>${esc(adLabel)}</strong></div>
+      ${bb.hasTodayImport ? `<div class="analytics-summary-item"><span>ブラウザー番頭</span><strong>今日取り込み済</strong></div>` : ''}
       ${ctx.priority ? `<p class="analytics-summary-priority">${esc(ctx.priority.actionSummary || ctx.priority.pageName)}</p>` : ''}`;
+  }
+
+  function renderBrowserBantouPrompt() {
+    const prompt = AnalyticsBrain.buildBrowserBantouPrompt(Storage.getSettings());
+    const previewEl = document.getElementById('browser-bantou-prompt-preview');
+    const sampleEl = document.getElementById('browser-bantou-sample-text');
+    const shortPreview = prompt.length > 600 ? prompt.slice(0, 600) + '\n…（コピーで全文）' : prompt;
+    if (previewEl) previewEl.textContent = shortPreview;
+    if (sampleEl) sampleEl.textContent = AnalyticsBrain.BROWSER_BANTOU_SAMPLE;
+    return prompt;
+  }
+
+  function copyBrowserBantouPrompt() {
+    const prompt = AnalyticsBrain.buildBrowserBantouPrompt(Storage.getSettings());
+    copyText(prompt).then(() => {
+      alert('ブラウザー番頭プロンプトをコピーしました。');
+    }).catch(() => alert('コピーに失敗しました。'));
+  }
+
+  function parseBrowserBantouPaste() {
+    const text = document.getElementById('browser-bantou-paste')?.value || '';
+    const parsed = AnalyticsBrain.parseBrowserBantouReport(text);
+    parsed.rawText = text;
+    const preview = AnalyticsBrain.buildImportPreview(parsed, Storage.getAnalyticsRecords());
+    lastBrowserBantouPreview = preview;
+    renderBrowserBantouPreview(preview);
+    const saveBtn = document.getElementById('btn-browser-bantou-save');
+    if (saveBtn) saveBtn.disabled = !preview.pages.length || preview.errors.length > 0;
+    return preview;
+  }
+
+  function renderBrowserBantouPreview(preview) {
+    const previewPanel = document.getElementById('browser-bantou-preview');
+    const errorsEl = document.getElementById('browser-bantou-errors');
+    if (!preview) {
+      if (previewPanel) previewPanel.classList.add('hidden');
+      if (errorsEl) errorsEl.classList.add('hidden');
+      return;
+    }
+
+    const dupIds = new Set((preview.duplicates || []).map(d => d.record.pageName + '|' + d.record.date));
+
+    if (errorsEl) {
+      const msgs = [...(preview.errors || []), ...(preview.warnings || [])];
+      if (msgs.length) {
+        errorsEl.classList.remove('hidden');
+        errorsEl.classList.toggle('is-warning', !preview.errors.length);
+        errorsEl.innerHTML = `<strong>${preview.errors.length ? '解析エラー' : '注意'}</strong><ul>${msgs.map(m => `<li>${esc(m)}</li>`).join('')}</ul>`;
+      } else {
+        errorsEl.classList.add('hidden');
+        errorsEl.innerHTML = '';
+      }
+    }
+
+    if (previewPanel) previewPanel.classList.remove('hidden');
+
+    const summaryEl = document.getElementById('browser-bantou-preview-summary');
+    if (summaryEl) {
+      summaryEl.innerHTML = `
+        <p><strong>取り込み日：</strong>${esc(preview.date || '—')}</p>
+        <p><strong>全体コメント：</strong>${esc(preview.overallComment || '—')}</p>
+        <p><strong>広告判断：</strong>${esc(preview.adDecision || '—')}</p>
+        <p><strong>ページ件数：</strong>${preview.pageCount || 0}件（形式：${esc(preview.sourceFormat || '—')}）</p>`;
+    }
+
+    const pagesEl = document.getElementById('browser-bantou-preview-pages');
+    if (pagesEl) {
+      pagesEl.innerHTML = (preview.pages || []).map(r => {
+        const isDup = dupIds.has(r.pageName + '|' + r.date);
+        const action = (r.recommendedActions || [])[0]?.text || r.recommendedActionText || '—';
+        return `<div class="browser-bantou-preview-page${isDup ? ' is-duplicate' : ''}">
+          <strong>${esc(r.pageName)}</strong>${isDup ? '<span class="browser-bantou-dup-label">重複候補</span>' : ''}
+          <p class="analytics-meta">表示${r.views} / 直帰${r.bounceRate}% / スコア${r.demandScore}（${esc(r.scoreLabel)}）</p>
+          <p class="analytics-meta">診断：${esc((r.diagnosis || '').split('\n')[0])}</p>
+          <p class="analytics-meta">推奨：${esc(action)}</p>
+        </div>`;
+      }).join('') || '<p class="placeholder-text">ページデータがありません。</p>';
+    }
+
+    const tasksEl = document.getElementById('browser-bantou-preview-tasks');
+    if (tasksEl) {
+      const tasks = preview.todayTasks || [];
+      tasksEl.innerHTML = tasks.length ? `
+        <h4>今日やること候補</h4>
+        <ul class="browser-bantou-candidate-list">${tasks.map((t, i) => `
+          <li><span>${esc(t)}</span>
+            <button type="button" class="btn btn-sm btn-secondary" data-browser-task="${i}">今日やることに追加</button>
+          </li>`).join('')}</ul>
+        <button type="button" class="btn btn-sm btn-secondary" id="btn-browser-bantou-add-all-tasks">候補をすべて追加</button>`
+        : '';
+      tasksEl.querySelectorAll('[data-browser-task]').forEach(btn => {
+        btn.addEventListener('click', () => addBrowserBantouTask(Number(btn.dataset.browserTask)));
+      });
+      const allTasksBtn = document.getElementById('btn-browser-bantou-add-all-tasks');
+      if (allTasksBtn) allTasksBtn.addEventListener('click', addAllBrowserBantouTasks);
+    }
+
+    const demandEl = document.getElementById('browser-bantou-preview-demand');
+    if (demandEl) {
+      const candidates = preview.demandCandidates || [];
+      demandEl.innerHTML = candidates.length ? `
+        <h4>需要番頭に送る候補</h4>
+        <ul class="browser-bantou-candidate-list">${candidates.map((t, i) => `
+          <li><span>${esc(t)}</span>
+            <button type="button" class="btn btn-sm btn-primary" data-browser-demand="${i}">需要番頭に送る</button>
+          </li>`).join('')}</ul>
+        <button type="button" class="btn btn-sm btn-primary" id="btn-browser-bantou-send-all-demand">候補をすべて送る</button>`
+        : '';
+      demandEl.querySelectorAll('[data-browser-demand]').forEach(btn => {
+        btn.addEventListener('click', () => sendBrowserBantouDemand(Number(btn.dataset.browserDemand)));
+      });
+      const allDemandBtn = document.getElementById('btn-browser-bantou-send-all-demand');
+      if (allDemandBtn) allDemandBtn.addEventListener('click', sendAllBrowserBantouDemand);
+    }
+  }
+
+  function saveBrowserBantouImport() {
+    const preview = lastBrowserBantouPreview;
+    if (!preview || !preview.pages.length) {
+      alert('先にレポートを解析してください。');
+      return;
+    }
+    if (preview.errors.length) {
+      alert('解析エラーがあるため保存できません。');
+      return;
+    }
+    if (preview.duplicates && preview.duplicates.length) {
+      const ok = confirm(`既存あり：上書きせず追加しますか？\n重複候補 ${preview.duplicates.length}件`);
+      if (!ok) return;
+    }
+    const text = document.getElementById('browser-bantou-paste')?.value || '';
+    preview.pages.forEach(page => {
+      Storage.addAnalyticsRecord({
+        ...page,
+        browserReportText: text.length > 500 ? text.slice(0, 500) + '…' : text
+      });
+    });
+    lastBrowserBantouPreview = null;
+    const saveBtn = document.getElementById('btn-browser-bantou-save');
+    if (saveBtn) saveBtn.disabled = true;
+    renderAnalyticsView();
+    renderDashboard();
+    alert(`${preview.pages.length}件のアナリティクスデータを保存しました。`);
+  }
+
+  function addBrowserBantouTask(index) {
+    const preview = lastBrowserBantouPreview;
+    if (!preview) return;
+    const title = (preview.todayTasks || [])[index];
+    if (!title) return;
+    const payload = AnalyticsBrain.createBrowserBantouTaskPayload(title, preview.date || TODAY());
+    const exists = Storage.getDailyActionTasksData().manualTasks.some(
+      t => t.pickupDedupeKey === payload.pickupDedupeKey
+    );
+    if (exists) {
+      alert('同じタスクは既に今日やることにあります。');
+      return;
+    }
+    Storage.addManualDailyTask({ id: 'manual_' + Storage.generateId(), ...payload });
+    renderDashboard();
+    alert('今日やることに追加しました。');
+  }
+
+  function addAllBrowserBantouTasks() {
+    const preview = lastBrowserBantouPreview;
+    if (!preview) return;
+    let added = 0;
+    (preview.todayTasks || []).forEach((title, i) => {
+      const payload = AnalyticsBrain.createBrowserBantouTaskPayload(title, preview.date || TODAY());
+      const exists = Storage.getDailyActionTasksData().manualTasks.some(
+        t => t.pickupDedupeKey === payload.pickupDedupeKey
+      );
+      if (!exists) {
+        Storage.addManualDailyTask({ id: 'manual_' + Storage.generateId(), ...payload });
+        added++;
+      }
+    });
+    renderDashboard();
+    alert(added ? `${added}件を今日やることに追加しました。` : '追加できる新しい候補はありませんでした。');
+  }
+
+  function sendBrowserBantouDemand(index) {
+    const preview = lastBrowserBantouPreview;
+    if (!preview) return;
+    const candidate = (preview.demandCandidates || [])[index];
+    if (!candidate) return;
+    const payload = AnalyticsBrain.createBrowserBantouDemandPayload(candidate, preview.date || TODAY());
+    const exists = Storage.getDemandPickups().some(p =>
+      p.source === payload.source && p.topic === payload.topic && p.date === payload.date
+    );
+    if (exists) {
+      alert('同じ需要候補は既に送付済みです。');
+      return;
+    }
+    Storage.addDemandPickup(payload);
+    renderAnalyticsView();
+    renderDashboard();
+    alert('需要番頭に送りました。');
+  }
+
+  function sendAllBrowserBantouDemand() {
+    const preview = lastBrowserBantouPreview;
+    if (!preview) return;
+    let sent = 0;
+    (preview.demandCandidates || []).forEach(candidate => {
+      const payload = AnalyticsBrain.createBrowserBantouDemandPayload(candidate, preview.date || TODAY());
+      const exists = Storage.getDemandPickups().some(p =>
+        p.source === payload.source && p.topic === payload.topic && p.date === payload.date
+      );
+      if (!exists) {
+        Storage.addDemandPickup(payload);
+        sent++;
+      }
+    });
+    renderAnalyticsView();
+    renderDashboard();
+    alert(sent ? `${sent}件を需要番頭に送りました。` : '送れる新しい候補はありませんでした。');
+  }
+
+  function fillBrowserBantouSample() {
+    const el = document.getElementById('browser-bantou-paste');
+    if (el) el.value = AnalyticsBrain.BROWSER_BANTOU_SAMPLE;
+  }
+
+  function clearBrowserBantouPaste() {
+    const el = document.getElementById('browser-bantou-paste');
+    if (el) el.value = '';
+    lastBrowserBantouPreview = null;
+    const saveBtn = document.getElementById('btn-browser-bantou-save');
+    if (saveBtn) saveBtn.disabled = true;
+    renderBrowserBantouPreview(null);
   }
 
   function renderAnalyticsRecordsList(ctx) {
@@ -7774,6 +8049,7 @@
       renderAnalyticsTopDemand(ctx);
       renderAnalyticsActionsList(ctx);
       renderAnalyticsPickupBridge(ctx);
+      renderBrowserBantouPrompt();
     } catch (err) {
       console.error('[Budil] renderAnalyticsView', err);
     }
@@ -7789,6 +8065,31 @@
     if (clearBtn && !clearBtn.dataset.bound) {
       clearBtn.dataset.bound = '1';
       clearBtn.addEventListener('click', clearAnalyticsForm);
+    }
+    const copyPromptBtn = document.getElementById('btn-browser-bantou-copy-prompt');
+    if (copyPromptBtn && !copyPromptBtn.dataset.bound) {
+      copyPromptBtn.dataset.bound = '1';
+      copyPromptBtn.addEventListener('click', copyBrowserBantouPrompt);
+    }
+    const parseBtn = document.getElementById('btn-browser-bantou-parse');
+    if (parseBtn && !parseBtn.dataset.bound) {
+      parseBtn.dataset.bound = '1';
+      parseBtn.addEventListener('click', parseBrowserBantouPaste);
+    }
+    const saveBtn = document.getElementById('btn-browser-bantou-save');
+    if (saveBtn && !saveBtn.dataset.bound) {
+      saveBtn.dataset.bound = '1';
+      saveBtn.addEventListener('click', saveBrowserBantouImport);
+    }
+    const clearPasteBtn = document.getElementById('btn-browser-bantou-clear-paste');
+    if (clearPasteBtn && !clearPasteBtn.dataset.bound) {
+      clearPasteBtn.dataset.bound = '1';
+      clearPasteBtn.addEventListener('click', clearBrowserBantouPaste);
+    }
+    const sampleBtn = document.getElementById('btn-browser-bantou-sample');
+    if (sampleBtn && !sampleBtn.dataset.bound) {
+      sampleBtn.dataset.bound = '1';
+      sampleBtn.addEventListener('click', fillBrowserBantouSample);
     }
   }
 

@@ -1,5 +1,5 @@
 /**
- * Budil v3.9 - アナリティクス番頭（GA4/Search Console手入力・需要読み取り）
+ * Budil v3.9.1 - アナリティクス番頭（手入力 + ブラウザー番頭連携取り込み）
  */
 const AnalyticsBrain = {
   PAGE_TYPES: [
@@ -65,7 +65,12 @@ const AnalyticsBrain = {
       isDemo: !!item.isDemo,
       isTest: !!item.isTest,
       createdAt: item.createdAt || '',
-      updatedAt: item.updatedAt || ''
+      updatedAt: item.updatedAt || '',
+      importSource: item.importSource || '',
+      browserReportText: item.browserReportText || '',
+      overallComment: item.overallComment || '',
+      adDecision: item.adDecision || '',
+      recommendedActionText: item.recommendedActionText || ''
     };
     return rec;
   },
@@ -254,6 +259,11 @@ const AnalyticsBrain = {
 
   enrichRecord(raw) {
     const r = this.normalizeRecord(raw);
+    if (r.recommendedActionText && !r.memo) {
+      r.memo = r.recommendedActionText;
+    } else if (r.recommendedActionText && r.memo && !r.memo.includes(r.recommendedActionText)) {
+      r.memo = `${r.memo} / ${r.recommendedActionText}`;
+    }
     const demandScore = this.calculateDemandScore(r);
     const scoreLabel = this.getScoreLabel(demandScore, r);
     const diagnosis = raw.diagnosis || this.diagnosePage(r);
@@ -330,6 +340,7 @@ const AnalyticsBrain = {
     const contentIdeas = this.getContentIdeas(active);
     const adReadiness = this.getAdReadiness(active);
     const priority = topDemand[0] || highBounce[0] || null;
+    const browserBantou = this.getBrowserBantouMeta(records, today);
     return {
       today: today || new Date().toISOString().slice(0, 10),
       records: active,
@@ -339,12 +350,586 @@ const AnalyticsBrain = {
       adReadiness,
       priority,
       strongCount: active.filter(r => r.demandScore >= 80).length,
-      bounceCount: active.filter(r => Number(r.bounceRate) >= 60 && Number(r.views) >= 10).length
+      bounceCount: active.filter(r => Number(r.bounceRate) >= 60 && Number(r.views) >= 10).length,
+      browserBantou,
+      todayConclusion: this.buildTodayConclusion(active, browserBantou)
+    };
+  },
+
+  selectRecordsForDisplay(records, today) {
+    const all = this.normalizeRecords(records);
+    const t = today || new Date().toISOString().slice(0, 10);
+    const todayBrowser = all.filter(r => r.date === t && r.importSource === 'browser-bantou');
+    if (todayBrowser.length) return todayBrowser;
+    const todayManual = all.filter(r => r.date === t && r.importSource !== 'browser-bantou');
+    if (todayManual.length) return todayManual;
+    const weekStart = new Date(t);
+    weekStart.setDate(weekStart.getDate() - 6);
+    const weekStartStr = weekStart.toISOString().slice(0, 10);
+    const last7 = all.filter(r => r.date && r.date >= weekStartStr && r.date <= t);
+    const real = last7.filter(r => !r.isDemo && !r.isTest);
+    if (real.length) return real;
+    const demo = last7.filter(r => r.isDemo || r.isTest);
+    if (demo.length) return demo;
+    const allReal = all.filter(r => !r.isDemo && !r.isTest);
+    return allReal.length ? allReal : all;
+  },
+
+  getBrowserBantouMeta(records, today) {
+    const t = today || new Date().toISOString().slice(0, 10);
+    const browser = this.normalizeRecords(records).filter(r => r.importSource === 'browser-bantou');
+    const todayBrowser = browser.filter(r => r.date === t);
+    const sorted = browser.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    const latest = sorted[0] || null;
+    const ref = todayBrowser[0] || latest;
+    return {
+      importCount: browser.length,
+      todayCount: todayBrowser.length,
+      hasTodayImport: todayBrowser.length > 0,
+      overallComment: ref ? (ref.overallComment || '') : '',
+      adDecision: ref ? (ref.adDecision || '') : '',
+      latestDate: latest ? latest.date : ''
+    };
+  },
+
+  buildTodayConclusion(records, browserBantou) {
+    const bb = browserBantou || {};
+    if (bb.hasTodayImport && (bb.overallComment || bb.adDecision)) {
+      const parts = [];
+      if (bb.overallComment) parts.push(bb.overallComment);
+      if (bb.adDecision) parts.push(bb.adDecision);
+      return parts.join(' ');
+    }
+    const active = this.filterActive(records || []);
+    const todayManual = active.filter(r => r.importSource !== 'browser-bantou');
+    if (todayManual.length && active[0]) {
+      const p = active[0];
+      return p.actionSummary || p.diagnosis || '';
+    }
+    if (active.length && active[0]) {
+      return active[0].actionSummary || active[0].diagnosis || '';
+    }
+    return '';
+  },
+
+  BROWSER_PAGE_FIELD_MAP: {
+    'ページ名': 'pageName',
+    'URL': 'url',
+    'ページ種別': 'pageType',
+    '関連サービス': 'serviceTag',
+    '表示回数': 'views',
+    'アクティブユーザー': 'activeUsers',
+    '平均エンゲージメント秒': 'avgEngagementSeconds',
+    'イベント数': 'eventCount',
+    '直帰率': 'bounceRate',
+    'CTAクリック': 'ctaClicks',
+    'LINEクリック': 'lineClicks',
+    '予約クリック': 'bookingClicks',
+    '電話クリック': 'phoneClicks',
+    '検索クエリ': 'searchQueriesText',
+    '流入元メモ': 'sourceMemo',
+    'メモ': 'memo',
+    '推奨アクション': 'recommendedActionText'
+  },
+
+  BROWSER_NUMERIC_FIELDS: [
+    'views', 'activeUsers', 'avgEngagementSeconds', 'eventCount', 'bounceRate',
+    'ctaClicks', 'lineClicks', 'bookingClicks', 'phoneClicks'
+  ],
+
+  BROWSER_BANTOU_SAMPLE: `【Budilアナリティクス取り込み】
+日付：2026-06-18
+全体コメント：FAQページがよく読まれており、家庭LPへの導線強化が有効そうです。AI帳票番頭LPも見られていますが直帰率が高めです。
+広告判断：広告はまだ不要。先にLP改善と内部リンク強化を優先。
+
+【ページ1】
+ページ名：家庭向けエアコンLP
+URL：https://teruya1229.github.io/cursor-test/
+ページ種別：家庭LP
+関連サービス：エアコンクリーニング
+表示回数：120
+アクティブユーザー：85
+平均エンゲージメント秒：42
+イベント数：34
+直帰率：58.4
+CTAクリック：6
+LINEクリック：4
+予約クリック：1
+電話クリック：1
+検索クエリ：沖縄 エアコンクリーニング, 南城市 エアコン掃除
+流入元メモ：自然検索とLINE経由
+メモ：料金とFAQが見られている可能性
+推奨アクション：FAQから家庭LPへの導線強化
+
+【ページ2】
+ページ名：AI帳票番頭LP
+URL：https://teruya1229.github.io/ai-chouhyou-bantou/
+ページ種別：AI帳票番頭LP
+関連サービス：AI帳票番頭
+表示回数：45
+アクティブユーザー：28
+平均エンゲージメント秒：18
+イベント数：5
+直帰率：68.4
+CTAクリック：1
+LINEクリック：0
+予約クリック：0
+電話クリック：0
+検索クエリ：AI 帳票 自動化, 受付票 AI
+流入元メモ：SNS/直接流入
+メモ：興味はあるが離脱が多い
+推奨アクション：ファーストビューと無料診断CTAを改善
+
+【今日やること候補】
+1. AI帳票番頭LPのファーストビューを改善
+2. FAQページから家庭LPへの内部リンクを追加
+3. エアコン通常清掃の不安訴求SNSを1本作成
+
+【需要番頭に送る候補】
+1. FAQページが不安解消ページとして機能している
+2. AI帳票番頭LPは見られているが直帰率高め
+3. 家庭向けエアコンLPは自然需要あり`,
+
+  parseImportNumber(val) {
+    if (val == null || val === '') return 0;
+    const s = String(val).replace(/[%％]/g, '').trim();
+    const n = parseFloat(s.replace(/,/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  },
+
+  extractLabelValue(line) {
+    const m = String(line || '').match(/^([^：:]+)[：:]\s*(.*)$/);
+    if (!m) return null;
+    return { key: m[1].trim(), value: m[2].trim() };
+  },
+
+  parseNumberedSection(text, sectionName) {
+    const re = new RegExp(`【${sectionName}】\\s*([\\s\\S]*?)(?=\\n【|$)`, 'i');
+    const m = String(text || '').match(re);
+    if (!m) return [];
+    const items = [];
+    m[1].split('\n').forEach(line => {
+      const item = line.replace(/^\s*\d+[\.\)、．]\s*/, '').trim();
+      if (item) items.push(item);
+    });
+    return items;
+  },
+
+  parseBrowserBantouPages(text) {
+    const src = String(text || '');
+    const pages = [];
+    const blocks = src.split(/【ページ\s*\d+】/i).slice(1);
+    blocks.forEach(block => {
+      const raw = {};
+      const sectionEnd = block.search(/\n【/);
+      const body = sectionEnd >= 0 ? block.slice(0, sectionEnd) : block;
+      body.split('\n').forEach(line => {
+        const field = this.extractLabelValue(line);
+        if (!field) return;
+        const mapped = this.BROWSER_PAGE_FIELD_MAP[field.key];
+        if (mapped) raw[mapped] = field.value;
+      });
+      if (Object.keys(raw).length) pages.push(raw);
+    });
+    if (!pages.length) {
+      const loose = this.parseLooseBrowserPages(src);
+      return loose;
+    }
+    return pages;
+  },
+
+  parseLooseBrowserPages(text) {
+    const pages = [];
+    const urlRe = /https?:\/\/[^\s）)】\]]+/gi;
+    const urls = [...new Set((text.match(urlRe) || []).map(u => u.replace(/[.,;]+$/, '')))];
+    urls.forEach((url, i) => {
+      const idx = text.indexOf(url);
+      const chunk = text.slice(Math.max(0, idx - 200), idx + 400);
+      const page = { url };
+      const nameMatch = chunk.match(/ページ名[：:]\s*([^\n]+)/);
+      if (nameMatch) page.pageName = nameMatch[1].trim();
+      else page.pageName = `ページ${i + 1}`;
+      const viewsMatch = chunk.match(/表示回数[：:]\s*([\d,.]+)/);
+      if (viewsMatch) page.views = viewsMatch[1];
+      const bounceMatch = chunk.match(/直帰率[：:]\s*([\d.]+)/);
+      if (bounceMatch) page.bounceRate = bounceMatch[1];
+      pages.push(page);
+    });
+    return pages;
+  },
+
+  tryParseBrowserJson(text) {
+    const src = String(text || '').trim();
+    if (!src) return null;
+    const tryParse = str => {
+      try { return JSON.parse(str); } catch (e) { return null; }
+    };
+    let data = tryParse(src);
+    if (!data) {
+      const m = src.match(/\{[\s\S]*\}/);
+      if (m) data = tryParse(m[0]);
+    }
+    if (!data || typeof data !== 'object') return null;
+    const pages = Array.isArray(data.pages) ? data.pages.map(p => ({
+      pageName: p.pageName || p.page_name || '',
+      url: p.url || '',
+      pageType: p.pageType || p.page_type || '',
+      serviceTag: p.serviceTag || p.service_tag || '',
+      views: p.views,
+      activeUsers: p.activeUsers || p.active_users,
+      avgEngagementSeconds: p.avgEngagementSeconds || p.avg_engagement_seconds,
+      eventCount: p.eventCount || p.event_count,
+      bounceRate: p.bounceRate || p.bounce_rate,
+      ctaClicks: p.ctaClicks || p.cta_clicks,
+      lineClicks: p.lineClicks || p.line_clicks,
+      bookingClicks: p.bookingClicks || p.booking_clicks,
+      phoneClicks: p.phoneClicks || p.phone_clicks,
+      searchQueriesText: p.searchQueriesText || p.search_queries_text || '',
+      sourceMemo: p.sourceMemo || p.source_memo || '',
+      memo: p.memo || '',
+      recommendedActionText: p.recommendedActionText || p.recommended_action_text || ''
+    })) : [];
+    return {
+      date: data.date || '',
+      overallComment: data.overallComment || data.overall_comment || '',
+      adDecision: data.adDecision || data.ad_decision || '',
+      pages,
+      todayTasks: Array.isArray(data.todayTasks) ? data.todayTasks : (data.today_tasks || []),
+      demandCandidates: Array.isArray(data.demandCandidates) ? data.demandCandidates
+        : (data.demand_candidates || []),
+      sourceFormat: 'json'
+    };
+  },
+
+  parseBrowserBantouReport(text) {
+    const warnings = [];
+    const errors = [];
+    const src = String(text || '').trim();
+    if (!src) {
+      return {
+        date: '', overallComment: '', adDecision: '', pages: [],
+        todayTasks: [], demandCandidates: [], warnings: ['貼り付けテキストが空です'],
+        errors: [], sourceFormat: 'empty'
+      };
+    }
+
+    const jsonResult = this.tryParseBrowserJson(src);
+    if (jsonResult && jsonResult.pages && jsonResult.pages.length) {
+      jsonResult.warnings = warnings;
+      jsonResult.errors = errors;
+      if (!jsonResult.todayTasks.length) {
+        jsonResult.todayTasks = this.parseNumberedSection(src, '今日やること候補');
+      }
+      if (!jsonResult.demandCandidates.length) {
+        jsonResult.demandCandidates = this.parseNumberedSection(src, '需要番頭に送る候補');
+      }
+      return jsonResult;
+    }
+
+    let date = '';
+    let overallComment = '';
+    let adDecision = '';
+    const headerMatch = src.match(/【Budilアナリティクス取り込み】([\s\S]*?)(?=【ページ|$)/i);
+    const header = headerMatch ? headerMatch[1] : src.slice(0, 800);
+    header.split('\n').forEach(line => {
+      const field = this.extractLabelValue(line);
+      if (!field) return;
+      if (/^日付$/.test(field.key)) date = field.value.replace(/\//g, '-').slice(0, 10);
+      if (/^全体コメント$/.test(field.key)) overallComment = field.value;
+      if (/^広告判断$/.test(field.key)) adDecision = field.value;
+    });
+    if (!date) {
+      const dm = src.match(/日付[：:]\s*(\d{4}[-/]\d{1,2}[-/]\d{1,2})/);
+      if (dm) date = dm[1].replace(/\//g, '-');
+    }
+    if (!date) date = new Date().toISOString().slice(0, 10);
+
+    let pages = this.parseBrowserBantouPages(src);
+    let sourceFormat = pages.length ? 'structured' : 'loose';
+    if (!pages.length) {
+      pages = this.parseLooseBrowserPages(src);
+      if (pages.length) warnings.push('崩れたテキスト形式のため、拾えた項目のみ取り込みます');
+      else warnings.push('ページデータを認識できませんでした。形式を確認してください');
+    }
+
+    const todayTasks = this.parseNumberedSection(src, '今日やること候補');
+    const demandCandidates = this.parseNumberedSection(src, '需要番頭に送る候補');
+
+    pages.forEach((p, i) => {
+      if (!(p.pageName || '').trim()) warnings.push(`ページ${i + 1}: ページ名がありません`);
+    });
+
+    return {
+      date, overallComment, adDecision, pages, todayTasks, demandCandidates,
+      warnings, errors, sourceFormat
+    };
+  },
+
+  normalizeImportedAnalyticsRecord(raw, reportMeta) {
+    const meta = reportMeta || {};
+    const numeric = {};
+    this.BROWSER_NUMERIC_FIELDS.forEach(f => {
+      numeric[f] = this.parseImportNumber(raw[f]);
+    });
+    const reportText = meta.browserReportText || '';
+    const summaryText = reportText.length > 500 ? reportText.slice(0, 500) + '…' : reportText;
+    const payload = {
+      date: meta.date || raw.date || new Date().toISOString().slice(0, 10),
+      pageName: (raw.pageName || '').trim(),
+      url: (raw.url || '').trim(),
+      pageType: raw.pageType || 'その他',
+      serviceTag: raw.serviceTag || 'その他',
+      views: numeric.views,
+      activeUsers: numeric.activeUsers,
+      avgEngagementSeconds: numeric.avgEngagementSeconds,
+      eventCount: numeric.eventCount,
+      bounceRate: numeric.bounceRate,
+      ctaClicks: numeric.ctaClicks,
+      lineClicks: numeric.lineClicks,
+      bookingClicks: numeric.bookingClicks,
+      phoneClicks: numeric.phoneClicks,
+      searchQueriesText: raw.searchQueriesText || '',
+      sourceMemo: raw.sourceMemo || 'ブラウザー番頭',
+      memo: raw.memo || '',
+      recommendedActionText: raw.recommendedActionText || '',
+      status: 'open',
+      importSource: 'browser-bantou',
+      browserReportText: summaryText,
+      overallComment: meta.overallComment || '',
+      adDecision: meta.adDecision || ''
+    };
+    return this.enrichRecord(payload);
+  },
+
+  findDuplicateCandidates(records, existingRecords) {
+    const duplicates = [];
+    (records || []).forEach(r => {
+      const match = (existingRecords || []).find(e =>
+        e.date === r.date && (
+          ((r.url || '').trim() && (e.url || '').trim() && e.url === r.url)
+          || (!(r.url || '').trim() && e.pageName === r.pageName)
+          || ((e.pageName || '') === (r.pageName || '') && (r.url || '') === (e.url || ''))
+        )
+      );
+      if (match) {
+        duplicates.push({ record: r, existing: match });
+      }
+    });
+    return duplicates;
+  },
+
+  validateImportedRecords(records, existingRecords) {
+    const warnings = [];
+    const errors = [];
+    (records || []).forEach((r, i) => {
+      const label = r.pageName || `ページ${i + 1}`;
+      if (!(r.pageName || '').trim()) warnings.push(`${label}: ページ名がありません`);
+      if (!(r.url || '').trim()) warnings.push(`${label}: URLがありません`);
+      const missingNumeric = this.BROWSER_NUMERIC_FIELDS.filter(f => !r[f] && r[f] !== 0).length;
+      if (missingNumeric >= 5) warnings.push(`${label}: 数値項目の欠落が多いです`);
+    });
+    const duplicates = this.findDuplicateCandidates(records, existingRecords);
+    duplicates.forEach(d => {
+      warnings.push(`重複候補: ${d.record.pageName}（${d.record.date}）`);
+    });
+    if (!(records || []).length) errors.push('保存できるページがありません');
+    return { warnings, errors, duplicates };
+  },
+
+  buildImportPreview(parsed, existingRecords) {
+    const report = parsed || {};
+    const meta = {
+      date: report.date,
+      overallComment: report.overallComment || '',
+      adDecision: report.adDecision || '',
+      browserReportText: report.rawText || ''
+    };
+    const records = (report.pages || []).map(p => this.normalizeImportedAnalyticsRecord(p, meta));
+    const validation = this.validateImportedRecords(records, existingRecords);
+    return {
+      date: report.date,
+      overallComment: report.overallComment || '',
+      adDecision: report.adDecision || '',
+      pages: records,
+      pageCount: records.length,
+      todayTasks: report.todayTasks || [],
+      demandCandidates: report.demandCandidates || [],
+      warnings: [...(report.warnings || []), ...validation.warnings],
+      errors: [...(report.errors || []), ...validation.errors],
+      duplicates: validation.duplicates,
+      sourceFormat: report.sourceFormat || 'structured'
+    };
+  },
+
+  buildBrowserBantouPrompt(settings) {
+    const profile = settings && settings.businessProfile
+      ? (typeof Storage !== 'undefined' ? Storage.normalizeBusinessProfile(settings.businessProfile) : settings.businessProfile)
+      : null;
+    const businessName = (profile && profile.businessName) || 'BCサービス';
+    const area = (profile && profile.area) || '沖縄南部';
+    const mainServices = (profile && profile.mainServices && profile.mainServices.length)
+      ? profile.mainServices.join('、')
+      : 'エアコンクリーニング、完全分解、洗濯機クリーニング';
+    const lineUrl = (profile && profile.lineUrl) || '';
+    const googleReviewUrl = (profile && profile.googleReviewUrl) || '';
+    const memo = (profile && profile.memo) || '';
+
+  const profileLines = [];
+    if (lineUrl) profileLines.push(`LINE URL：${lineUrl}`);
+    if (googleReviewUrl) profileLines.push(`Google口コミURL：${googleReviewUrl}`);
+    if (memo) profileLines.push(`メモ：${memo}`);
+
+    return `あなたは「ブラウザー番頭」です。
+今日の目的は、GA4 / Search Console / Googleビジネスプロフィール / 必要なら広告状況を確認し、Budilに貼り付けられる形式で日次アナリティクスレポートを出すことです。
+
+対象事業：
+${businessName}
+
+対象地域：
+${area}
+
+主力サービス：
+${mainServices}
+${profileLines.length ? '\n' + profileLines.join('\n') : ''}
+
+確認対象：
+1. GA4のページ別データ
+2. Search Consoleの検索クエリ
+3. Googleビジネスプロフィールの表示・行動
+4. 必要ならGoogle広告の表示/クリック/費用
+5. LPや記事の見られ方
+
+重点ページ：
+- 家庭向けエアコンLP
+- 完全分解LP
+- 業務用LP
+- AI帳票番頭LP
+- Budil販売/紹介ページ
+- FAQページ
+- ブログ/記事ページ
+- 洗濯機クリーニング関連ページ
+
+確認してほしいこと：
+- どのページが見られているか
+- どのページの直帰率が高いか
+- どのページの滞在/イベント/CTAが良いか
+- LINE/予約/電話クリックがあるか
+- どの検索クエリが伸びているか
+- どのサービスに需要が出ていそうか
+- 広告を使うべきか、まだLP改善を優先すべきか
+- 今日やるべきことは何か
+
+必ず最後に、以下の形式で出力してください。
+
+【Budilアナリティクス取り込み】
+日付：YYYY-MM-DD
+全体コメント：
+広告判断：
+
+【ページ1】
+ページ名：
+URL：
+ページ種別：
+関連サービス：
+表示回数：
+アクティブユーザー：
+平均エンゲージメント秒：
+イベント数：
+直帰率：
+CTAクリック：
+LINEクリック：
+予約クリック：
+電話クリック：
+検索クエリ：
+流入元メモ：
+メモ：
+推奨アクション：
+
+【ページ2】
+ページ名：
+URL：
+ページ種別：
+関連サービス：
+表示回数：
+アクティブユーザー：
+平均エンゲージメント秒：
+イベント数：
+直帰率：
+CTAクリック：
+LINEクリック：
+予約クリック：
+電話クリック：
+検索クエリ：
+流入元メモ：
+メモ：
+推奨アクション：
+
+【今日やること候補】
+1.
+2.
+3.
+
+【需要番頭に送る候補】
+1.
+2.
+3.
+
+注意：
+分からない数値は空欄または0でOK。
+推測した場合はメモに「推測」と書いてください。
+広告費を使う判断は慎重にしてください。
+現段階では、広告より先に自然需要・LP改善・SNS/記事改善を優先します。`;
+  },
+
+  createBrowserBantouTaskPayload(title, date) {
+    const t = date || new Date().toISOString().slice(0, 10);
+    const clean = (title || '').trim();
+    return {
+      title: clean,
+      targetName: 'ブラウザー番頭',
+      priority: '中',
+      action: clean,
+      memo: 'ブラウザー番頭レポートの今日やること候補から追加',
+      dueDate: t,
+      status: 'open',
+      reason: 'ブラウザー番頭/アナリティクス',
+      pickupDedupeKey: ['browser-bantou', t, clean].join('|')
+    };
+  },
+
+  createBrowserBantouDemandPayload(candidate, date) {
+    const t = date || new Date().toISOString().slice(0, 10);
+    const topic = (candidate || '').trim();
+    return {
+      date: t,
+      source: 'ブラウザー番頭/アナリティクス',
+      topic,
+      summary: topic,
+      demandScore: 55,
+      relatedServices: [],
+      suggestedActions: [
+        { type: 'post', title: 'SNS/記事で需要を拾う', channel: 'Instagram' },
+        { type: 'sales', title: 'LP・導線改善を検討' },
+        { type: 'ad', title: '広告は保留（LP改善優先）' }
+      ],
+      memo: 'ブラウザー番頭レポートの需要番頭候補から送付',
+      status: 'open'
     };
   },
 
   buildHomeComment(ctx) {
     const c = ctx || {};
+    const bb = c.browserBantou || {};
+    if (bb.hasTodayImport) {
+      const parts = [];
+      if (bb.overallComment) parts.push(bb.overallComment);
+      else if (c.todayConclusion) parts.push(c.todayConclusion);
+      if (bb.adDecision) parts.push(bb.adDecision);
+      if (parts.length) {
+        return `ブラウザー番頭確認：${parts.join(' ')}`;
+      }
+    }
+    if (c.todayConclusion) return c.todayConclusion;
     const p = c.priority;
     if (!p) return '';
     if (/AI帳票|帳票番頭/i.test(p.pageName) && Number(p.bounceRate) >= 55) {
@@ -360,13 +945,21 @@ const AnalyticsBrain = {
   buildMorningLines(ctx) {
     const c = ctx || {};
     const lines = [];
+    const bb = c.browserBantou || {};
+    if (bb.hasTodayImport) {
+      lines.push('ブラウザー番頭確認済み');
+    }
     lines.push(`需要強いページ ${c.strongCount || 0}件`);
     lines.push(`離脱注意ページ ${c.bounceCount || 0}件`);
-    if (c.priority) {
+    if (bb.adDecision) {
+      lines.push(`広告判断：${bb.adDecision}`);
+    } else if (c.adReadiness) {
+      lines.push(`広告判断：${c.adReadiness.label}`);
+    }
+    if (c.priority && !bb.hasTodayImport) {
       const act = (c.priority.recommendedActions || [])[0];
       lines.push(`今日の優先：${act ? act.text + '（' + c.priority.pageName + '）' : c.priority.pageName}`);
     }
-    if (c.adReadiness) lines.push(`広告判断：${c.adReadiness.label}`);
     return lines;
   },
 
@@ -387,11 +980,28 @@ const AnalyticsBrain = {
     const lines = [];
     lines.push('■ アナリティクス状況');
     if (periodLabel) lines.push(`対象期間：${periodLabel}`);
+    const bb = c.browserBantou || {};
+    if (bb.importCount) {
+      lines.push(`ブラウザー番頭取り込み：${bb.importCount}件`);
+      if (bb.overallComment) lines.push(`全体コメント：${bb.overallComment}`);
+      if (bb.adDecision) lines.push(`広告判断：${bb.adDecision}`);
+    }
     lines.push(`ページ別データ：${(c.records || []).length}件`);
     lines.push(`需要強いページ：${c.strongCount || 0}件`);
     lines.push(`離脱注意ページ：${c.bounceCount || 0}件`);
-    if (c.adReadiness) lines.push(`広告判断：${c.adReadiness.label} — ${c.adReadiness.detail}`);
+    if (!bb.adDecision && c.adReadiness) {
+      lines.push(`広告判断：${c.adReadiness.label} — ${c.adReadiness.detail}`);
+    }
     lines.push('');
+    const browserPages = (c.records || []).filter(r => r.importSource === 'browser-bantou').slice(0, 5);
+    if (browserPages.length) {
+      lines.push('ブラウザー番頭由来の改善候補：');
+      browserPages.forEach(r => {
+        const action = r.recommendedActionText || (r.recommendedActions || [])[0]?.text || r.actionSummary || '継続観測';
+        lines.push(`・${r.pageName}：${action}`);
+      });
+      lines.push('');
+    }
     const top = (c.topDemand || []).slice(0, 3);
     if (top.length) {
       lines.push('需要スコア上位：');
@@ -468,6 +1078,10 @@ const AnalyticsBrain = {
     let noId = 0; let noDate = 0; let noName = 0; let noUrl = 0;
     let badNumeric = 0; let badBounce = 0; let badScore = 0; let badStatus = 0;
     let highBounce = 0; let noCta = 0;
+    let browserImport = 0; let browserNoUrl = 0; let browserMissingNumeric = 0;
+
+    const dupKeys = new Map();
+    let browserDuplicateCandidates = 0;
 
     list.forEach(r => {
       if (!r.id) noId++;
@@ -483,15 +1097,27 @@ const AnalyticsBrain = {
       if (r.status && !this.STATUSES.includes(r.status)) badStatus++;
       if (Number(r.bounceRate) >= 60 && Number(r.views) >= 10) highBounce++;
       if (Number(r.views) >= 15 && this.totalClicks(r) === 0) noCta++;
+
+      if (r.importSource === 'browser-bantou') {
+        browserImport++;
+        if (!(r.url || '').trim()) browserNoUrl++;
+        const missing = this.BROWSER_NUMERIC_FIELDS.filter(f => !r[f] && r[f] !== 0).length;
+        if (missing >= 5) browserMissingNumeric++;
+      }
+
+      const dupKey = `${r.date}|${(r.url || '').trim()}|${(r.pageName || '').trim()}`;
+      if (dupKeys.has(dupKey)) browserDuplicateCandidates++;
+      else dupKeys.set(dupKey, 1);
     });
 
     return {
       total: list.length, noId, noDate, noName, noUrl,
-      badNumeric, badBounce, badScore, badStatus, highBounce, noCta
+      badNumeric, badBounce, badScore, badStatus, highBounce, noCta,
+      browserImport, browserNoUrl, browserMissingNumeric, browserDuplicateCandidates
     };
   },
 
-  POLICY_TEXT: '広告番頭は広告費を使った後の判断用です。現段階では、まず自然に見られているページ・検索需要を読み、LP・記事・SNS・導線を改善してから広告を乗せる方針です。'
+  POLICY_TEXT: '広告番頭は広告費を使った後の判断用です。現段階では、まず自然に見られているページ・検索需要を読み、LP・記事・SNS・導線を改善してから広告を乗せる方針です。ブラウザー番頭がGA4/Search Console/GBPを確認した結果を貼り付けて取り込めます。'
 };
 
 function eventsLow(record) {

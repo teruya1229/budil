@@ -6109,3 +6109,149 @@ body {
   gap: 0.5rem;
   margin-top: 0.75rem;
 }
+
+/* v3.9.1 ブラウザー番頭連携 */
+.card-browser-bantou {
+  border-left: 4px solid #6366f1;
+}
+
+.browser-bantou-lead {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin: 0 0 1rem;
+}
+
+.browser-bantou-section {
+  margin-bottom: 1.25rem;
+}
+
+.browser-bantou-section h3 {
+  font-size: 0.95rem;
+  margin: 0 0 0.5rem;
+}
+
+.browser-bantou-prompt-preview,
+.browser-bantou-sample-text {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0 0 0.5rem;
+}
+
+.browser-bantou-paste {
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem;
+  resize: vertical;
+}
+
+.browser-bantou-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.browser-bantou-errors {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: #991b1b;
+}
+
+.browser-bantou-errors.is-warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.browser-bantou-preview {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.browser-bantou-preview-summary {
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.browser-bantou-preview-page {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.browser-bantou-preview-page.is-duplicate {
+  border-color: #fbbf24;
+  background: #fffbeb;
+}
+
+.browser-bantou-dup-label {
+  display: inline-block;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  margin-left: 0.25rem;
+}
+
+.browser-bantou-candidate-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+}
+
+.browser-bantou-candidate-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.85rem;
+}
+
+.analytics-today-conclusion {
+  background: #eef2ff;
+  border-left: 4px solid #6366f1;
+  padding: 0.75rem 1rem;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.analytics-today-conclusion:empty {
+  display: none;
+}
+
+.browser-bantou-sample-details {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.browser-bantou-sample-details summary {
+  cursor: pointer;
+  color: #6366f1;
+}
