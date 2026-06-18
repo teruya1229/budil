@@ -5,7 +5,16 @@
 ## 現在の公開状態
 
 - 公開URL: https://teruya1229.github.io/budil/
-- 現在バージョン: v4.0.1
+- 現在バージョン: v4.1
+
+## v4.1 実装内容（販売LP・無料体験導線MVP）
+
+- 販売用LP `sales.html` 新規作成（10セクション・FAQ・SEO/OG）
+- LINE無料体験CTA（https://lin.ee/t5eDoCU）
+- デモ画面CTA（index.html）
+- Budil本体から販売ページへの導線（ヘッダー・サイドバー・その他メニュー・データ管理）
+- はじめてガイドにデモ確認順・販売ページリンクを追加
+- デモ台本 `docs/budil-demo-script.md` 追加
 
 ## v4.0.1 実装内容（見やすさ・操作性改善）
 

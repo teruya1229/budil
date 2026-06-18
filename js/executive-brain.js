@@ -1,8 +1,8 @@
 /**
- * Budil v4.0.1 - 経営司令塔ホーム（毎朝5分・全番頭統合）
+ * Budil v4.1 - 経営司令塔ホーム（毎朝5分・全番頭統合）
  */
 const ExecutiveBrain = {
-  VERSION: 'v4.0.1',
+  VERSION: 'v4.1',
 
   CHECK_ITEMS: [
     { id: 'workOrders', label: '作業予定を確認した' },

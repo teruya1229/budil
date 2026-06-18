@@ -2600,6 +2600,24 @@
         ? 'Budilを初めて使う方・デモを見る方向けのセットアップ手順です。'
         : 'まずはこの順番で進めると、Budilの流れがつかめます。'}</p>
       ${profileHint}
+      <div class="onboarding-demo-hint">
+        <strong>初めて見る方へ：</strong>まずデモデータを作成すると、Budil全体の流れを確認できます。
+        <details class="onboarding-demo-order-details">
+          <summary>おすすめ確認順を見る</summary>
+          <ol class="onboarding-demo-order">
+            <li>経営司令塔ホーム</li>
+            <li>受付・予約番頭</li>
+            <li>予約・作業予定番頭</li>
+            <li>売上番頭</li>
+            <li>作業後フォロー番頭</li>
+            <li>利益番頭</li>
+            <li>アナリティクス番頭</li>
+            <li>経営レポート</li>
+            <li>データ診断</li>
+          </ol>
+        </details>
+      </div>
+      <p class="onboarding-sales-link"><a href="sales.html" class="view-header-link">Budilについて · 1ヶ月無料体験の案内</a></p>
       <h3 class="onboarding-subtitle">まずやること（3ステップ）</h3>
       <ol class="onboarding-steps">${ONBOARDING_STEPS.slice(0, 3).map((step, i) => {
         const done = status[step.key];
@@ -3742,7 +3760,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.0.1</span>
+        <span class="business-report-version">v4.1</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'

@@ -11,6 +11,7 @@
 - 公開URL: https://teruya1229.github.io/budil/
 
 ## 現在の状態
+- Budil v4.1 公開済み（販売LP・無料体験導線MVP）
 - Budil v4.0.1 公開済み（見やすさ・操作性改善）
 - Budil v4.0 公開済み（毎朝5分・経営司令塔ホーム再統合MVP）
 - Budil v3.9.1 公開済み（ブラウザー番頭連携アナリティクス取り込みMVP）
@@ -73,6 +74,16 @@
 | `js/profit-brain.js` | 利益・支出・粗利集計・改善ヒント |
 | `js/analytics-brain.js` | アナリティクス・需要スコア・LP診断・ブラウザー番頭パース |
 | `js/executive-brain.js` | 経営司令塔ホーム・全番頭データ統合・優先順位 |
+
+## v4.1で入ったもの
+
+- 販売用LP `sales.html`（ヒーロー・悩み・機能・使い方・強み・料金・対象・導入・FAQ・CTA）
+- 公開URL: https://teruya1229.github.io/budil/sales.html
+- LINE無料体験CTA・デモ画面CTA
+- Budil本体からの販売ページ導線
+- デモ台本 `docs/budil-demo-script.md`
+
+**意思決定：** Budil v4.1では、本体機能追加よりも販売・無料体験・デモ説明の導線を整える。Budilを自分用ツールから、現場業者に説明できる商品へ進める。
 
 ## v4.0.1で入ったもの
 
