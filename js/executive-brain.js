@@ -1,8 +1,8 @@
 /**
- * Budil v4.3 - 経営司令塔ホーム（毎朝5分・全番頭統合）
+ * Budil v4.4 - 経営司令塔ホーム（毎朝5分・全番頭統合）
  */
 const ExecutiveBrain = {
-  VERSION: 'v4.3',
+  VERSION: 'v4.4',
 
   CHECK_ITEMS: [
     { id: 'workOrders', label: '作業予定を確認した' },
@@ -54,6 +54,9 @@ const ExecutiveBrain = {
     const analyticsCtx = raw.analyticsCtx || {};
     const mapCtx = raw.mapCtx || { warnings: [], summary: [] };
     const forecast = WorkOrderBrain.getSalesForecast(workOrders, raw.revenues || [], today);
+    const completionSummary = typeof WorkCompletionBrain !== 'undefined'
+      ? WorkCompletionBrain.summarizeTargets(workOrders, raw.revenues || [], today)
+      : {};
     const todayWork = WorkOrderBrain.getTodayWorkOrders(workOrders, today);
     const receptionSummary = ReceptionBrain.getReceptionSummary(intakes, today);
     const pendingReceptions = this.getPendingReceptions(intakes);
@@ -70,6 +73,7 @@ const ExecutiveBrain = {
       analyticsCtx,
       mapCtx,
       forecast,
+      completionSummary,
       todayWork,
       pickups: raw.pickups || [],
       dailyTasks: raw.dailyTasks || [],
@@ -135,6 +139,11 @@ const ExecutiveBrain = {
         CalendarCandidateBrain.summarizeCandidates(c.workOrders, c.today)
       );
       if (calComment) push(calComment);
+    }
+
+    if (typeof WorkCompletionBrain !== 'undefined') {
+      const completionComment = WorkCompletionBrain.buildHomeComment(c.completionSummary);
+      if (completionComment) push(completionComment);
     }
 
     const rev = c.revCtx.summary || {};
@@ -480,6 +489,10 @@ const ExecutiveBrain = {
         CalendarCandidateBrain.summarizeCandidates(ctx.workOrders, today)
       ).forEach(w => add('注意', w, 'calendar-candidate'));
     }
+    if (typeof WorkCompletionBrain !== 'undefined') {
+      WorkCompletionBrain.buildWarnings(ctx.workOrders, ctx.revCtx.records || [], today)
+        .forEach(w => add('注意', w, 'work-completion'));
+    }
 
     (ctx.mapCtx.warnings || []).forEach(w => {
       if (w.type === 'far' && w.items && w.items[0]) {
@@ -534,6 +547,10 @@ const ExecutiveBrain = {
         CalendarCandidateBrain.summarizeCandidates(c.workOrders, c.today)
       );
       if (calLines.length) sections.push({ title: '予定候補', lines: calLines.slice(1) });
+    }
+    if (typeof WorkCompletionBrain !== 'undefined') {
+      const completionLines = WorkCompletionBrain.buildMorningReport(c.completionSummary);
+      if (completionLines.length) sections.push({ title: '作業後確定', lines: completionLines.slice(1) });
     }
     const rp = c.revenueProfitSection || {};
     sections.push({

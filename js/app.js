@@ -722,7 +722,8 @@
           ${renderMapActionsHtml(wo.address, { area: wo.area, showNoAddress: true })}
           ${wo.calendarReady ? `<a class="btn btn-sm btn-secondary" href="${esc(wo.calendarUrl)}" target="_blank" rel="noopener noreferrer">Googleカレンダー</a>` : ''}
           <button type="button" class="btn btn-sm btn-secondary" data-exec-wo-complete="${esc(wo.id)}">作業完了</button>
-          <button type="button" class="btn btn-sm btn-primary" data-exec-wo-revenue="${esc(wo.id)}">売上フォームへ</button>
+          <button type="button" class="btn btn-sm btn-primary" data-exec-wo-completion="${esc(wo.id)}">作業後確定</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-exec-wo-revenue="${esc(wo.id)}">売上確定へ</button>
         </div>
       </div>`).join('');
   }
@@ -1076,8 +1077,11 @@
     root.querySelectorAll('[data-exec-wo-complete]').forEach(btn => {
       btn.addEventListener('click', () => completeWorkOrder(btn.dataset.execWoComplete));
     });
+    root.querySelectorAll('[data-exec-wo-completion]').forEach(btn => {
+      btn.addEventListener('click', () => openWorkCompletionModal(btn.dataset.execWoCompletion));
+    });
     root.querySelectorAll('[data-exec-wo-revenue]').forEach(btn => {
-      btn.addEventListener('click', () => fillRevenueFromWorkOrder(btn.dataset.execWoRevenue));
+      btn.addEventListener('click', () => openWorkCompletionModal(btn.dataset.execWoRevenue));
     });
     root.querySelectorAll('[data-exec-intake-lead]').forEach(btn => {
       btn.addEventListener('click', () => createLeadFromReceptionIntake(btn.dataset.execIntakeLead));
@@ -1340,6 +1344,16 @@
       calendarMorningEl.innerHTML = calLines.length
         ? `<ul class="mgmt-calendar-candidate-list">${calLines.slice(1).map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
         : '<p class="placeholder-text">予定候補はありません</p>';
+    }
+
+    const completionMorningEl = document.getElementById('mgmt-work-completion');
+    if (completionMorningEl && typeof WorkCompletionBrain !== 'undefined') {
+      const completionLines = WorkCompletionBrain.buildMorningReport(
+        WorkCompletionBrain.summarizeTargets(Storage.getWorkOrders(), Storage.getRevenueRecords(), TODAY())
+      );
+      completionMorningEl.innerHTML = completionLines.length
+        ? `<ul class="mgmt-work-completion-list">${completionLines.slice(1).map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '<p class="placeholder-text">作業後確定待ちはありません</p>';
     }
 
     const demandTopEl = document.getElementById('mgmt-demand-top');
@@ -3903,7 +3917,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.3.1</span>
+        <span class="business-report-version">v4.4</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -7065,17 +7079,222 @@
     }
   }
 
+  function renderWorkCompletionStatusBadge(workOrder) {
+    if (typeof WorkCompletionBrain === 'undefined') return '';
+    const revenues = Storage.getRevenueRecords();
+    const label = WorkCompletionBrain.getDisplayStatus(workOrder, revenues);
+    const cls = {
+      '売上確定済み': 'status-confirmed',
+      '作業完了・入金待ち': 'status-unpaid',
+      '売上未確定': 'status-pending',
+      'キャンセル': 'status-cancelled',
+      '要確認': 'status-review'
+    }[label] || 'status-pending';
+    return `<span class="work-completion-status-badge ${cls}">${esc(label)}</span>`;
+  }
+
+  function fillWorkCompletionSelects() {
+    const serviceEl = document.getElementById('work-completion-service');
+    const sourceEl = document.getElementById('work-completion-source');
+    const methodEl = document.getElementById('work-completion-payment-method');
+    if (serviceEl && !serviceEl.options.length) {
+      serviceEl.innerHTML = RevenueBrain.SERVICES.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    }
+    if (sourceEl && !sourceEl.options.length) {
+      sourceEl.innerHTML = RevenueBrain.SOURCES.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    }
+    if (methodEl && methodEl.options.length <= 1) {
+      methodEl.innerHTML = '<option value="">未選択</option>'
+        + WorkCompletionBrain.PAYMENT_METHODS.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+    }
+  }
+
+  function openWorkCompletionModal(workOrderId) {
+    const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
+    if (!wo) return;
+    if (wo.actualRevenueId) {
+      alert('この作業予定はすでに売上確定済みです。');
+      return;
+    }
+    fillWorkCompletionSelects();
+    const defaults = WorkCompletionBrain.buildCompletionFormDefaults(wo);
+    document.getElementById('work-completion-wo-id').value = wo.id;
+    document.getElementById('work-completion-date').value = defaults.workDate;
+    document.getElementById('work-completion-customer').value = defaults.customerName;
+    document.getElementById('work-completion-actual-service').value = defaults.actualService;
+    document.getElementById('work-completion-service').value = defaults.service || RevenueBrain.SERVICES[0];
+    document.getElementById('work-completion-source').value = defaults.source || RevenueBrain.SOURCES[0];
+    document.getElementById('work-completion-amount').value = defaults.amount;
+    document.getElementById('work-completion-gross-rate').value = defaults.grossMarginRate;
+    document.getElementById('work-completion-payment-status').value = defaults.paymentStatus;
+    document.getElementById('work-completion-payment-date').value = defaults.paymentDate;
+    document.getElementById('work-completion-payment-method').value = defaults.paymentMethod;
+    document.getElementById('work-completion-payment-concern').checked = defaults.paymentConcern;
+    document.getElementById('work-completion-actual-memo').value = defaults.additionalMemo;
+    document.getElementById('work-completion-follow-memo').value = defaults.followMemo;
+    const hint = document.getElementById('work-completion-estimate-hint');
+    if (hint) {
+      hint.textContent = wo.estimateAmount
+        ? `予定金額（見込み）：${WorkOrderBrain.formatYen(wo.estimateAmount)} — 実績と違う場合は修正してください`
+        : '';
+    }
+    document.getElementById('work-completion-modal').classList.remove('hidden');
+  }
+
+  function closeWorkCompletionModal() {
+    document.getElementById('work-completion-modal').classList.add('hidden');
+  }
+
+  function openWorkCancelModal(workOrderId) {
+    const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
+    if (!wo) return;
+    document.getElementById('work-cancel-wo-id').value = wo.id;
+    document.getElementById('work-cancel-reason').value = (wo.cancel && wo.cancel.reason) || '';
+    document.getElementById('work-cancel-date').value = TODAY();
+    document.getElementById('work-cancel-propose-again').checked = !!(wo.cancel && wo.cancel.proposeAgain);
+    document.getElementById('work-cancel-add-task').checked = false;
+    document.getElementById('work-cancel-modal').classList.remove('hidden');
+  }
+
+  function closeWorkCancelModal() {
+    document.getElementById('work-cancel-modal').classList.add('hidden');
+  }
+
+  function submitWorkCompletion(e) {
+    e.preventDefault();
+    const workOrderId = document.getElementById('work-completion-wo-id').value;
+    const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
+    if (!wo) return;
+    const input = {
+      workDate: document.getElementById('work-completion-date').value,
+      customerName: document.getElementById('work-completion-customer').value.trim(),
+      actualService: document.getElementById('work-completion-actual-service').value.trim(),
+      service: document.getElementById('work-completion-service').value,
+      source: document.getElementById('work-completion-source').value,
+      amount: Number(document.getElementById('work-completion-amount').value) || 0,
+      grossMarginRate: document.getElementById('work-completion-gross-rate').value,
+      paymentStatus: document.getElementById('work-completion-payment-status').value,
+      paymentDate: document.getElementById('work-completion-payment-date').value,
+      paymentMethod: document.getElementById('work-completion-payment-method').value,
+      paymentConcern: document.getElementById('work-completion-payment-concern').checked,
+      actualMemo: document.getElementById('work-completion-actual-memo').value.trim(),
+      additionalMemo: '',
+      followMemo: document.getElementById('work-completion-follow-memo').value.trim(),
+      leadId: wo.leadId || ''
+    };
+    if (!input.customerName || !input.amount) {
+      alert('お客様名と実際の売上金額は必須です。');
+      return;
+    }
+    const estimate = wo.estimateAmount || 0;
+    const diffMsg = estimate && estimate !== input.amount
+      ? `\n予定金額 ${WorkOrderBrain.formatYen(estimate)} → 実績 ${WorkOrderBrain.formatYen(input.amount)}`
+      : '';
+    if (!confirm(`確定売上として登録します。${diffMsg}\n\nこの操作は売上集計に反映されます。よろしいですか？`)) return;
+
+    const revenuePayload = WorkCompletionBrain.createRevenuePayloadFromWorkOrder(wo, input);
+    const newRecord = Storage.addRevenueRecord(revenuePayload);
+    const woPatch = WorkCompletionBrain.markWorkOrderCompleted(wo, newRecord, input);
+    Storage.updateWorkOrder(workOrderId, woPatch);
+    closeWorkCompletionModal();
+    refreshAfterWorkCompletion();
+    alert('確定売上として登録しました。作業後フォロー番頭でお礼・口コミ対応を確認してください。');
+  }
+
+  function submitWorkCancel(e) {
+    e.preventDefault();
+    const workOrderId = document.getElementById('work-cancel-wo-id').value;
+    const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
+    if (!wo) return;
+    const cancelInput = {
+      reason: document.getElementById('work-cancel-reason').value.trim(),
+      canceledAt: document.getElementById('work-cancel-date').value || TODAY(),
+      proposeAgain: document.getElementById('work-cancel-propose-again').checked,
+      memo: ''
+    };
+    if (!cancelInput.reason) {
+      alert('キャンセル理由を入力してください。');
+      return;
+    }
+    if (!confirm('この作業予定をキャンセルします。売上には登録されません。よろしいですか？')) return;
+    const patch = WorkCompletionBrain.markWorkOrderCanceled(wo, cancelInput);
+    Storage.updateWorkOrder(workOrderId, patch);
+    if (document.getElementById('work-cancel-add-task').checked) {
+      addTaskFromWorkCompletion(workOrderId, 'cancelFollow');
+    }
+    closeWorkCancelModal();
+    refreshAfterWorkCompletion();
+    alert('キャンセルしました。');
+  }
+
+  function markWorkOrderNeedsReview(workOrderId) {
+    const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
+    if (!wo) return;
+    const note = prompt('要確認の内容を入力してください（任意）', (wo.completion && wo.completion.reviewNote) || '');
+    if (note === null) return;
+    Storage.updateWorkOrder(workOrderId, WorkCompletionBrain.markWorkOrderNeedsReview(wo, note));
+    refreshAfterWorkCompletion();
+    alert('要確認にしました。');
+  }
+
+  function addTaskFromWorkCompletion(workOrderId, type) {
+    const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
+    if (!wo) return;
+    const taskPayload = WorkCompletionBrain.createTaskPayload(wo, type || 'confirm', TODAY());
+    const store = Storage.getDailyActionTasksData();
+    if (store.manualTasks.some(t => t.pickupDedupeKey === taskPayload.pickupDedupeKey)) {
+      alert('同じ今日やることはすでに追加済みです。');
+      return;
+    }
+    Storage.addManualDailyTask(taskPayload);
+    renderDailyActionTasks();
+    renderExecutiveHome();
+    alert('今日やることに追加しました。');
+  }
+
+  function refreshAfterWorkCompletion() {
+    renderWorkOrderView();
+    renderRevenueView();
+    renderDashboard();
+    renderFollowUpView();
+    renderAreaView();
+    renderMorningExecutiveSections();
+  }
+
+  function renderWorkOrderPendingCompletionList() {
+    const el = document.getElementById('work-order-pending-completion-list');
+    if (!el || typeof WorkCompletionBrain === 'undefined') return;
+    const targets = WorkCompletionBrain.getCompletionTargets(
+      Storage.getWorkOrders(),
+      Storage.getRevenueRecords(),
+      TODAY()
+    );
+    if (!targets.length) {
+      el.innerHTML = '<p class="placeholder-text">作業後確定待ちはありません。</p>';
+      return;
+    }
+    el.innerHTML = targets.map(t => renderWorkOrderItemCard(t.workOrder)).join('');
+    bindWorkOrderItemEvents(el);
+  }
+
   function renderWorkOrderItemActions(workOrder) {
     const wo = WorkOrderBrain.normalizeWorkOrder(workOrder);
     const cal = WorkOrderBrain.buildGoogleCalendarUrl(wo);
     const mapUrl = MapBrain.buildGoogleMapSearchUrl(wo.address);
     const completed = wo.status === 'completed';
     const hasRevenue = !!wo.actualRevenueId;
+    const isCancelled = wo.status === 'cancelled';
+    const canConfirm = !hasRevenue && !isCancelled && typeof WorkCompletionBrain !== 'undefined'
+      && WorkCompletionBrain.isOperationalWorkOrder(wo);
     return `
       ${mapUrl ? `<a href="${esc(mapUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary">Googleマップで開く</a>` : ''}
       ${cal.ready ? `<a href="${esc(cal.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary" data-wo-calendar="${esc(wo.id)}">Googleカレンダーに追加</a>` : ''}
       <button type="button" class="btn btn-sm btn-secondary" data-wo-add-task="${esc(wo.id)}">今日やることに追加</button>
-      ${!completed ? `<button type="button" class="btn btn-sm btn-primary" data-wo-complete="${esc(wo.id)}">作業完了</button>` : ''}
+      ${canConfirm ? `<button type="button" class="btn btn-sm btn-primary" data-wo-completion="${esc(wo.id)}">作業後確定</button>` : ''}
+      ${canConfirm ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-completion-open="${esc(wo.id)}">売上確定へ</button>` : ''}
+      ${canConfirm ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-needs-review="${esc(wo.id)}">要確認</button>` : ''}
+      ${canConfirm ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-cancel-open="${esc(wo.id)}">キャンセル</button>` : ''}
+      ${hasRevenue ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-goto-follow="${esc(wo.id)}">フォローへ</button>` : ''}
       ${completed && !hasRevenue ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-fill-revenue="${esc(wo.id)}">売上フォームへ反映</button>` : ''}
       <button type="button" class="btn btn-sm btn-secondary" data-wo-edit="${esc(wo.id)}">編集</button>`;
   }
@@ -7090,6 +7309,7 @@
           <strong>${esc(timeLabel)}</strong>
           <span class="work-order-status-badge work-order-status-${esc(wo.status)}">${esc(WorkOrderBrain.formatStatus(wo.status))}</span>
           ${renderCalendarCandidateBadge(wo)}
+          ${renderWorkCompletionStatusBadge(wo)}
         </div>
         <p class="work-order-item-meta"><strong>${esc(wo.customerName || '（名前なし）')}</strong> / ${esc(wo.serviceText || '—')}</p>
         <p class="work-order-item-meta">エリア：${esc(area)} ${renderAreaDistanceBadge(area, wo.address)} / 見込み：${esc(WorkOrderBrain.formatYen(wo.estimateAmount))}${typeof CalendarCandidateBrain !== 'undefined' && CalendarCandidateBrain.isCalendarCandidateWorkOrder(wo) && !wo.actualRevenueId ? ' <span class="work-order-not-revenue">（売上未確定）</span>' : ''}</p>
@@ -7112,6 +7332,18 @@
     });
     container.querySelectorAll('[data-wo-complete]').forEach(btn => {
       btn.addEventListener('click', () => completeWorkOrder(btn.dataset.woComplete));
+    });
+    container.querySelectorAll('[data-wo-completion], [data-wo-completion-open]').forEach(btn => {
+      btn.addEventListener('click', () => openWorkCompletionModal(btn.dataset.woCompletion || btn.dataset.woCompletionOpen));
+    });
+    container.querySelectorAll('[data-wo-cancel-open]').forEach(btn => {
+      btn.addEventListener('click', () => openWorkCancelModal(btn.dataset.woCancelOpen));
+    });
+    container.querySelectorAll('[data-wo-needs-review]').forEach(btn => {
+      btn.addEventListener('click', () => markWorkOrderNeedsReview(btn.dataset.woNeedsReview));
+    });
+    container.querySelectorAll('[data-wo-goto-follow]').forEach(btn => {
+      btn.addEventListener('click', () => navigateToView('follow-up'));
     });
     container.querySelectorAll('[data-wo-fill-revenue]').forEach(btn => {
       btn.addEventListener('click', () => fillRevenueFromWorkOrder(btn.dataset.woFillRevenue));
@@ -7243,6 +7475,7 @@
   function renderWorkOrderView() {
     try {
       safeRenderSection(null, () => renderWorkOrderCalendarBrief(), '予定候補');
+      safeRenderSection('work-order-pending-completion-list', () => renderWorkOrderPendingCompletionList(), '作業後確定待ち');
       safeRenderSection('work-order-forecast', () => renderWorkOrderForecast(), '売上見込み');
       safeRenderSection('work-order-today-list', () => renderWorkOrderTodayList(), '今日の作業予定');
       safeRenderSection('work-order-week-list', () => renderWorkOrderWeekList(), '今週の作業予定');
@@ -7309,6 +7542,37 @@
         if (id) Storage.updateWorkOrder(id, { calendarAdded: true });
       });
     }
+    initWorkCompletion();
+  }
+
+  function initWorkCompletion() {
+    fillWorkCompletionSelects();
+    const completionForm = document.getElementById('work-completion-form');
+    if (completionForm && !completionForm.dataset.bound) {
+      completionForm.dataset.bound = '1';
+      completionForm.addEventListener('submit', submitWorkCompletion);
+    }
+    const cancelForm = document.getElementById('work-cancel-form');
+    if (cancelForm && !cancelForm.dataset.bound) {
+      cancelForm.dataset.bound = '1';
+      cancelForm.addEventListener('submit', submitWorkCancel);
+    }
+    const closeBtn = document.getElementById('btn-work-completion-cancel-modal');
+    if (closeBtn) closeBtn.addEventListener('click', closeWorkCompletionModal);
+    const cancelCloseBtn = document.getElementById('btn-work-cancel-close');
+    if (cancelCloseBtn) cancelCloseBtn.addEventListener('click', closeWorkCancelModal);
+    const addTaskBtn = document.getElementById('btn-work-completion-add-task');
+    if (addTaskBtn) {
+      addTaskBtn.addEventListener('click', () => {
+        const id = document.getElementById('work-completion-wo-id').value;
+        if (id) addTaskFromWorkCompletion(id, 'confirm');
+      });
+    }
+    document.querySelectorAll('#work-completion-modal, #work-cancel-modal').forEach(modal => {
+      modal.addEventListener('click', e => {
+        if (e.target === modal) modal.classList.add('hidden');
+      });
+    });
   }
 
   // ── 作業後フォロー番頭 ──

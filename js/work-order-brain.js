@@ -63,6 +63,16 @@ const WorkOrderBrain = {
         ? FollowUpBrain.normalizeFollowUp(item.followUp)
         : item.followUp;
     }
+    if (item.completion != null && typeof item.completion === 'object') {
+      normalized.completion = typeof WorkCompletionBrain !== 'undefined'
+        ? WorkCompletionBrain.normalizeCompletion(item.completion)
+        : item.completion;
+    }
+    if (item.cancel != null && typeof item.cancel === 'object') {
+      normalized.cancel = typeof WorkCompletionBrain !== 'undefined'
+        ? WorkCompletionBrain.normalizeCancelInfo(item.cancel)
+        : item.cancel;
+    }
     return normalized;
   },
 

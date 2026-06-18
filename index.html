@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.3.1</small>
+          <small>AI経営脳みそ v4.4</small>
         </div>
       </div>
       <nav class="nav">
@@ -134,7 +134,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.3.1</small>
+        <small>Budil v4.4</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -156,7 +156,7 @@
               <h2>経営司令塔ホーム</h2>
               <p class="exec-home-subtitle">毎朝5分で、今日やること・売上・利益・需要・受付・作業予定を確認</p>
             </div>
-            <span class="exec-home-version">v4.3.1</span>
+            <span class="exec-home-version">v4.4</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <div id="exec-home-start-guide" class="exec-home-start-guide hidden"></div>
@@ -374,7 +374,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.3.1</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.4</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -406,6 +406,10 @@
               <h3>アナリティクス・需要</h3>
               <div id="mgmt-analytics" class="mgmt-analytics-block"></div>
               <div id="mgmt-demand-top" class="mgmt-demand-top-block"></div>
+            </div>
+            <div class="morning-section">
+              <h3>作業後確定</h3>
+              <div id="mgmt-work-completion" class="mgmt-work-completion-block"></div>
             </div>
             <div class="morning-section">
               <h3>予定候補</h3>
@@ -1469,6 +1473,15 @@
           <div id="work-order-calendar-candidates-brief" class="work-order-calendar-candidates-brief"></div>
         </div>
 
+        <div class="card card-wide card-work-order-completion-notice">
+          <p class="work-completion-notice">作業予定・候補は売上集計に含まれません。確定売上として登録されたものだけ集計されます。</p>
+        </div>
+
+        <div class="card card-wide card-work-order-pending-completion">
+          <h2>作業後確定待ち</h2>
+          <div id="work-order-pending-completion-list" class="work-order-schedule-list"></div>
+        </div>
+
         <div class="card card-wide card-work-order-comment">
           <h2>売上見込み</h2>
           <div id="work-order-forecast" class="work-order-forecast"></div>
@@ -1701,6 +1714,7 @@
         <div class="card card-wide" id="revenue-aggregation-card">
           <h2>売上集計</h2>
           <p class="view-subtitle revenue-aggregation-subtitle">月別・年別・依頼元別・サービス別に確定売上を確認できます（見込み・候補は含みません）</p>
+          <p class="work-completion-notice work-completion-notice-inline">作業予定・候補は売上集計に含まれません。確定売上として登録されたものだけ集計されます。</p>
           <div id="revenue-aggregation-panel" class="revenue-aggregation-panel"></div>
         </div>
 
@@ -2612,6 +2626,125 @@
     </main>
   </div>
 
+  <div id="work-completion-modal" class="modal hidden">
+    <div class="modal-content modal-lg">
+      <h2>作業後確定 — 実績入力</h2>
+      <p class="work-completion-modal-notice">予定金額ではなく、実際の金額・作業内容を確認してから確定売上に登録してください。</p>
+      <form id="work-completion-form">
+        <input type="hidden" id="work-completion-wo-id">
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label for="work-completion-date">作業日 *</label>
+            <input type="date" id="work-completion-date" required>
+          </div>
+          <div class="form-group">
+            <label for="work-completion-customer">お客様名 *</label>
+            <input type="text" id="work-completion-customer" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="work-completion-actual-service">実際の作業内容 *</label>
+          <textarea id="work-completion-actual-service" rows="2" required></textarea>
+        </div>
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label for="work-completion-service">サービス分類 *</label>
+            <select id="work-completion-service" required></select>
+          </div>
+          <div class="form-group">
+            <label for="work-completion-source">依頼元 *</label>
+            <select id="work-completion-source" required></select>
+          </div>
+        </div>
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label for="work-completion-amount">実際の売上金額（円） *</label>
+            <input type="number" id="work-completion-amount" min="0" step="1" required>
+            <small class="field-hint" id="work-completion-estimate-hint"></small>
+          </div>
+          <div class="form-group">
+            <label for="work-completion-gross-rate">粗利率（%）</label>
+            <input type="number" id="work-completion-gross-rate" min="0" max="100" step="1" placeholder="任意">
+          </div>
+        </div>
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label for="work-completion-payment-status">支払い状態 *</label>
+            <select id="work-completion-payment-status" required>
+              <option value="未入金">入金待ち</option>
+              <option value="入金済み">入金済み</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="work-completion-payment-date">入金日</label>
+            <input type="date" id="work-completion-payment-date">
+          </div>
+        </div>
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label for="work-completion-payment-method">支払い方法</label>
+            <select id="work-completion-payment-method">
+              <option value="">未選択</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="work-completion-payment-concern">
+              入金注意
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="work-completion-actual-memo">追加作業メモ</label>
+          <textarea id="work-completion-actual-memo" rows="2" placeholder="追加作業・現場メモ"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="work-completion-follow-memo">フォローメモ</label>
+          <input type="text" id="work-completion-follow-memo" placeholder="お礼LINE・口コミ依頼のメモ">
+        </div>
+        <div class="modal-actions work-completion-modal-actions">
+          <button type="submit" class="btn btn-primary">確定売上として登録</button>
+          <button type="button" id="btn-work-completion-add-task" class="btn btn-secondary">今日やることに追加</button>
+          <button type="button" id="btn-work-completion-cancel-modal" class="btn btn-secondary">閉じる</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="work-cancel-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2>作業予定のキャンセル</h2>
+      <p class="work-completion-modal-notice">キャンセルは売上に登録されません。</p>
+      <form id="work-cancel-form">
+        <input type="hidden" id="work-cancel-wo-id">
+        <div class="form-group">
+          <label for="work-cancel-reason">キャンセル理由 *</label>
+          <textarea id="work-cancel-reason" rows="2" required placeholder="例：お客様都合で延期"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="work-cancel-date">キャンセル日</label>
+          <input type="date" id="work-cancel-date">
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="work-cancel-propose-again">
+            再提案する
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="work-cancel-add-task">
+            今日やることへ追加する
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-danger">キャンセル確定</button>
+          <button type="button" id="btn-work-cancel-close" class="btn btn-secondary">戻る</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
   <script src="js/storage.js"></script>
@@ -2627,6 +2760,7 @@
   <script src="js/calendar-candidate-brain.js"></script>
   <script src="js/work-order-brain.js"></script>
   <script src="js/follow-up-brain.js"></script>
+  <script src="js/work-completion-brain.js"></script>
   <script src="js/profit-brain.js"></script>
   <script src="js/analytics-brain.js"></script>
   <script src="js/executive-brain.js"></script>

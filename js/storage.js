@@ -1102,6 +1102,15 @@ const Storage = {
       if (badIntakeRef) add('review', `存在しない受付を指すintakeId ${badIntakeRef}件`);
       if (badRevRef) add('review', `存在しない売上を指すactualRevenueId ${badRevRef}件`);
       if (completedNoRev) add('caution', `作業完了済みで売上未登録 ${completedNoRev}件`);
+      if (typeof WorkCompletionBrain !== 'undefined') {
+        const wcDiag = WorkCompletionBrain.getDiagnosticsCounts(workOrders, revenues, todayDiag);
+        if (wcDiag.completedNoRevenue) add('caution', `作業完了っぽいが売上未確定 ${wcDiag.completedNoRevenue}件`);
+        if (wcDiag.overdueActive) add('caution', `予定日が過ぎたが未完了の作業予定 ${wcDiag.overdueActive}件`);
+        if (wcDiag.orphanConfirmed) add('caution', `売上確定済みだが作業予定に未紐付け ${wcDiag.orphanConfirmed}件`);
+        if (wcDiag.unpaid) add('caution', `入金待ちの確定売上 ${wcDiag.unpaid}件`);
+        if (wcDiag.cancelNoMemo) add('caution', `キャンセル状態だが理由なし ${wcDiag.cancelNoMemo}件`);
+        if (wcDiag.pendingConfirmCount) add('caution', `作業後確定待ち ${wcDiag.pendingConfirmCount}件`);
+      }
       if (typeof CalendarCandidateBrain !== 'undefined') {
         const calDiag = CalendarCandidateBrain.getDiagnosticsCounts(workOrders);
         if (calDiag.calendarCandidateTotal) {
@@ -1789,7 +1798,7 @@ const Storage = {
       endTime: '15:00',
       status: 'confirmed',
       estimateAmount: 18000,
-      memo: 'デモ：候補から作業予定に反映済み',
+      memo: 'デモ：候補から作業予定に反映済み・作業後確定待ち',
       candidateMeta: {
         importSource: 'calendar-paste',
         sourceType: 'work-order-candidate',
@@ -1801,6 +1810,155 @@ const Storage = {
         importedAt: now
       }
     });
+
+    const pastWoDate = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.addDays(today, -1)
+      : today;
+    this.addWorkOrder({
+      ...flag,
+      customerName: 'デモ：作業後確定待ち・比嘉様',
+      phone: '090-2222-3333',
+      address: '沖縄県宜野湾市',
+      area: '宜野湾市',
+      source: '直予約',
+      serviceText: 'エアコン通常クリーニング',
+      scheduledDate: pastWoDate,
+      startTime: '14:00',
+      endTime: '16:00',
+      status: 'confirmed',
+      estimateAmount: 8500,
+      memo: 'デモ：予定日過ぎ・作業後確定待ち'
+    });
+
+    this.addWorkOrder({
+      ...flag,
+      customerName: 'デモ：キャンセル・新垣様',
+      address: '沖縄県うるま市',
+      area: 'うるま市',
+      source: 'LINE',
+      serviceText: 'レンジフードクリーニング',
+      scheduledDate: pastWoDate,
+      status: 'cancelled',
+      estimateAmount: 12000,
+      cancel: {
+        reason: 'お客様都合で延期',
+        canceledAt: today,
+        proposeAgain: true,
+        memo: 'デモ：再提案候補'
+      },
+      completion: {
+        status: 'cancelled',
+        needsReview: false,
+        memo: 'デモ：キャンセル',
+        updatedAt: now
+      },
+      memo: 'デモ：キャンセル予定'
+    });
+
+    const demoRevConfirmed = this.addRevenueRecord({
+      ...flag,
+      workDate: pastWoDate,
+      customerName: 'デモ：売上確定済み・金城様',
+      service: 'エアコン完全分解',
+      source: 'くらしのマーケット',
+      amount: 22000,
+      status: '確定',
+      paymentStatus: '入金済み',
+      confirmedFrom: 'work-order',
+      confirmedAt: now,
+      isConfirmedRevenue: true,
+      memo: 'デモ：売上確定済み',
+      followUp: {
+        thanksStatus: 'done',
+        reviewStatus: 'pending',
+        repeatStatus: 'planned',
+        updatedAt: now
+      }
+    });
+
+    const demoWoConfirmed = this.addWorkOrder({
+      ...flag,
+      customerName: 'デモ：売上確定済み・金城様',
+      address: '沖縄県浦添市',
+      area: '浦添市',
+      source: 'くらしのマーケット',
+      serviceText: 'エアコン完全分解',
+      scheduledDate: pastWoDate,
+      startTime: '09:00',
+      endTime: '12:00',
+      status: 'completed',
+      estimateAmount: 22000,
+      completedAt: new Date(pastWoDate + 'T12:00:00').toISOString(),
+      actualRevenueId: demoRevConfirmed.id,
+      completion: {
+        status: 'completed',
+        completedAt: new Date(pastWoDate + 'T12:00:00').toISOString(),
+        revenueId: demoRevConfirmed.id,
+        actualAmount: 22000,
+        actualService: 'エアコン完全分解',
+        paymentStatus: '入金済み',
+        memo: 'デモ：確定済み',
+        updatedAt: now
+      },
+      followUp: {
+        thanksStatus: 'done',
+        reviewStatus: 'pending',
+        repeatStatus: 'planned',
+        updatedAt: now
+      },
+      memo: 'デモ：売上確定済み'
+    });
+    this.updateRevenueRecord(demoRevConfirmed.id, { sourceWorkOrderId: demoWoConfirmed.id });
+
+    const demoRevUnpaid = this.addRevenueRecord({
+      ...flag,
+      workDate: today,
+      customerName: 'デモ：入金待ち・大城様',
+      service: '洗濯機クリーニング',
+      source: 'Airリザーブ',
+      amount: 15000,
+      status: '確定',
+      paymentStatus: '未入金',
+      sourceWorkOrderId: '',
+      confirmedFrom: 'work-order',
+      confirmedAt: now,
+      isConfirmedRevenue: true,
+      memo: 'デモ：入金待ち',
+      followUp: {
+        thanksStatus: 'pending',
+        reviewStatus: 'pending',
+        repeatStatus: 'pending',
+        updatedAt: now
+      }
+    });
+
+    const demoWoUnpaid = this.addWorkOrder({
+      ...flag,
+      customerName: 'デモ：入金待ち・大城様',
+      address: '沖縄県那覇市',
+      area: '那覇市',
+      source: 'Airリザーブ',
+      serviceText: '洗濯機クリーニング',
+      scheduledDate: today,
+      startTime: '10:00',
+      endTime: '12:00',
+      status: 'completed',
+      estimateAmount: 15000,
+      completedAt: now,
+      actualRevenueId: demoRevUnpaid.id,
+      completion: {
+        status: 'completed',
+        completedAt: now,
+        revenueId: demoRevUnpaid.id,
+        actualAmount: 15000,
+        actualService: '洗濯機クリーニング',
+        paymentStatus: '未入金',
+        memo: 'デモ：入金待ち',
+        updatedAt: now
+      },
+      memo: 'デモ：入金待ち'
+    });
+    this.updateRevenueRecord(demoRevUnpaid.id, { sourceWorkOrderId: demoWoUnpaid.id });
 
     const demoRevenues = this.getRevenueRecords();
     const demoWo1 = this.getWorkOrders().find(w => w.isDemo && w.customerName.includes('山田'));
@@ -1819,15 +1977,15 @@ const Storage = {
           updatedAt: now
         }
       });
-      this.updateWorkOrder(demoWo1.id, {
-        actualRevenueId: rev0.id,
+    }
+
+    const demoWo1Final = this.getWorkOrders().find(w => w.isDemo && w.customerName.includes('山田'));
+    if (demoWo1Final) {
+      this.updateWorkOrder(demoWo1Final.id, {
         followUp: {
           thanksStatus: 'pending',
-          reviewStatus: 'done',
-          repeatStatus: 'planned',
-          nextMaintenanceDate: typeof WorkOrderBrain !== 'undefined'
-            ? WorkOrderBrain.addDays(today, 365)
-            : today,
+          reviewStatus: 'pending',
+          repeatStatus: 'pending',
           updatedAt: now
         }
       });

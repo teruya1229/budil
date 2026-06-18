@@ -5,7 +5,17 @@
 ## 現在の公開状態
 
 - 公開URL: https://teruya1229.github.io/budil/
-- 現在バージョン: v4.3.1
+- 現在バージョン: v4.4
+
+## v4.4 実装内容（作業後の確定処理番頭MVP）
+
+- 作業予定から「作業後確定」フォームで実績金額・作業内容・支払い状態を確認し、確定売上として登録
+- `js/work-completion-brain.js` 新規追加
+- `budil_work_orders.completion` / `cancel` 任意フィールドで状態管理
+- 確定時のみ `budil_revenue_records` に保存（status: 確定, isConfirmedRevenue: true）
+- キャンセル処理・要確認・今日やること連携・作業後フォロー番頭連携
+- 経営司令塔ホーム・朝レポート・データ診断へ反映
+- v4.2確定売上のみ集計は維持（未確定予定・候補は集計対象外）
 
 ## v4.3.1 実装内容（サイドバー整理・番頭グループ化）
 
