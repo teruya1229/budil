@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.1',
+  BUDIL_VERSION: 'v4.2',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -404,7 +404,7 @@ const Storage = {
     store.dailyChecks[d] = {
       checkedAt: (checkData && checkData.checkedAt) || prev.checkedAt || '',
       memo: (checkData && checkData.memo != null) ? checkData.memo : (prev.memo || ''),
-      version: (checkData && checkData.version) || prev.version || 'v4.1',
+      version: (checkData && checkData.version) || prev.version || 'v4.2',
       items
     };
     this.saveDailyActionTasksData(store);
@@ -869,6 +869,14 @@ const Storage = {
       if (badLeadRef) add('review', `存在しない営業先に紐付いた売上 ${badLeadRef}件`);
       if (paymentConcern) add('caution', `入金注意（paymentConcern） ${paymentConcern}件`);
       if (unlinked) add('caution', `未紐付け売上 ${unlinked}件`);
+
+      if (typeof RevenueSummaryBrain !== 'undefined') {
+        const revWarnings = RevenueSummaryBrain.getRevenueWarnings(revenues);
+        if (revWarnings.noDate) add('caution', `日付不明の売上 ${revWarnings.noDate}件`);
+        if (revWarnings.badAmount) add('caution', `金額不明/数値不正の売上 ${revWarnings.badAmount}件`);
+        if (revWarnings.unknownSource) add('caution', `依頼元不明の売上 ${revWarnings.unknownSource}件`);
+        if (revWarnings.unknownService) add('caution', `サービス不明の売上 ${revWarnings.unknownService}件`);
+      }
     } else {
       add('ok', '売上 0件');
     }
@@ -1461,29 +1469,68 @@ const Storage = {
 
     this.addRevenueRecord({
       ...flag,
-      workDate: today,
+      workDate: today.slice(0, 8) + '05',
+      customerName: leadNames[0],
+      service: 'エアコン通常',
+      source: '直予約',
+      amount: 12000,
+      status: '完了',
+      paymentStatus: '入金済み',
+      leadId: leadIds[0],
+      leadName: leadNames[0],
+      memo: 'デモデータ（6月・直予約）'
+    });
+    this.addRevenueRecord({
+      ...flag,
+      workDate: today.slice(0, 8) + '12',
       customerName: leadNames[0],
       service: 'エアコン完全分解',
-      source: 'LINE',
+      source: '紹介',
       amount: 28000,
       status: '完了',
       paymentStatus: '入金済み',
       leadId: leadIds[0],
       leadName: leadNames[0],
-      memo: 'デモデータ'
+      memo: 'デモデータ（6月・紹介）'
+    });
+    this.addRevenueRecord({
+      ...flag,
+      workDate: today.slice(0, 5) + '07-03',
+      customerName: leadNames[2],
+      service: '洗濯機クリーニング',
+      source: 'LINE',
+      amount: 18000,
+      status: '確定',
+      paymentStatus: '未入金',
+      leadId: leadIds[2],
+      leadName: leadNames[2],
+      memo: 'デモデータ（7月・LINE）'
+    });
+    this.addRevenueRecord({
+      ...flag,
+      workDate: today.slice(0, 5) + '07-10',
+      customerName: leadNames[1],
+      service: '法人案件',
+      source: '法人',
+      amount: 45000,
+      status: '完了',
+      paymentStatus: '入金済み',
+      leadId: leadIds[1],
+      leadName: leadNames[1],
+      memo: 'デモデータ（7月・法人）'
     });
     this.addRevenueRecord({
       ...flag,
       workDate: today,
       customerName: leadNames[1],
       service: 'エアコン通常',
-      source: '紹介',
+      source: 'くらしのマーケット',
       amount: 15000,
       status: '確定',
       paymentStatus: '未入金',
       leadId: leadIds[1],
       leadName: leadNames[1],
-      memo: 'デモデータ（入金待ち）'
+      memo: 'デモデータ（今月・くらしのマーケット）'
     });
 
     const pickupTopics = [

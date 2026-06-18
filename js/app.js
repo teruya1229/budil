@@ -16,6 +16,7 @@
   let weeklyStrategyPeriod = '7d';
   let businessReportPeriod = '7d';
   let lastBusinessReportContext = null;
+  let revenueAggregationFilter = { year: '', month: '', source: '', service: '' };
 
   const SALES_TAB_FIELDS = { email: 'msg-email', form: 'msg-form', dm: 'msg-dm', phone: 'msg-phone' };
   const SALES_TAB_LOG = { email: 'メール送信', form: 'フォーム送信', dm: 'DM', phone: '電話' };
@@ -724,6 +725,12 @@
 
   function renderExecutiveRevenueProfitHtml(section) {
     const s = section || {};
+    const agg = s.revenueAggregation || {};
+    const compact = agg.compact || {};
+    const diffClass = compact.monthDiff > 0 ? 'revenue-agg-diff-up' : (compact.monthDiff < 0 ? 'revenue-agg-diff-down' : '');
+    const diffSign = compact.monthDiff > 0 ? '+' : '';
+    const topSource = (compact.topSources || [])[0];
+    const topService = (compact.topServices || [])[0];
     return `
       <div class="exec-home-revenue-grid">
         <div><span>今月売上</span><strong>${esc(RevenueBrain.formatYen(s.monthRevenue))}</strong></div>
@@ -734,6 +741,11 @@
         <div><span>粗利率</span><strong>${esc(ProfitBrain.formatRate(s.grossRate))}</strong></div>
         <div><span>今週見込み</span><strong>${esc(WorkOrderBrain.formatYen(s.weekForecast))}</strong></div>
         <div><span>売上未登録</span><strong>${s.completedNoRevenue || 0}件</strong></div>
+      </div>
+      <div class="exec-home-revenue-summary">
+        <p>先月比：<span class="${diffClass}">${diffSign}${esc(RevenueBrain.formatYen(compact.monthDiff || 0))}</span></p>
+        <p>今年売上：${esc(RevenueBrain.formatYen(compact.yearTotal || 0))}</p>
+        <p>今月の主力：${esc(topSource ? topSource.name : '—')} / ${esc(topService ? topService.name : '—')}</p>
       </div>
       ${(s.cautions || []).map(c => `<p class="exec-work-warn">${esc(c)}</p>`).join('')}
       <div class="exec-work-actions">
@@ -1326,7 +1338,22 @@
     const managementComment = RevenueBrain.buildManagementComment({
       summary, salesOutcome, nextSalesCandidates, salesHoldCandidates
     });
-    return { today, records, settings, leads, monthKey, summary, comment, salesOutcome, nextSalesCandidates, salesHoldCandidates, managementComment };
+    const revenueSummary = typeof RevenueSummaryBrain !== 'undefined'
+      ? RevenueSummaryBrain.buildFullSummary(records, getRevenueAggregationFilter(), today)
+      : null;
+    return { today, records, settings, leads, monthKey, summary, comment, salesOutcome, nextSalesCandidates, salesHoldCandidates, managementComment, revenueSummary };
+  }
+
+  function getRevenueAggregationFilter() {
+    const filter = { ...revenueAggregationFilter };
+    if (!filter.year && !filter.month && !filter.source && !filter.service) {
+      filter.year = TODAY().slice(0, 4);
+    }
+    return filter;
+  }
+
+  function resetRevenueAggregationFilter() {
+    revenueAggregationFilter = { year: TODAY().slice(0, 4), month: '', source: '', service: '' };
   }
 
   function renderManagementComment(containerId, options) {
@@ -3252,9 +3279,18 @@
         return false;
       }
     });
+    const revWarnings = typeof RevenueSummaryBrain !== 'undefined'
+      ? RevenueSummaryBrain.getRevenueWarnings(records)
+      : null;
 
     if (unlinked) notes.push(`未紐付け売上 ${unlinked}件`);
     if (badLeadRef) notes.push(`紐付け切れ ${badLeadRef}件`);
+    if (revWarnings) {
+      if (revWarnings.noDate) notes.push(`日付不明の売上 ${revWarnings.noDate}件`);
+      if (revWarnings.badAmount) notes.push(`金額不明/数値不正の売上 ${revWarnings.badAmount}件`);
+      if (revWarnings.unknownSource) notes.push(`依頼元不明の売上 ${revWarnings.unknownSource}件`);
+      if (revWarnings.unknownService) notes.push(`サービス不明の売上 ${revWarnings.unknownService}件`);
+    }
     if (missingPerf) notes.push(`成果未入力 ${missingPerf}件`);
     notes.push(backupOk ? 'バックアップ対象キー確認済み' : 'バックアップ対象キーに未保存あり');
     notes.push(`localStorage使用量 ${usage.label || '—'}`);
@@ -3336,6 +3372,9 @@
     );
     const profitCtx = getProfitContext({ period: range });
     const analyticsCtx = getAnalyticsContext({ period: range });
+    const revenueSummary = typeof RevenueSummaryBrain !== 'undefined'
+      ? RevenueSummaryBrain.buildFullSummary(revCtx.records, { year: today.slice(0, 4) }, today)
+      : null;
 
     const context = {
       today,
@@ -3376,6 +3415,7 @@
       paymentConcern,
       profitCtx,
       analyticsCtx,
+      revenueSummary,
       nextActions: []
     };
     context.nextActions = buildNextActionsFromReport(context);
@@ -3481,6 +3521,42 @@
     lines.push(`未紐付け売上：${c.revCtx.salesOutcome && c.revCtx.salesOutcome.unlinkedTotal > 0 ? RevenueBrain.formatYen(c.revCtx.salesOutcome.unlinkedTotal) : 'なし'}`);
     const holdNames = (c.revCtx.salesHoldCandidates || []).map(h => h.leadName).join('、');
     lines.push(`入金確認・保留：${holdNames || (c.paymentConcern.length ? `${c.paymentConcern.length}件` : 'なし')}`);
+    if (c.revenueSummary && c.revenueSummary.compact) {
+      const agg = c.revenueSummary;
+      const compact = agg.compact;
+      const diffSign = compact.monthDiff > 0 ? '+' : '';
+      lines.push(`先月比：${diffSign}${RevenueBrain.formatYen(compact.monthDiff)}`);
+      lines.push(`今年売上：${RevenueBrain.formatYen(compact.yearTotal)}`);
+      lines.push(`今年月平均：${RevenueBrain.formatYen(compact.yearMonthAvg)}`);
+      const topSrc = (compact.topSources || [])[0];
+      const topSvc = (compact.topServices || [])[0];
+      lines.push(`今月の主力依頼元：${topSrc ? topSrc.name : '—'}`);
+      lines.push(`今月の主力サービス：${topSvc ? topSvc.name : '—'}`);
+      if (agg.monthly && agg.monthly.length) {
+        lines.push('月別売上：');
+        agg.monthly.slice(0, 6).forEach(m => {
+          lines.push(`  ${m.label}：${RevenueBrain.formatYen(m.total)} / ${m.count}件`);
+        });
+      }
+      if (agg.yearly && agg.yearly.length) {
+        lines.push('年別売上：');
+        agg.yearly.slice(0, 3).forEach(y => {
+          lines.push(`  ${y.label}：${RevenueBrain.formatYen(y.total)} / ${y.count}件`);
+        });
+      }
+      if (agg.sources && agg.sources.length) {
+        lines.push('依頼元別：');
+        agg.sources.slice(0, 5).forEach(s => {
+          lines.push(`  ${s.name}：${RevenueBrain.formatYen(s.total)} / ${s.count}件（${s.judgment}）`);
+        });
+      }
+      if (agg.services && agg.services.length) {
+        lines.push('サービス別：');
+        agg.services.slice(0, 5).forEach(s => {
+          lines.push(`  ${s.name}：${RevenueBrain.formatYen(s.total)} / ${s.count}件（${s.judgment}）`);
+        });
+      }
+    }
     if (c.profitCtx && c.profitCtx.summary) {
       const ps = c.profitCtx.summary;
       lines.push(`期間内支出：${ProfitBrain.formatYen(ps.monthExpense)}`);
@@ -3591,7 +3667,8 @@
       '売上だけでなく、粗利・支出・広告費・遠方案件も見て、次の7日間の優先行動を提案してください。',
       'GA4/Search Consoleの手入力データから、どのLPを改善すべきか、どの記事・SNS投稿を出すべきか、広告を使うべきかを判断してください。',
       'ブラウザー番頭が確認したGA4/Search Console/GBPの出力も踏まえて、LP改善・記事/SNS・広告判断をしてください。',
-      '毎朝5分で見るべき優先順位として、作業予定・受付・売上/利益・フォロー・アナリティクス需要・注意点を統合して判断してください。'
+      '毎朝5分で見るべき優先順位として、作業予定・受付・売上/利益・フォロー・アナリティクス需要・注意点を統合して判断してください。',
+      '月別・年別・依頼元別・サービス別の売上から、伸ばすべき集客経路とサービスを判断してください。'
     ];
     if (profileBlock) {
       intro.push('');
@@ -3720,10 +3797,14 @@
     copyText(ctx.nextActionsText).then(() => showBusinessReportToast('次の一手をコピーしました')).catch(() => alert('コピーに失敗しました'));
   }
 
-  function renderBusinessReportSummaryCards(summary) {
+  function renderBusinessReportSummaryCards(summary, revenueSummary) {
     const s = summary || {};
+    const compact = revenueSummary && revenueSummary.compact ? revenueSummary.compact : {};
     const cards = [
       { label: '期間内売上', value: RevenueBrain.formatYen(s.periodRevenue || 0) },
+      { label: '今月売上', value: RevenueBrain.formatYen(compact.thisMonthTotal || 0) },
+      { label: '先月比', value: (compact.monthDiff > 0 ? '+' : '') + RevenueBrain.formatYen(compact.monthDiff || 0) },
+      { label: '今年売上', value: RevenueBrain.formatYen(compact.yearTotal || 0) },
       { label: '今月達成率', value: `${s.monthAchievementRate || 0}%` },
       { label: '需要ピックアップ数', value: s.pickupCount ?? 0 },
       { label: '実行済み施策数', value: s.executedCount ?? 0 },
@@ -3772,7 +3853,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.1</span>
+        <span class="business-report-version">v4.2</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -3782,7 +3863,7 @@
         ${periodBtns}
       </div>
       <button type="button" class="btn btn-primary btn-sm" id="${isDetail ? 'btn-generate-report-detail' : 'btn-generate-report-dash'}">レポート生成</button>
-      ${renderBusinessReportSummaryCards(ctx.summary)}
+      ${renderBusinessReportSummaryCards(ctx.summary, ctx.revenueSummary)}
       <div class="business-report-next-block">
         <h3>次の一手</h3>
         ${renderBusinessReportNextActions(ctx.nextActions, isDetail ? 'detail' : 'compact')}
@@ -7283,6 +7364,17 @@
     const el = document.getElementById('profit-summary');
     if (!el) return;
     const s = ctx.summary;
+    let monthlyBrief = '';
+    if (typeof RevenueSummaryBrain !== 'undefined') {
+      const monthly = RevenueSummaryBrain.buildMonthlySummary(
+        RevenueSummaryBrain.activeRecords(Storage.getRevenueRecords())
+      ).slice(0, 3);
+      if (monthly.length) {
+        monthlyBrief = `<div class="profit-monthly-brief"><p class="profit-monthly-brief-title">月別売上（直近）</p>${monthly.map(m =>
+          `<p class="profit-monthly-brief-line">${esc(m.label)}：${esc(RevenueSummaryBrain.formatYen(m.total))} / ${m.count}件</p>`
+        ).join('')}</div>`;
+      }
+    }
     el.innerHTML = `
       <div class="profit-summary-item"><span>今月売上</span><strong>${esc(ProfitBrain.formatYen(s.monthRevenue))}</strong></div>
       <div class="profit-summary-item"><span>今月支出</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
@@ -7293,7 +7385,8 @@
       <div class="profit-summary-item"><span>広告費</span><strong>${esc(ProfitBrain.formatYen(s.adExpense))}</strong></div>
       <div class="profit-summary-item"><span>手数料</span><strong>${esc(ProfitBrain.formatYen(s.feeExpense))}</strong></div>
       <div class="profit-summary-item"><span>外注費</span><strong>${esc(ProfitBrain.formatYen(s.outsourceExpense))}</strong></div>
-      <div class="profit-summary-item"><span>未紐付け支出</span><strong>${s.unlinkedCount}件（${esc(ProfitBrain.formatYen(s.unlinkedTotal))}）</strong></div>`;
+      <div class="profit-summary-item"><span>未紐付け支出</span><strong>${s.unlinkedCount}件（${esc(ProfitBrain.formatYen(s.unlinkedTotal))}）</strong></div>
+      ${monthlyBrief}`;
   }
 
   function renderProfitExpenseList(ctx) {
@@ -10356,6 +10449,193 @@
     if (btn) btn.addEventListener('click', goToAreaView);
   }
 
+  function renderRevenueAggMonthlyTable(rows) {
+    if (!rows.length) return '<p class="placeholder-text">データがありません</p>';
+    return `<table class="revenue-agg-table"><thead><tr>
+      <th>月</th><th class="num">売上件数</th><th class="num">売上合計</th><th class="num">平均単価</th>
+    </tr></thead><tbody>${rows.map(r => `<tr>
+      <td>${esc(r.label)}</td>
+      <td class="num">${r.count}件</td>
+      <td class="num">${esc(RevenueSummaryBrain.formatYen(r.total))}</td>
+      <td class="num">${esc(RevenueSummaryBrain.formatYen(r.avg))}</td>
+    </tr>`).join('')}</tbody></table>`;
+  }
+
+  function renderRevenueAggYearlyTable(rows) {
+    if (!rows.length) return '<p class="placeholder-text">データがありません</p>';
+    return `<table class="revenue-agg-table"><thead><tr>
+      <th>年</th><th class="num">売上件数</th><th class="num">売上合計</th><th class="num">月平均</th>
+    </tr></thead><tbody>${rows.map(r => `<tr>
+      <td>${esc(r.label)}</td>
+      <td class="num">${r.count}件</td>
+      <td class="num">${esc(RevenueSummaryBrain.formatYen(r.total))}</td>
+      <td class="num">${esc(RevenueSummaryBrain.formatYen(r.monthAvg))}</td>
+    </tr>`).join('')}</tbody></table>`;
+  }
+
+  function renderRevenueAggDimensionTable(rows, labelCol) {
+    if (!rows.length) return '<p class="placeholder-text">データがありません</p>';
+    return `<table class="revenue-agg-table"><thead><tr>
+      <th>${esc(labelCol)}</th><th class="num">件数</th><th class="num">売上合計</th><th class="num">平均単価</th><th class="num">構成比</th><th>判断</th>
+    </tr></thead><tbody>${rows.map(r => `<tr>
+      <td>${esc(r.name)}</td>
+      <td class="num">${r.count}件</td>
+      <td class="num">${esc(RevenueSummaryBrain.formatYen(r.total))}</td>
+      <td class="num">${esc(RevenueSummaryBrain.formatYen(r.avg))}</td>
+      <td class="num">${r.share}%</td>
+      <td>${esc(r.judgment)}</td>
+    </tr>`).join('')}</tbody></table>`;
+  }
+
+  function renderRevenueAggMonthBlocks(blocks, field) {
+    if (!blocks.length) return '<p class="placeholder-text">データがありません</p>';
+    return blocks.map(b => `
+      <div class="revenue-agg-month-block">
+        <h4>${esc(b.label)}</h4>
+        <table class="revenue-agg-table"><thead><tr>
+          <th>${field === 'sources' ? '依頼元' : 'サービス'}</th><th class="num">件数</th><th class="num">売上</th>
+        </tr></thead><tbody>${(b[field] || []).map(r => `<tr>
+          <td>${esc(r.name)}</td>
+          <td class="num">${r.count}件</td>
+          <td class="num">${esc(RevenueSummaryBrain.formatYen(r.total))}</td>
+        </tr>`).join('')}</tbody></table>
+      </div>`).join('');
+  }
+
+  function renderRevenueAggregationPanel() {
+    const el = document.getElementById('revenue-aggregation-panel');
+    if (!el || typeof RevenueSummaryBrain === 'undefined') return;
+
+    const { records, today } = getRevenueContext();
+    const filter = getRevenueAggregationFilter();
+    const summary = RevenueSummaryBrain.buildFullSummary(records, filter, today);
+    const options = RevenueSummaryBrain.getFilterOptions(records);
+    const compact = summary.compact;
+
+    const yearOpts = ['<option value="">すべて</option>']
+      .concat(options.years.map(y => `<option value="${esc(y)}"${filter.year === y ? ' selected' : ''}>${esc(y)}年</option>`));
+    const monthOpts = ['<option value="">すべて</option>']
+      .concat(options.months
+        .filter(m => !filter.year || m.startsWith(filter.year))
+        .map(m => `<option value="${esc(m)}"${filter.month === m ? ' selected' : ''}>${esc(RevenueSummaryBrain.formatMonthLabel(m))}</option>`));
+    const sourceOpts = ['<option value="">すべて</option>']
+      .concat(options.sources.map(s => `<option value="${esc(s)}"${filter.source === s ? ' selected' : ''}>${esc(s)}</option>`));
+    const serviceOpts = ['<option value="">すべて</option>']
+      .concat(options.services.map(s => `<option value="${esc(s)}"${filter.service === s ? ' selected' : ''}>${esc(s)}</option>`));
+
+    const topSourceNames = (compact.topSources || []).map(s => s.name).join(' / ') || '—';
+    const topServiceNames = (compact.topServices || []).map(s => s.name).join(' / ') || '—';
+
+    el.innerHTML = `
+      <div class="revenue-agg-compact">
+        <div class="revenue-agg-compact-item revenue-agg-highlight">
+          <span>今月売上</span>
+          <strong>${esc(RevenueSummaryBrain.formatYen(compact.thisMonthTotal))}</strong>
+        </div>
+        <div class="revenue-agg-compact-item">
+          <span>先月売上</span>
+          <strong>${esc(RevenueSummaryBrain.formatYen(compact.prevMonthTotal))}</strong>
+        </div>
+        <div class="revenue-agg-compact-item revenue-agg-highlight">
+          <span>今年売上</span>
+          <strong>${esc(RevenueSummaryBrain.formatYen(compact.yearTotal))}</strong>
+        </div>
+        <div class="revenue-agg-compact-item">
+          <span>今年の月平均</span>
+          <strong>${esc(RevenueSummaryBrain.formatYen(compact.yearMonthAvg))}</strong>
+        </div>
+        <div class="revenue-agg-compact-item">
+          <span>上位依頼元（今月）</span>
+          <p class="revenue-agg-top-list">${esc(topSourceNames)}</p>
+        </div>
+        <div class="revenue-agg-compact-item">
+          <span>上位サービス（今月）</span>
+          <p class="revenue-agg-top-list">${esc(topServiceNames)}</p>
+        </div>
+      </div>
+
+      <div class="revenue-agg-filters">
+        <div class="form-group">
+          <label for="revenue-agg-filter-year">年</label>
+          <select id="revenue-agg-filter-year">${yearOpts.join('')}</select>
+        </div>
+        <div class="form-group">
+          <label for="revenue-agg-filter-month">月</label>
+          <select id="revenue-agg-filter-month">${monthOpts.join('')}</select>
+        </div>
+        <div class="form-group">
+          <label for="revenue-agg-filter-source">依頼元</label>
+          <select id="revenue-agg-filter-source">${sourceOpts.join('')}</select>
+        </div>
+        <div class="form-group">
+          <label for="revenue-agg-filter-service">サービス</label>
+          <select id="revenue-agg-filter-service">${serviceOpts.join('')}</select>
+        </div>
+        <button type="button" class="btn btn-sm btn-secondary" id="btn-revenue-agg-reset-filter">リセット</button>
+      </div>
+
+      <details class="revenue-agg-collapse">
+        <summary>月別を見る</summary>
+        <div class="revenue-agg-collapse-body">${renderRevenueAggMonthlyTable(summary.monthly)}</div>
+      </details>
+      <details class="revenue-agg-collapse">
+        <summary>年別を見る</summary>
+        <div class="revenue-agg-collapse-body">${renderRevenueAggYearlyTable(summary.yearly)}</div>
+      </details>
+      <details class="revenue-agg-collapse">
+        <summary>依頼元別を見る</summary>
+        <div class="revenue-agg-collapse-body">${renderRevenueAggDimensionTable(summary.sources, '依頼元')}</div>
+      </details>
+      <details class="revenue-agg-collapse">
+        <summary>サービス別を見る</summary>
+        <div class="revenue-agg-collapse-body">${renderRevenueAggDimensionTable(summary.services, 'サービス')}</div>
+      </details>
+      <details class="revenue-agg-collapse">
+        <summary>詳細集計を開く（月別×依頼元 / 月別×サービス / 年別内訳）</summary>
+        <div class="revenue-agg-collapse-body">
+          <h4>月別 × 依頼元</h4>
+          ${renderRevenueAggMonthBlocks(summary.monthlySources, 'sources')}
+          <h4>月別 × サービス</h4>
+          ${renderRevenueAggMonthBlocks(summary.monthlyServices, 'services')}
+          <h4>年別 × 依頼元</h4>
+          ${renderRevenueAggMonthBlocks(summary.yearlySources.map(b => ({ label: b.label, sources: b.sources })), 'sources')}
+          <h4>年別 × サービス</h4>
+          ${renderRevenueAggMonthBlocks(summary.yearlyServices.map(b => ({ label: b.label, services: b.services })), 'services')}
+        </div>
+      </details>
+
+      <div class="revenue-agg-actions">
+        <button type="button" class="btn btn-sm btn-primary" id="btn-revenue-agg-copy">売上集計をコピー</button>
+      </div>`;
+
+    const bindFilter = (id, key) => {
+      const sel = el.querySelector(id);
+      if (sel) sel.addEventListener('change', () => {
+        revenueAggregationFilter[key] = sel.value;
+        if (key === 'year' && revenueAggregationFilter.month && !revenueAggregationFilter.month.startsWith(sel.value)) {
+          revenueAggregationFilter.month = '';
+        }
+        renderRevenueAggregationPanel();
+      });
+    };
+    bindFilter('#revenue-agg-filter-year', 'year');
+    bindFilter('#revenue-agg-filter-month', 'month');
+    bindFilter('#revenue-agg-filter-source', 'source');
+    bindFilter('#revenue-agg-filter-service', 'service');
+
+    const resetBtn = el.querySelector('#btn-revenue-agg-reset-filter');
+    if (resetBtn) resetBtn.addEventListener('click', () => {
+      resetRevenueAggregationFilter();
+      renderRevenueAggregationPanel();
+    });
+
+    const copyBtn = el.querySelector('#btn-revenue-agg-copy');
+    if (copyBtn) copyBtn.addEventListener('click', () => {
+      const text = RevenueSummaryBrain.buildCopyText(summary, filter);
+      copyText(text).then(() => alert('売上集計をコピーしました')).catch(() => alert('コピーに失敗しました'));
+    });
+  }
+
   function renderRevenueSummaryPanel() {
     const { summary, comment, settings, salesOutcome, leads } = getRevenueContext();
     const summaryEl = document.getElementById('revenue-summary');
@@ -10410,6 +10690,7 @@
       fillRevenueLeadSelect(leadEl ? leadEl.value : '');
       toggleRevenueLeadOptions();
       safeRenderSection('revenue-summary', () => renderRevenueSummaryPanel(), '売上サマリー');
+      safeRenderSection('revenue-aggregation-panel', () => renderRevenueAggregationPanel(), '売上集計');
       safeRenderSection(null, () => renderRevenueAreaBrief(), '売上エリア');
       safeRenderSection('revenue-tbody', () => renderRevenueList(), '売上一覧');
     } catch (err) {
@@ -10482,6 +10763,9 @@
         const section = document.getElementById('revenue-list-section');
         if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
+    }
+    if (!revenueAggregationFilter.year) {
+      resetRevenueAggregationFilter();
     }
     resetRevenueForm();
     renderRevenueView();

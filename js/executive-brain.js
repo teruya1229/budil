@@ -1,8 +1,8 @@
 /**
- * Budil v4.1 - 経営司令塔ホーム（毎朝5分・全番頭統合）
+ * Budil v4.2 - 経営司令塔ホーム（毎朝5分・全番頭統合）
  */
 const ExecutiveBrain = {
-  VERSION: 'v4.1',
+  VERSION: 'v4.2',
 
   CHECK_ITEMS: [
     { id: 'workOrders', label: '作業予定を確認した' },
@@ -356,6 +356,9 @@ const ExecutiveBrain = {
     if (rev.salesOutcome && rev.salesOutcome.unlinkedTotal > 0) {
       cautions.push('未紐付け売上あり');
     }
+    const revenueAggregation = rev.revenueSummary || (typeof RevenueSummaryBrain !== 'undefined'
+      ? RevenueSummaryBrain.buildFullSummary(rev.records || [], { year: (ctx.today || '').slice(0, 4) }, ctx.today)
+      : null);
     return {
       monthRevenue: summary.planned || 0,
       monthlyTarget: summary.monthlyTarget || 0,
@@ -365,7 +368,8 @@ const ExecutiveBrain = {
       grossRate: ps.monthGrossRate || 0,
       weekForecast: forecast.weekAmount || 0,
       completedNoRevenue: forecast.completedNoRevenueCount || 0,
-      cautions
+      cautions,
+      revenueAggregation
     };
   },
 

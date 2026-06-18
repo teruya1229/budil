@@ -462,6 +462,7 @@ const ProfitBrain = {
       areaRows,
       sourceRows,
       hints,
+      revenues: ctx.revenues || [],
       expenses: this.normalizeExpenses(ctx.expenses)
     };
   },
@@ -568,6 +569,12 @@ const ProfitBrain = {
     lines.push(`見込み利益：${this.formatYen(s.forecastProfit)}`);
     lines.push(`広告費：${this.formatYen(s.adExpense)} / 手数料：${this.formatYen(s.feeExpense)} / 外注費：${this.formatYen(s.outsourceExpense)}`);
     lines.push(`未紐付け支出：${s.unlinkedCount || 0}件`);
+    const monthlyLines = this.buildMonthlyRevenueProfitLines(c.revenues, c.expenses);
+    if (monthlyLines.length) {
+      lines.push('');
+      lines.push('月別売上・粗利（直近）：');
+      monthlyLines.forEach(l => lines.push(`・${l}`));
+    }
     lines.push('');
     const svc = (c.serviceRows || []).slice(0, 5).map(r =>
       `${r.service}：売上${this.formatYen(r.revenueTotal)} / 粗利${this.formatYen(r.grossProfit)}（${r.judgment}）`
@@ -595,6 +602,19 @@ const ProfitBrain = {
       hints.forEach(h => lines.push(`・${h}`));
     }
     return lines.join('\n');
+  },
+
+  buildMonthlyRevenueProfitLines(revenues, expenses) {
+    if (typeof RevenueSummaryBrain === 'undefined') return [];
+    const active = RevenueSummaryBrain.activeRecords(revenues);
+    const monthly = RevenueSummaryBrain.buildMonthlySummary(active).slice(0, 3);
+    const expenseList = this.normalizeExpenses(expenses);
+    return monthly.map(m => {
+      const monthExpenses = expenseList.filter(e => e.date && e.date.startsWith(m.monthKey));
+      const expenseTotal = monthExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+      const gross = m.total - expenseTotal;
+      return `${m.label}：売上${this.formatYen(m.total)} / 粗利${this.formatYen(gross)}（${m.count}件）`;
+    });
   },
 
   getDiagnosticsCounts(expenses, revenues, workOrders, leads) {
