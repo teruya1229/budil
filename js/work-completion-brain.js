@@ -95,6 +95,13 @@ const WorkCompletionBrain = {
     return this.isPastScheduledActive(wo, today);
   },
 
+  isRevenueLocked(workOrder) {
+    const wo = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.normalizeWorkOrder(workOrder)
+      : workOrder;
+    return !!(wo && wo.actualRevenueId);
+  },
+
   buildCompletionFormDefaults(workOrder) {
     const wo = typeof WorkOrderBrain !== 'undefined'
       ? WorkOrderBrain.normalizeWorkOrder(workOrder)

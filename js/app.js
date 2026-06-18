@@ -7109,11 +7109,19 @@
     }
   }
 
+  function isWorkOrderRevenueLocked(wo) {
+    return !!(wo && wo.actualRevenueId);
+  }
+
   function openWorkCompletionModal(workOrderId) {
     const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
     if (!wo) return;
-    if (wo.actualRevenueId) {
-      alert('この作業予定はすでに売上確定済みです。');
+    if (isWorkOrderRevenueLocked(wo)) {
+      alert('この作業予定はすでに売上確定済みです。二重登録はできません。');
+      return;
+    }
+    if (wo.status === 'cancelled') {
+      alert('キャンセル済みの作業予定です。');
       return;
     }
     fillWorkCompletionSelects();
@@ -7148,6 +7156,14 @@
   function openWorkCancelModal(workOrderId) {
     const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
     if (!wo) return;
+    if (isWorkOrderRevenueLocked(wo)) {
+      alert('売上確定済みの作業予定はキャンセルできません。売上番頭で対応してください。');
+      return;
+    }
+    if (wo.status === 'cancelled') {
+      alert('すでにキャンセル済みです。');
+      return;
+    }
     document.getElementById('work-cancel-wo-id').value = wo.id;
     document.getElementById('work-cancel-reason').value = (wo.cancel && wo.cancel.reason) || '';
     document.getElementById('work-cancel-date').value = TODAY();
@@ -7165,6 +7181,14 @@
     const workOrderId = document.getElementById('work-completion-wo-id').value;
     const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
     if (!wo) return;
+    if (isWorkOrderRevenueLocked(wo)) {
+      alert('この作業予定はすでに売上確定済みです。二重登録はできません。');
+      return;
+    }
+    if (wo.status === 'cancelled') {
+      alert('キャンセル済みの作業予定です。');
+      return;
+    }
     const input = {
       workDate: document.getElementById('work-completion-date').value,
       customerName: document.getElementById('work-completion-customer').value.trim(),
@@ -7206,6 +7230,14 @@
     const workOrderId = document.getElementById('work-cancel-wo-id').value;
     const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
     if (!wo) return;
+    if (isWorkOrderRevenueLocked(wo)) {
+      alert('売上確定済みの作業予定はキャンセルできません。');
+      return;
+    }
+    if (wo.status === 'cancelled') {
+      alert('すでにキャンセル済みです。');
+      return;
+    }
     const cancelInput = {
       reason: document.getElementById('work-cancel-reason').value.trim(),
       canceledAt: document.getElementById('work-cancel-date').value || TODAY(),
@@ -7391,6 +7423,10 @@
   function fillRevenueFromWorkOrder(workOrderId) {
     const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
     if (!wo) return;
+    if (isWorkOrderRevenueLocked(wo)) {
+      alert('この作業予定はすでに売上確定済みです。作業後確定処理をご利用ください。');
+      return;
+    }
     const candidate = WorkOrderBrain.buildRevenueFormPayload(wo);
     pendingRevenueWorkOrderId = workOrderId;
     fillRevenueSelects();
@@ -11314,6 +11350,12 @@
     if (id) Storage.updateRevenueRecord(id, data);
     else newRecord = Storage.addRevenueRecord(data);
     if (workOrderId) {
+      const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
+      if (wo && wo.actualRevenueId && wo.actualRevenueId !== id) {
+        alert('この作業予定はすでに別の売上と紐付いています。二重登録はできません。');
+        pendingRevenueWorkOrderId = '';
+        return;
+      }
       const revId = id || (newRecord && newRecord.id);
       if (revId) Storage.updateWorkOrder(workOrderId, { actualRevenueId: revId });
       pendingRevenueWorkOrderId = '';
