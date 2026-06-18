@@ -1,8 +1,8 @@
 /**
- * Budil v4.2 - 経営司令塔ホーム（毎朝5分・全番頭統合）
+ * Budil v4.3 - 経営司令塔ホーム（毎朝5分・全番頭統合）
  */
 const ExecutiveBrain = {
-  VERSION: 'v4.2',
+  VERSION: 'v4.3',
 
   CHECK_ITEMS: [
     { id: 'workOrders', label: '作業予定を確認した' },
@@ -17,6 +17,7 @@ const ExecutiveBrain = {
   QUICK_LINKS: [
     { id: 'reception', label: '受付番頭を開く', view: 'reception', tier: 'primary' },
     { id: 'work-order', label: '作業予定番頭を開く', view: 'work-order', tier: 'primary' },
+    { id: 'calendar-candidate', label: '予定候補取り込み', view: 'calendar-candidate', tier: 'primary' },
     { id: 'revenue', label: '売上を登録', view: 'revenue', tier: 'primary' },
     { id: 'tasks', label: '今日やることを開く', action: 'tasks', tier: 'primary' },
     { id: 'profit', label: '利益番頭を開く', view: 'profit', tier: 'primary' },
@@ -128,6 +129,13 @@ const ExecutiveBrain = {
       ? FollowUpBrain.buildHomeComment(c.followTargets)
       : '';
     if (followComment) push(followComment);
+
+    if (typeof CalendarCandidateBrain !== 'undefined') {
+      const calComment = CalendarCandidateBrain.buildHomeComment(
+        CalendarCandidateBrain.summarizeCandidates(c.workOrders, c.today)
+      );
+      if (calComment) push(calComment);
+    }
 
     const rev = c.revCtx.summary || {};
     if (rev.monthlyTarget > 0 && rev.remainingToTarget > 0) {
@@ -467,6 +475,12 @@ const ExecutiveBrain = {
 
     ReceptionBrain.getReceptionWarnings(ctx.intakes).forEach(w => add('注意', w, 'reception'));
 
+    if (typeof CalendarCandidateBrain !== 'undefined') {
+      CalendarCandidateBrain.buildWarnings(
+        CalendarCandidateBrain.summarizeCandidates(ctx.workOrders, today)
+      ).forEach(w => add('注意', w, 'calendar-candidate'));
+    }
+
     (ctx.mapCtx.warnings || []).forEach(w => {
       if (w.type === 'far' && w.items && w.items[0]) {
         add('注意', `遠方・移動注意：${w.items[0].area} ${w.items[0].name}`, 'area');
@@ -515,6 +529,12 @@ const ExecutiveBrain = {
       `・${i.customerName}：${i.serviceText || '—'}（${i.nextAction}）`
     );
     sections.push({ title: '新規受付', lines: recLines.length ? recLines : ['なし'] });
+    if (typeof CalendarCandidateBrain !== 'undefined') {
+      const calLines = CalendarCandidateBrain.buildMorningReport(
+        CalendarCandidateBrain.summarizeCandidates(c.workOrders, c.today)
+      );
+      if (calLines.length) sections.push({ title: '予定候補', lines: calLines.slice(1) });
+    }
     const rp = c.revenueProfitSection || {};
     sections.push({
       title: '売上・利益',

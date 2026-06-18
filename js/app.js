@@ -396,6 +396,7 @@
         if (view === 'pickup') renderDemandPickup();
         if (view === 'reception') renderReceptionView();
         if (view === 'work-order') renderWorkOrderView();
+        if (view === 'calendar-candidate') renderCalendarCandidateView();
         if (view === 'follow-up') renderFollowUpView();
         if (view === 'profit') renderProfitView();
         if (view === 'analytics') renderAnalyticsView();
@@ -1307,6 +1308,16 @@
       analyticsMorningEl.innerHTML = lines.length
         ? `<p class="mgmt-analytics-label">アナリティクス：</p><ul class="mgmt-analytics-list">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
         : '<p class="placeholder-text">アナリティクス判断はまだありません</p>';
+    }
+
+    const calendarMorningEl = document.getElementById('mgmt-calendar-candidates');
+    if (calendarMorningEl && typeof CalendarCandidateBrain !== 'undefined') {
+      const calLines = CalendarCandidateBrain.buildMorningReport(
+        CalendarCandidateBrain.summarizeCandidates(Storage.getWorkOrders(), TODAY())
+      );
+      calendarMorningEl.innerHTML = calLines.length
+        ? `<ul class="mgmt-calendar-candidate-list">${calLines.slice(1).map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
+        : '<p class="placeholder-text">予定候補はありません</p>';
     }
 
     const demandTopEl = document.getElementById('mgmt-demand-top');
@@ -3301,6 +3312,11 @@
       if (revWarnings.unknownSource) notes.push(`依頼元不明の売上 ${revWarnings.unknownSource}件`);
       if (revWarnings.unknownService) notes.push(`サービス不明の売上 ${revWarnings.unknownService}件`);
     }
+    if (typeof CalendarCandidateBrain !== 'undefined') {
+      const calDiag = CalendarCandidateBrain.getDiagnosticsCounts(Storage.getWorkOrders());
+      if (calDiag.pendingCount) notes.push(`作業予定未反映の候補 ${calDiag.pendingCount}件`);
+      if (calDiag.withAmountNoRevenueCount) notes.push(`予定金額あり・売上未確定候補 ${calDiag.withAmountNoRevenueCount}件`);
+    }
     if (missingPerf) notes.push(`成果未入力 ${missingPerf}件`);
     notes.push(backupOk ? 'バックアップ対象キー確認済み' : 'バックアップ対象キーに未保存あり');
     notes.push(`localStorage使用量 ${usage.label || '—'}`);
@@ -3865,7 +3881,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.2</span>
+        <span class="business-report-version">v4.3</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -6768,6 +6784,265 @@
     alert('営業先の情報を作業予定フォームに反映しました。');
   }
 
+  function getCalendarCandidateSummary() {
+    if (typeof CalendarCandidateBrain === 'undefined') return null;
+    return CalendarCandidateBrain.summarizeCandidates(Storage.getWorkOrders(), TODAY());
+  }
+
+  function renderCalendarCandidatePrompt() {
+    const el = document.getElementById('calendar-candidate-prompt-preview');
+    if (!el || typeof CalendarCandidateBrain === 'undefined') return;
+    const prompt = CalendarCandidateBrain.buildBrowserPrompt({ periodLabel: '今週と来週' });
+    el.textContent = prompt;
+  }
+
+  function parseCalendarCandidatePaste() {
+    const text = document.getElementById('calendar-candidate-paste')?.value || '';
+    if (typeof CalendarCandidateBrain === 'undefined') return;
+    const parsed = CalendarCandidateBrain.parseCalendarText(text);
+    lastCalendarCandidatePreview = CalendarCandidateBrain.buildImportPreview(parsed, Storage.getWorkOrders());
+    renderCalendarCandidatePreview();
+  }
+
+  function renderCalendarCandidatePreview() {
+    const previewPanel = document.getElementById('calendar-candidate-preview');
+    const errorsEl = document.getElementById('calendar-candidate-errors');
+    const listEl = document.getElementById('calendar-candidate-preview-list');
+    const saveAllBtn = document.getElementById('btn-calendar-candidate-save-all');
+    const preview = lastCalendarCandidatePreview;
+    if (!previewPanel || !preview) return;
+    previewPanel.classList.remove('hidden');
+    const msgs = [...(preview.warnings || []), ...(preview.errors || [])];
+    if (errorsEl) {
+      errorsEl.innerHTML = msgs.length
+        ? `<ul class="calendar-candidate-error-list">${msgs.map(m =>
+          `<li class="${(preview.errors || []).includes(m) ? 'is-error' : 'is-warning'}">${esc(m)}</li>`
+        ).join('')}</ul>`
+        : '';
+    }
+    if (listEl) {
+      listEl.innerHTML = (preview.items || []).length
+        ? preview.items.map((item, i) => {
+          const c = item.candidate;
+          const dup = item.isDuplicate
+            ? `<p class="calendar-candidate-dup">${esc((item.duplicates[0] && item.duplicates[0].reason) || '重複の可能性')}</p>`
+            : '';
+          return `<div class="calendar-candidate-preview-item${item.isDuplicate ? ' is-duplicate' : ''}">
+            <p class="calendar-candidate-preview-title"><strong>${esc(c.customerName || '（名前なし）')}</strong> / ${esc(c.serviceText || '—')}</p>
+            <p class="calendar-candidate-preview-meta">${esc(c.scheduledDate || '日付不明')} ${esc(c.startTime || '')}〜${esc(c.endTime || '')} / ${esc(c.source || '—')} / 見込み ${esc(WorkOrderBrain.formatYen(c.estimateAmount))}</p>
+            <p class="calendar-candidate-not-sale">これは売上ではありません（候補）</p>
+            ${dup}
+            <button type="button" class="btn btn-sm btn-primary" data-cal-save-one="${i}">候補として保存</button>
+          </div>`;
+        }).join('')
+        : '<p class="placeholder-text">解析結果がありません</p>';
+      listEl.querySelectorAll('[data-cal-save-one]').forEach(btn => {
+        btn.addEventListener('click', () => saveCalendarCandidateOne(Number(btn.dataset.calSaveOne)));
+      });
+    }
+    if (saveAllBtn) saveAllBtn.disabled = !(preview.items || []).length || (preview.errors || []).length > 0;
+  }
+
+  function saveCalendarCandidateOne(index, force) {
+    const preview = lastCalendarCandidatePreview;
+    const item = preview && preview.items ? preview.items[index] : null;
+    if (!item) return;
+    if (item.isDuplicate && !force) {
+      if (!confirm('重複の可能性があります。それでも候補として保存しますか？')) return;
+    }
+    const payload = CalendarCandidateBrain.createWorkOrderPayload(item.candidate, {
+      originalText: preview.rawText,
+      candidateStatus: '候補'
+    });
+    Storage.addWorkOrder(payload);
+    refreshCalendarCandidateViews();
+    alert('予定候補を保存しました（売上確定ではありません）。');
+  }
+
+  function saveAllCalendarCandidates(force) {
+    const preview = lastCalendarCandidatePreview;
+    if (!preview || !(preview.items || []).length) return;
+    const dupItems = preview.items.filter(i => i.isDuplicate);
+    if (dupItems.length && !force) {
+      if (!confirm(`重複の可能性がある候補が${dupItems.length}件あります。すべて保存しますか？`)) return;
+    }
+    let saved = 0;
+    preview.items.forEach(item => {
+      const payload = CalendarCandidateBrain.createWorkOrderPayload(item.candidate, {
+        originalText: preview.rawText,
+        candidateStatus: '候補'
+      });
+      Storage.addWorkOrder(payload);
+      saved += 1;
+    });
+    lastCalendarCandidatePreview = null;
+    const pasteEl = document.getElementById('calendar-candidate-paste');
+    if (pasteEl) pasteEl.value = '';
+    const previewPanel = document.getElementById('calendar-candidate-preview');
+    if (previewPanel) previewPanel.classList.add('hidden');
+    refreshCalendarCandidateViews();
+    alert(`予定候補を${saved}件保存しました（売上確定ではありません）。`);
+  }
+
+  function refreshCalendarCandidateViews() {
+    renderCalendarCandidateSavedList();
+    renderWorkOrderCalendarBrief();
+    renderWorkOrderView();
+    renderDashboard();
+    renderExecutiveHome();
+    renderMorningExecutiveSections();
+    renderRevenueView();
+  }
+
+  function renderCalendarCandidateBadge(workOrder) {
+    if (typeof CalendarCandidateBrain === 'undefined' || !CalendarCandidateBrain.isCalendarCandidateWorkOrder(workOrder)) {
+      return '';
+    }
+    const st = CalendarCandidateBrain.getCandidateStatus(workOrder);
+    const revenueNote = workOrder.actualRevenueId ? '' : ' / 売上未確定';
+    return `<span class="work-order-candidate-badge">カレンダー候補由来${revenueNote}（${esc(st)}）</span>`;
+  }
+
+  function renderCalendarCandidateSavedList() {
+    const el = document.getElementById('calendar-candidate-saved-list');
+    if (!el || typeof CalendarCandidateBrain === 'undefined') return;
+    const list = Storage.getWorkOrders()
+      .filter(w => CalendarCandidateBrain.isCalendarCandidateWorkOrder(w))
+      .map(w => WorkOrderBrain.normalizeWorkOrder(w))
+      .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+    if (!list.length) {
+      el.innerHTML = '<p class="placeholder-text">保存済みの予定候補はありません。上の貼り付け欄から取り込んでください。</p>';
+      return;
+    }
+    el.innerHTML = `<p class="calendar-candidate-not-sale-list">これは売上ではありません。確定売上集計には含まれません。</p>
+      ${list.map(wo => {
+        const st = CalendarCandidateBrain.getCandidateStatus(wo);
+        const timeLabel = wo.startTime && wo.endTime ? `${wo.startTime}〜${wo.endTime}` : (wo.startTime || '時間未設定');
+        return `<div class="calendar-candidate-saved-item" data-cal-wo-id="${esc(wo.id)}">
+          <div class="calendar-candidate-saved-header">
+            <strong>${esc(wo.customerName || '（名前なし）')}</strong>
+            <span class="calendar-candidate-status-badge status-${esc(st)}">${esc(st)}</span>
+          </div>
+          <p class="calendar-candidate-saved-meta">${esc(wo.scheduledDate || '日付不明')} ${esc(timeLabel)} / ${esc(wo.serviceText || '—')} / ${esc(wo.address || '—')}</p>
+          <p class="calendar-candidate-saved-meta">依頼元：${esc(wo.source || '—')} / 見込み：${esc(WorkOrderBrain.formatYen(wo.estimateAmount))} / 確度：${esc((wo.candidateMeta && wo.candidateMeta.confidence) || '—')}</p>
+          ${wo.candidateMeta && wo.candidateMeta.cautionNote ? `<p class="calendar-candidate-saved-warn">注意：${esc(wo.candidateMeta.cautionNote)}</p>` : ''}
+          <div class="calendar-candidate-saved-actions">
+            ${st === '候補' || st === '要確認' ? `<button type="button" class="btn btn-sm btn-primary" data-cal-promote="${esc(wo.id)}">作業予定に追加</button>` : ''}
+            <button type="button" class="btn btn-sm btn-secondary" data-cal-task="${esc(wo.id)}">今日やることに追加</button>
+            ${st !== 'スキップ' ? `<button type="button" class="btn btn-sm btn-secondary" data-cal-review="${esc(wo.id)}">要確認にする</button>` : ''}
+            ${st !== 'スキップ' ? `<button type="button" class="btn btn-sm btn-secondary" data-cal-skip="${esc(wo.id)}">スキップ</button>` : ''}
+          </div>
+        </div>`;
+      }).join('')}`;
+    el.querySelectorAll('[data-cal-promote]').forEach(btn => {
+      btn.addEventListener('click', () => promoteCalendarCandidate(btn.dataset.calPromote));
+    });
+    el.querySelectorAll('[data-cal-task]').forEach(btn => {
+      btn.addEventListener('click', () => addCalendarCandidateTask(btn.dataset.calTask));
+    });
+    el.querySelectorAll('[data-cal-review]').forEach(btn => {
+      btn.addEventListener('click', () => markCalendarCandidateReview(btn.dataset.calReview));
+    });
+    el.querySelectorAll('[data-cal-skip]').forEach(btn => {
+      btn.addEventListener('click', () => skipCalendarCandidate(btn.dataset.calSkip));
+    });
+  }
+
+  function promoteCalendarCandidate(workOrderId) {
+    const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
+    if (!wo || !wo.candidateMeta) return;
+    Storage.updateWorkOrder(workOrderId, {
+      status: 'tentative',
+      candidateMeta: {
+        ...wo.candidateMeta,
+        candidateStatus: '作業予定に追加済み',
+        confirmedRevenue: false
+      }
+    });
+    refreshCalendarCandidateViews();
+    alert('作業予定に反映しました。売上は売上番頭で確定してください。');
+  }
+
+  function skipCalendarCandidate(workOrderId) {
+    const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
+    if (!wo || !wo.candidateMeta) return;
+    Storage.updateWorkOrder(workOrderId, {
+      candidateMeta: { ...wo.candidateMeta, candidateStatus: 'スキップ' }
+    });
+    refreshCalendarCandidateViews();
+  }
+
+  function markCalendarCandidateReview(workOrderId) {
+    const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
+    if (!wo || !wo.candidateMeta) return;
+    Storage.updateWorkOrder(workOrderId, {
+      candidateMeta: { ...wo.candidateMeta, candidateStatus: '要確認', confidence: '要確認' }
+    });
+    refreshCalendarCandidateViews();
+  }
+
+  function addCalendarCandidateTask(workOrderId) {
+    const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
+    if (!wo || typeof CalendarCandidateBrain === 'undefined') return;
+    const today = TODAY();
+    const payload = CalendarCandidateBrain.createTaskPayload(wo, 'review', today);
+    const store = Storage.getDailyActionTasksData();
+    if (store.manualTasks.some(t => t.pickupDedupeKey === payload.pickupDedupeKey)) {
+      alert('同じ今日やることはすでに追加済みです。');
+      return;
+    }
+    Storage.addManualDailyTask(payload);
+    renderDailyActionTasks();
+    renderExecutiveHome();
+    alert('今日やることに追加しました。');
+  }
+
+  function renderCalendarCandidateView() {
+    renderCalendarCandidatePrompt();
+    renderCalendarCandidateSavedList();
+    renderCalendarCandidatePreview();
+  }
+
+  function renderWorkOrderCalendarBrief() {
+    const el = document.getElementById('work-order-calendar-candidates-brief');
+    if (!el || typeof CalendarCandidateBrain === 'undefined') return;
+    const summary = getCalendarCandidateSummary();
+    if (!summary || !summary.pendingCount) {
+      el.innerHTML = '';
+      return;
+    }
+    el.innerHTML = `<p>予定候補（未反映）：${summary.pendingCount}件 / 要確認：${summary.reviewCount}件 — <button type="button" class="btn btn-sm btn-secondary" id="btn-work-order-open-calendar-candidates">予定候補を見る</button></p>`;
+    const btn = document.getElementById('btn-work-order-open-calendar-candidates');
+    if (btn) btn.addEventListener('click', () => navigateToView('calendar-candidate'));
+  }
+
+  function initCalendarCandidate() {
+    renderCalendarCandidatePrompt();
+    const copyBtn = document.getElementById('btn-calendar-candidate-copy-prompt');
+    if (copyBtn && !copyBtn.dataset.bound) {
+      copyBtn.dataset.bound = '1';
+      copyBtn.addEventListener('click', () => {
+        const prompt = CalendarCandidateBrain.buildBrowserPrompt({ periodLabel: '今週と来週' });
+        copyText(prompt).then(() => alert('カレンダー確認プロンプトをコピーしました')).catch(() => alert('コピーに失敗しました'));
+      });
+    }
+    const parseBtn = document.getElementById('btn-calendar-candidate-parse');
+    if (parseBtn && !parseBtn.dataset.bound) {
+      parseBtn.dataset.bound = '1';
+      parseBtn.addEventListener('click', parseCalendarCandidatePaste);
+    }
+    const saveAllBtn = document.getElementById('btn-calendar-candidate-save-all');
+    if (saveAllBtn && !saveAllBtn.dataset.bound) {
+      saveAllBtn.dataset.bound = '1';
+      saveAllBtn.addEventListener('click', () => saveAllCalendarCandidates(false));
+    }
+    const goBtn = document.getElementById('btn-go-calendar-candidate');
+    if (goBtn && !goBtn.dataset.bound) {
+      goBtn.dataset.bound = '1';
+      goBtn.addEventListener('click', () => navigateToView('calendar-candidate'));
+    }
+  }
+
   function renderWorkOrderItemActions(workOrder) {
     const wo = WorkOrderBrain.normalizeWorkOrder(workOrder);
     const cal = WorkOrderBrain.buildGoogleCalendarUrl(wo);
@@ -6792,9 +7067,10 @@
         <div class="work-order-item-header">
           <strong>${esc(timeLabel)}</strong>
           <span class="work-order-status-badge work-order-status-${esc(wo.status)}">${esc(WorkOrderBrain.formatStatus(wo.status))}</span>
+          ${renderCalendarCandidateBadge(wo)}
         </div>
         <p class="work-order-item-meta"><strong>${esc(wo.customerName || '（名前なし）')}</strong> / ${esc(wo.serviceText || '—')}</p>
-        <p class="work-order-item-meta">エリア：${esc(area)} ${renderAreaDistanceBadge(area, wo.address)} / 見込み：${esc(WorkOrderBrain.formatYen(wo.estimateAmount))}</p>
+        <p class="work-order-item-meta">エリア：${esc(area)} ${renderAreaDistanceBadge(area, wo.address)} / 見込み：${esc(WorkOrderBrain.formatYen(wo.estimateAmount))}${typeof CalendarCandidateBrain !== 'undefined' && CalendarCandidateBrain.isCalendarCandidateWorkOrder(wo) && !wo.actualRevenueId ? ' <span class="work-order-not-revenue">（売上未確定）</span>' : ''}</p>
         <div class="work-order-item-actions">
           ${renderWorkOrderItemActions(wo)}
         </div>
@@ -6944,6 +7220,7 @@
 
   function renderWorkOrderView() {
     try {
+      safeRenderSection(null, () => renderWorkOrderCalendarBrief(), '予定候補');
       safeRenderSection('work-order-forecast', () => renderWorkOrderForecast(), '売上見込み');
       safeRenderSection('work-order-today-list', () => renderWorkOrderTodayList(), '今日の作業予定');
       safeRenderSection('work-order-week-list', () => renderWorkOrderWeekList(), '今週の作業予定');
@@ -7721,6 +7998,7 @@
   // ── アナリティクス番頭 ──
   let selectedAnalyticsId = null;
   let lastBrowserBantouPreview = null;
+  let lastCalendarCandidatePreview = null;
 
   function getAnalyticsContext(opts) {
     const today = TODAY();
@@ -9627,6 +9905,7 @@
     if (viewName === 'pickup') renderDemandPickup();
     if (viewName === 'reception') renderReceptionView();
     if (viewName === 'work-order') renderWorkOrderView();
+    if (viewName === 'calendar-candidate') renderCalendarCandidateView();
     if (viewName === 'follow-up') renderFollowUpView();
     if (viewName === 'profit') renderProfitView();
     if (viewName === 'analytics') renderAnalyticsView();
@@ -10516,17 +10795,27 @@
 
   function renderRevenueAggSeparateHtml(separate) {
     const s = separate || {};
+    const calSummary = typeof CalendarCandidateBrain !== 'undefined' ? getCalendarCandidateSummary() : null;
     const rows = [
       { label: s.forecast && s.forecast.label, count: s.forecast && s.forecast.count, total: s.forecast && s.forecast.total },
       { label: s.receptionCandidates && s.receptionCandidates.label, count: s.receptionCandidates && s.receptionCandidates.count, total: s.receptionCandidates && s.receptionCandidates.total },
       { label: s.plannedRevenue && s.plannedRevenue.label, count: s.plannedRevenue && s.plannedRevenue.count, total: s.plannedRevenue && s.plannedRevenue.total },
       { label: s.noDateConfirmed && s.noDateConfirmed.label, count: s.noDateConfirmed && s.noDateConfirmed.count, total: s.noDateConfirmed && s.noDateConfirmed.total }
-    ].filter(r => r.label && ((r.count > 0) || (r.total > 0)));
-    if (!rows.length) return '';
+    ];
+    if (calSummary && calSummary.pendingCount) {
+      rows.unshift({
+        label: 'カレンダー予定候補（未反映）',
+        count: calSummary.pendingCount,
+        total: calSummary.pending.reduce((sum, w) => sum + Number(w.estimateAmount || 0), 0),
+        link: 'calendar-candidate'
+      });
+    }
+    const filtered = rows.filter(r => r.label && ((r.count > 0) || (r.total > 0)));
+    if (!filtered.length) return '';
     return `<div class="revenue-agg-separate">
-      <p class="revenue-agg-separate-title">集計対象外（別表示）</p>
-      ${rows.map(r =>
-        `<p class="revenue-agg-separate-line"><span>${esc(r.label)}</span><strong>${r.count}件 / ${esc(RevenueSummaryBrain.formatYen(r.total))}</strong></p>`
+      <p class="revenue-agg-separate-title">集計対象外（別表示）※確定売上には含まれません</p>
+      ${filtered.map(r =>
+        `<p class="revenue-agg-separate-line"><span>${esc(r.label)}</span><strong>${r.count}件 / ${esc(RevenueSummaryBrain.formatYen(r.total))}${r.link ? ` <button type="button" class="btn btn-sm btn-secondary revenue-agg-goto-candidate">見る</button>` : ''}</strong></p>`
       ).join('')}
     </div>`;
   }
@@ -10666,6 +10955,9 @@
     if (copyBtn) copyBtn.addEventListener('click', () => {
       const text = RevenueSummaryBrain.buildCopyText(summary, filter);
       copyText(text).then(() => alert('売上集計をコピーしました')).catch(() => alert('コピーに失敗しました'));
+    });
+    el.querySelectorAll('.revenue-agg-goto-candidate').forEach(btn => {
+      btn.addEventListener('click', () => navigateToView('calendar-candidate'));
     });
   }
 
@@ -10990,6 +11282,7 @@
     initDemandPickup();
     initReception();
     initWorkOrder();
+    initCalendarCandidate();
     initFollowUp();
     initProfit();
     initAnalytics();

@@ -29,7 +29,7 @@ const WorkOrderBrain = {
     const address = String(item.address || '').trim();
     const area = String(item.area || '').trim()
       || (typeof MapBrain !== 'undefined' ? MapBrain.detectAreaFromAddress(address) : '');
-    return {
+    const normalized = {
       id: item.id || '',
       intakeId: String(item.intakeId || '').trim(),
       leadId: String(item.leadId || '').trim(),
@@ -53,12 +53,26 @@ const WorkOrderBrain = {
       isDemo: item.isDemo === true,
       isTest: item.isTest === true
     };
+    if (item.candidateMeta && typeof item.candidateMeta === 'object') {
+      normalized.candidateMeta = typeof CalendarCandidateBrain !== 'undefined'
+        ? CalendarCandidateBrain.normalizeCandidateMeta(item.candidateMeta)
+        : { ...item.candidateMeta };
+    }
     if (item.followUp != null && typeof item.followUp === 'object') {
       normalized.followUp = typeof FollowUpBrain !== 'undefined'
         ? FollowUpBrain.normalizeFollowUp(item.followUp)
         : item.followUp;
     }
     return normalized;
+  },
+
+  isPendingCalendarCandidate(workOrder) {
+    return typeof CalendarCandidateBrain !== 'undefined'
+      && CalendarCandidateBrain.isPendingCandidate(workOrder);
+  },
+
+  forOperationalList(workOrders) {
+    return (workOrders || []).filter(w => !this.isPendingCalendarCandidate(w));
   },
 
   isValidTime(str) {
@@ -183,7 +197,7 @@ const WorkOrderBrain = {
   },
 
   filterActive(workOrders) {
-    return (workOrders || []).map(w => this.normalizeWorkOrder(w))
+    return this.forOperationalList(workOrders).map(w => this.normalizeWorkOrder(w))
       .filter(w => w.status !== 'archived' && w.status !== 'cancelled');
   },
 
@@ -215,7 +229,7 @@ const WorkOrderBrain = {
   getSalesForecast(workOrders, revenues, today) {
     const t = today || new Date().toISOString().slice(0, 10);
     const monthStart = this.getMonthStart(t);
-    const list = (workOrders || []).map(w => this.normalizeWorkOrder(w));
+    const list = this.forOperationalList(workOrders || []).map(w => this.normalizeWorkOrder(w));
     const active = list.filter(w => this.ACTIVE_STATUSES.includes(w.status));
     const todayOrders = active.filter(w => w.scheduledDate === t);
     const weekEnd = this.addDays(t, 6);

@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.2</small>
+          <small>AI経営脳みそ v4.3</small>
         </div>
       </div>
       <nav class="nav">
@@ -37,6 +37,9 @@
         </button>
         <button class="nav-item" data-view="work-order">
           <span class="nav-icon">📅</span>予約・作業予定番頭
+        </button>
+        <button class="nav-item" data-view="calendar-candidate">
+          <span class="nav-icon">📋</span>予定候補取り込み
         </button>
         <button class="nav-item" data-view="area">
           <span class="nav-icon">🗺️</span>エリア番頭
@@ -64,7 +67,7 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.2</small>
+        <small>Budil v4.3</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -86,7 +89,7 @@
               <h2>経営司令塔ホーム</h2>
               <p class="exec-home-subtitle">毎朝5分で、今日やること・売上・利益・需要・受付・作業予定を確認</p>
             </div>
-            <span class="exec-home-version">v4.2</span>
+            <span class="exec-home-version">v4.3</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <div id="exec-home-start-guide" class="exec-home-start-guide hidden"></div>
@@ -304,7 +307,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.2</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.3</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -336,6 +339,10 @@
               <h3>アナリティクス・需要</h3>
               <div id="mgmt-analytics" class="mgmt-analytics-block"></div>
               <div id="mgmt-demand-top" class="mgmt-demand-top-block"></div>
+            </div>
+            <div class="morning-section">
+              <h3>予定候補</h3>
+              <div id="mgmt-calendar-candidates" class="mgmt-calendar-candidates-block"></div>
             </div>
             <div class="morning-section">
               <h3>注意・保留</h3>
@@ -1390,6 +1397,11 @@
           <p class="view-subtitle">受付・営業先から作業予定をつなぎ、今日/今週の作業と売上見込みを管理する</p>
         </header>
 
+        <div class="card card-wide card-work-order-calendar-link">
+          <p class="work-order-calendar-link-text">Googleカレンダーの予定は <button type="button" class="btn btn-sm btn-secondary" id="btn-go-calendar-candidate">予定候補取り込み番頭</button> から候補として取り込めます（売上確定ではありません）。</p>
+          <div id="work-order-calendar-candidates-brief" class="work-order-calendar-candidates-brief"></div>
+        </div>
+
         <div class="card card-wide card-work-order-comment">
           <h2>売上見込み</h2>
           <div id="work-order-forecast" class="work-order-forecast"></div>
@@ -1502,6 +1514,53 @@
           <h2>受付から作業予定化</h2>
           <p class="data-mgmt-desc">受付一覧の「作業予定を作成」からも登録できます。下記は関連受付付きの作業予定一覧です。</p>
           <div id="work-order-from-intake-list" class="work-order-intake-list"></div>
+        </div>
+      </section>
+
+      <!-- 予定候補取り込み番頭 -->
+      <section id="view-calendar-candidate" class="view">
+        <header class="view-header">
+          <h1>予定候補取り込み番頭</h1>
+          <p class="view-subtitle">Googleカレンダー/ブラウザー番頭の予定を貼り付けて作業予定候補にする（売上確定ではありません）</p>
+        </header>
+
+        <div class="card card-wide card-calendar-candidate">
+          <p class="calendar-candidate-notice"><strong>これは売上ではありません。</strong> 予定候補として取り込み、現場後に売上番頭で確定してください。</p>
+
+          <h2>ブラウザー番頭用プロンプト</h2>
+          <div id="calendar-candidate-prompt-preview" class="calendar-candidate-prompt-preview"></div>
+          <div class="calendar-candidate-actions">
+            <button type="button" id="btn-calendar-candidate-copy-prompt" class="btn btn-sm btn-primary">カレンダー確認プロンプトをコピー</button>
+          </div>
+
+          <h2>カレンダー予定の貼り付け</h2>
+          <p class="pickup-paste-hint">【カレンダー予定】形式で複数件貼り付けできます。売上確定ではなく候補として扱います。</p>
+          <textarea id="calendar-candidate-paste" class="calendar-candidate-paste" rows="10" placeholder="【カレンダー予定】&#10;日付：2026-07-03&#10;開始時間：09:00&#10;..."></textarea>
+          <div class="calendar-candidate-actions">
+            <button type="button" id="btn-calendar-candidate-parse" class="btn btn-sm btn-secondary">予定候補を解析</button>
+            <button type="button" id="btn-calendar-candidate-save-all" class="btn btn-sm btn-primary" disabled>候補をすべて保存</button>
+          </div>
+
+          <div id="calendar-candidate-preview" class="calendar-candidate-preview hidden">
+            <h3>予定候補プレビュー</h3>
+            <div id="calendar-candidate-errors" class="calendar-candidate-errors"></div>
+            <div id="calendar-candidate-preview-list" class="calendar-candidate-preview-list"></div>
+          </div>
+
+          <h2>取り込み候補一覧</h2>
+          <p class="calendar-candidate-list-note">候補は作業予定候補です。確定売上集計には含まれません。</p>
+          <div id="calendar-candidate-saved-list" class="calendar-candidate-saved-list"></div>
+
+          <details class="calendar-candidate-collapse">
+            <summary>注意事項</summary>
+            <div class="calendar-candidate-collapse-body">
+              <ul class="calendar-candidate-notes">
+                <li>カレンダー予定は予定変更・キャンセル・金額変更が起きやすいため、売上確定には使いません。</li>
+                <li>作業予定へ反映後も、売上は売上番頭で確定してください。</li>
+                <li>予定金額は見込みであり、売上集計には混ぜません。</li>
+              </ul>
+            </div>
+          </details>
         </div>
       </section>
 
@@ -2498,6 +2557,7 @@
   <script src="js/revenue-summary-brain.js"></script>
   <script src="js/reception-brain.js"></script>
   <script src="js/map-brain.js"></script>
+  <script src="js/calendar-candidate-brain.js"></script>
   <script src="js/work-order-brain.js"></script>
   <script src="js/follow-up-brain.js"></script>
   <script src="js/profit-brain.js"></script>

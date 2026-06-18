@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.2',
+  BUDIL_VERSION: 'v4.3',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -404,7 +404,7 @@ const Storage = {
     store.dailyChecks[d] = {
       checkedAt: (checkData && checkData.checkedAt) || prev.checkedAt || '',
       memo: (checkData && checkData.memo != null) ? checkData.memo : (prev.memo || ''),
-      version: (checkData && checkData.version) || prev.version || 'v4.2',
+      version: (checkData && checkData.version) || prev.version || 'v4.3',
       items
     };
     this.saveDailyActionTasksData(store);
@@ -1102,6 +1102,18 @@ const Storage = {
       if (badIntakeRef) add('review', `存在しない受付を指すintakeId ${badIntakeRef}件`);
       if (badRevRef) add('review', `存在しない売上を指すactualRevenueId ${badRevRef}件`);
       if (completedNoRev) add('caution', `作業完了済みで売上未登録 ${completedNoRev}件`);
+      if (typeof CalendarCandidateBrain !== 'undefined') {
+        const calDiag = CalendarCandidateBrain.getDiagnosticsCounts(workOrders);
+        if (calDiag.calendarCandidateTotal) {
+          add('ok', `カレンダー由来の作業予定候補 ${calDiag.calendarCandidateTotal}件`);
+        }
+        if (calDiag.pendingCount) add('caution', `作業予定未反映の候補 ${calDiag.pendingCount}件`);
+        if (calDiag.withAmountNoRevenueCount) {
+          add('caution', `予定金額あり・売上未確定の候補 ${calDiag.withAmountNoRevenueCount}件`);
+        }
+        if (calDiag.noDateCount) add('caution', `日付不明の予定候補 ${calDiag.noDateCount}件`);
+        if (calDiag.duplicateSuspectCount) add('caution', `重複疑いの予定候補 ${calDiag.duplicateSuspectCount}件`);
+      }
       if (overdue) add('caution', `予定日超過で未完了 ${overdue}件`);
       if (noAddress) add('caution', `住所未入力の作業予定 ${noAddress}件`);
       if (unknownArea) add('caution', `エリア不明の作業予定 ${unknownArea}件`);
@@ -1711,6 +1723,83 @@ const Storage = {
       status: 'tentative',
       estimateAmount: 12000,
       memo: 'デモ：明日の作業予定'
+    });
+
+    const calDate = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.addDays(today, 3)
+      : today;
+    this.addWorkOrder({
+      ...flag,
+      customerName: 'デモ：カレンダー候補・田中様',
+      address: '沖縄県南城市',
+      area: '南城市',
+      source: '直予約',
+      serviceText: 'エアコンクリーニング',
+      scheduledDate: calDate,
+      startTime: '14:00',
+      endTime: '16:00',
+      status: 'tentative',
+      estimateAmount: 9000,
+      memo: 'デモ：カレンダー候補（未反映）',
+      candidateMeta: {
+        importSource: 'calendar-paste',
+        sourceType: 'work-order-candidate',
+        candidateStatus: '候補',
+        confidence: '予定',
+        estimatedAmount: '9000',
+        confirmedRevenue: false,
+        originalText: 'デモ用カレンダー候補',
+        importedAt: now
+      }
+    });
+    this.addWorkOrder({
+      ...flag,
+      customerName: 'デモ：カレンダー候補・要確認',
+      address: '沖縄県豊見城市',
+      area: '豊見城市',
+      source: '紹介',
+      serviceText: '完全分解',
+      scheduledDate: calDate,
+      startTime: '09:00',
+      endTime: '12:00',
+      status: 'tentative',
+      estimateAmount: 28000,
+      memo: 'デモ：金額・日付要確認',
+      candidateMeta: {
+        importSource: 'calendar-paste',
+        sourceType: 'work-order-candidate',
+        candidateStatus: '要確認',
+        confidence: '要確認',
+        estimatedAmount: '28000',
+        confirmedRevenue: false,
+        cautionNote: '金額仮',
+        originalText: 'デモ用要確認候補',
+        importedAt: now
+      }
+    });
+    this.addWorkOrder({
+      ...flag,
+      customerName: 'デモ：カレンダー反映済み',
+      address: '沖縄県読谷村',
+      area: '読谷村',
+      source: 'くらしのマーケット',
+      serviceText: '洗濯機クリーニング',
+      scheduledDate: tomorrowWo,
+      startTime: '13:00',
+      endTime: '15:00',
+      status: 'confirmed',
+      estimateAmount: 18000,
+      memo: 'デモ：候補から作業予定に反映済み',
+      candidateMeta: {
+        importSource: 'calendar-paste',
+        sourceType: 'work-order-candidate',
+        candidateStatus: '作業予定に追加済み',
+        confidence: '確定っぽい',
+        estimatedAmount: '18000',
+        confirmedRevenue: false,
+        originalText: 'デモ用反映済み候補',
+        importedAt: now
+      }
     });
 
     const demoRevenues = this.getRevenueRecords();
