@@ -13,61 +13,128 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.3</small>
+          <small>AI経営脳みそ v4.3.1</small>
         </div>
       </div>
       <nav class="nav">
-        <button class="nav-item active" data-view="dashboard">
-          <span class="nav-icon">📊</span>ダッシュボード
-        </button>
-        <button class="nav-item" data-view="radar">
-          <span class="nav-icon">📡</span>需要レーダー
-        </button>
-        <button class="nav-item" data-view="pickup">
-          <span class="nav-icon">📥</span>需要番頭
-        </button>
-        <button class="nav-item" data-view="demand">
-          <span class="nav-icon">🔍</span>需要サーチ番頭
-        </button>
-        <button class="nav-item" data-view="sales">
-          <span class="nav-icon">📋</span>営業番頭
-        </button>
-        <button class="nav-item" data-view="reception">
-          <span class="nav-icon">📞</span>受付・予約番頭
-        </button>
-        <button class="nav-item" data-view="work-order">
-          <span class="nav-icon">📅</span>予約・作業予定番頭
-        </button>
-        <button class="nav-item" data-view="calendar-candidate">
-          <span class="nav-icon">📋</span>予定候補取り込み
-        </button>
-        <button class="nav-item" data-view="area">
-          <span class="nav-icon">🗺️</span>エリア番頭
-        </button>
-        <button class="nav-item" data-view="revenue">
-          <span class="nav-icon">💰</span>売上番頭
-        </button>
-        <button class="nav-item" data-view="follow-up">
-          <span class="nav-icon">💬</span>作業後フォロー番頭
-        </button>
-        <button class="nav-item" data-view="profit">
-          <span class="nav-icon">📊</span>利益番頭
-        </button>
-        <button class="nav-item" data-view="analytics">
-          <span class="nav-icon">📈</span>アナリティクス番頭
-        </button>
-        <button class="nav-item" data-view="card">
-          <span class="nav-icon">🪪</span>名刺解析
-        </button>
-        <button class="nav-item" data-view="followup">
-          <span class="nav-icon">📨</span>追客管理
-        </button>
-        <button class="nav-item" data-view="data">
-          <span class="nav-icon">💾</span>データ管理
-        </button>
+        <p class="nav-hint">必要な番頭を分類から選んでください</p>
+
+        <details class="nav-group" open>
+          <summary class="nav-group-title"><span class="nav-group-icon">🏠</span><span class="nav-group-label">ホーム</span></summary>
+          <p class="nav-group-hint">司令塔・今日やること・朝レポート</p>
+          <div class="nav-group-items">
+            <button class="nav-item nav-item-main active" data-view="dashboard">
+              <span class="nav-icon">📊</span><span class="nav-label">ダッシュボード</span>
+            </button>
+            <button class="nav-item nav-item-sub" data-view="dashboard" data-scroll="#executive-home">
+              <span class="nav-icon">🎯</span><span class="nav-label">経営司令塔</span>
+            </button>
+            <button class="nav-item nav-item-sub" data-view="dashboard" data-scroll=".card-daily-action-tasks">
+              <span class="nav-icon">✅</span><span class="nav-label">今日やること</span>
+            </button>
+            <button class="nav-item nav-item-sub" data-view="dashboard" data-scroll="#morning-report">
+              <span class="nav-icon">🌅</span><span class="nav-label">朝レポート</span>
+            </button>
+          </div>
+        </details>
+
+        <details class="nav-group" open>
+          <summary class="nav-group-title"><span class="nav-group-icon">📈</span><span class="nav-group-label">集客・需要</span></summary>
+          <p class="nav-group-hint">見られているもの、伸びそうな需要</p>
+          <div class="nav-group-items">
+            <button class="nav-item nav-item-main" data-view="radar">
+              <span class="nav-icon">📡</span><span class="nav-label">需要レーダー</span>
+            </button>
+            <button class="nav-item nav-item-main" data-view="pickup">
+              <span class="nav-icon">📥</span><span class="nav-label">需要番頭</span>
+            </button>
+            <button class="nav-item nav-item-main" data-view="demand">
+              <span class="nav-icon">🔍</span><span class="nav-label">需要リサーチ</span>
+            </button>
+            <button class="nav-item nav-item-main" data-view="analytics">
+              <span class="nav-icon">📈</span><span class="nav-label">アナリティクス</span>
+            </button>
+          </div>
+        </details>
+
+        <details class="nav-group" open>
+          <summary class="nav-group-title"><span class="nav-group-icon">📅</span><span class="nav-group-label">受付・予定</span></summary>
+          <p class="nav-group-hint">受付、予定、候補、エリア</p>
+          <div class="nav-group-items">
+            <button class="nav-item nav-item-main" data-view="reception">
+              <span class="nav-icon">📞</span><span class="nav-label">受付・予約</span>
+            </button>
+            <button class="nav-item nav-item-main" data-view="work-order">
+              <span class="nav-icon">📅</span><span class="nav-label">予約・作業予定</span>
+            </button>
+            <button class="nav-item nav-item-main" data-view="calendar-candidate">
+              <span class="nav-icon">📋</span><span class="nav-label">予定候補取り込み</span>
+            </button>
+            <button class="nav-item nav-item-main" data-view="area">
+              <span class="nav-icon">🗺️</span><span class="nav-label">エリア番頭</span>
+            </button>
+          </div>
+        </details>
+
+        <details class="nav-group" open>
+          <summary class="nav-group-title"><span class="nav-group-icon">💰</span><span class="nav-group-label">売上・利益</span></summary>
+          <p class="nav-group-hint">確定売上、利益、フォロー</p>
+          <div class="nav-group-items">
+            <button class="nav-item nav-item-main" data-view="revenue">
+              <span class="nav-icon">💰</span><span class="nav-label">売上番頭</span>
+            </button>
+            <button class="nav-item nav-item-sub" data-view="revenue" data-scroll="#revenue-aggregation-card">
+              <span class="nav-icon">📊</span><span class="nav-label">売上集計</span>
+            </button>
+            <button class="nav-item nav-item-main" data-view="profit">
+              <span class="nav-icon">📊</span><span class="nav-label">利益番頭</span>
+            </button>
+            <button class="nav-item nav-item-main" data-view="follow-up">
+              <span class="nav-icon">💬</span><span class="nav-label">作業後フォロー</span>
+            </button>
+          </div>
+        </details>
+
+        <details class="nav-group" open>
+          <summary class="nav-group-title"><span class="nav-group-icon">🤝</span><span class="nav-group-label">営業・顧客</span></summary>
+          <p class="nav-group-hint">営業先、追客、名刺</p>
+          <div class="nav-group-items">
+            <button class="nav-item nav-item-main" data-view="sales">
+              <span class="nav-icon">📋</span><span class="nav-label">営業番頭</span>
+            </button>
+            <button class="nav-item nav-item-main" data-view="followup">
+              <span class="nav-icon">📨</span><span class="nav-label">追客管理</span>
+            </button>
+            <button class="nav-item nav-item-main" data-view="card">
+              <span class="nav-icon">🪪</span><span class="nav-label">名刺解析</span>
+            </button>
+          </div>
+        </details>
+
+        <details class="nav-group" open>
+          <summary class="nav-group-title"><span class="nav-group-icon">🗂</span><span class="nav-group-label">管理</span></summary>
+          <p class="nav-group-hint">データ、バックアップ、診断</p>
+          <div class="nav-group-items">
+            <button class="nav-item nav-item-main" data-view="data">
+              <span class="nav-icon">💾</span><span class="nav-label">データ管理</span>
+            </button>
+            <button class="nav-item nav-item-sub" data-view="data" data-scroll=".data-mgmt-grid">
+              <span class="nav-icon">📦</span><span class="nav-label">バックアップ</span>
+            </button>
+            <button class="nav-item nav-item-sub" data-view="data" data-scroll=".card-data-diagnostics">
+              <span class="nav-icon">🔎</span><span class="nav-label">データ診断</span>
+            </button>
+            <button class="nav-item nav-item-sub" data-view="data" data-scroll="#business-profile-settings">
+              <span class="nav-icon">🏢</span><span class="nav-label">事業プロフィール</span>
+            </button>
+            <button class="nav-item nav-item-sub" data-view="data" data-scroll="#demo-data-panel">
+              <span class="nav-icon">🧪</span><span class="nav-label">デモデータ</span>
+            </button>
+          </div>
+        </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.3</small>
+        <small>Budil v4.3.1</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -89,7 +156,7 @@
               <h2>経営司令塔ホーム</h2>
               <p class="exec-home-subtitle">毎朝5分で、今日やること・売上・利益・需要・受付・作業予定を確認</p>
             </div>
-            <span class="exec-home-version">v4.3</span>
+            <span class="exec-home-version">v4.3.1</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <div id="exec-home-start-guide" class="exec-home-start-guide hidden"></div>
@@ -307,7 +374,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.3</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.3.1</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">

@@ -92,26 +92,105 @@ body {
 
 .nav {
   flex: 1;
-  padding: 16px 12px;
+  padding: 12px 10px 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.nav-hint {
+  margin: 0 6px 4px;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.nav-group {
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.12);
+  padding: 0;
+}
+
+.nav-group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.nav-group-title::-webkit-details-marker {
+  display: none;
+}
+
+.nav-group-title::after {
+  content: '▾';
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  transition: transform 0.2s;
+}
+
+.nav-group:not([open]) .nav-group-title::after {
+  transform: rotate(-90deg);
+}
+
+.nav-group-icon {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.nav-group-label {
+  letter-spacing: 0.02em;
+}
+
+.nav-group-hint {
+  margin: 0 10px 6px;
+  font-size: 0.68rem;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+.nav-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 6px 8px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px;
+  padding: 10px 12px;
   border: none;
   background: transparent;
-  color: var(--text-muted);
-  font-size: 0.9rem;
+  color: #cbd5e1;
+  font-size: 0.86rem;
   border-radius: var(--radius);
   cursor: pointer;
   text-align: left;
   transition: all 0.2s;
   font-family: inherit;
+  width: 100%;
+}
+
+.nav-item-sub {
+  padding: 8px 12px 8px 28px;
+  font-size: 0.8rem;
+  color: #b8c5d6;
+}
+
+.nav-item-sub .nav-icon {
+  font-size: 0.85rem;
+  opacity: 0.9;
 }
 
 .nav-item:hover {
@@ -2349,7 +2428,11 @@ body {
   }
 
   .logo-text,
-  .nav-item span:not(.nav-icon),
+  .nav-hint,
+  .nav-group-hint,
+  .nav-group-title,
+  .nav-label,
+  .nav-item-sub,
   .sidebar-footer {
     display: none;
   }
@@ -2359,9 +2442,27 @@ body {
     padding: 16px 10px;
   }
 
-  .nav-item {
+  .nav {
+    padding: 8px 6px;
+    gap: 4px;
+  }
+
+  .nav-group {
+    border: none;
+    background: transparent;
+    padding: 0;
+  }
+
+  .nav-group-items {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0;
+  }
+
+  .nav-item-main {
     justify-content: center;
-    padding: 12px;
+    padding: 10px;
   }
 
   .main {

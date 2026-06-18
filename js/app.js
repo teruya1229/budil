@@ -383,26 +383,48 @@
   const ACTIVE_LEAD_STATUSES = ['未接触', 'アプローチ中', '商談中'];
 
   // ── ナビゲーション ──
+  function setNavActive(viewName) {
+    document.querySelectorAll('.nav-item-main').forEach(n => {
+      n.classList.toggle('active', n.dataset.view === viewName);
+    });
+  }
+
+  function scrollNavTarget(selector) {
+    if (!selector) return;
+    const target = document.querySelector(selector);
+    if (!target) return;
+    let node = target;
+    while (node) {
+      if (node.tagName === 'DETAILS' && !node.open) node.open = true;
+      node = node.parentElement;
+    }
+    setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  }
+
+  function switchView(view) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + view).classList.add('active');
+    if (view === 'dashboard') renderDashboard();
+    if (view === 'radar') renderDemandRadar();
+    if (view === 'pickup') renderDemandPickup();
+    if (view === 'reception') renderReceptionView();
+    if (view === 'work-order') renderWorkOrderView();
+    if (view === 'calendar-candidate') renderCalendarCandidateView();
+    if (view === 'follow-up') renderFollowUpView();
+    if (view === 'profit') renderProfitView();
+    if (view === 'analytics') renderAnalyticsView();
+    if (view === 'area') renderAreaView();
+    if (view === 'revenue') renderRevenueView();
+    if (view === 'data') renderDataManagement();
+  }
+
   function initNavigation() {
     document.querySelectorAll('.nav-item').forEach(btn => {
       btn.addEventListener('click', () => {
         const view = btn.dataset.view;
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        btn.classList.add('active');
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById('view-' + view).classList.add('active');
-        if (view === 'dashboard') renderDashboard();
-        if (view === 'radar') renderDemandRadar();
-        if (view === 'pickup') renderDemandPickup();
-        if (view === 'reception') renderReceptionView();
-        if (view === 'work-order') renderWorkOrderView();
-        if (view === 'calendar-candidate') renderCalendarCandidateView();
-        if (view === 'follow-up') renderFollowUpView();
-        if (view === 'profit') renderProfitView();
-        if (view === 'analytics') renderAnalyticsView();
-        if (view === 'area') renderAreaView();
-        if (view === 'revenue') renderRevenueView();
-        if (view === 'data') renderDataManagement();
+        setNavActive(view);
+        switchView(view);
+        scrollNavTarget(btn.dataset.scroll);
       });
     });
   }
@@ -3881,7 +3903,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.3</span>
+        <span class="business-report-version">v4.3.1</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -9894,24 +9916,10 @@
     renderDashboard();
   }
 
-  function navigateToView(viewName) {
-    document.querySelectorAll('.nav-item').forEach(n => {
-      n.classList.toggle('active', n.dataset.view === viewName);
-    });
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById('view-' + viewName).classList.add('active');
-    if (viewName === 'dashboard') renderDashboard();
-    if (viewName === 'radar') renderDemandRadar();
-    if (viewName === 'pickup') renderDemandPickup();
-    if (viewName === 'reception') renderReceptionView();
-    if (viewName === 'work-order') renderWorkOrderView();
-    if (viewName === 'calendar-candidate') renderCalendarCandidateView();
-    if (viewName === 'follow-up') renderFollowUpView();
-    if (viewName === 'profit') renderProfitView();
-    if (viewName === 'analytics') renderAnalyticsView();
-    if (viewName === 'area') renderAreaView();
-    if (viewName === 'revenue') renderRevenueView();
-    if (viewName === 'data') renderDataManagement();
+  function navigateToView(viewName, scrollSelector) {
+    setNavActive(viewName);
+    switchView(viewName);
+    scrollNavTarget(scrollSelector);
   }
 
   function getEnrichedLead(leadId) {
