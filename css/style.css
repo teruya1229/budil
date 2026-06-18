@@ -6764,7 +6764,7 @@ body {
   color: #a8b8cc;
 }
 
-.card-daily-action-towers .daily-task-meta,
+.card-daily-action-tasks .daily-task-meta,
 .daily-task-v2 .daily-task-memo-text {
   color: #a8b8cc;
 }
@@ -6805,6 +6805,49 @@ body {
   .card-command-tower .exec-home-revenue-grid strong {
     font-size: 1.05rem;
   }
+}
+
+/* v4.1+ 安定化ループ: ライトカード上の文字色・導線 */
+.card-onboarding-guide,
+.card-business-report,
+.card-executive-home:not(.card-command-tower) {
+  color: #1e293b;
+}
+
+.card-onboarding-guide .onboarding-header h2,
+.card-onboarding-guide .onboarding-subtitle,
+.card-onboarding-guide .onboarding-step-label,
+.card-business-report .business-report-header h2,
+.card-business-report .business-report-next-block h3,
+.card-business-report .business-report-body-block h3 {
+  color: #1e293b;
+}
+
+.card-onboarding-guide .onboarding-workflow-list {
+  color: #374151;
+}
+
+.demo-data-guide-order {
+  margin: 0.5rem 0 0.75rem;
+  padding-left: 1.35rem;
+  font-size: 0.88rem;
+  color: #b8c9dc;
+  line-height: 1.65;
+}
+
+.demo-data-guide-order li {
+  margin: 0.2rem 0;
+}
+
+.data-safety-list .view-header-link {
+  display: inline-block;
+  margin-top: 0.25rem;
+}
+
+.section-render-error {
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.35);
 }
 
 /* v4.1 販売LP */

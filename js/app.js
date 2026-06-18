@@ -873,7 +873,7 @@
       area: goToAreaView,
       sales: () => navigateToView('sales'),
       report: () => scrollToElement('#business-report-dash'),
-      diagnostic: () => { navigateToView('data'); setTimeout(() => scrollToElement('#btn-run-diagnostic'), 120); },
+      diagnostic: () => { navigateToView('data'); setTimeout(() => scrollToElement('#btn-run-diagnostics'), 120); },
       backup: goToDataBackup,
       kurokuro: goToKurokuroPrompt
     };
@@ -2767,9 +2767,20 @@
         <button type="button" id="btn-delete-demo-data" class="btn btn-secondary" ${hasDemo ? '' : 'disabled'}>デモデータを削除</button>
       </div>
       <div id="demo-data-guide" class="demo-data-guide ${demoGuideVisible ? '' : 'hidden'}">
-        <p class="demo-data-guide-text">デモデータを作成しました。<br>経営番頭ホーム → 需要番頭 → 受付・予約番頭 → 予約・作業予定番頭 → 経営レポート の順で確認すると、Budilの流れが分かります。</p>
+        <p class="demo-data-guide-text">デモデータを作成しました。<br>初めて見る方は、まず<strong>経営司令塔ホーム</strong>で全体像を確認してください。おすすめの確認順は下のとおりです。</p>
+        <ol class="demo-data-guide-order">
+          <li>経営司令塔ホーム</li>
+          <li>受付・予約番頭</li>
+          <li>予約・作業予定番頭</li>
+          <li>売上番頭</li>
+          <li>作業後フォロー番頭</li>
+          <li>利益番頭</li>
+          <li>アナリティクス番頭</li>
+          <li>経営レポート</li>
+          <li>データ診断</li>
+        </ol>
         <div class="demo-data-guide-actions">
-          <button type="button" class="btn btn-sm btn-primary" data-demo-nav="home">経営番頭ホームを見る</button>
+          <button type="button" class="btn btn-sm btn-primary" data-demo-nav="home">経営司令塔ホームを見る</button>
           <button type="button" class="btn btn-sm btn-secondary" data-demo-nav="pickup">需要番頭を見る</button>
           <button type="button" class="btn btn-sm btn-secondary" data-demo-nav="report">経営レポートを見る</button>
           <button type="button" class="btn btn-sm btn-secondary" data-demo-nav="diagnostics">データ診断を実行</button>
@@ -2836,6 +2847,7 @@
         <li>機種変更や誤操作に備え、<strong>定期的なバックアップ</strong>を推奨します</li>
         <li>本番データを誤って消さない設計です（デモ削除は <code>isDemo</code> / <code>isTest</code> のみ）</li>
         <li>販売・複数端末での本格運用には、将来のクラウド保存が必要です</li>
+        <li><a href="sales.html" class="view-header-link">Budilについて · 1ヶ月無料体験の案内</a></li>
       </ul>`;
   }
 
@@ -3077,7 +3089,7 @@
     const critical = Storage.CRITICAL_BACKUP_KEYS || [];
     const list = (backupKeys || []).filter(b => critical.includes(b.key));
     el.innerHTML = `
-      <p class="label-muted">バックアップ対象キー（主要7件）</p>
+      <p class="label-muted">バックアップ対象キー（主要${critical.length}件）</p>
       <ul>${list.map(b => {
         const status = !b.exists ? '未保存' : (b.parseOk ? 'OK' : '読込エラー');
         return `<li><code>${esc(b.key)}</code> — ${esc(status)}</li>`;
