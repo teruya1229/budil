@@ -8178,6 +8178,15 @@ body.sales-page {
   color: #c4b5fd;
 }
 
+.action-candidate-badge-orphan {
+  background: rgba(248, 113, 113, 0.2);
+  color: #fca5a5;
+}
+
+.action-candidate-list-item.is-orphaned {
+  opacity: 0.85;
+}
+
 .external-check-more-note,
 .action-candidates-source-note,
 .external-check-actions-note {

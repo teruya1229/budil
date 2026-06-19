@@ -69,6 +69,13 @@ const ActionBrain = {
     return this.getTodoCandidates(candidates).slice(0, limit || 3);
   },
 
+  isOrphanedSource(sourceReportId, reports) {
+    const id = String(sourceReportId || '').trim();
+    if (!id) return true;
+    const list = Array.isArray(reports) ? reports : [];
+    return !list.some(r => r && r.id === id);
+  },
+
   createFromExternalCheck(sourceReportId, title) {
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');

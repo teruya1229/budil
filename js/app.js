@@ -3920,7 +3920,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.4.2</span>
+        <span class="business-report-version">v4.4.3</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -7279,9 +7279,12 @@
     const todo = candidates.filter(c => c.status === ActionBrain.STATUS_TODO);
     const done = candidates.filter(c => c.status === ActionBrain.STATUS_DONE);
 
-    const renderItem = c => `
-      <div class="action-candidate-list-item${c.status === ActionBrain.STATUS_DONE ? ' is-done' : ''}">
-        <p class="action-candidate-list-title">${esc(c.title)}</p>
+    const reports = Storage.getExternalCheckReports();
+    const renderItem = c => {
+      const orphaned = ActionBrain.isOrphanedSource(c.sourceReportId, reports);
+      return `
+      <div class="action-candidate-list-item${c.status === ActionBrain.STATUS_DONE ? ' is-done' : ''}${orphaned ? ' is-orphaned' : ''}">
+        <p class="action-candidate-list-title">${esc(c.title)}${orphaned ? ' <span class="action-candidate-badge action-candidate-badge-orphan">元レポート削除済み</span>' : ''}</p>
         <p class="action-candidate-list-meta">レポート: ${esc(c.sourceReportId)} / 追加: ${esc(ActionBrain.formatCreatedAt(c.createdAt))}</p>
         <div class="action-candidate-list-buttons">
           ${c.status === ActionBrain.STATUS_DONE
@@ -7291,6 +7294,7 @@
         </div>
       </div>
     `;
+    };
 
     el.innerHTML = `
       <p class="action-candidates-summary">未対応 ${todo.length}件 / 対応済み ${done.length}件</p>
@@ -7336,6 +7340,18 @@
     showAppToast('今日やることに追加しました');
   }
 
+  function syncDailyTaskFromActionCandidate(candidate) {
+    if (!candidate || !candidate.sourceReportId || !candidate.title) return;
+    const key = ActionBrain.makeDailyTaskDedupeKey(candidate.sourceReportId, candidate.title);
+    const manual = Storage.getDailyActionTasksData().manualTasks.find(t => t.pickupDedupeKey === key);
+    if (manual && manual.status !== 'done') {
+      Storage.updateManualDailyTask(manual.id, {
+        status: 'done',
+        completedAt: new Date().toISOString()
+      });
+    }
+  }
+
   function markActionCandidateDone(id) {
     if (!id) return;
     const updated = Storage.markActionCandidateDone(id);
@@ -7343,6 +7359,7 @@
       showAppToast('行動候補が見つかりません');
       return;
     }
+    syncDailyTaskFromActionCandidate(updated);
     refreshActionCandidateViews();
     showAppToast('対応済みにしました');
   }
