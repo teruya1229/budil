@@ -8072,3 +8072,168 @@ body.sales-page {
   padding-top: 0.75rem;
   border-top: 1px solid var(--border);
 }
+
+/* 外部チェック 行動候補 */
+.card-action-candidates,
+.card-external-check-actions {
+  border-left: 4px solid #34d399;
+}
+
+.external-check-today-actions-card,
+.external-check-cautions-card {
+  margin: 0.75rem 0;
+  padding: 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.external-check-today-actions-card {
+  border-color: rgba(52, 211, 153, 0.45);
+  background: rgba(52, 211, 153, 0.08);
+}
+
+.external-check-cautions-card {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.external-check-today-actions-header,
+.external-check-cautions-header,
+.action-candidates-dash-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.external-check-today-actions-header h3,
+.external-check-cautions-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.external-check-count-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: rgba(52, 211, 153, 0.2);
+  color: #6ee7b7;
+}
+
+.external-check-count-badge-caution {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fde68a;
+}
+
+.external-check-today-action-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.external-check-today-action-item {
+  padding: 0.65rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.external-check-today-action-item:last-child {
+  border-bottom: none;
+}
+
+.external-check-today-action-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.92rem;
+}
+
+.external-check-today-action-buttons,
+.action-candidate-list-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.action-candidate-badge {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+
+.action-candidate-badge-added {
+  background: rgba(56, 189, 248, 0.2);
+  color: #7dd3fc;
+}
+
+.action-candidate-badge-done {
+  background: rgba(148, 163, 184, 0.25);
+  color: #cbd5e1;
+}
+
+.action-candidate-badge-daily {
+  background: rgba(167, 139, 250, 0.2);
+  color: #c4b5fd;
+}
+
+.external-check-more-note,
+.action-candidates-source-note,
+.external-check-actions-note {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.action-candidates-dash-list {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.action-candidate-dash-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.action-candidate-dash-item p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.action-candidate-list-item {
+  padding: 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.action-candidate-list-item.is-done {
+  opacity: 0.75;
+}
+
+.action-candidate-list-title {
+  margin: 0 0 0.25rem;
+  font-size: 0.92rem;
+}
+
+.action-candidate-list-meta {
+  margin: 0 0 0.4rem;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.action-candidates-summary {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+}
+
+.action-candidate-list-group h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}

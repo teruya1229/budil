@@ -22,7 +22,8 @@ const DataBackup = {
     'budil_work_orders',
     'budil_expense_records',
     'budil_analytics_records',
-    'budil_external_check_reports'
+    'budil_external_check_reports',
+    'budil_action_candidates'
   ],
 
   exportPayload() {

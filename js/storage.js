@@ -23,7 +23,8 @@ const Storage = {
     WORK_ORDERS: 'budil_work_orders',
     EXPENSE_RECORDS: 'budil_expense_records',
     ANALYTICS_RECORDS: 'budil_analytics_records',
-    EXTERNAL_CHECK_REPORTS: 'budil_external_check_reports'
+    EXTERNAL_CHECK_REPORTS: 'budil_external_check_reports',
+    ACTION_CANDIDATES: 'budil_action_candidates'
   },
 
   get(key, defaultValue = null) {
@@ -520,7 +521,8 @@ const Storage = {
     'budil_work_orders',
     'budil_expense_records',
     'budil_analytics_records',
-    'budil_external_check_reports'
+    'budil_external_check_reports',
+    'budil_action_candidates'
   ],
 
   getExternalCheckReports() {
@@ -553,6 +555,59 @@ const Storage = {
   getLatestExternalCheckReport() {
     const list = this.getExternalCheckReports();
     return list.length ? list[0] : null;
+  },
+
+  getActionCandidates() {
+    const raw = this.get(this.KEYS.ACTION_CANDIDATES, []);
+    return Array.isArray(raw) ? raw : [];
+  },
+
+  saveActionCandidates(list) {
+    this.set(this.KEYS.ACTION_CANDIDATES, list);
+  },
+
+  findActionCandidateByDedupe(dedupeKey) {
+    return this.getActionCandidates().find(c => c.dedupeKey === dedupeKey) || null;
+  },
+
+  addActionCandidate(item) {
+    const normalized = typeof ActionBrain !== 'undefined'
+      ? ActionBrain.normalizeCandidate(item)
+      : { ...item };
+    if (this.findActionCandidateByDedupe(normalized.dedupeKey)) {
+      return { duplicate: true, record: this.findActionCandidateByDedupe(normalized.dedupeKey) };
+    }
+    const list = this.getActionCandidates();
+    const now = new Date().toISOString();
+    const record = {
+      ...normalized,
+      id: normalized.id || ('actcand-' + this.generateId()),
+      createdAt: normalized.createdAt || now,
+      status: normalized.status || 'todo',
+      doneAt: normalized.doneAt || null
+    };
+    list.unshift(record);
+    this.saveActionCandidates(list);
+    return { duplicate: false, record };
+  },
+
+  markActionCandidateDone(id) {
+    const list = this.getActionCandidates();
+    const idx = list.findIndex(c => c.id === id);
+    if (idx === -1) return null;
+    const now = new Date().toISOString();
+    list[idx] = {
+      ...list[idx],
+      status: 'done',
+      doneAt: now,
+      updatedAt: now
+    };
+    this.saveActionCandidates(list);
+    return list[idx];
+  },
+
+  deleteActionCandidate(id) {
+    this.saveActionCandidates(this.getActionCandidates().filter(c => c.id !== id));
   },
 
   getWorkOrders() {

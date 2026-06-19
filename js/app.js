@@ -476,6 +476,7 @@
     renderStartGuide();
     safeRenderSection('executive-home', () => renderExecutiveHome(), '経営司令塔ホーム');
     safeRenderSection('dash-external-check', () => renderDashExternalCheck(), '外部チェック');
+    safeRenderSection('dash-action-candidates', () => renderDashActionCandidates(), '今日の行動候補');
     safeRenderSection(null, () => renderBackupStatus(), 'バックアップ状況');
     safeRenderSection('morning-report', () => renderMorningReport(), '朝レポート');
     safeRenderSection(null, () => renderDemandInsights(), '需要インサイト');
@@ -7082,6 +7083,11 @@
   }
 
   // ── 外部チェック（Browser番頭貼り付け）──
+  function getExternalCheckActionItems(summary) {
+    const actions = summary && summary.todayActions ? summary.todayActions : [];
+    return actions.filter(i => i && i !== ExternalCheckBrain.UNCONFIRMED);
+  }
+
   function renderExternalCheckListItems(items) {
     const list = Array.isArray(items) ? items : [];
     if (!list.length || (list.length === 1 && list[0] === ExternalCheckBrain.UNCONFIRMED)) {
@@ -7090,11 +7096,90 @@
     return `<ul class="external-check-item-list">${list.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`;
   }
 
+  function renderActionCandidateButtons(reportId, title) {
+    if (!reportId || !title || typeof ActionBrain === 'undefined') return '';
+    const candidates = Storage.getActionCandidates();
+    const state = ActionBrain.getCandidateState(candidates, reportId, title);
+    const found = ActionBrain.findByDedupeKey(candidates, ActionBrain.makeDedupeKey(reportId, title));
+    const dailyKey = ActionBrain.makeDailyTaskDedupeKey(reportId, title);
+    const inDaily = Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === dailyKey);
+
+    if (state === 'done') {
+      return `<span class="action-candidate-badge action-candidate-badge-done">対応済み</span>`;
+    }
+    if (state === 'added') {
+      return `
+        <span class="action-candidate-badge action-candidate-badge-added">追加済み</span>
+        <button type="button" class="btn btn-sm btn-secondary" data-act-done="${esc(found.id)}">対応済みにする</button>
+        ${inDaily ? '<span class="action-candidate-badge action-candidate-badge-daily">今日やること追加済み</span>' : `<button type="button" class="btn btn-sm btn-secondary" data-act-daily="${esc(reportId)}" data-act-title="${esc(title)}">今日やることに追加</button>`}
+      `;
+    }
+    return `
+      <button type="button" class="btn btn-sm btn-primary" data-act-add="${esc(reportId)}" data-act-title="${esc(title)}">行動候補に追加</button>
+      ${inDaily ? '<span class="action-candidate-badge action-candidate-badge-daily">今日やること追加済み</span>' : `<button type="button" class="btn btn-sm btn-secondary" data-act-daily="${esc(reportId)}" data-act-title="${esc(title)}">今日やることに追加</button>`}
+    `;
+  }
+
+  function renderExternalCheckTodayActionsSection(report, compact) {
+    if (!report) return '';
+    const s = report.summary || {};
+    const allActions = getExternalCheckActionItems(s);
+    const displayActions = compact ? ExternalCheckBrain.topItems(allActions, 3) : allActions;
+    const count = allActions.length;
+
+    if (!count) {
+      return `
+        <div class="external-check-today-actions-card">
+          <div class="external-check-today-actions-header">
+            <h3>今日やること候補</h3>
+            <span class="external-check-count-badge">0件</span>
+          </div>
+          <p class="external-check-unconfirmed">${esc(ExternalCheckBrain.UNCONFIRMED)}</p>
+        </div>
+      `;
+    }
+
+    const itemsHtml = displayActions.map(title => `
+      <li class="external-check-today-action-item">
+        <p class="external-check-today-action-title">${esc(title)}</p>
+        ${compact ? '' : `<div class="external-check-today-action-buttons">${renderActionCandidateButtons(report.id, title)}</div>`}
+      </li>
+    `).join('');
+
+    return `
+      <div class="external-check-today-actions-card">
+        <div class="external-check-today-actions-header">
+          <h3>今日やること候補</h3>
+          <span class="external-check-count-badge">${count}件</span>
+        </div>
+        <ul class="external-check-today-action-list">${itemsHtml}</ul>
+        ${compact && count > 3 ? `<p class="external-check-more-note">他 ${count - 3} 件 — 外部チェック画面で全件確認</p>` : ''}
+        <p class="external-check-not-sale">行動候補はやることであり、売上確定ではありません。</p>
+      </div>
+    `;
+  }
+
+  function renderExternalCheckCautionsSection(report, compact) {
+    if (!report) return '';
+    const s = report.summary || {};
+    const allCautions = (s.cautions || []).filter(i => i && i !== ExternalCheckBrain.UNCONFIRMED);
+    const displayCautions = compact ? ExternalCheckBrain.topItems(allCautions, 3) : allCautions;
+    const count = allCautions.length;
+
+    return `
+      <div class="external-check-cautions-card">
+        <div class="external-check-cautions-header">
+          <h3>注意・未確認</h3>
+          <span class="external-check-count-badge external-check-count-badge-caution">${count || 0}件</span>
+        </div>
+        ${count ? renderExternalCheckListItems(displayCautions) : `<p class="external-check-unconfirmed">${esc(ExternalCheckBrain.UNCONFIRMED)}</p>`}
+      </div>
+    `;
+  }
+
   function renderExternalCheckSummaryBlock(report, compact) {
     if (!report) return '<p class="placeholder-text">まだ外部チェックは保存されていません。</p>';
     const s = report.summary || {};
-    const actions = ExternalCheckBrain.topItems(s.todayActions, compact ? 3 : 99);
-    const cautions = ExternalCheckBrain.topItems(s.cautions, compact ? 3 : 99);
 
     if (compact) {
       return `
@@ -7103,17 +7188,15 @@
           <p><strong>確認日：</strong>${esc(s.date || ExternalCheckBrain.UNCONFIRMED)}</p>
           <p><strong>確認対象：</strong>${esc(s.targets || ExternalCheckBrain.UNCONFIRMED)}</p>
         </div>
-        <div class="external-check-dash-section">
-          <h3>今日やること候補</h3>
-          ${renderExternalCheckListItems(actions)}
-        </div>
-        <div class="external-check-dash-section">
-          <h3>注意・未確認</h3>
-          ${renderExternalCheckListItems(cautions)}
-        </div>
+        ${renderExternalCheckTodayActionsSection(report, true)}
+        ${renderExternalCheckCautionsSection(report, true)}
         <p class="external-check-not-sale">予定候補・GBP反応は売上確定ではありません。</p>
       `;
     }
+
+    const linked = typeof ActionBrain !== 'undefined'
+      ? ActionBrain.getByReportId(Storage.getActionCandidates(), report.id)
+      : [];
 
     return `
       <div class="external-check-latest-meta">
@@ -7121,21 +7204,171 @@
         <p><strong>確認日：</strong>${esc(s.date || ExternalCheckBrain.UNCONFIRMED)}</p>
         <p><strong>確認対象：</strong>${esc(s.targets || ExternalCheckBrain.UNCONFIRMED)}</p>
         <p><strong>ソース：</strong>${esc(report.source || 'browser-bantou')}</p>
+        ${linked.length ? `<p><strong>行動候補：</strong>${linked.filter(c => c.status !== 'done').length}件未対応 / ${linked.filter(c => c.status === 'done').length}件対応済み</p>` : ''}
       </div>
+      ${renderExternalCheckTodayActionsSection(report, false)}
+      ${renderExternalCheckCautionsSection(report, false)}
       <div class="external-check-section-grid">
         <div class="external-check-section"><h3>予定候補</h3>${renderExternalCheckListItems(s.scheduleCandidates)}<p class="external-check-not-sale">作業予定候補であり売上確定ではありません。</p></div>
         <div class="external-check-section"><h3>需要候補</h3>${renderExternalCheckListItems(s.demandCandidates)}</div>
         <div class="external-check-section"><h3>アナリティクス候補</h3>${renderExternalCheckListItems(s.analyticsCandidates)}</div>
         <div class="external-check-section"><h3>GBP反応</h3>${renderExternalCheckListItems(s.gbpSignals)}<p class="external-check-not-sale">集客情報であり売上確定ではありません。</p></div>
         <div class="external-check-section"><h3>広告異常</h3>${renderExternalCheckListItems(s.adAnomalies)}</div>
-        <div class="external-check-section"><h3>今日やること候補</h3>${renderExternalCheckListItems(s.todayActions)}</div>
-        <div class="external-check-section"><h3>注意・未確認</h3>${renderExternalCheckListItems(s.cautions)}</div>
       </div>
       <details class="external-check-raw-collapse">
         <summary>貼り付け原文を表示</summary>
         <pre class="external-check-raw-text">${esc(report.rawText || '')}</pre>
       </details>
     `;
+  }
+
+  function renderDashActionCandidates() {
+    const el = document.getElementById('dash-action-candidates');
+    if (!el || typeof ActionBrain === 'undefined') return;
+    const candidates = Storage.getActionCandidates();
+    const todo = ActionBrain.getTodoCandidates(candidates);
+    const top = ActionBrain.topTodo(candidates, 3);
+
+    if (!todo.length) {
+      el.innerHTML = `
+        <h2>今日の行動候補</h2>
+        <p class="placeholder-text">外部チェック由来の未対応行動候補はありません。</p>
+        <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-action-candidates">外部チェックを見る</button>
+      `;
+    } else {
+      el.innerHTML = `
+        <div class="action-candidates-dash-header">
+          <h2>今日の行動候補 <span class="external-check-count-badge">${todo.length}件未対応</span></h2>
+          <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-action-candidates">行動候補を見る</button>
+        </div>
+        <p class="action-candidates-source-note">由来：外部チェック（売上確定ではありません）</p>
+        <ul class="action-candidates-dash-list">
+          ${top.map(c => `
+            <li class="action-candidate-dash-item">
+              <p>${esc(c.title)}</p>
+              <button type="button" class="btn btn-sm btn-secondary" data-act-done="${esc(c.id)}">対応済みにする</button>
+            </li>
+          `).join('')}
+        </ul>
+        ${todo.length > 3 ? `<p class="external-check-more-note">他 ${todo.length - 3} 件</p>` : ''}
+      `;
+    }
+
+    const btn = document.getElementById('btn-dash-go-action-candidates');
+    if (btn) {
+      btn.addEventListener('click', () => {
+        navigateToView('external-check');
+        scrollToElement('.card-external-check-actions');
+      });
+    }
+    bindActionCandidateButtons(el);
+  }
+
+  function renderExternalCheckActionCandidatesList() {
+    const el = document.getElementById('external-check-action-candidates');
+    if (!el || typeof ActionBrain === 'undefined') return;
+    const candidates = Storage.getActionCandidates()
+      .map(c => ActionBrain.normalizeCandidate(c))
+      .filter(c => c.source === ActionBrain.SOURCE_EXTERNAL_CHECK);
+
+    if (!candidates.length) {
+      el.innerHTML = '<p class="placeholder-text">まだ行動候補はありません。最新レポートの「今日やること候補」から追加してください。</p>';
+      return;
+    }
+
+    const todo = candidates.filter(c => c.status === ActionBrain.STATUS_TODO);
+    const done = candidates.filter(c => c.status === ActionBrain.STATUS_DONE);
+
+    const renderItem = c => `
+      <div class="action-candidate-list-item${c.status === ActionBrain.STATUS_DONE ? ' is-done' : ''}">
+        <p class="action-candidate-list-title">${esc(c.title)}</p>
+        <p class="action-candidate-list-meta">レポート: ${esc(c.sourceReportId)} / 追加: ${esc(ActionBrain.formatCreatedAt(c.createdAt))}</p>
+        <div class="action-candidate-list-buttons">
+          ${c.status === ActionBrain.STATUS_DONE
+            ? '<span class="action-candidate-badge action-candidate-badge-done">対応済み</span>'
+            : `<span class="action-candidate-badge action-candidate-badge-added">未対応</span>
+               <button type="button" class="btn btn-sm btn-secondary" data-act-done="${esc(c.id)}">対応済みにする</button>`}
+        </div>
+      </div>
+    `;
+
+    el.innerHTML = `
+      <p class="action-candidates-summary">未対応 ${todo.length}件 / 対応済み ${done.length}件</p>
+      <div class="action-candidate-list-group">
+        <h3>未対応</h3>
+        ${todo.length ? todo.map(renderItem).join('') : '<p class="placeholder-text">未対応の行動候補はありません。</p>'}
+      </div>
+      ${done.length ? `<div class="action-candidate-list-group"><h3>対応済み</h3>${done.map(renderItem).join('')}</div>` : ''}
+    `;
+    bindActionCandidateButtons(el);
+  }
+
+  function addExternalCheckActionCandidate(reportId, title) {
+    if (!reportId || !title) return;
+    const result = Storage.addActionCandidate(ActionBrain.createFromExternalCheck(reportId, title));
+    if (result.duplicate) {
+      showAppToast('この候補は既に行動候補に追加済みです');
+      return;
+    }
+    refreshActionCandidateViews();
+    showAppToast('行動候補に追加しました');
+  }
+
+  function addExternalCheckToDailyTask(reportId, title) {
+    if (!reportId || !title) return;
+    const key = ActionBrain.makeDailyTaskDedupeKey(reportId, title);
+    if (Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === key)) {
+      showAppToast('既に今日やることに追加済みです');
+      return;
+    }
+    Storage.addManualDailyTask({
+      title,
+      targetName: '外部チェック',
+      priority: '中',
+      action: title,
+      dueDate: TODAY(),
+      memo: `外部チェックレポート(${reportId})より。売上確定ではありません。`,
+      pickupDedupeKey: key,
+      reason: '外部チェック由来',
+      status: 'open'
+    });
+    refreshActionCandidateViews();
+    showAppToast('今日やることに追加しました');
+  }
+
+  function markActionCandidateDone(id) {
+    if (!id) return;
+    const updated = Storage.markActionCandidateDone(id);
+    if (!updated) {
+      showAppToast('行動候補が見つかりません');
+      return;
+    }
+    refreshActionCandidateViews();
+    showAppToast('対応済みにしました');
+  }
+
+  function refreshActionCandidateViews() {
+    renderExternalCheckView();
+    renderDashboard();
+  }
+
+  function bindActionCandidateButtons(root) {
+    if (!root) return;
+    root.querySelectorAll('[data-act-add]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => addExternalCheckActionCandidate(btn.dataset.actAdd, btn.dataset.actTitle));
+    });
+    root.querySelectorAll('[data-act-daily]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => addExternalCheckToDailyTask(btn.dataset.actDaily, btn.dataset.actTitle));
+    });
+    root.querySelectorAll('[data-act-done]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => markActionCandidateDone(btn.dataset.actDone));
+    });
   }
 
   function renderDashExternalCheck() {
@@ -7166,6 +7399,7 @@
     if (!el || typeof ExternalCheckBrain === 'undefined') return;
     const latest = Storage.getLatestExternalCheckReport();
     el.innerHTML = renderExternalCheckSummaryBlock(latest, false);
+    bindActionCandidateButtons(el);
   }
 
   function renderExternalCheckHistory() {
@@ -7212,6 +7446,7 @@
     el.querySelectorAll('[data-extchk-delete]').forEach(btn => {
       btn.addEventListener('click', () => deleteExternalCheckReport(btn.dataset.extchkDelete));
     });
+    el.querySelectorAll('.external-check-history-detail').forEach(panel => bindActionCandidateButtons(panel));
   }
 
   function saveExternalCheckPaste() {
@@ -7256,6 +7491,7 @@
 
   function renderExternalCheckView() {
     renderExternalCheckLatest();
+    renderExternalCheckActionCandidatesList();
     renderExternalCheckHistory();
   }
 

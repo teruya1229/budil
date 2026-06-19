@@ -225,6 +225,8 @@
 
         <div id="dash-external-check" class="card card-wide card-external-check"></div>
 
+        <div id="dash-action-candidates" class="card card-wide card-action-candidates"></div>
+
         <div id="onboarding-guide-dash" class="card card-wide card-onboarding-guide"></div>
 
         <div id="business-report-dash" class="card card-wide card-business-report card-business-report-compact"></div>
@@ -1673,6 +1675,12 @@
           <div id="external-check-latest" class="external-check-latest-body"></div>
         </div>
 
+        <div class="card card-wide card-external-check-actions">
+          <h2>行動候補一覧</h2>
+          <p class="external-check-actions-note">外部チェックの「今日やること候補」から追加した行動候補です。売上確定ではありません。</p>
+          <div id="external-check-action-candidates" class="external-check-action-candidates-list"></div>
+        </div>
+
         <div class="card card-wide card-external-check-history">
           <h2>保存履歴</h2>
           <div id="external-check-history" class="external-check-history-list"></div>
@@ -2794,6 +2802,7 @@
   <script src="js/map-brain.js"></script>
   <script src="js/calendar-candidate-brain.js"></script>
   <script src="js/external-check-brain.js"></script>
+  <script src="js/action-brain.js"></script>
   <script src="js/work-order-brain.js"></script>
   <script src="js/follow-up-brain.js"></script>
   <script src="js/work-completion-brain.js"></script>
