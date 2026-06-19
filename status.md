@@ -1,6 +1,14 @@
 # Budil status
 
-最終更新: 2026-06-18
+最終更新: 2026-06-19
+
+## v4.4.2 実装内容（外部チェック受け皿MVP）
+
+- Browser番頭の【Budil貼り付け用】を手動貼り付けで保存・表示
+- `js/external-check-brain.js` 新規追加（簡易パース）
+- 外部チェック画面・ダッシュボードカード・保存履歴
+- 新規 localStorage キー: `budil_external_check_reports`
+- 予定候補・GBP反応は売上確定扱いしない
 
 ## 現在の公開状態
 

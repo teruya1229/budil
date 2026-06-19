@@ -22,7 +22,8 @@ const Storage = {
     RECEPTION_INTAKES: 'budil_reception_intakes',
     WORK_ORDERS: 'budil_work_orders',
     EXPENSE_RECORDS: 'budil_expense_records',
-    ANALYTICS_RECORDS: 'budil_analytics_records'
+    ANALYTICS_RECORDS: 'budil_analytics_records',
+    EXTERNAL_CHECK_REPORTS: 'budil_external_check_reports'
   },
 
   get(key, defaultValue = null) {
@@ -518,8 +519,41 @@ const Storage = {
     'budil_reception_intakes',
     'budil_work_orders',
     'budil_expense_records',
-    'budil_analytics_records'
+    'budil_analytics_records',
+    'budil_external_check_reports'
   ],
+
+  getExternalCheckReports() {
+    const raw = this.get(this.KEYS.EXTERNAL_CHECK_REPORTS, []);
+    return Array.isArray(raw) ? raw : [];
+  },
+
+  saveExternalCheckReports(list) {
+    this.set(this.KEYS.EXTERNAL_CHECK_REPORTS, list);
+  },
+
+  addExternalCheckReport(item) {
+    const list = this.getExternalCheckReports();
+    const now = new Date().toISOString();
+    const record = {
+      ...item,
+      id: item.id || ('extchk-' + this.generateId()),
+      createdAt: item.createdAt || now,
+      source: item.source || 'browser-bantou'
+    };
+    list.unshift(record);
+    this.saveExternalCheckReports(list);
+    return record;
+  },
+
+  deleteExternalCheckReport(id) {
+    this.saveExternalCheckReports(this.getExternalCheckReports().filter(r => r.id !== id));
+  },
+
+  getLatestExternalCheckReport() {
+    const list = this.getExternalCheckReports();
+    return list.length ? list[0] : null;
+  },
 
   getWorkOrders() {
     const raw = this.get(this.KEYS.WORK_ORDERS, []);

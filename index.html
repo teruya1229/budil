@@ -35,6 +35,9 @@
             <button class="nav-item nav-item-sub" data-view="dashboard" data-scroll="#morning-report">
               <span class="nav-icon">🌅</span><span class="nav-label">朝レポート</span>
             </button>
+            <button class="nav-item nav-item-main" data-view="external-check">
+              <span class="nav-icon">🔍</span><span class="nav-label">外部チェック</span>
+            </button>
           </div>
         </details>
 
@@ -219,6 +222,8 @@
             </details>
           </div>
         </div>
+
+        <div id="dash-external-check" class="card card-wide card-external-check"></div>
 
         <div id="onboarding-guide-dash" class="card card-wide card-onboarding-guide"></div>
 
@@ -1644,6 +1649,36 @@
         </div>
       </section>
 
+      <!-- 外部チェック -->
+      <section id="view-external-check" class="view">
+        <header class="view-header">
+          <h1>外部チェック</h1>
+          <p class="view-subtitle">Browser番頭の【Budil貼り付け用】を貼り付けて保存する画面</p>
+        </header>
+
+        <div class="card card-wide card-external-check-form">
+          <p class="external-check-notice"><strong>これは売上確定ではありません。</strong> Browser番頭が見た情報を記録する受け皿です。予定候補・GBP反応は候補/集客情報として扱います。</p>
+
+          <h2>レポート貼り付け</h2>
+          <textarea id="external-check-paste" class="external-check-paste" rows="14" placeholder="【Budil貼り付け用】&#10;種別：外部チェックレポート&#10;確認日：2026-06-19&#10;..."></textarea>
+          <div class="external-check-actions">
+            <button type="button" id="btn-external-check-save" class="btn btn-sm btn-primary">保存</button>
+            <button type="button" id="btn-external-check-clear" class="btn btn-sm btn-secondary">クリア</button>
+          </div>
+          <div id="external-check-parse-warnings" class="external-check-parse-warnings"></div>
+        </div>
+
+        <div class="card card-wide card-external-check-latest">
+          <h2>最新レポート</h2>
+          <div id="external-check-latest" class="external-check-latest-body"></div>
+        </div>
+
+        <div class="card card-wide card-external-check-history">
+          <h2>保存履歴</h2>
+          <div id="external-check-history" class="external-check-history-list"></div>
+        </div>
+      </section>
+
       <!-- エリア番頭 -->
       <section id="view-area" class="view">
         <header class="view-header">
@@ -2758,6 +2793,7 @@
   <script src="js/reception-brain.js"></script>
   <script src="js/map-brain.js"></script>
   <script src="js/calendar-candidate-brain.js"></script>
+  <script src="js/external-check-brain.js"></script>
   <script src="js/work-order-brain.js"></script>
   <script src="js/follow-up-brain.js"></script>
   <script src="js/work-completion-brain.js"></script>

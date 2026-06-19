@@ -410,6 +410,7 @@
     if (view === 'reception') renderReceptionView();
     if (view === 'work-order') renderWorkOrderView();
     if (view === 'calendar-candidate') renderCalendarCandidateView();
+    if (view === 'external-check') renderExternalCheckView();
     if (view === 'follow-up') renderFollowUpView();
     if (view === 'profit') renderProfitView();
     if (view === 'analytics') renderAnalyticsView();
@@ -474,6 +475,7 @@
   function renderDashboard() {
     renderStartGuide();
     safeRenderSection('executive-home', () => renderExecutiveHome(), '経営司令塔ホーム');
+    safeRenderSection('dash-external-check', () => renderDashExternalCheck(), '外部チェック');
     safeRenderSection(null, () => renderBackupStatus(), 'バックアップ状況');
     safeRenderSection('morning-report', () => renderMorningReport(), '朝レポート');
     safeRenderSection(null, () => renderDemandInsights(), '需要インサイト');
@@ -7079,6 +7081,197 @@
     }
   }
 
+  // ── 外部チェック（Browser番頭貼り付け）──
+  function renderExternalCheckListItems(items) {
+    const list = Array.isArray(items) ? items : [];
+    if (!list.length || (list.length === 1 && list[0] === ExternalCheckBrain.UNCONFIRMED)) {
+      return `<p class="external-check-unconfirmed">${esc(ExternalCheckBrain.UNCONFIRMED)}</p>`;
+    }
+    return `<ul class="external-check-item-list">${list.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`;
+  }
+
+  function renderExternalCheckSummaryBlock(report, compact) {
+    if (!report) return '<p class="placeholder-text">まだ外部チェックは保存されていません。</p>';
+    const s = report.summary || {};
+    const actions = ExternalCheckBrain.topItems(s.todayActions, compact ? 3 : 99);
+    const cautions = ExternalCheckBrain.topItems(s.cautions, compact ? 3 : 99);
+
+    if (compact) {
+      return `
+        <div class="external-check-dash-meta">
+          <p><strong>保存日時：</strong>${esc(ExternalCheckBrain.formatCreatedAt(report.createdAt))}</p>
+          <p><strong>確認日：</strong>${esc(s.date || ExternalCheckBrain.UNCONFIRMED)}</p>
+          <p><strong>確認対象：</strong>${esc(s.targets || ExternalCheckBrain.UNCONFIRMED)}</p>
+        </div>
+        <div class="external-check-dash-section">
+          <h3>今日やること候補</h3>
+          ${renderExternalCheckListItems(actions)}
+        </div>
+        <div class="external-check-dash-section">
+          <h3>注意・未確認</h3>
+          ${renderExternalCheckListItems(cautions)}
+        </div>
+        <p class="external-check-not-sale">予定候補・GBP反応は売上確定ではありません。</p>
+      `;
+    }
+
+    return `
+      <div class="external-check-latest-meta">
+        <p><strong>保存日時：</strong>${esc(ExternalCheckBrain.formatCreatedAt(report.createdAt))}</p>
+        <p><strong>確認日：</strong>${esc(s.date || ExternalCheckBrain.UNCONFIRMED)}</p>
+        <p><strong>確認対象：</strong>${esc(s.targets || ExternalCheckBrain.UNCONFIRMED)}</p>
+        <p><strong>ソース：</strong>${esc(report.source || 'browser-bantou')}</p>
+      </div>
+      <div class="external-check-section-grid">
+        <div class="external-check-section"><h3>予定候補</h3>${renderExternalCheckListItems(s.scheduleCandidates)}<p class="external-check-not-sale">作業予定候補であり売上確定ではありません。</p></div>
+        <div class="external-check-section"><h3>需要候補</h3>${renderExternalCheckListItems(s.demandCandidates)}</div>
+        <div class="external-check-section"><h3>アナリティクス候補</h3>${renderExternalCheckListItems(s.analyticsCandidates)}</div>
+        <div class="external-check-section"><h3>GBP反応</h3>${renderExternalCheckListItems(s.gbpSignals)}<p class="external-check-not-sale">集客情報であり売上確定ではありません。</p></div>
+        <div class="external-check-section"><h3>広告異常</h3>${renderExternalCheckListItems(s.adAnomalies)}</div>
+        <div class="external-check-section"><h3>今日やること候補</h3>${renderExternalCheckListItems(s.todayActions)}</div>
+        <div class="external-check-section"><h3>注意・未確認</h3>${renderExternalCheckListItems(s.cautions)}</div>
+      </div>
+      <details class="external-check-raw-collapse">
+        <summary>貼り付け原文を表示</summary>
+        <pre class="external-check-raw-text">${esc(report.rawText || '')}</pre>
+      </details>
+    `;
+  }
+
+  function renderDashExternalCheck() {
+    const el = document.getElementById('dash-external-check');
+    if (!el || typeof ExternalCheckBrain === 'undefined') return;
+    const latest = Storage.getLatestExternalCheckReport();
+    if (!latest) {
+      el.innerHTML = `
+        <h2>外部チェック（Browser番頭）</h2>
+        <p class="placeholder-text">Browser番頭の【Budil貼り付け用】レポートはまだ保存されていません。</p>
+        <button type="button" class="btn btn-sm btn-primary" id="btn-dash-go-external-check">外部チェックを見る</button>
+      `;
+    } else {
+      el.innerHTML = `
+        <div class="external-check-dash-header">
+          <h2>外部チェック（Browser番頭）</h2>
+          <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-external-check">外部チェックを見る</button>
+        </div>
+        ${renderExternalCheckSummaryBlock(latest, true)}
+      `;
+    }
+    const btn = document.getElementById('btn-dash-go-external-check');
+    if (btn) btn.addEventListener('click', () => navigateToView('external-check'));
+  }
+
+  function renderExternalCheckLatest() {
+    const el = document.getElementById('external-check-latest');
+    if (!el || typeof ExternalCheckBrain === 'undefined') return;
+    const latest = Storage.getLatestExternalCheckReport();
+    el.innerHTML = renderExternalCheckSummaryBlock(latest, false);
+  }
+
+  function renderExternalCheckHistory() {
+    const el = document.getElementById('external-check-history');
+    if (!el || typeof ExternalCheckBrain === 'undefined') return;
+    const reports = Storage.getExternalCheckReports();
+    if (!reports.length) {
+      el.innerHTML = '<p class="placeholder-text">保存履歴はまだありません。</p>';
+      return;
+    }
+    el.innerHTML = reports.map(r => {
+      const s = r.summary || {};
+      const actionCount = ExternalCheckBrain.countActionItems(s);
+      const detailId = `extchk-detail-${r.id}`;
+      return `
+        <div class="external-check-history-item" data-report-id="${esc(r.id)}">
+          <div class="external-check-history-head">
+            <div>
+              <p><strong>保存日時：</strong>${esc(ExternalCheckBrain.formatCreatedAt(r.createdAt))}</p>
+              <p><strong>確認日：</strong>${esc(s.date || ExternalCheckBrain.UNCONFIRMED)} / <strong>確認対象：</strong>${esc(s.targets || ExternalCheckBrain.UNCONFIRMED)}</p>
+              <p><strong>今日やること候補：</strong>${actionCount}件</p>
+            </div>
+            <div class="external-check-history-actions">
+              <button type="button" class="btn btn-sm btn-secondary" data-extchk-toggle="${esc(r.id)}">詳細表示</button>
+              <button type="button" class="btn btn-sm btn-danger" data-extchk-delete="${esc(r.id)}">削除</button>
+            </div>
+          </div>
+          <div id="${detailId}" class="external-check-history-detail hidden">
+            ${renderExternalCheckSummaryBlock(r, false)}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    el.querySelectorAll('[data-extchk-toggle]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.extchkToggle;
+        const panel = document.getElementById(`extchk-detail-${id}`);
+        if (!panel) return;
+        const open = panel.classList.toggle('hidden');
+        btn.textContent = open ? '詳細表示' : '詳細を閉じる';
+      });
+    });
+    el.querySelectorAll('[data-extchk-delete]').forEach(btn => {
+      btn.addEventListener('click', () => deleteExternalCheckReport(btn.dataset.extchkDelete));
+    });
+  }
+
+  function saveExternalCheckPaste() {
+    const pasteEl = document.getElementById('external-check-paste');
+    const warningsEl = document.getElementById('external-check-parse-warnings');
+    const text = pasteEl ? pasteEl.value.trim() : '';
+    if (!text) {
+      alert('貼り付け本文を入力してください');
+      return;
+    }
+    const parsed = ExternalCheckBrain.parseReport(text);
+    const report = ExternalCheckBrain.createReport(text);
+    Storage.addExternalCheckReport(report);
+
+    if (warningsEl) {
+      const msgs = parsed.warnings || [];
+      warningsEl.innerHTML = msgs.length
+        ? `<ul class="external-check-warning-list">${msgs.map(m => `<li>${esc(m)}</li>`).join('')}</ul>`
+        : '<p class="external-check-save-ok">保存しました（予定候補・GBP反応は売上確定ではありません）。</p>';
+    }
+    if (pasteEl) pasteEl.value = '';
+    renderExternalCheckView();
+    renderDashboard();
+    showAppToast('外部チェックを保存しました');
+  }
+
+  function clearExternalCheckPaste() {
+    const pasteEl = document.getElementById('external-check-paste');
+    const warningsEl = document.getElementById('external-check-parse-warnings');
+    if (pasteEl) pasteEl.value = '';
+    if (warningsEl) warningsEl.innerHTML = '';
+  }
+
+  function deleteExternalCheckReport(id) {
+    if (!id) return;
+    if (!confirm('この外部チェックレポートを削除しますか？')) return;
+    Storage.deleteExternalCheckReport(id);
+    renderExternalCheckView();
+    renderDashboard();
+    showAppToast('外部チェックを削除しました');
+  }
+
+  function renderExternalCheckView() {
+    renderExternalCheckLatest();
+    renderExternalCheckHistory();
+  }
+
+  function initExternalCheck() {
+    const saveBtn = document.getElementById('btn-external-check-save');
+    if (saveBtn && !saveBtn.dataset.bound) {
+      saveBtn.dataset.bound = '1';
+      saveBtn.addEventListener('click', saveExternalCheckPaste);
+    }
+    const clearBtn = document.getElementById('btn-external-check-clear');
+    if (clearBtn && !clearBtn.dataset.bound) {
+      clearBtn.dataset.bound = '1';
+      clearBtn.addEventListener('click', clearExternalCheckPaste);
+    }
+  }
+
   function renderWorkCompletionStatusBadge(workOrder) {
     if (typeof WorkCompletionBrain === 'undefined') return '';
     const revenues = Storage.getRevenueRecords();
@@ -11597,6 +11790,7 @@
     initReception();
     initWorkOrder();
     initCalendarCandidate();
+    initExternalCheck();
     initFollowUp();
     initProfit();
     initAnalytics();
