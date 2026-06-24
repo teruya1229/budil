@@ -8246,3 +8246,83 @@ body.sales-page {
   margin: 0 0 0.5rem;
   font-size: 0.95rem;
 }
+
+/* 月次実績 v4.4.4 */
+.monthly-results-summary-grid,
+.monthly-results-dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.monthly-results-summary-item,
+.monthly-results-dash-grid > div {
+  padding: 0.65rem 0.75rem;
+  background: var(--surface-2, #f8fafc);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.monthly-results-summary-item span,
+.monthly-results-dash-grid span {
+  display: block;
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-bottom: 0.2rem;
+}
+
+.monthly-results-summary-item strong,
+.monthly-results-dash-grid strong {
+  font-size: 1rem;
+}
+
+.monthly-results-csv-hint {
+  font-size: 0.88rem;
+  color: #64748b;
+  margin: 0 0 0.5rem;
+}
+
+.monthly-results-csv-sample {
+  font-size: 0.78rem;
+  padding: 0.5rem 0.75rem;
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin-bottom: 0.75rem;
+}
+
+.monthly-results-csv-paste {
+  width: 100%;
+  min-height: 120px;
+  margin-bottom: 0.5rem;
+}
+
+.monthly-results-csv-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.monthly-results-csv-errors {
+  margin-bottom: 0.75rem;
+}
+
+.monthly-results-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.monthly-results-table .actions {
+  white-space: nowrap;
+}
+
+.monthly-results-table-wrap {
+  overflow-x: auto;
+}
+
+.card-monthly-results-dash .empty-hint {
+  margin-bottom: 0.75rem;
+}

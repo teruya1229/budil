@@ -24,7 +24,8 @@ const Storage = {
     EXPENSE_RECORDS: 'budil_expense_records',
     ANALYTICS_RECORDS: 'budil_analytics_records',
     EXTERNAL_CHECK_REPORTS: 'budil_external_check_reports',
-    ACTION_CANDIDATES: 'budil_action_candidates'
+    ACTION_CANDIDATES: 'budil_action_candidates',
+    MONTHLY_RESULTS: 'budil_monthly_results'
   },
 
   get(key, defaultValue = null) {
@@ -522,7 +523,8 @@ const Storage = {
     'budil_expense_records',
     'budil_analytics_records',
     'budil_external_check_reports',
-    'budil_action_candidates'
+    'budil_action_candidates',
+    'budil_monthly_results'
   ],
 
   getExternalCheckReports() {
@@ -747,6 +749,80 @@ const Storage = {
 
   deleteDemoAnalyticsRecords() {
     this.saveAnalyticsRecords(this.getAnalyticsRecords().filter(r => !this.isDemoOrTestFlag(r)));
+  },
+
+  getMonthlyResults() {
+    const raw = this.get(this.KEYS.MONTHLY_RESULTS, []);
+    return Array.isArray(raw) ? raw : [];
+  },
+
+  saveMonthlyResults(list) {
+    this.set(this.KEYS.MONTHLY_RESULTS, list);
+  },
+
+  getMonthlyResultByMonth(month) {
+    const key = typeof MonthlyResultsBrain !== 'undefined'
+      ? MonthlyResultsBrain.normalizeMonth(month)
+      : String(month || '').trim();
+    if (!key) return null;
+    return this.getMonthlyResults().find(r => r.month === key || r.id === key) || null;
+  },
+
+  upsertMonthlyResult(item) {
+    const list = this.getMonthlyResults();
+    const normalized = typeof MonthlyResultsBrain !== 'undefined'
+      ? MonthlyResultsBrain.normalizeRecord(item)
+      : { ...item };
+    const month = normalized.month || normalized.id;
+    if (!month) return { ok: false, error: 'month_required' };
+    normalized.id = month;
+    normalized.month = month;
+    const now = new Date().toISOString();
+    const idx = list.findIndex(r => r.month === month || r.id === month);
+    if (idx >= 0) {
+      const prev = list[idx];
+      list[idx] = {
+        ...prev,
+        ...normalized,
+        id: month,
+        month,
+        createdAt: prev.createdAt || now,
+        updatedAt: now
+      };
+      this.saveMonthlyResults(list);
+      return { ok: true, record: list[idx], created: false };
+    }
+    const record = {
+      ...normalized,
+      id: month,
+      month,
+      createdAt: now,
+      updatedAt: now
+    };
+    list.push(record);
+    if (typeof MonthlyResultsBrain !== 'undefined') {
+      this.saveMonthlyResults(MonthlyResultsBrain.sortByMonthDesc(list));
+    } else {
+      this.saveMonthlyResults(list);
+    }
+    return { ok: true, record, created: true };
+  },
+
+  updateMonthlyResult(id, data) {
+    const list = this.getMonthlyResults();
+    const idx = list.findIndex(r => r.id === id);
+    if (idx === -1) return null;
+    const prev = list[idx];
+    const merged = typeof MonthlyResultsBrain !== 'undefined'
+      ? MonthlyResultsBrain.normalizeRecord({ ...prev, ...data, id: prev.id, month: prev.month })
+      : { ...prev, ...data };
+    list[idx] = { ...merged, updatedAt: new Date().toISOString() };
+    this.saveMonthlyResults(list);
+    return list[idx];
+  },
+
+  deleteMonthlyResult(id) {
+    this.saveMonthlyResults(this.getMonthlyResults().filter(r => r.id !== id));
   },
 
   getReceptionIntakes() {

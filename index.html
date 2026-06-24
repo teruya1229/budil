@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.4.3</small>
+          <small>AI経営脳みそ v4.4.4</small>
         </div>
       </div>
       <nav class="nav">
@@ -89,6 +89,9 @@
             <button class="nav-item nav-item-sub" data-view="revenue" data-scroll="#revenue-aggregation-card">
               <span class="nav-icon">📊</span><span class="nav-label">売上集計</span>
             </button>
+            <button class="nav-item nav-item-main" data-view="monthly-results">
+              <span class="nav-icon">📅</span><span class="nav-label">月次実績</span>
+            </button>
             <button class="nav-item nav-item-main" data-view="profit">
               <span class="nav-icon">📊</span><span class="nav-label">利益番頭</span>
             </button>
@@ -137,7 +140,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.4.3</small>
+        <small>Budil v4.4.4</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -159,7 +162,7 @@
               <h2>経営司令塔ホーム</h2>
               <p class="exec-home-subtitle">毎朝5分で、今日やること・売上・利益・需要・受付・作業予定を確認</p>
             </div>
-            <span class="exec-home-version">v4.4.3</span>
+            <span class="exec-home-version">v4.4.4</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <div id="exec-home-start-guide" class="exec-home-start-guide hidden"></div>
@@ -381,7 +384,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.4.3</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.4.4</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -458,6 +461,11 @@
           <h2>今月の売上状況</h2>
           <div id="dash-revenue-summary" class="revenue-summary-block"></div>
           <div id="dash-sales-outcome" class="revenue-sales-outcome"></div>
+        </div>
+
+        <div class="card card-wide card-monthly-results-dash">
+          <h2>月次実績（まとめ入力）</h2>
+          <div id="dash-monthly-results" class="monthly-results-dash-block"></div>
         </div>
 
         <div class="card card-mission card-wide">
@@ -2053,6 +2061,90 @@
         </div>
       </section>
 
+      <!-- 月次実績 -->
+      <section id="view-monthly-results" class="view">
+        <header class="view-header">
+          <h1>月次実績</h1>
+          <p class="view-subtitle">過去月の売上・費用・利益をまとめて登録し、経営判断の実績補正に使う（売上詳細レコードとは別管理）</p>
+        </header>
+
+        <div class="card card-wide card-monthly-results-summary">
+          <h2>月別サマリー</h2>
+          <div id="monthly-results-summary" class="monthly-results-summary-grid"></div>
+        </div>
+
+        <div class="card card-wide" id="monthly-results-form-card">
+          <h2 id="monthly-results-form-title">月次実績入力</h2>
+          <form id="monthly-results-form" class="monthly-results-form">
+            <input type="hidden" id="monthly-results-edit-id" value="">
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="monthly-results-month">対象月 *</label>
+                <input type="month" id="monthly-results-month" required>
+              </div>
+              <div class="form-group">
+                <label for="monthly-results-sales">売上</label>
+                <input type="number" id="monthly-results-sales" min="0" step="1" placeholder="例：850000">
+              </div>
+            </div>
+            <div class="form-row form-row-3">
+              <div class="form-group">
+                <label for="monthly-results-broker-fee">手数料 / 仲介料</label>
+                <input type="number" id="monthly-results-broker-fee" min="0" step="1" placeholder="例：80000">
+              </div>
+              <div class="form-group">
+                <label for="monthly-results-material-cost">材料費</label>
+                <input type="number" id="monthly-results-material-cost" min="0" step="1" placeholder="例：45000">
+              </div>
+              <div class="form-group">
+                <label for="monthly-results-labor-cost">人件費</label>
+                <input type="number" id="monthly-results-labor-cost" min="0" step="1" placeholder="例：120000">
+              </div>
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="monthly-results-other-cost">その他費用</label>
+                <input type="number" id="monthly-results-other-cost" min="0" step="1" value="0">
+              </div>
+              <div class="form-group">
+                <label for="monthly-results-profit">利益</label>
+                <input type="number" id="monthly-results-profit" step="1" placeholder="自動計算または手入力">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="monthly-results-memo">メモ</label>
+              <input type="text" id="monthly-results-memo" placeholder="例：5月分まとめ入力">
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="monthly-results-calc-profit">利益を自動計算</button>
+              <button type="submit" class="btn btn-primary">保存</button>
+              <button type="button" class="btn btn-secondary" id="monthly-results-clear">クリア</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card card-wide card-monthly-results-csv">
+          <h2>CSV一括取り込み（過去月まとめて入力）</h2>
+          <p class="monthly-results-csv-hint">1行1ヶ月。ヘッダー行あり・なしどちらも可。</p>
+          <pre class="monthly-results-csv-sample">月,売上,手数料,材料費,人件費,その他費用,利益,メモ
+2026-05,850000,80000,45000,120000,0,605000,5月分
+2026-06,920000,70000,50000,130000,0,670000,6月分</pre>
+          <textarea id="monthly-results-csv-paste" class="monthly-results-csv-paste" rows="6" placeholder="CSVを貼り付け"></textarea>
+          <div class="monthly-results-csv-actions">
+            <button type="button" class="btn btn-primary btn-sm" id="monthly-results-csv-parse">解析</button>
+            <button type="button" class="btn btn-primary btn-sm" id="monthly-results-csv-save" disabled>一括保存</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="monthly-results-csv-clear">貼り付け欄をクリア</button>
+          </div>
+          <div id="monthly-results-csv-errors" class="monthly-results-csv-errors hidden"></div>
+          <div id="monthly-results-csv-preview" class="monthly-results-csv-preview hidden"></div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>月次実績一覧</h2>
+          <div id="monthly-results-list" class="monthly-results-list-wrap"></div>
+        </div>
+      </section>
+
       <!-- アナリティクス番頭 -->
       <section id="view-analytics" class="view">
         <header class="view-header">
@@ -2808,6 +2900,7 @@
   <script src="js/work-completion-brain.js"></script>
   <script src="js/profit-brain.js"></script>
   <script src="js/analytics-brain.js"></script>
+  <script src="js/monthly-results-brain.js"></script>
   <script src="js/executive-brain.js"></script>
   <script src="js/card-ocr.js"></script>
   <script src="js/data-backup.js"></script>

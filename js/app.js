@@ -413,6 +413,7 @@
     if (view === 'external-check') renderExternalCheckView();
     if (view === 'follow-up') renderFollowUpView();
     if (view === 'profit') renderProfitView();
+    if (view === 'monthly-results') renderMonthlyResultsView();
     if (view === 'analytics') renderAnalyticsView();
     if (view === 'area') renderAreaView();
     if (view === 'revenue') renderRevenueView();
@@ -483,6 +484,7 @@
     safeRenderSection('dash-sales-targets', () => renderSalesInsights(), '営業インサイト');
     safeRenderSection('dash-followups', () => renderDashboardLists(), 'ダッシュボードリスト');
     safeRenderSection('dash-revenue-summary', () => renderDashRevenueSummary(), '売上サマリー');
+    safeRenderSection('dash-monthly-results', () => renderDashMonthlyResults(), '月次実績');
     safeRenderSection('dash-management-comment', () => renderManagementComments(), '経営番頭コメント');
     safeRenderSection('dash-today-execution', () => renderDashTodayExecutionPlan(), '今日の投稿・広告予定');
     safeRenderSection('dash-improvement-hints', () => renderDashImprovementHints(), '改善ヒント');
@@ -2558,6 +2560,7 @@
     if (summary.workOrders) items.push('作業予定 ' + summary.workOrders + '件');
     if (summary.expenseRecords) items.push('支出記録 ' + summary.expenseRecords + '件');
     if (summary.analyticsRecords) items.push('アナリティクス ' + summary.analyticsRecords + '件');
+    if (summary.monthlyResults) items.push('月次実績 ' + summary.monthlyResults + '件');
     return items;
   }
 
@@ -3920,7 +3923,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.4.3</span>
+        <span class="business-report-version">v4.4.4</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -8763,6 +8766,332 @@
     }
   }
 
+  // ── 月次実績 ──
+  let monthlyResultsCsvPreview = [];
+
+  function readMonthlyResultsFormPayload() {
+    const month = document.getElementById('monthly-results-month')?.value || '';
+    return {
+      month,
+      sales: Number(document.getElementById('monthly-results-sales')?.value || 0),
+      brokerFee: Number(document.getElementById('monthly-results-broker-fee')?.value || 0),
+      materialCost: Number(document.getElementById('monthly-results-material-cost')?.value || 0),
+      laborCost: Number(document.getElementById('monthly-results-labor-cost')?.value || 0),
+      otherCost: Number(document.getElementById('monthly-results-other-cost')?.value || 0),
+      profit: Number(document.getElementById('monthly-results-profit')?.value || 0),
+      memo: document.getElementById('monthly-results-memo')?.value.trim() || ''
+    };
+  }
+
+  function clearMonthlyResultsForm() {
+    const editId = document.getElementById('monthly-results-edit-id');
+    if (editId) editId.value = '';
+    const title = document.getElementById('monthly-results-form-title');
+    if (title) title.textContent = '月次実績入力';
+    ['monthly-results-sales', 'monthly-results-broker-fee', 'monthly-results-material-cost',
+      'monthly-results-labor-cost', 'monthly-results-memo'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    const other = document.getElementById('monthly-results-other-cost');
+    if (other) other.value = '0';
+    const profit = document.getElementById('monthly-results-profit');
+    if (profit) profit.value = '';
+    const monthEl = document.getElementById('monthly-results-month');
+    if (monthEl) {
+      monthEl.value = '';
+      monthEl.removeAttribute('readonly');
+    }
+  }
+
+  function fillMonthlyResultsForm(id) {
+    const record = Storage.getMonthlyResults().find(r => r.id === id);
+    if (!record) return;
+    const set = (elId, val) => {
+      const el = document.getElementById(elId);
+      if (el) el.value = val != null ? val : '';
+    };
+    document.getElementById('monthly-results-edit-id').value = record.id;
+    const title = document.getElementById('monthly-results-form-title');
+    if (title) title.textContent = '月次実績編集（' + record.month + '）';
+    set('monthly-results-month', record.month);
+    const monthEl = document.getElementById('monthly-results-month');
+    if (monthEl) monthEl.setAttribute('readonly', 'readonly');
+    set('monthly-results-sales', record.sales);
+    set('monthly-results-broker-fee', record.brokerFee);
+    set('monthly-results-material-cost', record.materialCost);
+    set('monthly-results-labor-cost', record.laborCost);
+    set('monthly-results-other-cost', record.otherCost);
+    set('monthly-results-profit', record.profit);
+    set('monthly-results-memo', record.memo);
+    scrollToElement('#monthly-results-form-card');
+  }
+
+  function applyMonthlyResultsProfitCalc() {
+    const payload = readMonthlyResultsFormPayload();
+    const profit = MonthlyResultsBrain.computeProfit(
+      payload.sales, payload.brokerFee, payload.materialCost, payload.laborCost, payload.otherCost
+    );
+    const el = document.getElementById('monthly-results-profit');
+    if (el) el.value = String(profit);
+    showAppToast('利益を自動計算しました');
+  }
+
+  function saveMonthlyResultsFromForm(e) {
+    if (e) e.preventDefault();
+    const editId = document.getElementById('monthly-results-edit-id')?.value || '';
+    const payload = readMonthlyResultsFormPayload();
+    if (!payload.month) {
+      alert('対象月を選択してください。');
+      return;
+    }
+    if (!editId) {
+      const existing = Storage.getMonthlyResultByMonth(payload.month);
+      if (existing && !confirm(payload.month + ' の実績は既に登録されています。上書き保存しますか？')) {
+        return;
+      }
+    }
+    const result = Storage.upsertMonthlyResult({
+      ...payload,
+      id: editId || payload.month
+    });
+    if (!result.ok) {
+      alert('保存に失敗しました。');
+      return;
+    }
+    clearMonthlyResultsForm();
+    renderMonthlyResultsView();
+    renderDashboard();
+    showAppToast(editId || !result.created ? '月次実績を更新しました' : '月次実績を保存しました');
+  }
+
+  function renderMonthlyResultsSummary(records) {
+    const el = document.getElementById('monthly-results-summary');
+    if (!el) return;
+    const sorted = MonthlyResultsBrain.sortByMonthDesc(records);
+    if (!sorted.length) {
+      el.innerHTML = '<p class="empty-hint">まだ月次実績がありません。上のフォームまたはCSVから登録してください。</p>';
+      return;
+    }
+    const totals = MonthlyResultsBrain.getTotals(sorted);
+    const latest = sorted[0];
+    el.innerHTML = `
+      <div class="monthly-results-summary-item">
+        <span>登録月数</span><strong>${sorted.length}ヶ月</strong>
+      </div>
+      <div class="monthly-results-summary-item">
+        <span>最新月</span><strong>${esc(latest.month)}</strong>
+      </div>
+      <div class="monthly-results-summary-item">
+        <span>累計売上</span><strong>${esc(MonthlyResultsBrain.formatYen(totals.sales))}</strong>
+      </div>
+      <div class="monthly-results-summary-item">
+        <span>累計利益</span><strong>${esc(MonthlyResultsBrain.formatYen(totals.profit))}</strong>
+      </div>
+      <div class="monthly-results-summary-item">
+        <span>累計利益率</span><strong>${esc(MonthlyResultsBrain.formatRate(totals.profit, totals.sales))}</strong>
+      </div>
+    `;
+  }
+
+  function renderMonthlyResultsList(records) {
+    const el = document.getElementById('monthly-results-list');
+    if (!el) return;
+    const sorted = MonthlyResultsBrain.sortByMonthDesc(records);
+    if (!sorted.length) {
+      el.innerHTML = '<p class="empty-hint">登録済みの月次実績はありません。</p>';
+      return;
+    }
+    const rows = sorted.map(r => `
+      <tr data-monthly-id="${esc(r.id)}">
+        <td>${esc(r.month)}</td>
+        <td class="num">${esc(MonthlyResultsBrain.formatYen(r.sales))}</td>
+        <td class="num">${esc(MonthlyResultsBrain.formatYen(r.brokerFee))}</td>
+        <td class="num">${esc(MonthlyResultsBrain.formatYen(r.materialCost))}</td>
+        <td class="num">${esc(MonthlyResultsBrain.formatYen(r.laborCost))}</td>
+        <td class="num">${esc(MonthlyResultsBrain.formatYen(r.otherCost))}</td>
+        <td class="num">${esc(MonthlyResultsBrain.formatYen(r.profit))}</td>
+        <td class="num">${esc(MonthlyResultsBrain.formatRate(r.profit, r.sales))}</td>
+        <td>${esc(r.memo || '—')}</td>
+        <td class="actions">
+          <button type="button" class="btn btn-sm btn-secondary" data-monthly-edit="${esc(r.id)}">編集</button>
+          <button type="button" class="btn btn-sm btn-danger" data-monthly-delete="${esc(r.id)}">削除</button>
+        </td>
+      </tr>
+    `).join('');
+    el.innerHTML = `
+      <div class="table-wrap monthly-results-table-wrap">
+        <table class="data-table monthly-results-table">
+          <thead>
+            <tr>
+              <th>月</th><th>売上</th><th>手数料</th><th>材料費</th><th>人件費</th><th>その他</th><th>利益</th><th>利益率</th><th>メモ</th><th></th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+    el.querySelectorAll('[data-monthly-edit]').forEach(btn => {
+      btn.addEventListener('click', () => fillMonthlyResultsForm(btn.dataset.monthlyEdit));
+    });
+    el.querySelectorAll('[data-monthly-delete]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.monthlyDelete;
+        const rec = Storage.getMonthlyResults().find(r => r.id === id);
+        if (!rec) return;
+        if (!confirm(rec.month + ' の月次実績を削除しますか？')) return;
+        Storage.deleteMonthlyResult(id);
+        renderMonthlyResultsView();
+        renderDashboard();
+        showAppToast('月次実績を削除しました');
+      });
+    });
+  }
+
+  function renderMonthlyResultsCsvPreview() {
+    const previewEl = document.getElementById('monthly-results-csv-preview');
+    const saveBtn = document.getElementById('monthly-results-csv-save');
+    const errEl = document.getElementById('monthly-results-csv-errors');
+    if (!previewEl) return;
+    if (!monthlyResultsCsvPreview.length) {
+      previewEl.classList.add('hidden');
+      previewEl.innerHTML = '';
+      if (saveBtn) saveBtn.disabled = true;
+      return;
+    }
+    const existing = Storage.getMonthlyResults();
+    const rows = monthlyResultsCsvPreview.map(r => {
+      const dup = existing.some(e => e.month === r.month);
+      return `<tr><td>${esc(r.month)}</td><td>${esc(MonthlyResultsBrain.formatYen(r.sales))}</td><td>${esc(MonthlyResultsBrain.formatYen(r.profit))}</td><td>${dup ? '上書き' : '新規'}</td><td>${esc(r.memo || '—')}</td></tr>`;
+    }).join('');
+    previewEl.classList.remove('hidden');
+    previewEl.innerHTML = `
+      <h3>取り込みプレビュー（${monthlyResultsCsvPreview.length}件）</h3>
+      <div class="table-wrap"><table class="data-table"><thead><tr><th>月</th><th>売上</th><th>利益</th><th>操作</th><th>メモ</th></tr></thead><tbody>${rows}</tbody></table></div>
+    `;
+    if (saveBtn) saveBtn.disabled = false;
+    if (errEl) errEl.classList.add('hidden');
+  }
+
+  function parseMonthlyResultsCsv() {
+    const text = document.getElementById('monthly-results-csv-paste')?.value || '';
+    const parsed = MonthlyResultsBrain.parseCsv(text);
+    const errEl = document.getElementById('monthly-results-csv-errors');
+    if (parsed.errors.length) {
+      monthlyResultsCsvPreview = [];
+      renderMonthlyResultsCsvPreview();
+      if (errEl) {
+        errEl.classList.remove('hidden');
+        errEl.innerHTML = '<ul class="error-list">' + parsed.errors.map(e => '<li>' + esc(e) + '</li>').join('') + '</ul>';
+      }
+      return;
+    }
+    if (!parsed.records.length) {
+      alert('取り込めるデータがありません。');
+      return;
+    }
+    monthlyResultsCsvPreview = parsed.records;
+    renderMonthlyResultsCsvPreview();
+    if (parsed.warnings.length && errEl) {
+      errEl.classList.remove('hidden');
+      errEl.innerHTML = '<ul class="caution-list">' + parsed.warnings.map(w => '<li>' + esc(w) + '</li>').join('') + '</ul>';
+    }
+    showAppToast(parsed.records.length + '件を解析しました');
+  }
+
+  function saveMonthlyResultsCsv() {
+    if (!monthlyResultsCsvPreview.length) return;
+    const overwriteMonths = monthlyResultsCsvPreview
+      .filter(r => Storage.getMonthlyResultByMonth(r.month))
+      .map(r => r.month);
+    if (overwriteMonths.length && !confirm(overwriteMonths.join(', ') + ' は既存データを上書きします。続行しますか？')) {
+      return;
+    }
+    monthlyResultsCsvPreview.forEach(r => Storage.upsertMonthlyResult(r));
+    monthlyResultsCsvPreview = [];
+    const paste = document.getElementById('monthly-results-csv-paste');
+    if (paste) paste.value = '';
+    renderMonthlyResultsCsvPreview();
+    renderMonthlyResultsView();
+    renderDashboard();
+    showAppToast('CSV一括取り込みを保存しました');
+  }
+
+  function renderMonthlyResultsView() {
+    try {
+      const records = Storage.getMonthlyResults();
+      renderMonthlyResultsSummary(records);
+      renderMonthlyResultsList(records);
+    } catch (err) {
+      console.error('[Budil] renderMonthlyResultsView', err);
+    }
+  }
+
+  function renderDashMonthlyResults() {
+    const el = document.getElementById('dash-monthly-results');
+    if (!el) return;
+    const records = Storage.getMonthlyResults();
+    const latest = MonthlyResultsBrain.getLatest(records);
+    if (!latest) {
+      el.innerHTML = `
+        <p class="empty-hint">過去月の実績がまだありません。</p>
+        <button type="button" class="btn btn-sm btn-primary" id="btn-go-monthly-results">月次実績を入力</button>
+      `;
+    } else {
+      el.innerHTML = `
+        <div class="monthly-results-dash-grid">
+          <div><span>最新月</span><strong>${esc(latest.month)}</strong></div>
+          <div><span>売上</span><strong>${esc(MonthlyResultsBrain.formatYen(latest.sales))}</strong></div>
+          <div><span>利益</span><strong>${esc(MonthlyResultsBrain.formatYen(latest.profit))}</strong></div>
+          <div><span>利益率</span><strong>${esc(MonthlyResultsBrain.formatRate(latest.profit, latest.sales))}</strong></div>
+        </div>
+        <button type="button" class="btn btn-sm btn-secondary" id="btn-go-monthly-results">月次実績を開く</button>
+      `;
+    }
+    const btn = el.querySelector('#btn-go-monthly-results');
+    if (btn) btn.addEventListener('click', () => navigateToView('monthly-results'));
+  }
+
+  function initMonthlyResults() {
+    const form = document.getElementById('monthly-results-form');
+    if (form && !form.dataset.bound) {
+      form.dataset.bound = '1';
+      form.addEventListener('submit', saveMonthlyResultsFromForm);
+    }
+    const clearBtn = document.getElementById('monthly-results-clear');
+    if (clearBtn && !clearBtn.dataset.bound) {
+      clearBtn.dataset.bound = '1';
+      clearBtn.addEventListener('click', clearMonthlyResultsForm);
+    }
+    const calcBtn = document.getElementById('monthly-results-calc-profit');
+    if (calcBtn && !calcBtn.dataset.bound) {
+      calcBtn.dataset.bound = '1';
+      calcBtn.addEventListener('click', applyMonthlyResultsProfitCalc);
+    }
+    const parseBtn = document.getElementById('monthly-results-csv-parse');
+    if (parseBtn && !parseBtn.dataset.bound) {
+      parseBtn.dataset.bound = '1';
+      parseBtn.addEventListener('click', parseMonthlyResultsCsv);
+    }
+    const csvSaveBtn = document.getElementById('monthly-results-csv-save');
+    if (csvSaveBtn && !csvSaveBtn.dataset.bound) {
+      csvSaveBtn.dataset.bound = '1';
+      csvSaveBtn.addEventListener('click', saveMonthlyResultsCsv);
+    }
+    const csvClearBtn = document.getElementById('monthly-results-csv-clear');
+    if (csvClearBtn && !csvClearBtn.dataset.bound) {
+      csvClearBtn.dataset.bound = '1';
+      csvClearBtn.addEventListener('click', () => {
+        const paste = document.getElementById('monthly-results-csv-paste');
+        if (paste) paste.value = '';
+        monthlyResultsCsvPreview = [];
+        renderMonthlyResultsCsvPreview();
+        const errEl = document.getElementById('monthly-results-csv-errors');
+        if (errEl) { errEl.classList.add('hidden'); errEl.innerHTML = ''; }
+      });
+    }
+  }
+
   // ── アナリティクス番頭 ──
   let selectedAnalyticsId = null;
   let lastBrowserBantouPreview = null;
@@ -12046,6 +12375,7 @@
     initExternalCheck();
     initFollowUp();
     initProfit();
+    initMonthlyResults();
     initAnalytics();
     initDemandSearch();
     initLeads();
