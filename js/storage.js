@@ -25,7 +25,8 @@ const Storage = {
     ANALYTICS_RECORDS: 'budil_analytics_records',
     EXTERNAL_CHECK_REPORTS: 'budil_external_check_reports',
     ACTION_CANDIDATES: 'budil_action_candidates',
-    MONTHLY_RESULTS: 'budil_monthly_results'
+    MONTHLY_RESULTS: 'budil_monthly_results',
+    DOCUMENTS: 'budil_documents'
   },
 
   get(key, defaultValue = null) {
@@ -524,8 +525,56 @@ const Storage = {
     'budil_analytics_records',
     'budil_external_check_reports',
     'budil_action_candidates',
-    'budil_monthly_results'
+    'budil_monthly_results',
+    'budil_documents'
   ],
+
+  getDocuments() {
+    const raw = this.get(this.KEYS.DOCUMENTS, []);
+    return Array.isArray(raw) ? raw : [];
+  },
+
+  saveDocuments(list) {
+    this.set(this.KEYS.DOCUMENTS, list);
+  },
+
+  addDocument(item) {
+    const list = this.getDocuments();
+    const now = new Date().toISOString();
+    const normalized = typeof DocumentsBrain !== 'undefined'
+      ? DocumentsBrain.normalizeDocument(item)
+      : { ...item };
+    const record = {
+      ...normalized,
+      id: normalized.id || ('doc-' + this.generateId()),
+      createdAt: normalized.createdAt || now,
+      updatedAt: now
+    };
+    list.unshift(record);
+    this.saveDocuments(list);
+    return record;
+  },
+
+  updateDocument(id, data) {
+    const list = this.getDocuments();
+    const idx = list.findIndex(d => d.id === id);
+    if (idx === -1) return null;
+    const prev = list[idx];
+    const merged = typeof DocumentsBrain !== 'undefined'
+      ? DocumentsBrain.normalizeDocument({ ...prev, ...data, id: prev.id })
+      : { ...prev, ...data };
+    list[idx] = { ...merged, createdAt: prev.createdAt, updatedAt: new Date().toISOString() };
+    this.saveDocuments(list);
+    return list[idx];
+  },
+
+  deleteDocument(id) {
+    this.saveDocuments(this.getDocuments().filter(d => d.id !== id));
+  },
+
+  getDocumentById(id) {
+    return this.getDocuments().find(d => d.id === id) || null;
+  },
 
   getExternalCheckReports() {
     const raw = this.get(this.KEYS.EXTERNAL_CHECK_REPORTS, []);

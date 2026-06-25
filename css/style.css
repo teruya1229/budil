@@ -8367,3 +8367,369 @@ body.sales-page {
 .card-monthly-results-dash .empty-hint {
   margin-bottom: 0.75rem;
 }
+
+/* ── 請求書・見積書 v4.4.9 ── */
+.doc-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.doc-preview-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.documents-list-wrap {
+  overflow-x: auto;
+}
+
+.documents-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.documents-table th,
+.documents-table td {
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.documents-table th {
+  background: #f8fafc;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.documents-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.documents-table .actions {
+  white-space: nowrap;
+}
+
+.documents-table .actions .btn {
+  margin: 0.1rem 0.15rem 0.1rem 0;
+}
+
+.doc-status-badge {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.doc-status-badge.status-paid,
+.doc-status-badge.status-won {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.doc-status-badge.status-issued,
+.doc-status-badge.status-submitted {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.doc-status-badge.status-cancelled,
+.doc-status-badge.status-lost {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.doc-status-badge.status-converted {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.doc-form-subtitle {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.doc-items-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.doc-item-row {
+  display: grid;
+  grid-template-columns: 7rem 1fr 6rem 4rem 6rem auto;
+  gap: 0.35rem;
+  align-items: end;
+}
+
+.doc-item-row input {
+  width: 100%;
+}
+
+.doc-item-row .btn-remove-item {
+  align-self: center;
+}
+
+.doc-tax-preview {
+  padding: 0.45rem 0.6rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  min-height: 2.2rem;
+}
+
+.documents-preview-body {
+  background: #f1f5f9;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.doc-sheet {
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 14mm 12mm;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  font-size: 11pt;
+  line-height: 1.5;
+}
+
+.doc-sheet-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+
+.doc-title {
+  font-size: 1.6rem;
+  letter-spacing: 0.2em;
+  margin: 0 0 0.6rem;
+  font-weight: 700;
+}
+
+.doc-customer {
+  font-size: 1.05rem;
+  margin: 0;
+  border-bottom: 1px solid #111;
+  display: inline-block;
+  padding-bottom: 0.15rem;
+  min-width: 10rem;
+}
+
+.doc-sheet-right {
+  flex-shrink: 0;
+}
+
+.doc-issuer-block {
+  position: relative;
+  text-align: right;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  min-width: 11rem;
+  padding-right: 4.5rem;
+}
+
+.doc-seal {
+  position: absolute;
+  top: -0.2rem;
+  right: 0;
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  opacity: 0.92;
+}
+
+.doc-meta {
+  margin-bottom: 0.9rem;
+}
+
+.doc-meta-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.2rem;
+  font-size: 0.9rem;
+}
+
+.doc-meta-label {
+  min-width: 6.5rem;
+  color: #444;
+}
+
+.doc-total-banner {
+  margin: 0.8rem 0 1rem;
+  padding: 0.65rem 0.8rem;
+  border: 2px solid #111;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+}
+
+.doc-total-label {
+  font-weight: 600;
+}
+
+.doc-total-amount {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.doc-total-tax-note {
+  font-size: 0.78rem;
+  color: #555;
+}
+
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.8rem;
+  font-size: 0.88rem;
+}
+
+.doc-table th,
+.doc-table td {
+  border: 1px solid #333;
+  padding: 0.35rem 0.45rem;
+}
+
+.doc-table th {
+  background: #f5f5f5;
+  font-weight: 600;
+}
+
+.doc-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.doc-col-date { width: 6.5rem; }
+.doc-col-price { width: 6rem; }
+.doc-col-qty { width: 3.5rem; }
+.doc-col-amount { width: 6.5rem; }
+
+.doc-totals {
+  margin-left: auto;
+  width: min(100%, 16rem);
+  margin-bottom: 0.8rem;
+}
+
+.doc-totals-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.2rem 0;
+  border-bottom: 1px solid #ddd;
+}
+
+.doc-totals-grand {
+  font-weight: 700;
+  font-size: 1.05rem;
+  border-bottom: 2px solid #111;
+}
+
+.doc-section-title {
+  font-size: 0.9rem;
+  margin: 0 0 0.35rem;
+}
+
+.doc-tax-breakdown,
+.doc-bank,
+.doc-note {
+  margin-top: 0.75rem;
+}
+
+.doc-bank-body,
+.doc-note-body {
+  font-size: 0.88rem;
+  white-space: pre-wrap;
+}
+
+.doc-table-compact th,
+.doc-table-compact td {
+  font-size: 0.82rem;
+}
+
+@media (max-width: 900px) {
+  .doc-item-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .doc-item-row .doc-item-date { grid-column: 1 / -1; }
+  .doc-item-row .doc-item-name { grid-column: 1 / -1; }
+  .doc-sheet-header {
+    flex-direction: column;
+  }
+  .doc-issuer-block {
+    text-align: left;
+    padding-right: 0;
+    padding-top: 4.5rem;
+  }
+  .doc-seal {
+    top: 0;
+    right: auto;
+    left: 0;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  body.doc-printing .sidebar,
+  body.doc-printing .view-header,
+  body.doc-printing .no-print,
+  body.doc-printing .card:not(#documents-preview-panel),
+  body.doc-printing #documents-list-panel,
+  body.doc-printing #documents-form-panel,
+  body.doc-printing .doc-toolbar,
+  body.doc-printing .doc-preview-toolbar,
+  body.doc-printing .app-toast {
+    display: none !important;
+  }
+
+  body.doc-printing .view {
+    display: none !important;
+  }
+
+  body.doc-printing #view-documents {
+    display: block !important;
+  }
+
+  body.doc-printing #documents-preview-panel {
+    display: block !important;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+    background: #fff;
+  }
+
+  body.doc-printing .documents-preview-body {
+    padding: 0;
+    background: #fff;
+  }
+
+  body.doc-printing .doc-sheet {
+    box-shadow: none;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  body.doc-printing .doc-seal {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

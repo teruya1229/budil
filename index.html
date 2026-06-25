@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.4.8">
+  <link rel="stylesheet" href="css/style.css?v=4.4.9">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.4.8</small>
+          <small>AI経営脳みそ v4.4.9</small>
         </div>
       </div>
       <nav class="nav">
@@ -79,6 +79,9 @@
             </button>
             <button class="nav-item nav-item-main" data-view="follow-up">
               <span class="nav-icon">💬</span><span class="nav-label">フォロー</span>
+            </button>
+            <button class="nav-item nav-item-main" data-view="documents">
+              <span class="nav-icon">📄</span><span class="nav-label">請求書・見積書</span>
             </button>
           </div>
         </details>
@@ -156,7 +159,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.4.8</small>
+        <small>Budil v4.4.9</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -178,7 +181,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">毎朝5分で、今日やること・売上・利益・需要・受付・作業予定を確認</p>
             </div>
-            <span class="exec-home-version">v4.4.8</span>
+            <span class="exec-home-version">v4.4.9</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <div id="exec-home-start-guide" class="exec-home-start-guide hidden"></div>
@@ -400,7 +403,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.4.8</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.4.9</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -1967,6 +1970,110 @@
         </div>
       </section>
 
+      <!-- 請求書・見積書 -->
+      <section id="view-documents" class="view">
+        <header class="view-header">
+          <h1>請求書・見積書</h1>
+          <p class="view-subtitle">請求書・見積書の作成・保存・印刷/PDF（売上確定は別操作）</p>
+        </header>
+
+        <div class="doc-toolbar no-print">
+          <button type="button" class="btn btn-primary btn-sm" id="btn-doc-new-invoice">新規請求書</button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-doc-new-estimate">新規見積書</button>
+          <button type="button" class="btn btn-secondary btn-sm hidden" id="btn-doc-back-list">一覧に戻る</button>
+        </div>
+
+        <div id="documents-list-panel" class="card card-wide">
+          <h2>一覧</h2>
+          <div id="documents-list-wrap" class="documents-list-wrap"></div>
+        </div>
+
+        <div id="documents-form-panel" class="card card-wide hidden">
+          <h2 id="documents-form-title">書類入力</h2>
+          <form id="documents-form" class="documents-form">
+            <input type="hidden" id="doc-edit-id" value="">
+            <input type="hidden" id="doc-type" value="invoice">
+            <div class="form-row form-row-3">
+              <div class="form-group">
+                <label for="doc-number">番号</label>
+                <input type="text" id="doc-number" required placeholder="例: 493">
+              </div>
+              <div class="form-group">
+                <label for="doc-issue-date">発行日</label>
+                <input type="date" id="doc-issue-date" required>
+              </div>
+              <div class="form-group doc-due-group">
+                <label for="doc-due-date">お支払期限</label>
+                <input type="date" id="doc-due-date">
+              </div>
+            </div>
+            <div class="form-row form-row-3">
+              <div class="form-group">
+                <label for="doc-customer">宛名</label>
+                <input type="text" id="doc-customer" placeholder="例: 山田" required>
+              </div>
+              <div class="form-group">
+                <label for="doc-honorific">敬称</label>
+                <select id="doc-honorific">
+                  <option value="様">様</option>
+                  <option value="御中">御中</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="doc-status">ステータス</label>
+                <select id="doc-status"></select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="doc-title">件名</label>
+              <input type="text" id="doc-title" placeholder="例: エアコンクリーニング">
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="doc-tax-mode">税入力方式</label>
+                <select id="doc-tax-mode">
+                  <option value="taxIncluded">税込入力（請求書向け）</option>
+                  <option value="taxExcluded">税抜入力（見積書向け）</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>税計算プレビュー</label>
+                <div id="doc-tax-preview" class="doc-tax-preview">—</div>
+              </div>
+            </div>
+
+            <h3 class="doc-form-subtitle">明細</h3>
+            <div id="doc-items-editor" class="doc-items-editor"></div>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-doc-add-item">行を追加</button>
+
+            <div class="form-group doc-bank-group">
+              <label for="doc-bank-info">振込先（請求書のみ）</label>
+              <textarea id="doc-bank-info" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="doc-note">備考</label>
+              <textarea id="doc-note" rows="4"></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">保存</button>
+              <button type="button" class="btn btn-secondary" id="btn-doc-cancel">キャンセル</button>
+              <button type="button" class="btn btn-secondary hidden" id="btn-doc-preview-from-form">プレビュー</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="documents-preview-panel" class="card card-wide hidden">
+          <div class="doc-preview-toolbar no-print">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-doc-print">印刷 / PDF</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-doc-edit-from-preview">編集</button>
+            <button type="button" class="btn btn-secondary btn-sm hidden" id="btn-doc-convert-invoice">見積書を請求書に変換</button>
+            <button type="button" class="btn btn-secondary btn-sm hidden" id="btn-doc-reflect-revenue">売上登録に反映</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-doc-back-from-preview">一覧に戻る</button>
+          </div>
+          <div id="documents-preview-body" class="documents-preview-body doc-print-area"></div>
+        </div>
+      </section>
+
       <!-- 利益サマリー -->
       <section id="view-profit" class="view">
         <header class="view-header">
@@ -2904,28 +3011,29 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.4.8"></script>
-  <script src="js/messages.js?v=4.4.8"></script>
-  <script src="js/demand-brain.js?v=4.4.8"></script>
-  <script src="js/demand-radar.js?v=4.4.8"></script>
-  <script src="js/sales-brain.js?v=4.4.8"></script>
-  <script src="js/management-brain.js?v=4.4.8"></script>
-  <script src="js/revenue-brain.js?v=4.4.8"></script>
-  <script src="js/revenue-summary-brain.js?v=4.4.8"></script>
-  <script src="js/reception-brain.js?v=4.4.8"></script>
-  <script src="js/map-brain.js?v=4.4.8"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.4.8"></script>
-  <script src="js/external-check-brain.js?v=4.4.8"></script>
-  <script src="js/action-brain.js?v=4.4.8"></script>
-  <script src="js/work-order-brain.js?v=4.4.8"></script>
-  <script src="js/follow-up-brain.js?v=4.4.8"></script>
-  <script src="js/work-completion-brain.js?v=4.4.8"></script>
-  <script src="js/profit-brain.js?v=4.4.8"></script>
-  <script src="js/analytics-brain.js?v=4.4.8"></script>
-  <script src="js/monthly-results-brain.js?v=4.4.8"></script>
-  <script src="js/executive-brain.js?v=4.4.8"></script>
-  <script src="js/card-ocr.js?v=4.4.8"></script>
-  <script src="js/data-backup.js?v=4.4.8"></script>
-  <script src="js/app.js?v=4.4.8"></script>
+  <script src="js/storage.js?v=4.4.9"></script>
+  <script src="js/messages.js?v=4.4.9"></script>
+  <script src="js/demand-brain.js?v=4.4.9"></script>
+  <script src="js/demand-radar.js?v=4.4.9"></script>
+  <script src="js/sales-brain.js?v=4.4.9"></script>
+  <script src="js/management-brain.js?v=4.4.9"></script>
+  <script src="js/revenue-brain.js?v=4.4.9"></script>
+  <script src="js/revenue-summary-brain.js?v=4.4.9"></script>
+  <script src="js/reception-brain.js?v=4.4.9"></script>
+  <script src="js/map-brain.js?v=4.4.9"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.4.9"></script>
+  <script src="js/external-check-brain.js?v=4.4.9"></script>
+  <script src="js/action-brain.js?v=4.4.9"></script>
+  <script src="js/work-order-brain.js?v=4.4.9"></script>
+  <script src="js/follow-up-brain.js?v=4.4.9"></script>
+  <script src="js/work-completion-brain.js?v=4.4.9"></script>
+  <script src="js/profit-brain.js?v=4.4.9"></script>
+  <script src="js/analytics-brain.js?v=4.4.9"></script>
+  <script src="js/monthly-results-brain.js?v=4.4.9"></script>
+  <script src="js/documents-brain.js?v=4.4.9"></script>
+  <script src="js/executive-brain.js?v=4.4.9"></script>
+  <script src="js/card-ocr.js?v=4.4.9"></script>
+  <script src="js/data-backup.js?v=4.4.9"></script>
+  <script src="js/app.js?v=4.4.9"></script>
 </body>
 </html>

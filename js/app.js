@@ -17,6 +17,8 @@
   let businessReportPeriod = '7d';
   let lastBusinessReportContext = null;
   let revenueAggregationFilter = { year: '', month: '', source: '', service: '' };
+  let currentDocPreviewId = null;
+  let documentsFormDirty = false;
 
   const SALES_TAB_FIELDS = { email: 'msg-email', form: 'msg-form', dm: 'msg-dm', phone: 'msg-phone' };
   const SALES_TAB_LOG = { email: 'メール送信', form: 'フォーム送信', dm: 'DM', phone: '電話' };
@@ -417,6 +419,7 @@
     if (view === 'analytics') renderAnalyticsView();
     if (view === 'area') renderAreaView();
     if (view === 'revenue') renderRevenueView();
+    if (view === 'documents') renderDocumentsView();
     if (view === 'data') renderDataManagement();
   }
 
@@ -2572,6 +2575,7 @@
     if (summary.expenseRecords) items.push('支出記録 ' + summary.expenseRecords + '件');
     if (summary.analyticsRecords) items.push('アナリティクス ' + summary.analyticsRecords + '件');
     if (summary.monthlyResults) items.push('月次実績 ' + summary.monthlyResults + '件');
+    if (summary.documents) items.push('請求書・見積書 ' + summary.documents + '件');
     return items;
   }
 
@@ -3934,7 +3938,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.4.8</span>
+        <span class="business-report-version">v4.4.9</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -12378,6 +12382,392 @@
     renderDashboard();
   }
 
+  // ── 請求書・見積書 ──
+  function showDocumentsPanel(panel) {
+    const list = document.getElementById('documents-list-panel');
+    const form = document.getElementById('documents-form-panel');
+    const preview = document.getElementById('documents-preview-panel');
+    const backList = document.getElementById('btn-doc-back-list');
+    if (!list || !form || !preview) return;
+    list.classList.toggle('hidden', panel !== 'list');
+    form.classList.toggle('hidden', panel !== 'form');
+    preview.classList.toggle('hidden', panel !== 'preview');
+    if (backList) backList.classList.toggle('hidden', panel === 'list');
+  }
+
+  function fillDocStatusOptions(type, selected) {
+    const sel = document.getElementById('doc-status');
+    if (!sel) return;
+    const list = type === 'invoice' ? DocumentsBrain.INVOICE_STATUSES : DocumentsBrain.ESTIMATE_STATUSES;
+    sel.innerHTML = list.map(s => `<option value="${esc(s.value)}">${esc(s.label)}</option>`).join('');
+    sel.value = selected || 'draft';
+  }
+
+  function toggleDocFormFields(type) {
+    const isInvoice = type === 'invoice';
+    const dueGroup = document.querySelector('.doc-due-group');
+    const bankGroup = document.querySelector('.doc-bank-group');
+    if (dueGroup) dueGroup.classList.toggle('hidden', !isInvoice);
+    if (bankGroup) bankGroup.classList.toggle('hidden', !isInvoice);
+    const taxMode = document.getElementById('doc-tax-mode');
+    if (taxMode && !documentsFormDirty) {
+      taxMode.value = isInvoice ? 'taxIncluded' : 'taxExcluded';
+    }
+  }
+
+  function readDocItemsFromForm() {
+    const rows = document.querySelectorAll('#doc-items-editor .doc-item-row');
+    return Array.from(rows).map(row => ({
+      date: row.querySelector('.doc-item-date')?.value || '',
+      name: row.querySelector('.doc-item-name')?.value.trim() || '',
+      unitPrice: Number(row.querySelector('.doc-item-unit')?.value) || 0,
+      quantity: Number(row.querySelector('.doc-item-qty')?.value) || 1,
+      amount: Number(row.querySelector('.doc-item-amount')?.value) || 0
+    }));
+  }
+
+  function updateDocItemRowAmount(row) {
+    const type = document.getElementById('doc-type')?.value || 'invoice';
+    const taxMode = document.getElementById('doc-tax-mode')?.value || 'taxIncluded';
+    const unit = Number(row.querySelector('.doc-item-unit')?.value) || 0;
+    const qty = Number(row.querySelector('.doc-item-qty')?.value) || 1;
+    const amountEl = row.querySelector('.doc-item-amount');
+    if (!amountEl) return;
+    if (taxMode === 'taxExcluded') {
+      amountEl.value = Math.round(unit * qty);
+    } else {
+      amountEl.value = Math.round(unit * qty);
+    }
+    updateDocTaxPreview();
+  }
+
+  function updateDocTaxPreview() {
+    const preview = document.getElementById('doc-tax-preview');
+    if (!preview) return;
+    const taxMode = document.getElementById('doc-tax-mode')?.value || 'taxIncluded';
+    const items = readDocItemsFromForm();
+    const calc = DocumentsBrain.calcFromItems(items, taxMode, DocumentsBrain.TAX_RATE);
+    const modeLabel = taxMode === 'taxIncluded' ? '税込入力' : '税抜入力';
+    preview.textContent = `${modeLabel} / 小計 ${DocumentsBrain.formatYen(calc.subtotal)} / 税 ${DocumentsBrain.formatYen(calc.tax)} / 合計 ${DocumentsBrain.formatYen(calc.total)}`;
+  }
+
+  function buildDocItemRow(item, showDate) {
+    const row = document.createElement('div');
+    row.className = 'doc-item-row';
+    row.innerHTML = `
+      ${showDate ? '<input type="date" class="doc-item-date" value="' + esc(item.date || '') + '">' : '<input type="hidden" class="doc-item-date" value="">'}
+      <input type="text" class="doc-item-name" placeholder="品目" value="${esc(item.name || '')}">
+      <input type="number" class="doc-item-unit" min="0" step="1" placeholder="単価" value="${item.unitPrice != null ? item.unitPrice : ''}">
+      <input type="number" class="doc-item-qty" min="0" step="1" placeholder="数量" value="${item.quantity != null ? item.quantity : 1}">
+      <input type="number" class="doc-item-amount" min="0" step="1" placeholder="価格" value="${item.amount != null ? item.amount : ''}">
+      <button type="button" class="btn btn-secondary btn-sm btn-remove-item" title="行削除">×</button>`;
+    row.querySelectorAll('.doc-item-unit, .doc-item-qty').forEach(el => {
+      el.addEventListener('input', () => updateDocItemRowAmount(row));
+    });
+    row.querySelector('.doc-item-amount')?.addEventListener('input', updateDocTaxPreview);
+    row.querySelector('.btn-remove-item')?.addEventListener('click', () => {
+      const editor = document.getElementById('doc-items-editor');
+      if (editor && editor.querySelectorAll('.doc-item-row').length > 1) {
+        row.remove();
+        updateDocTaxPreview();
+      }
+    });
+    return row;
+  }
+
+  function renderDocItemsEditor(items, type) {
+    const editor = document.getElementById('doc-items-editor');
+    if (!editor) return;
+    editor.innerHTML = '';
+    const showDate = type === 'invoice';
+    const list = (items && items.length) ? items : [{ name: '', unitPrice: 0, quantity: 1, amount: 0 }];
+    list.forEach(item => editor.appendChild(buildDocItemRow(item, showDate)));
+    updateDocTaxPreview();
+  }
+
+  function resetDocumentsForm() {
+    documentsFormDirty = false;
+    document.getElementById('doc-edit-id').value = '';
+    document.getElementById('documents-form')?.reset();
+    currentDocPreviewId = null;
+  }
+
+  function openDocumentForm(type, doc) {
+    const documents = Storage.getDocuments();
+    const base = doc
+      ? DocumentsBrain.normalizeDocument(doc)
+      : DocumentsBrain.buildDefaultDocument(type, documents);
+    documentsFormDirty = false;
+    showDocumentsPanel('form');
+    document.getElementById('doc-edit-id').value = base.id || '';
+    document.getElementById('doc-type').value = base.type;
+    document.getElementById('documents-form-title').textContent = base.id
+      ? DocumentsBrain.typeLabel(base.type) + '編集'
+      : '新規' + DocumentsBrain.typeLabel(base.type);
+    document.getElementById('doc-number').value = base.number;
+    document.getElementById('doc-issue-date').value = base.issueDate;
+    document.getElementById('doc-due-date').value = base.dueDate || '';
+    document.getElementById('doc-customer').value = (base.customerName || '').replace(/\s*(様|御中)$/, '');
+    document.getElementById('doc-honorific').value = base.customerHonorific || '様';
+    fillDocStatusOptions(base.type, base.status);
+    document.getElementById('doc-title').value = base.title;
+    document.getElementById('doc-tax-mode').value = base.taxMode;
+    document.getElementById('doc-bank-info').value = base.bankInfo || '';
+    document.getElementById('doc-note').value = base.note || '';
+    toggleDocFormFields(base.type);
+    renderDocItemsEditor(base.items, base.type);
+    document.getElementById('documents-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function collectDocumentFormData() {
+    const type = document.getElementById('doc-type').value;
+    const taxMode = document.getElementById('doc-tax-mode').value;
+    const items = readDocItemsFromForm();
+    const calc = DocumentsBrain.calcFromItems(items, taxMode, DocumentsBrain.TAX_RATE);
+    return DocumentsBrain.normalizeDocument({
+      id: document.getElementById('doc-edit-id').value,
+      type,
+      number: document.getElementById('doc-number').value.trim(),
+      issueDate: document.getElementById('doc-issue-date').value,
+      dueDate: document.getElementById('doc-due-date').value,
+      customerName: document.getElementById('doc-customer').value.trim(),
+      customerHonorific: document.getElementById('doc-honorific').value,
+      title: document.getElementById('doc-title').value.trim(),
+      status: document.getElementById('doc-status').value,
+      items: calc.items,
+      subtotal: calc.subtotal,
+      tax: calc.tax,
+      total: calc.total,
+      taxMode,
+      taxRate: DocumentsBrain.TAX_RATE,
+      note: document.getElementById('doc-note').value.trim(),
+      bankInfo: document.getElementById('doc-bank-info').value.trim(),
+      issuer: DocumentsBrain.defaultIssuer()
+    });
+  }
+
+  function handleDocumentSubmit(e) {
+    e.preventDefault();
+    const data = collectDocumentFormData();
+    if (!data.customerName) {
+      alert('宛名を入力してください');
+      return;
+    }
+    if (!data.number) {
+      alert('番号を入力してください');
+      return;
+    }
+    const id = document.getElementById('doc-edit-id').value;
+    let saved;
+    if (id) saved = Storage.updateDocument(id, data);
+    else saved = Storage.addDocument(data);
+    if (!saved) {
+      alert('保存に失敗しました');
+      return;
+    }
+    showAppToast(id ? '書類を更新しました' : '書類を保存しました');
+    openDocumentPreview(saved.id);
+    renderDocumentsList();
+  }
+
+  function openDocumentPreview(id) {
+    const doc = Storage.getDocumentById(id);
+    if (!doc) return;
+    currentDocPreviewId = id;
+    showDocumentsPanel('preview');
+    const body = document.getElementById('documents-preview-body');
+    if (body) body.innerHTML = DocumentsBrain.renderDocumentSheet(doc, esc);
+    const convertBtn = document.getElementById('btn-doc-convert-invoice');
+    const revenueBtn = document.getElementById('btn-doc-reflect-revenue');
+    const normalized = DocumentsBrain.normalizeDocument(doc);
+    if (convertBtn) {
+      const showConvert = normalized.type === 'estimate' && normalized.status !== 'converted';
+      convertBtn.classList.toggle('hidden', !showConvert);
+    }
+    if (revenueBtn) {
+      revenueBtn.classList.toggle('hidden', normalized.type !== 'invoice');
+    }
+    document.getElementById('documents-preview-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderDocumentsList() {
+    const wrap = document.getElementById('documents-list-wrap');
+    if (!wrap) return;
+    const docs = DocumentsBrain.sortDocuments(Storage.getDocuments());
+    if (!docs.length) {
+      wrap.innerHTML = '<p class="placeholder-text">請求書・見積書はまだありません。「新規請求書」または「新規見積書」から作成できます。</p>';
+      return;
+    }
+    wrap.innerHTML = `
+      <table class="documents-table">
+        <thead>
+          <tr>
+            <th>種別</th><th>番号</th><th>宛名</th><th>件名</th><th>発行日</th><th>金額</th><th>ステータス</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${docs.map(d => {
+            const n = DocumentsBrain.normalizeDocument(d);
+            return `<tr>
+              <td>${esc(DocumentsBrain.typeLabel(n.type))}</td>
+              <td>${esc(n.number)}</td>
+              <td>${esc(DocumentsBrain.customerDisplay(n))}</td>
+              <td>${esc(n.title || '—')}</td>
+              <td>${esc(n.issueDate)}</td>
+              <td class="num">${esc(DocumentsBrain.formatYen(n.total))}</td>
+              <td><span class="doc-status-badge status-${esc(n.status)}">${esc(DocumentsBrain.statusLabel(n.type, n.status))}</span></td>
+              <td class="actions">
+                <button type="button" class="btn btn-secondary btn-sm" data-doc-action="edit" data-doc-id="${esc(n.id)}">編集</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-doc-action="preview" data-doc-id="${esc(n.id)}">プレビュー</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-doc-action="print" data-doc-id="${esc(n.id)}">印刷/PDF</button>
+                ${n.type === 'estimate' && n.status !== 'converted' ? `<button type="button" class="btn btn-secondary btn-sm" data-doc-action="convert" data-doc-id="${esc(n.id)}">請求書へ変換</button>` : ''}
+                <button type="button" class="btn btn-secondary btn-sm" data-doc-action="delete" data-doc-id="${esc(n.id)}">削除</button>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+    wrap.querySelectorAll('[data-doc-action]').forEach(btn => {
+      btn.addEventListener('click', () => handleDocumentListAction(btn.dataset.docAction, btn.dataset.docId));
+    });
+  }
+
+  function handleDocumentListAction(action, id) {
+    const doc = Storage.getDocumentById(id);
+    if (!doc) return;
+    if (action === 'edit') openDocumentForm(doc.type, doc);
+    else if (action === 'preview') openDocumentPreview(id);
+    else if (action === 'print') {
+      openDocumentPreview(id);
+      setTimeout(() => printDocument(), 200);
+    } else if (action === 'convert') convertEstimateToInvoice(id);
+    else if (action === 'delete') {
+      if (!confirm('この書類を削除しますか？')) return;
+      Storage.deleteDocument(id);
+      if (currentDocPreviewId === id) {
+        currentDocPreviewId = null;
+        showDocumentsPanel('list');
+      }
+      renderDocumentsList();
+      showAppToast('削除しました');
+    }
+  }
+
+  function convertEstimateToInvoice(estimateId) {
+    const estimate = Storage.getDocumentById(estimateId);
+    if (!estimate) return;
+    if (!confirm('この見積書を請求書に変換しますか？\n元の見積書は「請求書へ変換済み」になります。')) return;
+    const documents = Storage.getDocuments();
+    const invoiceData = DocumentsBrain.convertEstimateToInvoice(estimate, documents);
+    if (!invoiceData) return;
+    const saved = Storage.addDocument(invoiceData);
+    Storage.updateDocument(estimateId, { status: 'converted' });
+    showAppToast('請求書に変換しました（No.' + saved.number + '）');
+    openDocumentPreview(saved.id);
+    renderDocumentsList();
+  }
+
+  function reflectDocumentToRevenue() {
+    if (!currentDocPreviewId) return;
+    const doc = Storage.getDocumentById(currentDocPreviewId);
+    const prefill = DocumentsBrain.toRevenuePrefill(doc);
+    if (!prefill) return;
+    navigateToView('revenue');
+    resetRevenueForm();
+    document.getElementById('revenue-work-date').value = prefill.workDate;
+    document.getElementById('revenue-customer').value = prefill.customerName;
+    const serviceEl = document.getElementById('revenue-service');
+    if (serviceEl) {
+      const exists = Array.from(serviceEl.options).some(o => o.value === prefill.service);
+      if (!exists && prefill.service) {
+        const opt = document.createElement('option');
+        opt.value = prefill.service;
+        opt.textContent = prefill.service;
+        serviceEl.appendChild(opt);
+      }
+      serviceEl.value = prefill.service;
+    }
+    document.getElementById('revenue-amount').value = prefill.amount;
+    document.getElementById('revenue-status').value = prefill.status;
+    document.getElementById('revenue-payment').value = prefill.paymentStatus;
+    document.getElementById('revenue-memo').value = prefill.memo;
+    document.getElementById('revenue-form-title').textContent = '売上登録（請求書から反映）';
+    showAppToast('売上登録フォームに反映しました。内容を確認して保存してください。');
+    document.getElementById('revenue-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function printDocument() {
+    document.body.classList.add('doc-printing');
+    const cleanup = () => {
+      document.body.classList.remove('doc-printing');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    window.print();
+    setTimeout(cleanup, 1000);
+  }
+
+  function renderDocumentsView() {
+    try {
+      renderDocumentsList();
+      if (!currentDocPreviewId) showDocumentsPanel('list');
+    } catch (err) {
+      console.error('[Budil] render error: 請求書・見積書', err);
+      const wrap = document.getElementById('documents-list-wrap');
+      if (wrap) wrap.innerHTML = '<p class="section-render-error">表示中にエラーが発生しました。</p>';
+    }
+  }
+
+  function initDocuments() {
+    document.getElementById('btn-doc-new-invoice')?.addEventListener('click', () => openDocumentForm('invoice'));
+    document.getElementById('btn-doc-new-estimate')?.addEventListener('click', () => openDocumentForm('estimate'));
+    document.getElementById('btn-doc-back-list')?.addEventListener('click', () => {
+      currentDocPreviewId = null;
+      showDocumentsPanel('list');
+    });
+    document.getElementById('btn-doc-cancel')?.addEventListener('click', () => {
+      resetDocumentsForm();
+      showDocumentsPanel('list');
+    });
+    document.getElementById('btn-doc-back-from-preview')?.addEventListener('click', () => {
+      currentDocPreviewId = null;
+      showDocumentsPanel('list');
+    });
+    document.getElementById('btn-doc-preview-from-form')?.addEventListener('click', () => {
+      const data = collectDocumentFormData();
+      const body = document.getElementById('documents-preview-body');
+      if (body) body.innerHTML = DocumentsBrain.renderDocumentSheet(data, esc);
+      showDocumentsPanel('preview');
+    });
+    document.getElementById('btn-doc-edit-from-preview')?.addEventListener('click', () => {
+      if (!currentDocPreviewId) return;
+      const doc = Storage.getDocumentById(currentDocPreviewId);
+      if (doc) openDocumentForm(doc.type, doc);
+    });
+    document.getElementById('btn-doc-print')?.addEventListener('click', printDocument);
+    document.getElementById('btn-doc-convert-invoice')?.addEventListener('click', () => {
+      if (currentDocPreviewId) convertEstimateToInvoice(currentDocPreviewId);
+    });
+    document.getElementById('btn-doc-reflect-revenue')?.addEventListener('click', reflectDocumentToRevenue);
+    document.getElementById('btn-doc-add-item')?.addEventListener('click', () => {
+      const type = document.getElementById('doc-type')?.value || 'invoice';
+      const editor = document.getElementById('doc-items-editor');
+      if (editor) editor.appendChild(buildDocItemRow({ date: TODAY(), name: '', unitPrice: 0, quantity: 1, amount: 0 }, type === 'invoice'));
+      updateDocTaxPreview();
+    });
+    document.getElementById('documents-form')?.addEventListener('submit', handleDocumentSubmit);
+    document.getElementById('doc-tax-mode')?.addEventListener('change', () => {
+      documentsFormDirty = true;
+      document.querySelectorAll('#doc-items-editor .doc-item-row').forEach(updateDocItemRowAmount);
+      updateDocTaxPreview();
+    });
+    document.getElementById('doc-type')?.addEventListener('change', (e) => {
+      toggleDocFormFields(e.target.value);
+      fillDocStatusOptions(e.target.value, 'draft');
+    });
+    renderDocumentsView();
+  }
+
   // ── ユーティリティ ──
   function priorityOrder(p) {
     return { A: 0, B: 1, C: 2 }[p || 'B'] ?? 1;
@@ -12437,6 +12827,7 @@
     initDemandSearch();
     initLeads();
     initRevenue();
+    initDocuments();
     initCardParser();
     initFollowup();
     initDataManagement();
