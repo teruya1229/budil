@@ -8323,6 +8323,16 @@ body.sales-page {
   overflow-x: auto;
 }
 
+.profit-monthly-source-note {
+  margin: 0 0 0.75rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.82rem;
+  color: #0369a1;
+  background: #e0f2fe;
+  border: 1px solid #7dd3fc;
+  border-radius: 6px;
+}
+
 .card-monthly-results-dash .empty-hint {
   margin-bottom: 0.75rem;
 }

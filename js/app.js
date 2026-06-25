@@ -760,7 +760,11 @@
     const diffSign = compact.monthDiff > 0 ? '+' : '';
     const topSource = (compact.topSources || [])[0];
     const topService = (compact.topServices || [])[0];
+    const monthlyNote = s.usesMonthlyResult && s.aggregationSourceNote
+      ? `<p class="profit-monthly-source-note">${esc(s.aggregationSourceNote)}</p>`
+      : '';
     return `
+      ${monthlyNote}
       <div class="exec-home-revenue-grid">
         <div><span>今月売上</span><strong>${esc(RevenueBrain.formatYen(s.monthRevenue))}</strong></div>
         <div><span>月間目標</span><strong>${esc(RevenueBrain.formatYen(s.monthlyTarget))}</strong></div>
@@ -1308,7 +1312,11 @@
     const profitMorningEl = document.getElementById('mgmt-profit');
     if (profitMorningEl) {
       const rp = ctx.revenueProfitSection || {};
+      const monthlyNote = rp.usesMonthlyResult && rp.aggregationSourceNote
+        ? `<p class="profit-monthly-source-note">${esc(rp.aggregationSourceNote)}</p>`
+        : '';
       profitMorningEl.innerHTML = `
+        ${monthlyNote}
         <p class="mgmt-profit-label">売上・利益：</p>
         <ul class="mgmt-profit-list">
           <li>今月売上 ${esc(RevenueBrain.formatYen(rp.monthRevenue))} / 目標 ${esc(RevenueBrain.formatYen(rp.monthlyTarget))}（${rp.achievementRate}%）</li>
@@ -3923,7 +3931,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.4.5</span>
+        <span class="business-report-version">v4.4.6</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -8416,7 +8424,9 @@
       expenses: filteredExpenses,
       workOrders,
       leads,
-      intakes
+      intakes,
+      monthlyResults: Storage.getMonthlyResults(),
+      monthKey: opts && opts.monthKey
     });
   }
 
@@ -8424,8 +8434,11 @@
     const el = document.getElementById('profit-summary');
     if (!el) return;
     const s = ctx.summary;
+    const monthlyNote = s.usesMonthlyResult && s.aggregationSourceNote
+      ? `<p class="profit-monthly-source-note">${esc(s.aggregationSourceNote)}</p>`
+      : '';
     let monthlyBrief = '';
-    if (typeof RevenueSummaryBrain !== 'undefined') {
+    if (!s.usesMonthlyResult && typeof RevenueSummaryBrain !== 'undefined') {
       const monthly = RevenueSummaryBrain.buildMonthlySummary(
         RevenueSummaryBrain.confirmedRecords(Storage.getRevenueRecords())
       ).slice(0, 3);
@@ -8436,6 +8449,7 @@
       }
     }
     el.innerHTML = `
+      ${monthlyNote}
       <div class="profit-summary-item"><span>今月売上</span><strong>${esc(ProfitBrain.formatYen(s.monthRevenue))}</strong></div>
       <div class="profit-summary-item"><span>今月支出</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
       <div class="profit-summary-item"><span>概算粗利</span><strong>${esc(ProfitBrain.formatYen(s.monthGrossProfit))}</strong></div>
@@ -8445,7 +8459,7 @@
       <div class="profit-summary-item"><span>広告費</span><strong>${esc(ProfitBrain.formatYen(s.adExpense))}</strong></div>
       <div class="profit-summary-item"><span>手数料</span><strong>${esc(ProfitBrain.formatYen(s.feeExpense))}</strong></div>
       <div class="profit-summary-item"><span>外注費</span><strong>${esc(ProfitBrain.formatYen(s.outsourceExpense))}</strong></div>
-      <div class="profit-summary-item"><span>未紐付け支出</span><strong>${s.unlinkedCount}件（${esc(ProfitBrain.formatYen(s.unlinkedTotal))}）</strong></div>
+      <div class="profit-summary-item"><span>未紐付け支出</span><strong>${s.usesMonthlyResult ? '—' : `${s.unlinkedCount}件（${esc(ProfitBrain.formatYen(s.unlinkedTotal))}）`}</strong></div>
       ${monthlyBrief}`;
   }
 
@@ -8866,6 +8880,7 @@
     }
     clearMonthlyResultsForm();
     renderMonthlyResultsView();
+    renderProfitView();
     renderDashboard();
     showAppToast(editId || !result.created ? '月次実績を更新しました' : '月次実績を保存しました');
   }
@@ -8951,6 +8966,7 @@
         if (!confirm(rec.month + ' の月次実績を削除しますか？')) return;
         Storage.deleteMonthlyResult(id);
         renderMonthlyResultsView();
+        renderProfitView();
         renderDashboard();
         showAppToast('月次実績を削除しました');
       });
@@ -9022,6 +9038,7 @@
     if (paste) paste.value = '';
     renderMonthlyResultsCsvPreview();
     renderMonthlyResultsView();
+    renderProfitView();
     renderDashboard();
     showAppToast('CSV一括取り込みを保存しました');
   }

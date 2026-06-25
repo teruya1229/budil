@@ -444,7 +444,18 @@ const ProfitBrain = {
 
   buildProfitContext(ctx) {
     const today = ctx.today || new Date().toISOString().slice(0, 10);
-    const summary = this.getPeriodProfitSummary(ctx);
+    const baseSummary = this.getPeriodProfitSummary(ctx);
+    let summary = baseSummary;
+    if (typeof MonthlyResultsBrain !== 'undefined' && ctx.monthlyResults) {
+      const monthKey = ctx.monthKey || baseSummary.monthKey;
+      const monthly = MonthlyResultsBrain.findForMonth(ctx.monthlyResults, monthKey);
+      if (monthly) {
+        summary = MonthlyResultsBrain.buildProfitSummaryFromMonthly(monthly, {
+          expenses: ctx.expenses,
+          workOrderEstimate: baseSummary.workOrderEstimate
+        });
+      }
+    }
     const revenueRows = this.getRevenueProfitRows(ctx.revenues, ctx.expenses, ctx.leads, ctx.workOrders);
     const workOrderRows = this.getWorkOrderForecastRows(ctx.workOrders, ctx.expenses, ctx.leads, today);
     const serviceRows = this.getServiceProfitSummary(ctx.revenues, ctx.expenses, ctx.workOrders);
@@ -475,6 +486,16 @@ const ProfitBrain = {
     const c = context || {};
     const summary = c.summary || {};
     const expenses = c.expenses || [];
+
+    if (summary.usesMonthlyResult) {
+      if (summary.monthGrossProfit < 0) {
+        push('deficit', '月次実績：今月は赤字注意', `概算粗利${this.formatYen(summary.monthGrossProfit)}です。`);
+      }
+      if (summary.adExpense > 0 && summary.monthRevenue < summary.adExpense * 4) {
+        push('ad', '広告確認：Google広告費と売上を確認', `今月の広告費${this.formatYen(summary.adExpense)}に対し売上${this.formatYen(summary.monthRevenue)}です。`);
+      }
+      return hints.slice(0, 6);
+    }
 
     if (summary.unlinkedCount > 0) {
       push('unlinked', '支出確認：未紐付け支出を整理', `未紐付け支出が${summary.unlinkedCount}件（${this.formatYen(summary.unlinkedTotal)}）あります。`);

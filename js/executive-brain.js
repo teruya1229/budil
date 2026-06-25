@@ -2,7 +2,7 @@
  * Budil v4.4 - 経営司令塔ホーム（毎朝5分・全番頭統合）
  */
 const ExecutiveBrain = {
-  VERSION: 'v4.4.5',
+  VERSION: 'v4.4.6',
 
   CHECK_ITEMS: [
     { id: 'workOrders', label: '作業予定を確認した' },
@@ -360,17 +360,27 @@ const ExecutiveBrain = {
     const summary = rev.summary || {};
     const ps = (ctx.profitCtx && ctx.profitCtx.summary) || {};
     const forecast = ctx.forecast || {};
+    const usesMonthly = !!ps.usesMonthlyResult;
+    const monthRevenue = usesMonthly ? (ps.monthRevenue || 0) : (summary.planned || 0);
+    const achievementRate = summary.monthlyTarget > 0
+      ? Math.round((monthRevenue / summary.monthlyTarget) * 1000) / 10
+      : (summary.achievementRate || 0);
     const cautions = [];
-    if (summary.monthlyTarget > 0 && summary.achievementRate < 50) {
+    if (!usesMonthly && summary.monthlyTarget > 0 && summary.achievementRate < 50) {
+      cautions.push('月間目標に対して不足気味です');
+    }
+    if (usesMonthly && summary.monthlyTarget > 0 && achievementRate < 50) {
       cautions.push('月間目標に対して不足気味です');
     }
     if (ps.monthExpense > 0 && ps.monthGrossProfit < 0) cautions.push('今月は赤字注意です');
-    if (ps.adExpense > 0 && summary.planned < ps.adExpense * 4) cautions.push('広告費注意');
-    if (ps.unlinkedCount > 0) cautions.push(`未紐付け支出${ps.unlinkedCount}件`);
-    const deficitCount = ((ctx.profitCtx && ctx.profitCtx.revenueRows) || [])
-      .filter(r => r.label === '赤字注意').length;
-    if (deficitCount) cautions.push(`赤字注意の売上${deficitCount}件`);
-    if (rev.salesOutcome && rev.salesOutcome.unlinkedTotal > 0) {
+    if (!usesMonthly && ps.adExpense > 0 && summary.planned < ps.adExpense * 4) cautions.push('広告費注意');
+    if (!usesMonthly && ps.unlinkedCount > 0) cautions.push(`未紐付け支出${ps.unlinkedCount}件`);
+    if (!usesMonthly) {
+      const deficitCount = ((ctx.profitCtx && ctx.profitCtx.revenueRows) || [])
+        .filter(r => r.label === '赤字注意').length;
+      if (deficitCount) cautions.push(`赤字注意の売上${deficitCount}件`);
+    }
+    if (!usesMonthly && rev.salesOutcome && rev.salesOutcome.unlinkedTotal > 0) {
       cautions.push('未紐付け売上あり');
     }
     const revenueAggregation = rev.revenueSummary || (typeof RevenueSummaryBrain !== 'undefined'
@@ -380,16 +390,18 @@ const ExecutiveBrain = {
       })
       : null);
     return {
-      monthRevenue: summary.planned || 0,
+      monthRevenue,
       monthlyTarget: summary.monthlyTarget || 0,
-      achievementRate: summary.achievementRate || 0,
+      achievementRate,
       monthExpense: ps.monthExpense || 0,
       grossProfit: ps.monthGrossProfit || 0,
       grossRate: ps.monthGrossRate || 0,
       weekForecast: forecast.weekAmount || 0,
       completedNoRevenue: forecast.completedNoRevenueCount || 0,
       cautions,
-      revenueAggregation
+      revenueAggregation,
+      usesMonthlyResult: usesMonthly,
+      aggregationSourceNote: ps.aggregationSourceNote || ''
     };
   },
 

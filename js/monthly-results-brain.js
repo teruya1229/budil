@@ -1,8 +1,9 @@
 /**
- * Budil v4.4.5 - 月次実績（過去月まとめ入力）
+ * Budil v4.4.6 - 月次実績（過去月まとめ入力）
  * budil_revenue_records とは独立。経営判断・実績補正用。
  */
 const MonthlyResultsBrain = {
+  AGGREGATION_SOURCE_NOTE: '月次実績を優先表示中（売上明細とは別管理）',
   CSV_HEADERS: ['月', '売上', '手数料', '材料費', '人件費', '外注費', 'その他費用', '利益', 'メモ'],
   CSV_HEADERS_LEGACY: ['月', '売上', '手数料', '材料費', '人件費', 'その他費用', '利益', 'メモ'],
 
@@ -68,6 +69,59 @@ const MonthlyResultsBrain = {
   getLatest(records) {
     const sorted = this.sortByMonthDesc(records);
     return sorted.length ? sorted[0] : null;
+  },
+
+  findForMonth(records, monthKey) {
+    const key = this.normalizeMonth(monthKey);
+    if (!key) return null;
+    const rec = (records || []).find(r => this.normalizeMonth(r.month || r.id) === key);
+    return rec ? this.normalizeRecord(rec) : null;
+  },
+
+  totalExpenseFromRecord(record) {
+    const n = this.normalizeRecord(record);
+    return n.brokerFee + n.materialCost + n.laborCost + n.outsourcingCost + n.otherCost;
+  },
+
+  getAdExpenseFromDetail(expenses, monthKey) {
+    const list = typeof ProfitBrain !== 'undefined'
+      ? ProfitBrain.filterMonthExpenses(expenses, monthKey)
+      : (expenses || []).filter(e => e && e.date && e.date.startsWith(monthKey));
+    return list
+      .filter(e => e.category === '広告費')
+      .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+  },
+
+  buildProfitSummaryFromMonthly(monthlyRecord, opts) {
+    const n = this.normalizeRecord(monthlyRecord);
+    const monthKey = n.month;
+    const workOrderEstimate = Number(opts && opts.workOrderEstimate) || 0;
+    const adExpense = this.getAdExpenseFromDetail(opts && opts.expenses, monthKey);
+    const monthExpense = this.totalExpenseFromRecord(n);
+    const monthGrossRate = n.sales > 0 ? (n.profit / n.sales) * 100 : 0;
+    return {
+      monthKey,
+      monthRevenue: n.sales,
+      monthExpense,
+      monthGrossProfit: n.profit,
+      monthGrossRate,
+      workOrderEstimate,
+      forecastProfit: n.profit + workOrderEstimate,
+      adExpense,
+      feeExpense: n.brokerFee,
+      outsourceExpense: n.outsourcingCost,
+      materialCost: n.materialCost,
+      laborCost: n.laborCost,
+      otherCost: n.otherCost,
+      unlinkedCount: 0,
+      unlinkedTotal: 0,
+      monthRevenueCount: 0,
+      monthExpenseCount: 0,
+      usesMonthlyResult: true,
+      aggregationSource: 'monthly-result',
+      aggregationSourceNote: this.AGGREGATION_SOURCE_NOTE,
+      monthlyResultId: n.id
+    };
   },
 
   getTotals(records) {
