@@ -1,9 +1,10 @@
 /**
- * Budil v4.4.4 - 月次実績（過去月まとめ入力）
+ * Budil v4.4.5 - 月次実績（過去月まとめ入力）
  * budil_revenue_records とは独立。経営判断・実績補正用。
  */
 const MonthlyResultsBrain = {
-  CSV_HEADERS: ['月', '売上', '手数料', '材料費', '人件費', 'その他費用', '利益', 'メモ'],
+  CSV_HEADERS: ['月', '売上', '手数料', '材料費', '人件費', '外注費', 'その他費用', '利益', 'メモ'],
+  CSV_HEADERS_LEGACY: ['月', '売上', '手数料', '材料費', '人件費', 'その他費用', '利益', 'メモ'],
 
   formatYen(amount) {
     return Number(amount || 0).toLocaleString('ja-JP') + '円';
@@ -31,12 +32,16 @@ const MonthlyResultsBrain = {
     return `${m[1]}-${month}`;
   },
 
-  computeProfit(sales, brokerFee, materialCost, laborCost, otherCost) {
+  computeProfit(sales, brokerFee, materialCost, laborCost, arg5, arg6) {
+    const hasOutsourcing = arguments.length >= 6;
+    const outsourcingCost = hasOutsourcing ? this.parseAmount(arg5) : 0;
+    const otherCost = hasOutsourcing ? this.parseAmount(arg6) : this.parseAmount(arg5);
     return this.parseAmount(sales)
       - this.parseAmount(brokerFee)
       - this.parseAmount(materialCost)
       - this.parseAmount(laborCost)
-      - this.parseAmount(otherCost);
+      - outsourcingCost
+      - otherCost;
   },
 
   normalizeRecord(raw) {
@@ -49,6 +54,7 @@ const MonthlyResultsBrain = {
       brokerFee: this.parseAmount(item.brokerFee),
       materialCost: this.parseAmount(item.materialCost),
       laborCost: this.parseAmount(item.laborCost),
+      outsourcingCost: this.parseAmount(item.outsourcingCost),
       otherCost: this.parseAmount(item.otherCost),
       profit: this.parseAmount(item.profit),
       memo: String(item.memo || '').trim()
@@ -67,16 +73,19 @@ const MonthlyResultsBrain = {
   getTotals(records) {
     const list = records || [];
     return list.reduce((acc, r) => {
-      acc.sales += Number(r.sales) || 0;
-      acc.brokerFee += Number(r.brokerFee) || 0;
-      acc.materialCost += Number(r.materialCost) || 0;
-      acc.laborCost += Number(r.laborCost) || 0;
-      acc.otherCost += Number(r.otherCost) || 0;
-      acc.profit += Number(r.profit) || 0;
+      const n = this.normalizeRecord(r);
+      acc.sales += n.sales;
+      acc.brokerFee += n.brokerFee;
+      acc.materialCost += n.materialCost;
+      acc.laborCost += n.laborCost;
+      acc.outsourcingCost += n.outsourcingCost;
+      acc.otherCost += n.otherCost;
+      acc.profit += n.profit;
       acc.count += 1;
       return acc;
     }, {
-      sales: 0, brokerFee: 0, materialCost: 0, laborCost: 0, otherCost: 0, profit: 0, count: 0
+      sales: 0, brokerFee: 0, materialCost: 0, laborCost: 0,
+      outsourcingCost: 0, otherCost: 0, profit: 0, count: 0
     });
   },
 
@@ -125,6 +134,7 @@ const MonthlyResultsBrain = {
       '手数料': 'brokerFee', '仲介料': 'brokerFee', brokerfee: 'brokerFee',
       '材料費': 'materialCost', materialcost: 'materialCost',
       '人件費': 'laborCost', laborcost: 'laborCost',
+      '外注費': 'outsourcingCost', outsourcingcost: 'outsourcingCost',
       'その他費用': 'otherCost', othercost: 'otherCost',
       '利益': 'profit', profit: 'profit',
       'メモ': 'memo', memo: 'memo'
@@ -137,10 +147,12 @@ const MonthlyResultsBrain = {
       });
       startIdx = 1;
     } else {
-      [0, 1, 2, 3, 4, 5, 6, 7].forEach((idx, i) => {
-        const keys = ['month', 'sales', 'brokerFee', 'materialCost', 'laborCost', 'otherCost', 'profit', 'memo'];
-        headerMap[idx] = keys[i];
-      });
+      const sampleLine = lines.find(l => l.trim()) || lines[0];
+      const colCount = this.splitCsvLine(sampleLine).length;
+      const keysNew = ['month', 'sales', 'brokerFee', 'materialCost', 'laborCost', 'outsourcingCost', 'otherCost', 'profit', 'memo'];
+      const keysOld = ['month', 'sales', 'brokerFee', 'materialCost', 'laborCost', 'otherCost', 'profit', 'memo'];
+      const keys = colCount >= 9 ? keysNew : keysOld;
+      keys.forEach((key, i) => { headerMap[i] = key; });
     }
 
     for (let li = startIdx; li < lines.length; li++) {
@@ -161,7 +173,7 @@ const MonthlyResultsBrain = {
       if (!hasProfitInput && normalized.sales) {
         normalized.profit = this.computeProfit(
           normalized.sales, normalized.brokerFee, normalized.materialCost,
-          normalized.laborCost, normalized.otherCost
+          normalized.laborCost, normalized.outsourcingCost, normalized.otherCost
         );
         warnings.push(`${month}: 利益を自動計算しました`);
       }

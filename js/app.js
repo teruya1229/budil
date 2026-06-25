@@ -3923,7 +3923,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.4.4</span>
+        <span class="business-report-version">v4.4.5</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -8777,6 +8777,7 @@
       brokerFee: Number(document.getElementById('monthly-results-broker-fee')?.value || 0),
       materialCost: Number(document.getElementById('monthly-results-material-cost')?.value || 0),
       laborCost: Number(document.getElementById('monthly-results-labor-cost')?.value || 0),
+      outsourcingCost: Number(document.getElementById('monthly-results-outsourcing-cost')?.value || 0),
       otherCost: Number(document.getElementById('monthly-results-other-cost')?.value || 0),
       profit: Number(document.getElementById('monthly-results-profit')?.value || 0),
       memo: document.getElementById('monthly-results-memo')?.value.trim() || ''
@@ -8793,6 +8794,8 @@
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
+    const outsourcing = document.getElementById('monthly-results-outsourcing-cost');
+    if (outsourcing) outsourcing.value = '0';
     const other = document.getElementById('monthly-results-other-cost');
     if (other) other.value = '0';
     const profit = document.getElementById('monthly-results-profit');
@@ -8821,6 +8824,7 @@
     set('monthly-results-broker-fee', record.brokerFee);
     set('monthly-results-material-cost', record.materialCost);
     set('monthly-results-labor-cost', record.laborCost);
+    set('monthly-results-outsourcing-cost', record.outsourcingCost != null ? record.outsourcingCost : 0);
     set('monthly-results-other-cost', record.otherCost);
     set('monthly-results-profit', record.profit);
     set('monthly-results-memo', record.memo);
@@ -8830,7 +8834,8 @@
   function applyMonthlyResultsProfitCalc() {
     const payload = readMonthlyResultsFormPayload();
     const profit = MonthlyResultsBrain.computeProfit(
-      payload.sales, payload.brokerFee, payload.materialCost, payload.laborCost, payload.otherCost
+      payload.sales, payload.brokerFee, payload.materialCost,
+      payload.laborCost, payload.outsourcingCost, payload.otherCost
     );
     const el = document.getElementById('monthly-results-profit');
     if (el) el.value = String(profit);
@@ -8902,29 +8907,33 @@
       el.innerHTML = '<p class="empty-hint">登録済みの月次実績はありません。</p>';
       return;
     }
-    const rows = sorted.map(r => `
-      <tr data-monthly-id="${esc(r.id)}">
-        <td>${esc(r.month)}</td>
-        <td class="num">${esc(MonthlyResultsBrain.formatYen(r.sales))}</td>
-        <td class="num">${esc(MonthlyResultsBrain.formatYen(r.brokerFee))}</td>
-        <td class="num">${esc(MonthlyResultsBrain.formatYen(r.materialCost))}</td>
-        <td class="num">${esc(MonthlyResultsBrain.formatYen(r.laborCost))}</td>
-        <td class="num">${esc(MonthlyResultsBrain.formatYen(r.otherCost))}</td>
-        <td class="num">${esc(MonthlyResultsBrain.formatYen(r.profit))}</td>
-        <td class="num">${esc(MonthlyResultsBrain.formatRate(r.profit, r.sales))}</td>
-        <td>${esc(r.memo || '—')}</td>
+    const rows = sorted.map(r => {
+      const n = MonthlyResultsBrain.normalizeRecord(r);
+      return `
+      <tr data-monthly-id="${esc(n.id)}">
+        <td>${esc(n.month)}</td>
+        <td class="num">${esc(MonthlyResultsBrain.formatYen(n.sales))}</td>
+        <td class="num">${esc(MonthlyResultsBrain.formatYen(n.brokerFee))}</td>
+        <td class="num">${esc(MonthlyResultsBrain.formatYen(n.materialCost))}</td>
+        <td class="num">${esc(MonthlyResultsBrain.formatYen(n.laborCost))}</td>
+        <td class="num">${esc(MonthlyResultsBrain.formatYen(n.outsourcingCost))}</td>
+        <td class="num">${esc(MonthlyResultsBrain.formatYen(n.otherCost))}</td>
+        <td class="num">${esc(MonthlyResultsBrain.formatYen(n.profit))}</td>
+        <td class="num">${esc(MonthlyResultsBrain.formatRate(n.profit, n.sales))}</td>
+        <td>${esc(n.memo || '—')}</td>
         <td class="actions">
-          <button type="button" class="btn btn-sm btn-secondary" data-monthly-edit="${esc(r.id)}">編集</button>
-          <button type="button" class="btn btn-sm btn-danger" data-monthly-delete="${esc(r.id)}">削除</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-monthly-edit="${esc(n.id)}">編集</button>
+          <button type="button" class="btn btn-sm btn-danger" data-monthly-delete="${esc(n.id)}">削除</button>
         </td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
     el.innerHTML = `
       <div class="table-wrap monthly-results-table-wrap">
         <table class="data-table monthly-results-table">
           <thead>
             <tr>
-              <th>月</th><th>売上</th><th>手数料</th><th>材料費</th><th>人件費</th><th>その他</th><th>利益</th><th>利益率</th><th>メモ</th><th></th>
+              <th>月</th><th>売上</th><th>手数料</th><th>材料費</th><th>人件費</th><th>外注費</th><th>その他</th><th>利益</th><th>利益率</th><th>メモ</th><th></th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
