@@ -11,16 +11,33 @@ const RevenueBrain = {
     'Googleビジネスプロフィール', '紹介', '法人', 'その他'
   ],
   STATUSES: ['予定', '確定', '完了', 'キャンセル'],
-  PAYMENT_STATUSES: ['未入金', '入金済み'],
+  PAYMENT_STATUSES: ['pending', 'paid', 'partial', 'uncollected', 'cancelled'],
 
   formatYen(amount) {
     return Number(amount || 0).toLocaleString('ja-JP') + '円';
   },
 
   formatPaymentStatusLabel(status) {
-    if (status === '未入金') return '入金待ち';
-    if (status === '入金済み') return '入金済み';
+    if (typeof PaymentBrain !== 'undefined') {
+      return PaymentBrain.getPaymentStatusLabel({ paymentStatus: status });
+    }
+    if (status === '未入金' || status === 'pending') return '入金待ち';
+    if (status === '入金済み' || status === 'paid') return '入金済み';
     return status || '—';
+  },
+
+  isPaidPaymentStatus(status) {
+    const s = typeof PaymentBrain !== 'undefined'
+      ? PaymentBrain.migratePaymentStatus(status, 'pending')
+      : status;
+    return s === 'paid';
+  },
+
+  isUnpaidPaymentStatus(status) {
+    const s = typeof PaymentBrain !== 'undefined'
+      ? PaymentBrain.migratePaymentStatus(status, 'pending')
+      : status;
+    return s === 'pending' || s === 'partial' || s === 'uncollected' || s === '未入金';
   },
 
   recordHasPaymentConcern(record) {
@@ -55,6 +72,13 @@ const RevenueBrain = {
         ? FollowUpBrain.normalizeFollowUp(record.followUp)
         : record.followUp;
     }
+    if (typeof PaymentBrain !== 'undefined') {
+      const payment = PaymentBrain.normalizeRevenuePayment(normalized, {
+        total: normalized.amount,
+        defaultDate: normalized.workDate
+      });
+      Object.assign(normalized, payment);
+    }
     return normalized;
   },
 
@@ -77,8 +101,16 @@ const RevenueBrain = {
   getLeadRevenueSummary(leadId, records) {
     const linked = this.getRevenueRecordsByLeadId(leadId, records);
     const active = this.activeRecords(linked);
-    const paid = this.sumAmount(active.filter(r => r.paymentStatus === '入金済み'));
-    const unpaid = this.sumAmount(active.filter(r => r.paymentStatus === '未入金'));
+    const paid = active.reduce((sum, r) => {
+      if (typeof PaymentBrain !== 'undefined') return sum + PaymentBrain.getPaidAmount(r);
+      return sum + (this.isPaidPaymentStatus(r.paymentStatus) ? Number(r.amount || 0) : 0);
+    }, 0);
+    const unpaid = active.reduce((sum, r) => {
+      if (typeof PaymentBrain !== 'undefined') {
+        return sum + PaymentBrain.getUnpaidAmount(r);
+      }
+      return sum + (this.isUnpaidPaymentStatus(r.paymentStatus) ? Number(r.amount || 0) : 0);
+    }, 0);
     const concernRecords = active.filter(r => this.recordHasPaymentConcern(r));
     const dates = active.map(r => r.workDate).filter(Boolean).sort();
     return {
@@ -110,8 +142,8 @@ const RevenueBrain = {
       const amt = Number(r.amount || 0);
       g.total += amt;
       g.count += 1;
-      if (r.paymentStatus === '入金済み') g.paid += amt;
-      else g.unpaid += amt;
+      if (this.isPaidPaymentStatus(r.paymentStatus)) g.paid += amt;
+      else g.unpaid += typeof PaymentBrain !== 'undefined' ? PaymentBrain.getUnpaidAmount(r) : amt;
       if (this.recordHasPaymentConcern(r)) {
         g.paymentConcern = true;
         g.paymentConcernAmount += amt;
@@ -397,8 +429,16 @@ const RevenueBrain = {
     const planned = this.sumAmount(active);
     const confirmed = this.sumAmount(active.filter(r => r.status === '確定'));
     const completed = this.sumAmount(active.filter(r => r.status === '完了'));
-    const paid = this.sumAmount(active.filter(r => r.paymentStatus === '入金済み'));
-    const unpaid = this.sumAmount(active.filter(r => r.paymentStatus === '未入金'));
+    const paid = active.reduce((sum, r) => {
+      if (typeof PaymentBrain !== 'undefined') return sum + PaymentBrain.getPaidAmount(r);
+      return sum + (this.isPaidPaymentStatus(r.paymentStatus) ? Number(r.amount || 0) : 0);
+    }, 0);
+    const unpaid = active.reduce((sum, r) => {
+      if (typeof PaymentBrain !== 'undefined') {
+        return sum + PaymentBrain.getUnpaidAmount(r);
+      }
+      return sum + (this.isUnpaidPaymentStatus(r.paymentStatus) ? Number(r.amount || 0) : 0);
+    }, 0);
     const paymentConcernCount = active.filter(r => this.recordHasPaymentConcern(r)).length;
 
     const monthlyTarget = Number(settings && settings.monthlyTarget) || 0;

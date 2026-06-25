@@ -1,5 +1,5 @@
 /**
- * Budil v4.4.9.1 - 請求書・見積書（税・端数設定）
+ * Budil v4.4.9.2 - 請求書・見積書（税・端数設定・入金管理）
  * localStorage: budil_documents
  */
 const DocumentsBrain = {
@@ -290,7 +290,16 @@ const DocumentsBrain = {
       bankInfo: isInvoice ? this.DEFAULT_BANK_INFO : '',
       issuer: this.defaultIssuer(),
       createdAt: '',
-      updatedAt: ''
+      updatedAt: '',
+      paymentMethod: isInvoice ? 'bank_transfer' : 'cash',
+      paymentStatus: isInvoice ? 'pending' : 'paid',
+      expectedPaymentDate: '',
+      paidDate: '',
+      paidAmount: 0,
+      unpaidAmount: calc.total,
+      paymentMemo: '',
+      linkedDocumentId: '',
+      linkedRevenueId: ''
     };
   },
 
@@ -324,7 +333,20 @@ const DocumentsBrain = {
       issuer,
       sourceEstimateId: doc.sourceEstimateId || '',
       createdAt: doc.createdAt || '',
-      updatedAt: doc.updatedAt || ''
+      updatedAt: doc.updatedAt || '',
+      ...(typeof PaymentBrain !== 'undefined'
+        ? PaymentBrain.normalizeDocumentPayment(doc, { total: calc.total, defaultDate: doc.issueDate })
+        : {
+          paymentMethod: 'bank_transfer',
+          paymentStatus: 'pending',
+          expectedPaymentDate: '',
+          paidDate: '',
+          paidAmount: 0,
+          unpaidAmount: calc.total,
+          paymentMemo: '',
+          linkedDocumentId: '',
+          linkedRevenueId: ''
+        })
     };
   },
 
@@ -524,13 +546,23 @@ const DocumentsBrain = {
     const d = this.normalizeDocument(doc);
     if (d.type !== 'invoice') return null;
     const serviceGuess = (d.title || d.items[0]?.name || 'その他').slice(0, 40);
+    const payment = typeof PaymentBrain !== 'undefined'
+      ? PaymentBrain.normalizeDocumentPayment(d, { total: d.total, defaultDate: d.issueDate })
+      : {};
     return {
       workDate: d.issueDate || this.todayISO(),
       customerName: (d.customerName || '').replace(/\s*(様|御中)$/, '') + '様',
       service: serviceGuess,
       amount: d.total,
-      status: d.status === 'paid' ? '完了' : '確定',
-      paymentStatus: d.status === 'paid' ? '入金済み' : '未入金',
+      status: '確定',
+      paymentMethod: payment.paymentMethod || 'bank_transfer',
+      paymentStatus: payment.paymentStatus || 'pending',
+      expectedPaymentDate: payment.expectedPaymentDate || '',
+      paidDate: payment.paidDate || '',
+      paidAmount: payment.paidAmount || 0,
+      unpaidAmount: payment.unpaidAmount || d.total,
+      paymentMemo: payment.paymentMemo || '',
+      linkedDocumentId: d.id,
       memo: `請求書No.${d.number} ${d.title || ''}`.trim()
     };
   }

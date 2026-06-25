@@ -66,7 +66,7 @@ const WorkCompletionBrain = {
     if (completion && completion.needsReview) return '要確認';
     const rev = this.getLinkedRevenue(wo, revenues);
     if (rev) {
-      if (rev.paymentStatus === '未入金') return '作業完了・入金待ち';
+      if (typeof PaymentBrain !== 'undefined' ? PaymentBrain.isReceivablePending(rev) : rev.paymentStatus === '未入金') return '作業完了・入金待ち';
       return '売上確定済み';
     }
     if (wo.status === 'completed' || this.isPastScheduledActive(wo)) return '売上未確定';
@@ -282,7 +282,7 @@ const WorkCompletionBrain = {
       }
       if (wo.completion && wo.completion.needsReview) needsReviewCount += 1;
       const rev = this.getLinkedRevenue(wo, revList);
-      if (rev && rev.paymentStatus === '未入金' && rev.status !== 'キャンセル') unpaidCount += 1;
+      if (rev && (typeof PaymentBrain !== 'undefined' ? PaymentBrain.isReceivablePending(rev) : rev.paymentStatus === '未入金') && rev.status !== 'キャンセル') unpaidCount += 1;
       if (wo.status === 'cancelled' && wo.cancel && wo.cancel.proposeAgain) cancelFollowUpCount += 1;
     });
 
@@ -413,7 +413,7 @@ const WorkCompletionBrain = {
     });
 
     revList.forEach(r => {
-      if (r.paymentStatus === '未入金' && r.status !== 'キャンセル' && r.isConfirmedRevenue) unpaid += 1;
+      if ((typeof PaymentBrain !== 'undefined' ? PaymentBrain.isReceivablePending(r) : r.paymentStatus === '未入金') && r.status !== 'キャンセル' && r.isConfirmedRevenue) unpaid += 1;
       if (r.sourceWorkOrderId && r.isConfirmedRevenue) {
         const wo = list.find(w => w.id === r.sourceWorkOrderId);
         if (!wo || wo.actualRevenueId !== r.id) orphanConfirmed += 1;

@@ -8,6 +8,7 @@
   let currentMessageLeadId = null;
   let pendingImport = null;
   let pendingRevenueWorkOrderId = '';
+  let pendingLinkedDocumentId = '';
   let selectedFollowUpTargetId = null;
   let currentSalesTab = 'email';
   let currentSalesMessages = null;
@@ -419,6 +420,7 @@
     if (view === 'analytics') renderAnalyticsView();
     if (view === 'area') renderAreaView();
     if (view === 'revenue') renderRevenueView();
+    if (view === 'receivables') renderReceivablesView();
     if (view === 'documents') renderDocumentsView();
     if (view === 'data') renderDataManagement();
   }
@@ -533,6 +535,7 @@
       workOrders: Storage.getWorkOrders(),
       intakes: Storage.getReceptionIntakes(),
       revenues: Storage.getRevenueRecords(),
+      documents: Storage.getDocuments(),
       expenses: Storage.getExpenseRecords(),
       leads: Storage.getLeads(),
       pickups: Storage.getDemandPickups(),
@@ -786,8 +789,15 @@
         <p>今月の主力：${esc(topSource ? topSource.name : '—')} / ${esc(topService ? topService.name : '—')}</p>
       </div>
       ${(s.cautions || []).map(c => `<p class="exec-work-warn">${esc(c)}</p>`).join('')}
+      ${s.receivables ? `
+      <div class="exec-home-receivables">
+        <div><span>入金待ち合計</span><strong>${esc(PaymentBrain.formatYen(s.receivables.pendingTotal || 0))}</strong></div>
+        <div><span>今月入金予定</span><strong>${esc(PaymentBrain.formatYen(s.receivables.thisMonthExpected || 0))}</strong></div>
+        <div class="${s.receivables.overdueCount ? 'exec-home-receivables-warn' : ''}"><span>入金遅れ件数</span><strong>${s.receivables.overdueCount || 0}件</strong></div>
+      </div>` : ''}
       <div class="exec-work-actions">
         <button type="button" class="btn btn-sm btn-secondary exec-home-revenue-link">売上登録</button>
+        <button type="button" class="btn btn-sm btn-secondary exec-home-receivables-link">入金予定</button>
         <button type="button" class="btn btn-sm btn-secondary exec-home-profit-link">利益サマリー</button>
       </div>`;
   }
@@ -1119,6 +1129,8 @@
 
     const revLink = root.querySelector('.exec-home-revenue-link');
     if (revLink) revLink.addEventListener('click', () => navigateToView('revenue'));
+    const receivablesLink = root.querySelector('.exec-home-receivables-link');
+    if (receivablesLink) receivablesLink.addEventListener('click', () => navigateToView('receivables'));
     const profitLink = root.querySelector('.exec-home-profit-link');
     if (profitLink) profitLink.addEventListener('click', goToProfit);
     const followLink = root.querySelector('.exec-home-follow-link');
@@ -3938,7 +3950,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.4.9.1</span>
+        <span class="business-report-version">v4.4.9.2</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -11577,12 +11589,321 @@
     openSalesDetail(leadId, { navigate: true });
   }
 
+  function fillRevenuePaymentSelects() {
+    const methodEl = document.getElementById('revenue-payment-method');
+    const statusEl = document.getElementById('revenue-payment-status');
+    if (methodEl && !methodEl.options.length) {
+      methodEl.innerHTML = PaymentBrain.PAYMENT_METHODS
+        .map(m => `<option value="${esc(m.value)}">${esc(m.label)}</option>`).join('');
+    }
+    if (statusEl && !statusEl.options.length) {
+      statusEl.innerHTML = PaymentBrain.PAYMENT_STATUSES
+        .map(s => `<option value="${esc(s.value)}">${esc(s.label)}</option>`).join('');
+    }
+  }
+
+  function fillDocumentPaymentSelects() {
+    const methodEl = document.getElementById('doc-payment-method');
+    const statusEl = document.getElementById('doc-payment-status');
+    if (methodEl && !methodEl.options.length) {
+      methodEl.innerHTML = PaymentBrain.PAYMENT_METHODS
+        .map(m => `<option value="${esc(m.value)}">${esc(m.label)}</option>`).join('');
+    }
+    if (statusEl && !statusEl.options.length) {
+      statusEl.innerHTML = PaymentBrain.PAYMENT_STATUSES
+        .map(s => `<option value="${esc(s.value)}">${esc(s.label)}</option>`).join('');
+    }
+  }
+
+  function readRevenuePaymentFieldsFromForm() {
+    return {
+      paymentMethod: document.getElementById('revenue-payment-method')?.value || 'cash',
+      paymentStatus: document.getElementById('revenue-payment-status')?.value || 'paid',
+      expectedPaymentDate: document.getElementById('revenue-expected-payment-date')?.value || '',
+      paidDate: document.getElementById('revenue-paid-date')?.value || '',
+      paidAmount: Number(document.getElementById('revenue-paid-amount')?.value) || 0,
+      unpaidAmount: Number(document.getElementById('revenue-unpaid-amount')?.value) || 0,
+      paymentMemo: document.getElementById('revenue-payment-memo')?.value?.trim() || ''
+    };
+  }
+
+  function writeRevenuePaymentFieldsToForm(record) {
+    const r = RevenueBrain.normalizeRevenueRecord(record || {});
+    fillRevenuePaymentSelects();
+    const methodEl = document.getElementById('revenue-payment-method');
+    const statusEl = document.getElementById('revenue-payment-status');
+    if (methodEl) methodEl.value = r.paymentMethod || 'cash';
+    if (statusEl) statusEl.value = r.paymentStatus || 'paid';
+    const legacy = document.getElementById('revenue-payment');
+    if (legacy) legacy.value = r.paymentStatus || 'paid';
+    const set = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val != null && val !== '' ? val : '';
+    };
+    set('revenue-expected-payment-date', r.expectedPaymentDate);
+    set('revenue-paid-date', r.paidDate);
+    set('revenue-paid-amount', r.paidAmount);
+    set('revenue-unpaid-amount', r.unpaidAmount);
+    set('revenue-payment-memo', r.paymentMemo);
+  }
+
+  function suggestRevenuePaymentFromMethod(preserveUserInput) {
+    const amount = Number(document.getElementById('revenue-amount')?.value) || 0;
+    const workDate = document.getElementById('revenue-work-date')?.value || TODAY();
+    const method = document.getElementById('revenue-payment-method')?.value || 'cash';
+    const current = preserveUserInput ? readRevenuePaymentFieldsFromForm() : {};
+    const next = PaymentBrain.applyMethodChange(current, method, amount, workDate);
+    if (!preserveUserInput || !current.paymentStatus) {
+      const statusEl = document.getElementById('revenue-payment-status');
+      if (statusEl) statusEl.value = next.paymentStatus;
+    }
+    if (!preserveUserInput || !current.expectedPaymentDate) {
+      const el = document.getElementById('revenue-expected-payment-date');
+      if (el && next.expectedPaymentDate != null) el.value = next.expectedPaymentDate;
+    }
+    if (!preserveUserInput || !current.paidDate) {
+      const el = document.getElementById('revenue-paid-date');
+      if (el && next.paidDate) el.value = next.paidDate;
+    }
+    if (!preserveUserInput || current.paidAmount == null || document.getElementById('revenue-paid-amount')?.value === '') {
+      const el = document.getElementById('revenue-paid-amount');
+      if (el) el.value = next.paidAmount != null ? next.paidAmount : '';
+    }
+    if (!preserveUserInput || current.unpaidAmount == null || document.getElementById('revenue-unpaid-amount')?.value === '') {
+      const el = document.getElementById('revenue-unpaid-amount');
+      if (el) el.value = next.unpaidAmount != null ? next.unpaidAmount : '';
+    }
+  }
+
+  function readDocumentPaymentFieldsFromForm() {
+    return {
+      paymentMethod: document.getElementById('doc-payment-method')?.value || 'bank_transfer',
+      paymentStatus: document.getElementById('doc-payment-status')?.value || 'pending',
+      expectedPaymentDate: document.getElementById('doc-expected-payment-date')?.value || '',
+      paidDate: document.getElementById('doc-paid-date')?.value || '',
+      paidAmount: Number(document.getElementById('doc-paid-amount')?.value) || 0,
+      unpaidAmount: Number(document.getElementById('doc-unpaid-amount')?.value) || 0,
+      paymentMemo: document.getElementById('doc-payment-memo')?.value?.trim() || ''
+    };
+  }
+
+  function writeDocumentPaymentFieldsToForm(doc) {
+    const d = DocumentsBrain.normalizeDocument(doc || {});
+    fillDocumentPaymentSelects();
+    const methodEl = document.getElementById('doc-payment-method');
+    const statusEl = document.getElementById('doc-payment-status');
+    if (methodEl) methodEl.value = d.paymentMethod || 'bank_transfer';
+    if (statusEl) statusEl.value = d.paymentStatus || 'pending';
+    const set = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val != null && val !== '' ? val : '';
+    };
+    set('doc-expected-payment-date', d.expectedPaymentDate);
+    set('doc-paid-date', d.paidDate);
+    set('doc-paid-amount', d.paidAmount);
+    set('doc-unpaid-amount', d.unpaidAmount);
+    set('doc-payment-memo', d.paymentMemo);
+    updateDocPaymentStatusDisplay(d);
+    toggleDocPaymentFields(d.type);
+  }
+
+  function updateDocPaymentStatusDisplay(doc) {
+    const el = document.getElementById('doc-payment-status-display');
+    if (!el) return;
+    const d = DocumentsBrain.normalizeDocument(doc || {});
+    if (d.type !== 'invoice') {
+      el.textContent = '';
+      return;
+    }
+    const display = PaymentBrain.getCombinedStatusDisplay(d);
+    el.textContent = display.combined;
+  }
+
+  function toggleDocPaymentFields(type) {
+    const show = type === 'invoice';
+    document.querySelectorAll('.doc-invoice-payment-row, .doc-payment-details, #doc-payment-status-display')
+      .forEach(node => {
+        if (node) node.classList.toggle('hidden', !show);
+      });
+  }
+
+  function suggestDocumentPaymentFromMethod(preserveUserInput) {
+    const items = readDocItemsFromForm();
+    const taxSettings = readTaxSettingsFromForm();
+    const calc = DocumentsBrain.calcFromItems(items, taxSettings);
+    const issueDate = document.getElementById('doc-issue-date')?.value || TODAY();
+    const method = document.getElementById('doc-payment-method')?.value || 'bank_transfer';
+    const current = preserveUserInput ? readDocumentPaymentFieldsFromForm() : {};
+    const next = PaymentBrain.applyMethodChange(current, method, calc.total, issueDate);
+    if (!preserveUserInput || !current.paymentStatus) {
+      const statusEl = document.getElementById('doc-payment-status');
+      if (statusEl) statusEl.value = next.paymentStatus;
+    }
+    if (!preserveUserInput || !current.paidAmount == null) {
+      const paidEl = document.getElementById('doc-paid-amount');
+      if (paidEl && (paidEl.value === '' || !preserveUserInput)) paidEl.value = next.paidAmount || 0;
+    }
+    if (!preserveUserInput || document.getElementById('doc-unpaid-amount')?.value === '') {
+      const unpaidEl = document.getElementById('doc-unpaid-amount');
+      if (unpaidEl) unpaidEl.value = next.unpaidAmount != null ? next.unpaidAmount : '';
+    }
+    updateDocPaymentStatusDisplay(collectDocumentFormData());
+  }
+
+  function normalizeRevenueFormPayment(data) {
+    const amount = Number(data.amount) || 0;
+    const payment = PaymentBrain.normalizeRevenuePayment({
+      ...data,
+      paymentMethod: data.paymentMethod,
+      paymentStatus: data.paymentStatus,
+      expectedPaymentDate: data.expectedPaymentDate,
+      paidDate: data.paidDate,
+      paidAmount: data.paidAmount,
+      unpaidAmount: data.unpaidAmount,
+      paymentMemo: data.paymentMemo,
+      linkedDocumentId: data.linkedDocumentId || pendingLinkedDocumentId || ''
+    }, { total: amount, defaultDate: data.workDate });
+    if (payment.paymentStatus === 'paid') {
+      Object.assign(payment, PaymentBrain.buildPaidPatch(amount, payment.paidDate || data.workDate || TODAY()));
+    } else if (payment.paymentStatus === 'partial') {
+      Object.assign(payment, PaymentBrain.buildPartialPatch(amount, payment.paidAmount));
+    } else if (payment.paymentStatus === 'cancelled') {
+      Object.assign(payment, PaymentBrain.buildCancelledPatch());
+    }
+    return payment;
+  }
+
+  function markReceivablePaid(item) {
+    if (!item || !item.primaryId) return;
+    const today = TODAY();
+    if (item.primaryKind === 'revenue') {
+      const rev = Storage.getRevenueRecords().find(r => r.id === item.primaryId);
+      if (!rev) return;
+      const patch = PaymentBrain.buildPaidPatch(rev.amount, today);
+      Storage.updateRevenueRecord(item.primaryId, patch);
+      PaymentBrain.syncLinkedPayment('revenue', item.primaryId, patch, Storage);
+    } else {
+      const doc = Storage.getDocumentById(item.primaryId);
+      if (!doc) return;
+      const patch = PaymentBrain.buildPaidPatch(doc.total, today);
+      Storage.updateDocument(item.primaryId, patch);
+      PaymentBrain.syncLinkedPayment('document', item.primaryId, patch, Storage);
+    }
+    renderReceivablesView();
+    renderRevenueView();
+    renderDocumentsView();
+    renderDashboard();
+    showAppToast('入金済みにしました');
+  }
+
   function renderPaymentStatusBadge(record) {
-    const status = record.paymentStatus || '未入金';
-    const label = RevenueBrain.formatPaymentStatusLabel(status);
+    const status = PaymentBrain.migratePaymentStatus(record.paymentStatus, 'pending');
+    const label = PaymentBrain.getPaymentStatusLabel(record);
     const concern = RevenueBrain.recordHasPaymentConcern(record)
       ? ' <span class="revenue-payment-concern-badge">入金注意</span>' : '';
     return `<span class="revenue-status-badge revenue-payment-${esc(status)}">${esc(label)}</span>${concern}`;
+  }
+
+  function renderPaymentMethodBadge(record) {
+    const label = PaymentBrain.getPaymentMethodLabel(record);
+    return `<span class="revenue-payment-method-badge">${esc(label)}</span>`;
+  }
+
+  function renderReceivablesView() {
+    try {
+      const today = TODAY();
+      const summary = PaymentBrain.summarizeReceivables(
+        Storage.getRevenueRecords(),
+        Storage.getDocuments(),
+        today
+      );
+      const summaryEl = document.getElementById('receivables-summary');
+      if (summaryEl) {
+        summaryEl.innerHTML = [
+          { label: '入金待ち合計', value: PaymentBrain.formatYen(summary.pendingTotal), warn: false },
+          { label: '今月入金予定', value: PaymentBrain.formatYen(summary.thisMonthExpected), warn: false },
+          { label: '入金遅れ件数', value: (summary.overdueCount || 0) + '件', warn: summary.overdueCount > 0 },
+          { label: '一覧件数', value: (summary.count || 0) + '件', warn: false }
+        ].map(item => `
+          <div class="receivables-summary-item${item.warn ? ' warn' : ''}">
+            <span>${esc(item.label)}</span>
+            <strong>${esc(item.value)}</strong>
+          </div>`).join('');
+      }
+
+      const tbody = document.getElementById('receivables-tbody');
+      const cardList = document.getElementById('receivables-card-list');
+      const items = summary.items || [];
+
+      if (!items.length) {
+        const empty = '<tr><td colspan="10" class="empty-state">入金待ちの案件はありません。</td></tr>';
+        if (tbody) tbody.innerHTML = empty;
+        if (cardList) cardList.innerHTML = '<p class="empty-state">入金待ちの案件はありません。</p>';
+        return;
+      }
+
+      const rowHtml = item => {
+        const delay = PaymentBrain.getDelayLabel(item.expectedPaymentDate, today);
+        const delayClass = PaymentBrain.isOverdue(item.record, today) ? 'receivable-overdue' : '';
+        return `
+        <tr data-receivable-key="${esc(item.key)}">
+          <td>${esc(item.counterparty)}</td>
+          <td>${esc(item.subject)}</td>
+          <td class="num">${esc(PaymentBrain.formatYen(item.total))}</td>
+          <td class="num">${esc(PaymentBrain.formatYen(item.unpaidAmount))}</td>
+          <td>${esc(PaymentBrain.getPaymentMethodLabel(item.record))}</td>
+          <td>${esc(item.expectedPaymentDate || '—')}</td>
+          <td>${renderPaymentStatusBadge(item.record)}</td>
+          <td class="${delayClass}">${esc(delay)}</td>
+          <td>${esc(PaymentBrain.getSourceTypeLabel(item))}</td>
+          <td class="actions">
+            <button type="button" class="btn btn-sm btn-primary" data-mark-paid="${esc(item.primaryKind)}:${esc(item.primaryId)}">入金済み</button>
+            <button type="button" class="btn btn-sm btn-secondary" data-open-receivable="${esc(item.primaryKind)}:${esc(item.primaryId)}">開く</button>
+          </td>
+        </tr>`;
+      };
+
+      if (tbody) tbody.innerHTML = items.map(rowHtml).join('');
+
+      if (cardList) {
+        cardList.innerHTML = items.map(item => `
+          <div class="receivables-card">
+            <strong>${esc(item.counterparty)}</strong>
+            <p>${esc(item.subject)}</p>
+            <p>未入金：${esc(PaymentBrain.formatYen(item.unpaidAmount))} / ${esc(PaymentBrain.getPaymentMethodLabel(item.record))}</p>
+            <p>入金予定：${esc(item.expectedPaymentDate || '—')}（${esc(PaymentBrain.getDelayLabel(item.expectedPaymentDate, today))}）</p>
+            <p>${renderPaymentStatusBadge(item.record)} / ${esc(PaymentBrain.getSourceTypeLabel(item))}</p>
+            <div class="revenue-card-actions">
+              <button type="button" class="btn btn-sm btn-primary" data-mark-paid="${esc(item.primaryKind)}:${esc(item.primaryId)}">入金済み</button>
+              <button type="button" class="btn btn-sm btn-secondary" data-open-receivable="${esc(item.primaryKind)}:${esc(item.primaryId)}">開く</button>
+            </div>
+          </div>`).join('');
+      }
+
+      document.querySelectorAll('[data-mark-paid]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const [kind, id] = (btn.dataset.markPaid || '').split(':');
+          const hit = items.find(i => i.primaryKind === kind && i.primaryId === id);
+          if (hit) markReceivablePaid(hit);
+        });
+      });
+      document.querySelectorAll('[data-open-receivable]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const [kind, id] = (btn.dataset.openReceivable || '').split(':');
+          if (kind === 'document') {
+            navigateToView('documents');
+            openDocumentPreview(id);
+          } else {
+            navigateToView('revenue');
+            openRevenueEdit(id);
+          }
+        });
+      });
+    } catch (err) {
+      console.error('[Budil] render error: 入金予定', err);
+      const tbody = document.getElementById('receivables-tbody');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="section-render-error">表示中にエラーが発生しました。</td></tr>';
+    }
   }
 
   function openRevenueFormForLead(leadId) {
@@ -11590,6 +11911,7 @@
     if (!lead) return;
     navigateToView('revenue');
     fillRevenueSelects();
+    fillRevenuePaymentSelects();
     document.getElementById('revenue-edit-id').value = '';
     document.getElementById('revenue-form-title').textContent = '売上登録';
     document.getElementById('btn-revenue-cancel').classList.add('hidden');
@@ -11599,9 +11921,11 @@
     document.getElementById('revenue-source').value = RevenueBrain.SOURCES[0];
     document.getElementById('revenue-amount').value = '';
     document.getElementById('revenue-status').value = '予定';
-    document.getElementById('revenue-payment').value = '未入金';
+    writeRevenuePaymentFieldsToForm({ paymentMethod: 'cash', paymentStatus: 'paid', workDate: TODAY() });
+    suggestRevenuePaymentFromMethod(false);
     document.getElementById('revenue-payment-concern').checked = false;
     document.getElementById('revenue-memo').value = '';
+    pendingLinkedDocumentId = '';
     fillRevenueLeadSelect(leadId);
     document.getElementById('revenue-mark-won').checked = true;
     toggleRevenueLeadOptions();
@@ -11685,9 +12009,12 @@
     document.getElementById('revenue-edit-id').value = '';
     document.getElementById('revenue-form').reset();
     pendingRevenueWorkOrderId = '';
+    pendingLinkedDocumentId = '';
     document.getElementById('revenue-work-date').value = TODAY();
     document.getElementById('revenue-status').value = '予定';
-    document.getElementById('revenue-payment').value = '未入金';
+    fillRevenuePaymentSelects();
+    writeRevenuePaymentFieldsToForm({ paymentMethod: 'cash', paymentStatus: 'paid', workDate: TODAY() });
+    suggestRevenuePaymentFromMethod(false);
     document.getElementById('revenue-payment-concern').checked = false;
     document.getElementById('revenue-mark-won').checked = false;
     fillRevenueLeadSelect('');
@@ -11701,6 +12028,7 @@
     const record = RevenueBrain.normalizeRevenueRecord(Storage.getRevenueRecords().find(r => r.id === id));
     if (!record) return;
     fillRevenueSelects();
+    fillRevenuePaymentSelects();
     document.getElementById('revenue-edit-id').value = id;
     document.getElementById('revenue-work-date').value = record.workDate || '';
     document.getElementById('revenue-customer').value = record.customerName || '';
@@ -11708,9 +12036,10 @@
     document.getElementById('revenue-source').value = record.source || RevenueBrain.SOURCES[0];
     document.getElementById('revenue-amount').value = record.amount || '';
     document.getElementById('revenue-status').value = record.status || '予定';
-    document.getElementById('revenue-payment').value = record.paymentStatus || '未入金';
+    writeRevenuePaymentFieldsToForm(record);
     document.getElementById('revenue-payment-concern').checked = record.paymentConcern === true;
     document.getElementById('revenue-memo').value = record.memo || '';
+    pendingLinkedDocumentId = record.linkedDocumentId || '';
     fillRevenueLeadSelect(record.leadId || '');
     document.getElementById('revenue-mark-won').checked = false;
     toggleRevenueLeadOptions();
@@ -11722,6 +12051,7 @@
   function getRevenueFormData() {
     const leadId = document.getElementById('revenue-lead').value;
     const leads = Storage.getLeads();
+    const paymentFields = readRevenuePaymentFieldsFromForm();
     const data = {
       workDate: document.getElementById('revenue-work-date').value,
       customerName: document.getElementById('revenue-customer').value.trim(),
@@ -11729,10 +12059,13 @@
       source: document.getElementById('revenue-source').value,
       amount: Number(document.getElementById('revenue-amount').value) || 0,
       status: document.getElementById('revenue-status').value,
-      paymentStatus: document.getElementById('revenue-payment').value,
       paymentConcern: document.getElementById('revenue-payment-concern').checked,
-      memo: document.getElementById('revenue-memo').value.trim()
+      memo: document.getElementById('revenue-memo').value.trim(),
+      ...paymentFields,
+      linkedDocumentId: pendingLinkedDocumentId || ''
     };
+    const normalizedPayment = normalizeRevenueFormPayment(data);
+    Object.assign(data, normalizedPayment);
     if (leadId) {
       const lead = leads.find(l => l.id === leadId);
       data.leadId = leadId;
@@ -11774,7 +12107,7 @@
     const cardList = document.getElementById('revenue-card-list');
 
     if (!records.length) {
-      const empty = '<tr><td colspan="9" class="empty-state">今月の売上登録がまだありません。作業が終わったら1件登録してみましょう。</td></tr>';
+      const empty = '<tr><td colspan="10" class="empty-state">今月の売上登録がまだありません。作業が終わったら1件登録してみましょう。</td></tr>';
       if (tbody) tbody.innerHTML = empty;
       if (cardList) cardList.innerHTML = '<p class="empty-state">今月の売上登録がまだありません。作業が終わったら1件登録してみましょう。</p>';
       return;
@@ -11794,6 +12127,7 @@
           <td>${esc(r.source)}</td>
           <td>${esc(RevenueBrain.formatYen(r.amount))}</td>
           <td><span class="revenue-status-badge revenue-status-${esc(r.status)}">${esc(r.status)}</span></td>
+          <td>${renderPaymentMethodBadge(r)}</td>
           <td>${renderPaymentStatusBadge(r)}</td>
           <td class="actions">${renderRevenueRowActions(r.id)}</td>
         </tr>`;
@@ -11828,6 +12162,7 @@
           </div>
           <p class="revenue-card-meta">
             <span class="revenue-status-badge revenue-status-${esc(r.status)}">${esc(r.status)}</span>
+            ${renderPaymentMethodBadge(r)}
             ${renderPaymentStatusBadge(r)}
           </p>
           ${r.memo ? `<p class="revenue-card-meta">${esc(r.memo)}</p>` : ''}
@@ -12182,9 +12517,19 @@
     const leadId = data.leadId;
     const id = document.getElementById('revenue-edit-id').value;
     const workOrderId = pendingRevenueWorkOrderId;
+    const linkedDocId = pendingLinkedDocumentId || data.linkedDocumentId || '';
     let newRecord = null;
-    if (id) Storage.updateRevenueRecord(id, data);
-    else newRecord = Storage.addRevenueRecord(data);
+    if (id) {
+      Storage.updateRevenueRecord(id, data);
+      PaymentBrain.syncLinkedPayment('revenue', id, data, Storage);
+    } else {
+      newRecord = Storage.addRevenueRecord(data);
+      if (newRecord) PaymentBrain.syncLinkedPayment('revenue', newRecord.id, data, Storage);
+    }
+    const revId = id || (newRecord && newRecord.id);
+    if (linkedDocId && revId) {
+      PaymentBrain.linkRevenueAndDocument(revId, linkedDocId, Storage);
+    }
     if (workOrderId) {
       const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
       if (wo && wo.actualRevenueId && wo.actualRevenueId !== id) {
@@ -12192,16 +12537,18 @@
         pendingRevenueWorkOrderId = '';
         return;
       }
-      const revId = id || (newRecord && newRecord.id);
       if (revId) Storage.updateWorkOrder(workOrderId, { actualRevenueId: revId });
       pendingRevenueWorkOrderId = '';
     }
+    pendingLinkedDocumentId = '';
     if (markWon && leadId) {
       const updated = updateLeadStatusFromRevenue(leadId);
       if (updated) renderLeadsTable();
     }
     resetRevenueForm();
     renderRevenueView();
+    renderReceivablesView();
+    renderDocumentsView();
     renderWorkOrderView();
     renderDashboard();
     if (currentMessageLeadId === leadId) {
@@ -12211,11 +12558,24 @@
 
   function initRevenue() {
     fillRevenueSelects();
+    fillRevenuePaymentSelects();
     fillRevenueLeadSelect('');
     toggleRevenueLeadOptions();
     toggleRevenueOpenLeadButton();
     document.getElementById('revenue-form').addEventListener('submit', handleRevenueSubmit);
     document.getElementById('btn-revenue-cancel').addEventListener('click', resetRevenueForm);
+    document.getElementById('revenue-payment-method')?.addEventListener('change', () => suggestRevenuePaymentFromMethod(true));
+    document.getElementById('revenue-amount')?.addEventListener('change', () => suggestRevenuePaymentFromMethod(true));
+    document.getElementById('revenue-payment-status')?.addEventListener('change', () => {
+      const amount = Number(document.getElementById('revenue-amount')?.value) || 0;
+      const status = document.getElementById('revenue-payment-status')?.value;
+      const workDate = document.getElementById('revenue-work-date')?.value || TODAY();
+      let patch = {};
+      if (status === 'paid') patch = PaymentBrain.buildPaidPatch(amount, workDate);
+      else if (status === 'partial') patch = PaymentBrain.buildPartialPatch(amount, document.getElementById('revenue-paid-amount')?.value);
+      else if (status === 'cancelled') patch = PaymentBrain.buildCancelledPatch();
+      writeRevenuePaymentFieldsToForm({ ...readRevenuePaymentFieldsFromForm(), paymentStatus: status, ...patch, amount, workDate });
+    });
     document.getElementById('revenue-lead').addEventListener('change', () => {
       toggleRevenueLeadOptions();
       document.getElementById('revenue-mark-won').checked = false;
@@ -12409,6 +12769,11 @@
     const bankGroup = document.querySelector('.doc-bank-group');
     if (dueGroup) dueGroup.classList.toggle('hidden', !isInvoice);
     if (bankGroup) bankGroup.classList.toggle('hidden', !isInvoice);
+    toggleDocPaymentFields(type);
+  }
+
+  function initReceivables() {
+    renderReceivablesView();
   }
 
   function fillDocTaxCategoryOptions(selected) {
@@ -12561,6 +12926,7 @@
     fillTaxSettingsForm(base.taxSettings);
     document.getElementById('doc-bank-info').value = base.bankInfo || '';
     document.getElementById('doc-note').value = base.note || '';
+    writeDocumentPaymentFieldsToForm(base);
     toggleDocFormFields(base.type);
     renderDocItemsEditor(base.items, base.type);
     document.getElementById('documents-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -12588,8 +12954,24 @@
       taxSettings: calc.taxSettings,
       note: document.getElementById('doc-note').value.trim(),
       bankInfo: document.getElementById('doc-bank-info').value.trim(),
-      issuer: DocumentsBrain.defaultIssuer()
+      issuer: DocumentsBrain.defaultIssuer(),
+      ...readDocumentPaymentFieldsFromForm()
     });
+  }
+
+  function normalizeDocumentFormPayment(data) {
+    const payment = PaymentBrain.normalizeDocumentPayment(data, {
+      total: data.total,
+      defaultDate: data.issueDate
+    });
+    if (payment.paymentStatus === 'paid') {
+      Object.assign(payment, PaymentBrain.buildPaidPatch(data.total, payment.paidDate || data.issueDate || TODAY()));
+    } else if (payment.paymentStatus === 'partial') {
+      Object.assign(payment, PaymentBrain.buildPartialPatch(data.total, payment.paidAmount));
+    } else if (payment.paymentStatus === 'cancelled') {
+      Object.assign(payment, PaymentBrain.buildCancelledPatch());
+    }
+    return payment;
   }
 
   function handleDocumentSubmit(e) {
@@ -12603,10 +12985,17 @@
       alert('番号を入力してください');
       return;
     }
+    const payment = normalizeDocumentFormPayment(data);
+    Object.assign(data, payment);
     const id = document.getElementById('doc-edit-id').value;
     let saved;
-    if (id) saved = Storage.updateDocument(id, data);
-    else saved = Storage.addDocument(data);
+    if (id) {
+      saved = Storage.updateDocument(id, data);
+      PaymentBrain.syncLinkedPayment('document', id, payment, Storage);
+    } else {
+      saved = Storage.addDocument(data);
+      if (saved) PaymentBrain.syncLinkedPayment('document', saved.id, payment, Storage);
+    }
     if (!saved) {
       alert('保存に失敗しました');
       return;
@@ -12614,6 +13003,8 @@
     showAppToast(id ? '書類を更新しました' : '書類を保存しました');
     openDocumentPreview(saved.id);
     renderDocumentsList();
+    renderReceivablesView();
+    renderDashboard();
   }
 
   function openDocumentPreview(id) {
@@ -12648,7 +13039,7 @@
       <table class="documents-table">
         <thead>
           <tr>
-            <th>種別</th><th>番号</th><th>宛名</th><th>件名</th><th>発行日</th><th>金額</th><th>ステータス</th><th>操作</th>
+            <th>種別</th><th>番号</th><th>宛名</th><th>件名</th><th>発行日</th><th>金額</th><th>書類状態</th><th>入金状態</th><th>操作</th>
           </tr>
         </thead>
         <tbody>
@@ -12662,6 +13053,7 @@
               <td>${esc(n.issueDate)}</td>
               <td class="num">${esc(DocumentsBrain.formatYen(n.total))}</td>
               <td><span class="doc-status-badge status-${esc(n.status)}">${esc(DocumentsBrain.statusLabel(n.type, n.status))}</span></td>
+              <td>${n.type === 'invoice' ? renderPaymentStatusBadge(n) : '—'}</td>
               <td class="actions">
                 <button type="button" class="btn btn-secondary btn-sm" data-doc-action="edit" data-doc-id="${esc(n.id)}">編集</button>
                 <button type="button" class="btn btn-secondary btn-sm" data-doc-action="preview" data-doc-id="${esc(n.id)}">プレビュー</button>
@@ -12720,6 +13112,7 @@
     if (!prefill) return;
     navigateToView('revenue');
     resetRevenueForm();
+    pendingLinkedDocumentId = currentDocPreviewId;
     document.getElementById('revenue-work-date').value = prefill.workDate;
     document.getElementById('revenue-customer').value = prefill.customerName;
     const serviceEl = document.getElementById('revenue-service');
@@ -12735,10 +13128,10 @@
     }
     document.getElementById('revenue-amount').value = prefill.amount;
     document.getElementById('revenue-status').value = prefill.status;
-    document.getElementById('revenue-payment').value = prefill.paymentStatus;
+    writeRevenuePaymentFieldsToForm(prefill);
     document.getElementById('revenue-memo').value = prefill.memo;
     document.getElementById('revenue-form-title').textContent = '売上登録（請求書から反映）';
-    showAppToast('売上登録フォームに反映しました。内容を確認して保存してください。');
+    showAppToast('売上登録フォームに反映しました。保存すると請求書とリンクされます。');
     document.getElementById('revenue-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -12765,6 +13158,7 @@
   }
 
   function initDocuments() {
+    fillDocumentPaymentSelects();
     document.getElementById('btn-doc-new-invoice')?.addEventListener('click', () => openDocumentForm('invoice'));
     document.getElementById('btn-doc-new-estimate')?.addEventListener('click', () => openDocumentForm('estimate'));
     document.getElementById('btn-doc-back-list')?.addEventListener('click', () => {
@@ -12817,7 +13211,16 @@
     });
     document.getElementById('doc-type')?.addEventListener('change', (e) => {
       toggleDocFormFields(e.target.value);
+      toggleDocPaymentFields(e.target.value);
       fillDocStatusOptions(e.target.value, 'draft');
+    });
+    document.getElementById('doc-payment-method')?.addEventListener('change', () => suggestDocumentPaymentFromMethod(true));
+    document.getElementById('doc-payment-status')?.addEventListener('change', () => {
+      updateDocPaymentStatusDisplay(collectDocumentFormData());
+      suggestDocumentPaymentFromMethod(true);
+    });
+    ['doc-issue-date', 'doc-paid-amount'].forEach(id => {
+      document.getElementById(id)?.addEventListener('change', () => updateDocPaymentStatusDisplay(collectDocumentFormData()));
     });
     fillDocTaxCategoryOptions('taxable10');
     renderDocumentsView();
@@ -12882,6 +13285,7 @@
     initDemandSearch();
     initLeads();
     initRevenue();
+    initReceivables();
     initDocuments();
     initCardParser();
     initFollowup();

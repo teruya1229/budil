@@ -8368,7 +8368,7 @@ body.sales-page {
   margin-bottom: 0.75rem;
 }
 
-/* ── 請求書・見積書 v4.4.9.1 ── */
+/* ── 請求書・見積書 v4.4.9.2 ── */
 .doc-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -8788,5 +8788,117 @@ body.sales-page {
   body.doc-printing .doc-seal {
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+  }
+}
+
+/* ── 入金予定・支払方法 v4.4.9.2 ── */
+.revenue-payment-details,
+.doc-payment-details {
+  margin: 0.75rem 0 1rem;
+  border: 1px solid var(--border, #334155);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.revenue-payment-details summary,
+.doc-payment-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+.revenue-payment-details-body,
+.doc-payment-details-body {
+  margin-top: 0.75rem;
+}
+
+.receivables-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.receivables-summary-item {
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid var(--border, #334155);
+}
+
+.receivables-summary-item span {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+.receivables-summary-item strong {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 1.05rem;
+}
+
+.receivables-summary-item.warn strong {
+  color: #fbbf24;
+}
+
+.exec-home-receivables {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+  padding: 0.65rem;
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.45);
+  border: 1px solid var(--border, #334155);
+}
+
+.exec-home-receivables div span {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+.exec-home-receivables div strong {
+  font-size: 0.92rem;
+}
+
+.exec-home-receivables-warn strong {
+  color: #fbbf24;
+}
+
+.doc-payment-status-display {
+  font-size: 0.88rem;
+  color: var(--text-muted, #94a3b8);
+  margin: 0.25rem 0 0.75rem;
+}
+
+.revenue-payment-pending,
+.revenue-payment-partial,
+.revenue-payment-uncollected { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.revenue-payment-paid { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+.revenue-payment-cancelled { background: rgba(100, 116, 139, 0.25); color: #94a3b8; }
+.revenue-payment-未入金 { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.revenue-payment-入金済み { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+
+.receivables-card-list {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .receivables-table-wrap { display: none; }
+  .receivables-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .receivables-card {
+    border: 1px solid var(--border, #334155);
+    border-radius: 8px;
+    padding: 0.75rem;
+    background: rgba(30, 41, 59, 0.45);
+  }
+  .exec-home-receivables {
+    grid-template-columns: 1fr;
   }
 }

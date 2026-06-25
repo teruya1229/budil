@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.4.9.1">
+  <link rel="stylesheet" href="css/style.css?v=4.4.9.2">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.4.9.1</small>
+          <small>AI経営脳みそ v4.4.9.2</small>
         </div>
       </div>
       <nav class="nav">
@@ -63,10 +63,13 @@
 
         <details class="nav-group" open>
           <summary class="nav-group-title"><span class="nav-group-icon">💰</span><span class="nav-group-label">売上・利益</span></summary>
-          <p class="nav-group-hint">売上登録、月次実績、利益、フォロー</p>
+          <p class="nav-group-hint">売上登録、入金予定、月次実績、利益、フォロー</p>
           <div class="nav-group-items">
             <button class="nav-item nav-item-main" data-view="revenue">
               <span class="nav-icon">💰</span><span class="nav-label">売上登録</span>
+            </button>
+            <button class="nav-item nav-item-main" data-view="receivables">
+              <span class="nav-icon">📥</span><span class="nav-label">入金予定</span>
             </button>
             <button class="nav-item nav-item-sub" data-view="revenue" data-scroll="#revenue-aggregation-card">
               <span class="nav-icon">📊</span><span class="nav-label">売上一覧</span>
@@ -159,7 +162,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.4.9.1</small>
+        <small>Budil v4.4.9.2</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -181,7 +184,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">毎朝5分で、今日やること・売上・利益・需要・受付・作業予定を確認</p>
             </div>
-            <span class="exec-home-version">v4.4.9.1</span>
+            <span class="exec-home-version">v4.4.9.2</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <div id="exec-home-start-guide" class="exec-home-start-guide hidden"></div>
@@ -403,7 +406,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.4.9.1</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.4.9.2</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -1858,10 +1861,50 @@
               </div>
               <div class="form-row form-row-2">
                 <div class="form-group">
-                  <label for="revenue-payment">入金状況 *</label>
-                  <select id="revenue-payment" required>
-                    <option value="未入金">入金待ち</option>
-                    <option value="入金済み">入金済み</option>
+                  <label for="revenue-payment-method">支払方法 *</label>
+                  <select id="revenue-payment-method" required></select>
+                </div>
+                <div class="form-group">
+                  <label for="revenue-payment-status">入金状態 *</label>
+                  <select id="revenue-payment-status" required></select>
+                </div>
+              </div>
+              <details class="revenue-payment-details" id="revenue-payment-details">
+                <summary>入金管理</summary>
+                <div class="revenue-payment-details-body">
+                  <div class="form-row form-row-2">
+                    <div class="form-group">
+                      <label for="revenue-expected-payment-date">入金予定日</label>
+                      <input type="date" id="revenue-expected-payment-date">
+                    </div>
+                    <div class="form-group">
+                      <label for="revenue-paid-date">入金日</label>
+                      <input type="date" id="revenue-paid-date">
+                    </div>
+                  </div>
+                  <div class="form-row form-row-2">
+                    <div class="form-group">
+                      <label for="revenue-paid-amount">入金額（円）</label>
+                      <input type="number" id="revenue-paid-amount" min="0" step="1" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                      <label for="revenue-unpaid-amount">未入金額（円）</label>
+                      <input type="number" id="revenue-unpaid-amount" min="0" step="1" placeholder="0">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="revenue-payment-memo">入金メモ</label>
+                    <input type="text" id="revenue-payment-memo" placeholder="振込名義・決済会社メモなど">
+                  </div>
+                  <p class="field-hint">法人月末請求：作業完了→売上登録→月末に請求書作成→入金予定日登録→入金確認後に入金済み。くらし後払い/カード：決済会社の入金予定日で入金待ち管理。</p>
+                </div>
+              </details>
+              <div class="form-row form-row-2">
+                <div class="form-group hidden" id="revenue-payment-legacy-wrap">
+                  <label for="revenue-payment">入金状況（旧）</label>
+                  <select id="revenue-payment">
+                    <option value="pending">入金待ち</option>
+                    <option value="paid">入金済み</option>
                   </select>
                 </div>
                 <div class="form-group">
@@ -1931,6 +1974,7 @@
                   <th>依頼元</th>
                   <th>金額</th>
                   <th>ステータス</th>
+                  <th>支払方法</th>
                   <th>入金</th>
                   <th>操作</th>
                 </tr>
@@ -1939,6 +1983,44 @@
             </table>
           </div>
           <div id="revenue-card-list" class="revenue-card-list"></div>
+        </div>
+      </section>
+
+      <!-- 入金予定 -->
+      <section id="view-receivables" class="view">
+        <header class="view-header">
+          <h1>入金予定</h1>
+          <p class="view-subtitle">入金待ち・一部入金・未回収の回収状況（売上集計とは別管理）</p>
+        </header>
+
+        <div class="card card-wide">
+          <h2>入金待ちサマリー</h2>
+          <div id="receivables-summary" class="receivables-summary-grid"></div>
+        </div>
+
+        <div class="card card-wide">
+          <h2>入金予定一覧</h2>
+          <p class="field-hint">売上と請求書がリンクされている場合は1件だけ表示します（請求書情報を優先）。</p>
+          <div class="table-wrap receivables-table-wrap">
+            <table class="data-table receivables-table" id="receivables-table">
+              <thead>
+                <tr>
+                  <th>相手先</th>
+                  <th>件名 / 作業内容</th>
+                  <th>金額</th>
+                  <th>未入金額</th>
+                  <th>支払方法</th>
+                  <th>入金予定日</th>
+                  <th>入金状態</th>
+                  <th>経過/遅れ</th>
+                  <th>元データ</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="receivables-tbody"></tbody>
+            </table>
+          </div>
+          <div id="receivables-card-list" class="receivables-card-list"></div>
         </div>
       </section>
 
@@ -2020,10 +2102,50 @@
                 </select>
               </div>
               <div class="form-group">
-                <label for="doc-status">ステータス</label>
+                <label for="doc-status">書類ステータス</label>
                 <select id="doc-status"></select>
               </div>
             </div>
+            <div class="form-row form-row-2 doc-invoice-payment-row">
+              <div class="form-group">
+                <label for="doc-payment-method">支払方法</label>
+                <select id="doc-payment-method"></select>
+              </div>
+              <div class="form-group">
+                <label for="doc-payment-status">入金状態</label>
+                <select id="doc-payment-status"></select>
+              </div>
+            </div>
+            <p id="doc-payment-status-display" class="doc-payment-status-display"></p>
+            <details class="doc-payment-details" id="doc-payment-details">
+              <summary>入金管理</summary>
+              <div class="doc-payment-details-body">
+                <div class="form-row form-row-2">
+                  <div class="form-group">
+                    <label for="doc-expected-payment-date">入金予定日</label>
+                    <input type="date" id="doc-expected-payment-date">
+                  </div>
+                  <div class="form-group">
+                    <label for="doc-paid-date">入金日</label>
+                    <input type="date" id="doc-paid-date">
+                  </div>
+                </div>
+                <div class="form-row form-row-2">
+                  <div class="form-group">
+                    <label for="doc-paid-amount">入金額（円）</label>
+                    <input type="number" id="doc-paid-amount" min="0" step="1">
+                  </div>
+                  <div class="form-group">
+                    <label for="doc-unpaid-amount">未入金額（円）</label>
+                    <input type="number" id="doc-unpaid-amount" min="0" step="1">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="doc-payment-memo">入金メモ</label>
+                  <input type="text" id="doc-payment-memo" placeholder="振込名義・決済会社メモなど">
+                </div>
+              </div>
+            </details>
             <div class="form-group">
               <label for="doc-title">件名</label>
               <input type="text" id="doc-title" placeholder="例: エアコンクリーニング">
@@ -3044,29 +3166,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.4.9.1"></script>
-  <script src="js/messages.js?v=4.4.9.1"></script>
-  <script src="js/demand-brain.js?v=4.4.9.1"></script>
-  <script src="js/demand-radar.js?v=4.4.9.1"></script>
-  <script src="js/sales-brain.js?v=4.4.9.1"></script>
-  <script src="js/management-brain.js?v=4.4.9.1"></script>
-  <script src="js/revenue-brain.js?v=4.4.9.1"></script>
-  <script src="js/revenue-summary-brain.js?v=4.4.9.1"></script>
-  <script src="js/reception-brain.js?v=4.4.9.1"></script>
-  <script src="js/map-brain.js?v=4.4.9.1"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.4.9.1"></script>
-  <script src="js/external-check-brain.js?v=4.4.9.1"></script>
-  <script src="js/action-brain.js?v=4.4.9.1"></script>
-  <script src="js/work-order-brain.js?v=4.4.9.1"></script>
-  <script src="js/follow-up-brain.js?v=4.4.9.1"></script>
-  <script src="js/work-completion-brain.js?v=4.4.9.1"></script>
-  <script src="js/profit-brain.js?v=4.4.9.1"></script>
-  <script src="js/analytics-brain.js?v=4.4.9.1"></script>
-  <script src="js/monthly-results-brain.js?v=4.4.9.1"></script>
-  <script src="js/documents-brain.js?v=4.4.9.1"></script>
-  <script src="js/executive-brain.js?v=4.4.9.1"></script>
-  <script src="js/card-ocr.js?v=4.4.9.1"></script>
-  <script src="js/data-backup.js?v=4.4.9.1"></script>
-  <script src="js/app.js?v=4.4.9.1"></script>
+  <script src="js/storage.js?v=4.4.9.2"></script>
+  <script src="js/messages.js?v=4.4.9.2"></script>
+  <script src="js/demand-brain.js?v=4.4.9.2"></script>
+  <script src="js/demand-radar.js?v=4.4.9.2"></script>
+  <script src="js/sales-brain.js?v=4.4.9.2"></script>
+  <script src="js/management-brain.js?v=4.4.9.2"></script>
+  <script src="js/payment-brain.js?v=4.4.9.2"></script>
+  <script src="js/revenue-brain.js?v=4.4.9.2"></script>
+  <script src="js/revenue-summary-brain.js?v=4.4.9.2"></script>
+  <script src="js/reception-brain.js?v=4.4.9.2"></script>
+  <script src="js/map-brain.js?v=4.4.9.2"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.4.9.2"></script>
+  <script src="js/external-check-brain.js?v=4.4.9.2"></script>
+  <script src="js/action-brain.js?v=4.4.9.2"></script>
+  <script src="js/work-order-brain.js?v=4.4.9.2"></script>
+  <script src="js/follow-up-brain.js?v=4.4.9.2"></script>
+  <script src="js/work-completion-brain.js?v=4.4.9.2"></script>
+  <script src="js/profit-brain.js?v=4.4.9.2"></script>
+  <script src="js/analytics-brain.js?v=4.4.9.2"></script>
+  <script src="js/monthly-results-brain.js?v=4.4.9.2"></script>
+  <script src="js/documents-brain.js?v=4.4.9.2"></script>
+  <script src="js/executive-brain.js?v=4.4.9.2"></script>
+  <script src="js/card-ocr.js?v=4.4.9.2"></script>
+  <script src="js/data-backup.js?v=4.4.9.2"></script>
+  <script src="js/app.js?v=4.4.9.2"></script>
 </body>
 </html>
