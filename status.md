@@ -70,6 +70,67 @@
 - main push 済み
 - GitHub Pages 反映確認済み（v4.4.6 表示）
 
+## 2026-06-25 実機検証（Cursor Browser Automation × アナリティクス外部チェック）
+
+Cursor Browser Automation を使い、公開ページ上で GA4 / Search Console 読み取り → Budil 外部チェック保存の一連フローを確認済み。
+
+### 確認した流れ
+
+1. GA4 を開く（ログイン済み Chrome タブ）
+2. Search Console を開く
+3. 画面上の数値を読み取る
+4. `【Budil貼り付け用】` 形式に変換する
+5. Budil 公開 URL を開く
+6. 外部チェック画面へ貼り付ける
+7. 保存する
+8. 最新レポート・履歴・ダッシュボードに反映される
+9. 今日やること候補が表示される
+10. 行動候補追加ボタンが表示される
+11. 売上集計には影響しない
+12. コンソールエラーなし
+13. 表示崩れなし
+
+### 検証結果
+
+| 項目 | 結果 |
+|------|------|
+| 公開 URL | https://teruya1229.github.io/budil/ |
+| Budil バージョン | v4.4.6 |
+| 保存 ID | `extchk-mqtb19j1amlq` |
+| 保存日時 | 2026-06-25 18:33 |
+| 確認対象 | GA4（BCサービス LP）/ Search Console（https://teruya1229.github.io/） |
+| 今日やること候補 | 3 件 |
+| 外部チェック履歴 | 1 件保存確認 |
+| ダッシュボード反映 | OK |
+| 売上集計影響 | なし（確定売上 0 円のまま） |
+| コンソールエラー | なし |
+
+### 設計判断（追記）
+
+- Cursor Browser Automation は Budil 公開 URL の実機確認だけでなく、GA4 / Search Console の読み取り補助にも使える
+- **Browser番頭** = 外部サービスを見る目
+- **Cursor Browser Automation** = その場の読み取り・検査員
+- **Budil** = 記録・判断・行動候補化する脳みそ
+- まずは API 連携より、Browser Automation / Browser番頭 / Playwright を使った半自動フローを優先する
+- Google API / OAuth / バックエンド連携は将来の本格ボタン化で検討する
+
+### 今後の自動化段階
+
+1. **ワンプロンプト化** — Cursor に GA4/SC 確認 → Budil 保存まで一括指示
+2. **Browser番頭への統合** — 専用 Chrome/CDP でログイン状態を維持、GA4/SC/GBP/Calendar を読み取り、`reports/*.md` 生成
+3. **ローカル 1 コマンド化** — PowerShell または bat で「アナリティクス番頭チェック開始」
+4. **Budil 本体ボタン化** — Google API / OAuth / バックエンド連携（将来検討）
+
+### 残課題（アナリティクス自動化）
+
+- GA4 の正確な日付範囲取得
+- Search Console の 28 日間切り替え取得
+- GA4/SC の URL 固定化
+- ログイン済み Chrome プロファイルの運用整理
+- Browser番頭と Cursor Browser Automation の役割分担整理
+- Budil への `.md` ファイル取り込み
+- 将来的な「アナリティクス番頭チェック」ワンコマンド化
+
 ## v4.4.1 実装内容（作業後確定・売上反映 安全検収）
 
 - v4.4作業後確定処理の安全検収（売上集計ルール維持）
