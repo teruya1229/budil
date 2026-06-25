@@ -95,6 +95,7 @@ const PaymentBrain = {
     if (status === 'paid') return total;
     if (status === 'partial') return Math.min(total, this.parseAmount(record && record.paidAmount));
     if (status === 'cancelled') return 0;
+    if (status === 'pending' || status === 'uncollected') return 0;
     if (record && record.paidAmount != null && record.paidAmount !== '') {
       return Math.min(total, this.parseAmount(record.paidAmount));
     }
@@ -111,10 +112,10 @@ const PaymentBrain = {
       if (unpaid > 0) return unpaid;
       return Math.max(0, total - this.getPaidAmount(record));
     }
+    if (status === 'pending' || status === 'uncollected') return total;
     if (record && record.unpaidAmount != null && record.unpaidAmount !== '') {
       return this.parseAmount(record.unpaidAmount);
     }
-    if (status === 'pending' || status === 'uncollected') return total;
     return Math.max(0, total - this.getPaidAmount(record));
   },
 
@@ -157,26 +158,69 @@ const PaymentBrain = {
     };
   },
 
-  applyMethodChange(current, method, total, date) {
-    const suggested = this.suggestDefaultsForMethod(method, total, date);
-    const next = { ...(current || {}) };
-    next.paymentMethod = method;
-    if (!next.paymentStatus || next.paymentStatus === 'pending' || next.paymentStatus === 'paid') {
-      if (!current || !current._userEditedPaymentStatus) {
-        next.paymentStatus = suggested.paymentStatus;
-      }
+  clampAmount(value, total) {
+    const max = Math.max(0, this.parseAmount(total));
+    return Math.min(max, Math.max(0, this.parseAmount(value)));
+  },
+
+  normalizePaymentAmounts(record, total, date) {
+    const src = record || {};
+    const amt = this.parseAmount(total);
+    const paymentStatus = this.migratePaymentStatus(src.paymentStatus, 'pending');
+    let paidDate = String(src.paidDate || '').trim();
+    let paidAmount = this.clampAmount(src.paidAmount, amt);
+
+    if (paymentStatus === 'paid') {
+      paidDate = paidDate || date || this.todayISO();
+      paidAmount = amt;
+      return { paymentStatus, paidDate, paidAmount, unpaidAmount: 0 };
     }
-    if (method === 'cash') {
-      if (!current || !current.expectedPaymentDate) next.expectedPaymentDate = suggested.expectedPaymentDate;
-      if (!current || !current.paidDate) next.paidDate = suggested.paidDate;
-      if (!current || current.paidAmount == null || current.paidAmount === '') next.paidAmount = suggested.paidAmount;
-      if (!current || current.unpaidAmount == null || current.unpaidAmount === '') next.unpaidAmount = suggested.unpaidAmount;
+
+    if (paymentStatus === 'partial') {
+      return {
+        paymentStatus,
+        paidDate,
+        paidAmount,
+        unpaidAmount: Math.max(0, amt - paidAmount)
+      };
+    }
+
+    if (paymentStatus === 'cancelled') {
+      return { paymentStatus, paidDate: '', paidAmount: 0, unpaidAmount: 0 };
+    }
+
+    return { paymentStatus, paidDate: '', paidAmount: 0, unpaidAmount: amt };
+  },
+
+  applyPaymentStatusDefaults(record, total, date) {
+    const next = { ...(record || {}) };
+    return { ...next, ...this.normalizePaymentAmounts(next, total, date) };
+  },
+
+  applyPaymentMethodDefaults(record, total, options) {
+    const opts = options || {};
+    const method = opts.method || (record && record.paymentMethod) || 'cash';
+    const next = { ...(record || {}), paymentMethod: method };
+    const currentStatus = this.migratePaymentStatus(next.paymentStatus, method === 'cash' ? 'paid' : 'pending');
+    const shouldUseMethodDefault = opts.forceStatusDefault === true
+      || !next.paymentStatus
+      || currentStatus === 'pending'
+      || currentStatus === 'paid';
+    if (shouldUseMethodDefault) {
+      next.paymentStatus = method === 'cash' ? 'paid' : 'pending';
     } else {
-      if (!current || !current.expectedPaymentDate) next.expectedPaymentDate = next.expectedPaymentDate || '';
-      if (!current || current.paidAmount == null || current.paidAmount === '') next.paidAmount = suggested.paidAmount;
-      if (!current || current.unpaidAmount == null || current.unpaidAmount === '') next.unpaidAmount = suggested.unpaidAmount;
+      next.paymentStatus = currentStatus;
     }
-    return next;
+    const normalized = this.normalizePaymentAmounts(next, total, opts.date || next.workDate || next.issueDate);
+    return { ...next, ...normalized };
+  },
+
+  applyMethodChange(current, method, total, date, options) {
+    return this.applyPaymentMethodDefaults({ ...(current || {}), paymentMethod: method }, total, {
+      ...(options || {}),
+      method,
+      date
+    });
   },
 
   normalizeRevenuePayment(raw, options) {
@@ -194,49 +238,19 @@ const PaymentBrain = {
       paymentStatus = 'paid';
     }
 
-    let paidAmount;
-    if (src.paidAmount != null && src.paidAmount !== '') {
-      paidAmount = Math.min(total, this.parseAmount(src.paidAmount));
-    } else if (paymentStatus === 'paid') {
-      paidAmount = total;
-    } else {
-      paidAmount = 0;
-    }
-
-    let unpaidAmount;
-    if (src.unpaidAmount != null && src.unpaidAmount !== '') {
-      unpaidAmount = this.parseAmount(src.unpaidAmount);
-    } else if (paymentStatus === 'paid') {
-      unpaidAmount = 0;
-    } else if (paymentStatus === 'partial') {
-      unpaidAmount = Math.max(0, total - paidAmount);
-    } else {
-      unpaidAmount = total;
-    }
-
-    if (paymentStatus === 'paid') {
-      paidAmount = total;
-      unpaidAmount = 0;
-    } else if (paymentStatus === 'partial') {
-      paidAmount = Math.min(total, paidAmount);
-      unpaidAmount = Math.max(0, total - paidAmount);
-    } else if (paymentStatus === 'cancelled') {
-      paidAmount = 0;
-      unpaidAmount = 0;
-    }
-
-    let paidDate = String(src.paidDate || '').trim();
-    if (paymentStatus === 'paid' && !paidDate && paymentMethod === 'cash') {
-      paidDate = src.workDate || opts.defaultDate || this.todayISO();
-    }
+    const amounts = this.normalizePaymentAmounts(
+      { ...src, paymentStatus },
+      total,
+      src.workDate || opts.defaultDate || this.todayISO()
+    );
 
     return {
       paymentMethod,
-      paymentStatus,
+      paymentStatus: amounts.paymentStatus,
       expectedPaymentDate: String(src.expectedPaymentDate || '').trim(),
-      paidDate,
-      paidAmount: this.parseAmount(paidAmount),
-      unpaidAmount: this.parseAmount(unpaidAmount),
+      paidDate: amounts.paidDate,
+      paidAmount: amounts.paidAmount,
+      unpaidAmount: amounts.unpaidAmount,
       paymentMemo: String(src.paymentMemo || '').trim(),
       linkedDocumentId: String(src.linkedDocumentId || '').trim(),
       linkedRevenueId: String(src.linkedRevenueId || '').trim()
@@ -259,41 +273,19 @@ const PaymentBrain = {
       paymentStatus = 'pending';
     }
 
-    let paidAmount = raw.paidAmount;
-    let unpaidAmount = raw.unpaidAmount;
-    if (paidAmount == null || paidAmount === '') {
-      paidAmount = paymentStatus === 'paid' ? total : 0;
-    } else {
-      paidAmount = Math.min(total, this.parseAmount(paidAmount));
-    }
-    if (unpaidAmount == null || unpaidAmount === '') {
-      unpaidAmount = paymentStatus === 'paid' ? 0 : Math.max(0, total - paidAmount);
-    } else {
-      unpaidAmount = this.parseAmount(unpaidAmount);
-    }
-    if (paymentStatus === 'paid') {
-      paidAmount = total;
-      unpaidAmount = 0;
-    } else if (paymentStatus === 'partial') {
-      paidAmount = Math.min(total, paidAmount);
-      unpaidAmount = Math.max(0, total - paidAmount);
-    } else if (paymentStatus === 'cancelled') {
-      paidAmount = 0;
-      unpaidAmount = 0;
-    }
-
-    let paidDate = String(raw.paidDate || '').trim();
-    if (paymentStatus === 'paid' && !paidDate && raw.status === 'paid') {
-      paidDate = issueDate;
-    }
+    const amounts = this.normalizePaymentAmounts(
+      { ...raw, paymentStatus },
+      total,
+      raw.paidDate || issueDate
+    );
 
     return {
       paymentMethod,
-      paymentStatus,
+      paymentStatus: amounts.paymentStatus,
       expectedPaymentDate: String(raw.expectedPaymentDate || '').trim(),
-      paidDate,
-      paidAmount: this.parseAmount(paidAmount),
-      unpaidAmount: this.parseAmount(unpaidAmount),
+      paidDate: amounts.paidDate,
+      paidAmount: amounts.paidAmount,
+      unpaidAmount: amounts.unpaidAmount,
       paymentMemo: String(raw.paymentMemo || '').trim(),
       linkedDocumentId: String(raw.linkedDocumentId || '').trim(),
       linkedRevenueId: String(raw.linkedRevenueId || '').trim()
@@ -313,7 +305,7 @@ const PaymentBrain = {
 
   buildPartialPatch(total, paidAmount) {
     const amt = this.parseAmount(total);
-    const paid = Math.min(amt, this.parseAmount(paidAmount));
+    const paid = this.clampAmount(paidAmount, amt);
     return {
       paymentStatus: 'partial',
       paidAmount: paid,

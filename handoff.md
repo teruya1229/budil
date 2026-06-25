@@ -16,10 +16,21 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.4.9.2 |
-| 最新commit | `66d6af3` |
+| 最新バージョン | v4.4.9.2.1 |
+| 最新commit | v4.4.9.2.1 修正コミット |
 | ブランチ | `main` push 済み |
-| GitHub Pages | 反映確認済み（v4.4.9.2） |
+| GitHub Pages | Cursor Browser Automationで確認予定（v4.4.9.2.1） |
+
+## v4.4.9.2.1で直したもの
+
+- 入金待ち切替時の未入金額補正
+- 現金以外の支払方法に変更した直後は「入金待ち」を自然な初期値として提案
+- 入金待ち時は `paidAmount=0` / `unpaidAmount=total` / `paidDate=""`
+- 入金済み時は `paidAmount=total` / `unpaidAmount=0`
+- 一部入金時は入金額を 0〜total に丸めて差額を未入金額に反映
+- 売上集計は入金状態で増減させない
+- 請求書側にも同じ補正を適用
+- linked同期・入金予定一覧の重複防止は維持
 
 ## v4.4.9.2で入ったもの
 

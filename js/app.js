@@ -3950,7 +3950,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.4.9.2</span>
+        <span class="business-report-version">v4.4.9.2.1</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -11647,32 +11647,23 @@
     set('revenue-payment-memo', r.paymentMemo);
   }
 
-  function suggestRevenuePaymentFromMethod(preserveUserInput) {
+  function suggestRevenuePaymentFromMethod(preserveUserInput, forceStatusDefault) {
     const amount = Number(document.getElementById('revenue-amount')?.value) || 0;
     const workDate = document.getElementById('revenue-work-date')?.value || TODAY();
     const method = document.getElementById('revenue-payment-method')?.value || 'cash';
     const current = preserveUserInput ? readRevenuePaymentFieldsFromForm() : {};
-    const next = PaymentBrain.applyMethodChange(current, method, amount, workDate);
-    if (!preserveUserInput || !current.paymentStatus) {
-      const statusEl = document.getElementById('revenue-payment-status');
-      if (statusEl) statusEl.value = next.paymentStatus;
-    }
-    if (!preserveUserInput || !current.expectedPaymentDate) {
-      const el = document.getElementById('revenue-expected-payment-date');
-      if (el && next.expectedPaymentDate != null) el.value = next.expectedPaymentDate;
-    }
-    if (!preserveUserInput || !current.paidDate) {
-      const el = document.getElementById('revenue-paid-date');
-      if (el && next.paidDate) el.value = next.paidDate;
-    }
-    if (!preserveUserInput || current.paidAmount == null || document.getElementById('revenue-paid-amount')?.value === '') {
-      const el = document.getElementById('revenue-paid-amount');
-      if (el) el.value = next.paidAmount != null ? next.paidAmount : '';
-    }
-    if (!preserveUserInput || current.unpaidAmount == null || document.getElementById('revenue-unpaid-amount')?.value === '') {
-      const el = document.getElementById('revenue-unpaid-amount');
-      if (el) el.value = next.unpaidAmount != null ? next.unpaidAmount : '';
-    }
+    const next = PaymentBrain.applyMethodChange(current, method, amount, workDate, {
+      forceStatusDefault: forceStatusDefault === true
+    });
+    writeRevenuePaymentFieldsToForm({ ...current, ...next, amount, workDate });
+  }
+
+  function applyRevenuePaymentStatusDefaults() {
+    const amount = Number(document.getElementById('revenue-amount')?.value) || 0;
+    const workDate = document.getElementById('revenue-work-date')?.value || TODAY();
+    const current = readRevenuePaymentFieldsFromForm();
+    const next = PaymentBrain.applyPaymentStatusDefaults(current, amount, workDate);
+    writeRevenuePaymentFieldsToForm({ ...current, ...next, amount, workDate });
   }
 
   function readDocumentPaymentFieldsFromForm() {
@@ -11727,26 +11718,27 @@
       });
   }
 
-  function suggestDocumentPaymentFromMethod(preserveUserInput) {
+  function suggestDocumentPaymentFromMethod(preserveUserInput, forceStatusDefault) {
     const items = readDocItemsFromForm();
     const taxSettings = readTaxSettingsFromForm();
     const calc = DocumentsBrain.calcFromItems(items, taxSettings);
     const issueDate = document.getElementById('doc-issue-date')?.value || TODAY();
     const method = document.getElementById('doc-payment-method')?.value || 'bank_transfer';
     const current = preserveUserInput ? readDocumentPaymentFieldsFromForm() : {};
-    const next = PaymentBrain.applyMethodChange(current, method, calc.total, issueDate);
-    if (!preserveUserInput || !current.paymentStatus) {
-      const statusEl = document.getElementById('doc-payment-status');
-      if (statusEl) statusEl.value = next.paymentStatus;
-    }
-    if (!preserveUserInput || !current.paidAmount == null) {
-      const paidEl = document.getElementById('doc-paid-amount');
-      if (paidEl && (paidEl.value === '' || !preserveUserInput)) paidEl.value = next.paidAmount || 0;
-    }
-    if (!preserveUserInput || document.getElementById('doc-unpaid-amount')?.value === '') {
-      const unpaidEl = document.getElementById('doc-unpaid-amount');
-      if (unpaidEl) unpaidEl.value = next.unpaidAmount != null ? next.unpaidAmount : '';
-    }
+    const next = PaymentBrain.applyMethodChange(current, method, calc.total, issueDate, {
+      forceStatusDefault: forceStatusDefault === true
+    });
+    writeDocumentPaymentFieldsToForm({ ...collectDocumentFormData(), ...current, ...next, total: calc.total, issueDate });
+  }
+
+  function applyDocumentPaymentStatusDefaults() {
+    const items = readDocItemsFromForm();
+    const taxSettings = readTaxSettingsFromForm();
+    const calc = DocumentsBrain.calcFromItems(items, taxSettings);
+    const issueDate = document.getElementById('doc-issue-date')?.value || TODAY();
+    const current = readDocumentPaymentFieldsFromForm();
+    const next = PaymentBrain.applyPaymentStatusDefaults(current, calc.total, issueDate);
+    writeDocumentPaymentFieldsToForm({ ...collectDocumentFormData(), ...current, ...next, total: calc.total, issueDate });
     updateDocPaymentStatusDisplay(collectDocumentFormData());
   }
 
@@ -11763,13 +11755,7 @@
       paymentMemo: data.paymentMemo,
       linkedDocumentId: data.linkedDocumentId || pendingLinkedDocumentId || ''
     }, { total: amount, defaultDate: data.workDate });
-    if (payment.paymentStatus === 'paid') {
-      Object.assign(payment, PaymentBrain.buildPaidPatch(amount, payment.paidDate || data.workDate || TODAY()));
-    } else if (payment.paymentStatus === 'partial') {
-      Object.assign(payment, PaymentBrain.buildPartialPatch(amount, payment.paidAmount));
-    } else if (payment.paymentStatus === 'cancelled') {
-      Object.assign(payment, PaymentBrain.buildCancelledPatch());
-    }
+    Object.assign(payment, PaymentBrain.applyPaymentStatusDefaults(payment, amount, payment.paidDate || data.workDate || TODAY()));
     return payment;
   }
 
@@ -12564,18 +12550,9 @@
     toggleRevenueOpenLeadButton();
     document.getElementById('revenue-form').addEventListener('submit', handleRevenueSubmit);
     document.getElementById('btn-revenue-cancel').addEventListener('click', resetRevenueForm);
-    document.getElementById('revenue-payment-method')?.addEventListener('change', () => suggestRevenuePaymentFromMethod(true));
-    document.getElementById('revenue-amount')?.addEventListener('change', () => suggestRevenuePaymentFromMethod(true));
-    document.getElementById('revenue-payment-status')?.addEventListener('change', () => {
-      const amount = Number(document.getElementById('revenue-amount')?.value) || 0;
-      const status = document.getElementById('revenue-payment-status')?.value;
-      const workDate = document.getElementById('revenue-work-date')?.value || TODAY();
-      let patch = {};
-      if (status === 'paid') patch = PaymentBrain.buildPaidPatch(amount, workDate);
-      else if (status === 'partial') patch = PaymentBrain.buildPartialPatch(amount, document.getElementById('revenue-paid-amount')?.value);
-      else if (status === 'cancelled') patch = PaymentBrain.buildCancelledPatch();
-      writeRevenuePaymentFieldsToForm({ ...readRevenuePaymentFieldsFromForm(), paymentStatus: status, ...patch, amount, workDate });
-    });
+    document.getElementById('revenue-payment-method')?.addEventListener('change', () => suggestRevenuePaymentFromMethod(true, true));
+    document.getElementById('revenue-amount')?.addEventListener('change', applyRevenuePaymentStatusDefaults);
+    document.getElementById('revenue-payment-status')?.addEventListener('change', applyRevenuePaymentStatusDefaults);
     document.getElementById('revenue-lead').addEventListener('change', () => {
       toggleRevenueLeadOptions();
       document.getElementById('revenue-mark-won').checked = false;
@@ -12964,13 +12941,7 @@
       total: data.total,
       defaultDate: data.issueDate
     });
-    if (payment.paymentStatus === 'paid') {
-      Object.assign(payment, PaymentBrain.buildPaidPatch(data.total, payment.paidDate || data.issueDate || TODAY()));
-    } else if (payment.paymentStatus === 'partial') {
-      Object.assign(payment, PaymentBrain.buildPartialPatch(data.total, payment.paidAmount));
-    } else if (payment.paymentStatus === 'cancelled') {
-      Object.assign(payment, PaymentBrain.buildCancelledPatch());
-    }
+    Object.assign(payment, PaymentBrain.applyPaymentStatusDefaults(payment, data.total, payment.paidDate || data.issueDate || TODAY()));
     return payment;
   }
 
@@ -13214,13 +13185,12 @@
       toggleDocPaymentFields(e.target.value);
       fillDocStatusOptions(e.target.value, 'draft');
     });
-    document.getElementById('doc-payment-method')?.addEventListener('change', () => suggestDocumentPaymentFromMethod(true));
+    document.getElementById('doc-payment-method')?.addEventListener('change', () => suggestDocumentPaymentFromMethod(true, true));
     document.getElementById('doc-payment-status')?.addEventListener('change', () => {
-      updateDocPaymentStatusDisplay(collectDocumentFormData());
-      suggestDocumentPaymentFromMethod(true);
+      applyDocumentPaymentStatusDefaults();
     });
     ['doc-issue-date', 'doc-paid-amount'].forEach(id => {
-      document.getElementById(id)?.addEventListener('change', () => updateDocPaymentStatusDisplay(collectDocumentFormData()));
+      document.getElementById(id)?.addEventListener('change', applyDocumentPaymentStatusDefaults);
     });
     fillDocTaxCategoryOptions('taxable10');
     renderDocumentsView();
