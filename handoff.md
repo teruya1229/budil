@@ -19,7 +19,7 @@
 | 最新バージョン | v4.4.9 |
 | 最新commit | `f587abf` |
 | ブランチ | `main` push 済み |
-| GitHub Pages | 反映確認予定（v4.4.9） |
+| GitHub Pages | 反映確認済み（v4.4.9） |
 
 ## v4.4.9で入ったもの
 
