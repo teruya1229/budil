@@ -1,5 +1,5 @@
 /**
- * Budil - Browser番頭 外部チェック貼り付け番頭
+ * Budil v4.4.8 - Browser番頭 外部チェック貼り付け番頭
  * 【Budil貼り付け用】ブロックを簡易パースして保存する。売上確定にはしない。
  */
 const ExternalCheckBrain = {
@@ -14,6 +14,7 @@ const ExternalCheckBrain = {
     { key: 'gbpSignals', heading: 'GBP反応' },
     { key: 'adAnomalies', heading: '広告異常' },
     { key: 'todayActions', heading: '今日やること候補' },
+    { key: 'noiseCandidates', heading: '注意・ノイズ候補' },
     { key: 'cautions', heading: '注意・未確認' }
   ],
 

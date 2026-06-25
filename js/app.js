@@ -3934,7 +3934,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.4.7</span>
+        <span class="business-report-version">v4.4.8</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -7110,6 +7110,29 @@
     return `<ul class="external-check-item-list">${list.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`;
   }
 
+  function renderExternalCheckSaveId(report) {
+    if (!report || !report.id) return '';
+    return `<p class="external-check-save-id">保存ID：${esc(report.id)}</p>`;
+  }
+
+  function renderExternalCheckNoiseSection(report, compact) {
+    if (!report) return '';
+    const s = report.summary || {};
+    const allNoise = (s.noiseCandidates || []).filter(i => i && i !== ExternalCheckBrain.UNCONFIRMED);
+    const displayNoise = compact ? ExternalCheckBrain.topItems(allNoise, 3) : allNoise;
+    const count = allNoise.length;
+
+    return `
+      <div class="external-check-noise-card">
+        <div class="external-check-noise-header">
+          <h3>注意・ノイズ候補</h3>
+          <span class="external-check-count-badge external-check-count-badge-noise">${count || 0}件</span>
+        </div>
+        ${count ? renderExternalCheckListItems(displayNoise) : `<p class="external-check-unconfirmed">${esc(ExternalCheckBrain.UNCONFIRMED)}</p>`}
+      </div>
+    `;
+  }
+
   function renderActionCandidateButtons(reportId, title) {
     if (!reportId || !title || typeof ActionBrain === 'undefined') return '';
     const candidates = Storage.getActionCandidates();
@@ -7168,7 +7191,7 @@
         </div>
         <ul class="external-check-today-action-list">${itemsHtml}</ul>
         ${compact && count > 3 ? `<p class="external-check-more-note">他 ${count - 3} 件 — 外部チェック画面で全件確認</p>` : ''}
-        <p class="external-check-not-sale">行動候補はやることであり、売上確定ではありません。</p>
+        <p class="external-check-not-sale">外部チェック由来の候補です。売上確定ではありません。</p>
       </div>
     `;
   }
@@ -7201,8 +7224,10 @@
           <p><strong>保存日時：</strong>${esc(ExternalCheckBrain.formatCreatedAt(report.createdAt))}</p>
           <p><strong>確認日：</strong>${esc(s.date || ExternalCheckBrain.UNCONFIRMED)}</p>
           <p><strong>確認対象：</strong>${esc(s.targets || ExternalCheckBrain.UNCONFIRMED)}</p>
+          ${renderExternalCheckSaveId(report)}
         </div>
         ${renderExternalCheckTodayActionsSection(report, true)}
+        ${renderExternalCheckNoiseSection(report, true)}
         ${renderExternalCheckCautionsSection(report, true)}
         <p class="external-check-not-sale">予定候補・GBP反応は売上確定ではありません。</p>
       `;
@@ -7218,9 +7243,11 @@
         <p><strong>確認日：</strong>${esc(s.date || ExternalCheckBrain.UNCONFIRMED)}</p>
         <p><strong>確認対象：</strong>${esc(s.targets || ExternalCheckBrain.UNCONFIRMED)}</p>
         <p><strong>ソース：</strong>${esc(report.source || 'browser-bantou')}</p>
+        ${renderExternalCheckSaveId(report)}
         ${linked.length ? `<p><strong>行動候補：</strong>${linked.filter(c => c.status !== 'done').length}件未対応 / ${linked.filter(c => c.status === 'done').length}件対応済み</p>` : ''}
       </div>
       ${renderExternalCheckTodayActionsSection(report, false)}
+      ${renderExternalCheckNoiseSection(report, false)}
       ${renderExternalCheckCautionsSection(report, false)}
       <div class="external-check-section-grid">
         <div class="external-check-section"><h3>予定候補</h3>${renderExternalCheckListItems(s.scheduleCandidates)}<p class="external-check-not-sale">作業予定候補であり売上確定ではありません。</p></div>
@@ -7452,6 +7479,7 @@
               <p><strong>保存日時：</strong>${esc(ExternalCheckBrain.formatCreatedAt(r.createdAt))}</p>
               <p><strong>確認日：</strong>${esc(s.date || ExternalCheckBrain.UNCONFIRMED)} / <strong>確認対象：</strong>${esc(s.targets || ExternalCheckBrain.UNCONFIRMED)}</p>
               <p><strong>今日やること候補：</strong>${actionCount}件</p>
+              ${renderExternalCheckSaveId(r)}
             </div>
             <div class="external-check-history-actions">
               <button type="button" class="btn btn-sm btn-secondary" data-extchk-toggle="${esc(r.id)}">詳細表示</button>

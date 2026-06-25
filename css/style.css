@@ -8090,7 +8090,8 @@ body.sales-page {
 }
 
 .external-check-today-actions-card,
-.external-check-cautions-card {
+.external-check-cautions-card,
+.external-check-noise-card {
   margin: 0.75rem 0;
   padding: 0.85rem;
   border-radius: 8px;
@@ -8108,8 +8109,14 @@ body.sales-page {
   background: rgba(245, 158, 11, 0.08);
 }
 
+.external-check-noise-card {
+  border-color: rgba(167, 139, 250, 0.45);
+  background: rgba(167, 139, 250, 0.08);
+}
+
 .external-check-today-actions-header,
 .external-check-cautions-header,
+.external-check-noise-header,
 .action-candidates-dash-header {
   display: flex;
   justify-content: space-between;
@@ -8119,7 +8126,8 @@ body.sales-page {
 }
 
 .external-check-today-actions-header h3,
-.external-check-cautions-header h3 {
+.external-check-cautions-header h3,
+.external-check-noise-header h3 {
   margin: 0;
   font-size: 1rem;
 }
@@ -8136,6 +8144,19 @@ body.sales-page {
 .external-check-count-badge-caution {
   background: rgba(245, 158, 11, 0.2);
   color: #fde68a;
+}
+
+.external-check-count-badge-noise {
+  background: rgba(167, 139, 250, 0.2);
+  color: #ddd6fe;
+}
+
+.external-check-save-id {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted, #94a3b8);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  word-break: break-all;
 }
 
 .external-check-today-action-list {
