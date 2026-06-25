@@ -116,7 +116,7 @@
 - 現在バージョン: v4.4.9.1
 - 最新commit: `03d135f`
 - main push 済み
-- GitHub Pages 反映確認予定（v4.4.9.1）
+- GitHub Pages 反映確認済み（v4.4.9.1 表示・税・端数設定）
 
 ## 2026-06-25 実機検証（Cursor Browser Automation × アナリティクス外部チェック）
 
