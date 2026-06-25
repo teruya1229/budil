@@ -3938,7 +3938,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.4.9</span>
+        <span class="business-report-version">v4.4.9.1</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -12409,56 +12409,96 @@
     const bankGroup = document.querySelector('.doc-bank-group');
     if (dueGroup) dueGroup.classList.toggle('hidden', !isInvoice);
     if (bankGroup) bankGroup.classList.toggle('hidden', !isInvoice);
-    const taxMode = document.getElementById('doc-tax-mode');
-    if (taxMode && !documentsFormDirty) {
-      taxMode.value = isInvoice ? 'taxIncluded' : 'taxExcluded';
-    }
+  }
+
+  function fillDocTaxCategoryOptions(selected) {
+    const sel = document.getElementById('doc-tax-category');
+    if (!sel) return;
+    sel.innerHTML = DocumentsBrain.TAX_CATEGORY_OPTIONS
+      .map(o => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('');
+    sel.value = selected || 'taxable10';
+  }
+
+  function readTaxSettingsFromForm() {
+    return DocumentsBrain.normalizeTaxSettings({
+      taxSettings: {
+        taxDisplayMode: document.getElementById('doc-tax-display-mode')?.value || 'taxExcluded',
+        taxCategory: document.getElementById('doc-tax-category')?.value || 'taxable10',
+        taxRounding: document.getElementById('doc-tax-rounding')?.value || 'floor',
+        lineRounding: document.getElementById('doc-line-rounding')?.value || 'floor',
+        showUnit: document.getElementById('doc-show-unit')?.checked === true,
+        showZeroTax: document.getElementById('doc-show-zero-tax')?.checked === true,
+        showTaxBreakdown: document.getElementById('doc-show-tax-breakdown')?.checked !== false
+      }
+    });
+  }
+
+  function fillTaxSettingsForm(taxSettings) {
+    const ts = DocumentsBrain.normalizeTaxSettings({ taxSettings });
+    fillDocTaxCategoryOptions(ts.taxCategory);
+    const set = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    };
+    set('doc-tax-display-mode', ts.taxDisplayMode);
+    set('doc-tax-rounding', ts.taxRounding);
+    set('doc-line-rounding', ts.lineRounding);
+    const showUnit = document.getElementById('doc-show-unit');
+    const showZeroTax = document.getElementById('doc-show-zero-tax');
+    const showBreakdown = document.getElementById('doc-show-tax-breakdown');
+    if (showUnit) showUnit.checked = ts.showUnit;
+    if (showZeroTax) showZeroTax.checked = ts.showZeroTax;
+    if (showBreakdown) showBreakdown.checked = ts.showTaxBreakdown;
+    const panel = document.getElementById('doc-tax-settings-panel');
+    if (panel && !documentsFormDirty) panel.open = false;
   }
 
   function readDocItemsFromForm() {
+    const showUnit = document.getElementById('doc-show-unit')?.checked === true;
     const rows = document.querySelectorAll('#doc-items-editor .doc-item-row');
-    return Array.from(rows).map(row => ({
-      date: row.querySelector('.doc-item-date')?.value || '',
-      name: row.querySelector('.doc-item-name')?.value.trim() || '',
-      unitPrice: Number(row.querySelector('.doc-item-unit')?.value) || 0,
-      quantity: Number(row.querySelector('.doc-item-qty')?.value) || 1,
-      amount: Number(row.querySelector('.doc-item-amount')?.value) || 0
-    }));
+    return Array.from(rows).map(row => {
+      const item = {
+        date: row.querySelector('.doc-item-date')?.value || '',
+        name: row.querySelector('.doc-item-name')?.value.trim() || '',
+        unitPrice: Number(row.querySelector('.doc-item-unit')?.value) || 0,
+        quantity: Number(row.querySelector('.doc-item-qty')?.value) || 1,
+        amount: Number(row.querySelector('.doc-item-amount')?.value) || 0
+      };
+      if (showUnit) item.unit = row.querySelector('.doc-item-unit-label')?.value.trim() || '';
+      return item;
+    });
   }
 
   function updateDocItemRowAmount(row) {
-    const type = document.getElementById('doc-type')?.value || 'invoice';
-    const taxMode = document.getElementById('doc-tax-mode')?.value || 'taxIncluded';
+    const ts = readTaxSettingsFromForm();
     const unit = Number(row.querySelector('.doc-item-unit')?.value) || 0;
     const qty = Number(row.querySelector('.doc-item-qty')?.value) || 1;
     const amountEl = row.querySelector('.doc-item-amount');
     if (!amountEl) return;
-    if (taxMode === 'taxExcluded') {
-      amountEl.value = Math.round(unit * qty);
-    } else {
-      amountEl.value = Math.round(unit * qty);
-    }
+    amountEl.value = DocumentsBrain.roundBySetting(unit * qty, ts.lineRounding);
     updateDocTaxPreview();
   }
 
   function updateDocTaxPreview() {
     const preview = document.getElementById('doc-tax-preview');
     if (!preview) return;
-    const taxMode = document.getElementById('doc-tax-mode')?.value || 'taxIncluded';
+    const ts = readTaxSettingsFromForm();
     const items = readDocItemsFromForm();
-    const calc = DocumentsBrain.calcFromItems(items, taxMode, DocumentsBrain.TAX_RATE);
-    const modeLabel = taxMode === 'taxIncluded' ? '税込入力' : '税抜入力';
-    preview.textContent = `${modeLabel} / 小計 ${DocumentsBrain.formatYen(calc.subtotal)} / 税 ${DocumentsBrain.formatYen(calc.tax)} / 合計 ${DocumentsBrain.formatYen(calc.total)}`;
+    const calc = DocumentsBrain.calcFromItems(items, ts);
+    const modeLabel = ts.taxDisplayMode === 'taxIncluded' ? '内税' : '外税';
+    const catLabel = DocumentsBrain.taxCategoryLabel(ts.taxCategory);
+    preview.textContent = `${modeLabel} / ${catLabel} / 小計 ${DocumentsBrain.formatYen(calc.subtotal)} / 税 ${DocumentsBrain.formatYen(calc.tax)} / 合計 ${DocumentsBrain.formatYen(calc.total)}`;
   }
 
-  function buildDocItemRow(item, showDate) {
+  function buildDocItemRow(item, showDate, showUnit) {
     const row = document.createElement('div');
-    row.className = 'doc-item-row';
+    row.className = 'doc-item-row' + (showUnit ? ' doc-item-row-with-unit' : '');
     row.innerHTML = `
       ${showDate ? '<input type="date" class="doc-item-date" value="' + esc(item.date || '') + '">' : '<input type="hidden" class="doc-item-date" value="">'}
       <input type="text" class="doc-item-name" placeholder="品目" value="${esc(item.name || '')}">
       <input type="number" class="doc-item-unit" min="0" step="1" placeholder="単価" value="${item.unitPrice != null ? item.unitPrice : ''}">
       <input type="number" class="doc-item-qty" min="0" step="1" placeholder="数量" value="${item.quantity != null ? item.quantity : 1}">
+      ${showUnit ? '<input type="text" class="doc-item-unit-label" placeholder="単位" value="' + esc(item.unit || '') + '">' : ''}
       <input type="number" class="doc-item-amount" min="0" step="1" placeholder="価格" value="${item.amount != null ? item.amount : ''}">
       <button type="button" class="btn btn-secondary btn-sm btn-remove-item" title="行削除">×</button>`;
     row.querySelectorAll('.doc-item-unit, .doc-item-qty').forEach(el => {
@@ -12478,11 +12518,18 @@
   function renderDocItemsEditor(items, type) {
     const editor = document.getElementById('doc-items-editor');
     if (!editor) return;
+    const showUnit = document.getElementById('doc-show-unit')?.checked === true;
     editor.innerHTML = '';
     const showDate = type === 'invoice';
     const list = (items && items.length) ? items : [{ name: '', unitPrice: 0, quantity: 1, amount: 0 }];
-    list.forEach(item => editor.appendChild(buildDocItemRow(item, showDate)));
+    list.forEach(item => editor.appendChild(buildDocItemRow(item, showDate, showUnit)));
     updateDocTaxPreview();
+  }
+
+  function onDocTaxSettingsChange() {
+    documentsFormDirty = true;
+    const type = document.getElementById('doc-type')?.value || 'invoice';
+    renderDocItemsEditor(readDocItemsFromForm(), type);
   }
 
   function resetDocumentsForm() {
@@ -12511,7 +12558,7 @@
     document.getElementById('doc-honorific').value = base.customerHonorific || '様';
     fillDocStatusOptions(base.type, base.status);
     document.getElementById('doc-title').value = base.title;
-    document.getElementById('doc-tax-mode').value = base.taxMode;
+    fillTaxSettingsForm(base.taxSettings);
     document.getElementById('doc-bank-info').value = base.bankInfo || '';
     document.getElementById('doc-note').value = base.note || '';
     toggleDocFormFields(base.type);
@@ -12521,9 +12568,9 @@
 
   function collectDocumentFormData() {
     const type = document.getElementById('doc-type').value;
-    const taxMode = document.getElementById('doc-tax-mode').value;
+    const taxSettings = readTaxSettingsFromForm();
     const items = readDocItemsFromForm();
-    const calc = DocumentsBrain.calcFromItems(items, taxMode, DocumentsBrain.TAX_RATE);
+    const calc = DocumentsBrain.calcFromItems(items, taxSettings);
     return DocumentsBrain.normalizeDocument({
       id: document.getElementById('doc-edit-id').value,
       type,
@@ -12538,8 +12585,7 @@
       subtotal: calc.subtotal,
       tax: calc.tax,
       total: calc.total,
-      taxMode,
-      taxRate: DocumentsBrain.TAX_RATE,
+      taxSettings: calc.taxSettings,
       note: document.getElementById('doc-note').value.trim(),
       bankInfo: document.getElementById('doc-bank-info').value.trim(),
       issuer: DocumentsBrain.defaultIssuer()
@@ -12751,20 +12797,29 @@
     document.getElementById('btn-doc-reflect-revenue')?.addEventListener('click', reflectDocumentToRevenue);
     document.getElementById('btn-doc-add-item')?.addEventListener('click', () => {
       const type = document.getElementById('doc-type')?.value || 'invoice';
+      const showUnit = document.getElementById('doc-show-unit')?.checked === true;
       const editor = document.getElementById('doc-items-editor');
-      if (editor) editor.appendChild(buildDocItemRow({ date: TODAY(), name: '', unitPrice: 0, quantity: 1, amount: 0 }, type === 'invoice'));
+      if (editor) {
+        editor.appendChild(buildDocItemRow(
+          { date: TODAY(), name: '', unitPrice: 0, quantity: 1, amount: 0, unit: '' },
+          type === 'invoice',
+          showUnit
+        ));
+      }
       updateDocTaxPreview();
     });
     document.getElementById('documents-form')?.addEventListener('submit', handleDocumentSubmit);
-    document.getElementById('doc-tax-mode')?.addEventListener('change', () => {
-      documentsFormDirty = true;
-      document.querySelectorAll('#doc-items-editor .doc-item-row').forEach(updateDocItemRowAmount);
-      updateDocTaxPreview();
+    ['doc-tax-display-mode', 'doc-tax-category', 'doc-tax-rounding', 'doc-line-rounding'].forEach(id => {
+      document.getElementById(id)?.addEventListener('change', onDocTaxSettingsChange);
+    });
+    ['doc-show-unit', 'doc-show-zero-tax', 'doc-show-tax-breakdown'].forEach(id => {
+      document.getElementById(id)?.addEventListener('change', onDocTaxSettingsChange);
     });
     document.getElementById('doc-type')?.addEventListener('change', (e) => {
       toggleDocFormFields(e.target.value);
       fillDocStatusOptions(e.target.value, 'draft');
     });
+    fillDocTaxCategoryOptions('taxable10');
     renderDocumentsView();
   }
 

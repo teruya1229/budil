@@ -8368,7 +8368,7 @@ body.sales-page {
   margin-bottom: 0.75rem;
 }
 
-/* ── 請求書・見積書 v4.4.9 ── */
+/* ── 請求書・見積書 v4.4.9.1 ── */
 .doc-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -8477,6 +8477,63 @@ body.sales-page {
 
 .doc-item-row .btn-remove-item {
   align-self: center;
+}
+
+.doc-item-row-with-unit {
+  grid-template-columns: 7rem 1fr 5.5rem 3.5rem 4rem 5.5rem auto;
+}
+
+.doc-tax-settings-details {
+  margin: 1rem 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.doc-tax-settings-summary {
+  padding: 0.55rem 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.92rem;
+  list-style: none;
+}
+
+.doc-tax-settings-summary::-webkit-details-marker {
+  display: none;
+}
+
+.doc-tax-settings-summary::before {
+  content: '▶ ';
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.doc-tax-settings-details[open] .doc-tax-settings-summary::before {
+  content: '▼ ';
+}
+
+.doc-tax-settings-body {
+  padding: 0 0.75rem 0.75rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.doc-tax-settings-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.doc-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.doc-col-unit {
+  width: 3.5rem;
 }
 
 .doc-tax-preview {

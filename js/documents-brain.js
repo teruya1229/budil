@@ -1,10 +1,37 @@
 /**
- * Budil v4.4.9 - 請求書・見積書
+ * Budil v4.4.9.1 - 請求書・見積書（税・端数設定）
  * localStorage: budil_documents
  */
 const DocumentsBrain = {
   SEAL_IMAGE: 'assets/bc-service-seal.jpg',
   TAX_RATE: 10,
+
+  DEFAULT_TAX_SETTINGS: {
+    taxDisplayMode: 'taxExcluded',
+    taxRate: 10,
+    taxCategory: 'taxable10',
+    taxRounding: 'floor',
+    lineRounding: 'floor',
+    showUnit: false,
+    showZeroTax: false,
+    showTaxBreakdown: true
+  },
+
+  TAX_CATEGORY_OPTIONS: [
+    { value: 'taxable10', label: '10%', rate: 10 },
+    { value: 'reduced8', label: '8%（軽減税率）', rate: 8 },
+    { value: 'taxable8', label: '8%', rate: 8 },
+    { value: 'taxable5', label: '5%', rate: 5 },
+    { value: 'exempt', label: '免税', rate: 0 },
+    { value: 'nonTaxable', label: '非課税', rate: 0 },
+    { value: 'outOfScope', label: '不課税', rate: 0 }
+  ],
+
+  ROUNDING_OPTIONS: [
+    { value: 'floor', label: '切り捨て' },
+    { value: 'ceil', label: '切り上げ' },
+    { value: 'round', label: '四捨五入' }
+  ],
 
   INVOICE_STATUSES: [
     { value: 'draft', label: '下書き' },
@@ -45,8 +72,68 @@ const DocumentsBrain = {
     title: '中部支店エアコン取付工事',
     itemName: 'エアコン取外し・処分・取付(標準工事)',
     quantity: 1,
-    unitPrice: 11819,
+    unitPrice: 27000,
     note: '標準工事には、配管・電線・ドレンホース4mまで、室外機の地面置きまたはベランダ置きが含まれます。\n現地で4mを超える場合は、配管延長として1mごとに＋4,000円追加となります。'
+  },
+
+  roundBySetting(value, mode) {
+    const n = Number(value) || 0;
+    if (mode === 'ceil') return Math.ceil(n);
+    if (mode === 'round') return Math.round(n);
+    return Math.floor(n);
+  },
+
+  getTaxRateFromCategory(category) {
+    const hit = this.TAX_CATEGORY_OPTIONS.find(o => o.value === category);
+    return hit ? hit.rate : 10;
+  },
+
+  taxCategoryLabel(category) {
+    const hit = this.TAX_CATEGORY_OPTIONS.find(o => o.value === category);
+    return hit ? hit.label : String(category || '');
+  },
+
+  defaultTaxSettings() {
+    return { ...this.DEFAULT_TAX_SETTINGS };
+  },
+
+  normalizeTaxSettings(raw, legacyTaxMode) {
+    const base = this.defaultTaxSettings();
+    const src = raw && typeof raw === 'object' ? raw : {};
+    const fromSettings = src.taxSettings && typeof src.taxSettings === 'object' ? src.taxSettings : {};
+
+    let taxDisplayMode = fromSettings.taxDisplayMode;
+    if (taxDisplayMode !== 'taxIncluded' && taxDisplayMode !== 'taxExcluded') {
+      const mode = legacyTaxMode || src.taxMode;
+      if (mode === 'taxIncluded') taxDisplayMode = 'taxIncluded';
+      else if (mode === 'taxExcluded') taxDisplayMode = 'taxExcluded';
+      else taxDisplayMode = base.taxDisplayMode;
+    }
+
+    const taxCategory = this.TAX_CATEGORY_OPTIONS.some(o => o.value === fromSettings.taxCategory)
+      ? fromSettings.taxCategory
+      : (Number(src.taxRate) === 8 ? 'taxable8'
+        : Number(src.taxRate) === 5 ? 'taxable5'
+          : Number(src.taxRate) === 0 ? 'exempt'
+            : base.taxCategory);
+
+    const taxRounding = ['floor', 'ceil', 'round'].includes(fromSettings.taxRounding)
+      ? fromSettings.taxRounding : base.taxRounding;
+    const lineRounding = ['floor', 'ceil', 'round'].includes(fromSettings.lineRounding)
+      ? fromSettings.lineRounding : base.lineRounding;
+
+    const taxRate = this.getTaxRateFromCategory(taxCategory);
+
+    return {
+      taxDisplayMode,
+      taxRate,
+      taxCategory,
+      taxRounding,
+      lineRounding,
+      showUnit: fromSettings.showUnit === true,
+      showZeroTax: fromSettings.showZeroTax === true,
+      showTaxBreakdown: fromSettings.showTaxBreakdown !== false
+    };
   },
 
   formatYen(n) {
@@ -97,37 +184,63 @@ const DocumentsBrain = {
     return type === 'invoice' ? '請求書' : '見積書';
   },
 
-  normalizeItem(raw, taxMode, taxRate) {
+  normalizeItem(raw, lineRounding, showUnit) {
     const item = raw && typeof raw === 'object' ? { ...raw } : {};
     const quantity = Math.max(0, this.parseAmount(item.quantity) || 1);
     const unitPrice = this.parseAmount(item.unitPrice);
+    const mode = lineRounding || 'floor';
     let amount = this.parseAmount(item.amount);
-    if (!amount && unitPrice) amount = Math.round(unitPrice * quantity);
-    return {
+    if (!amount && unitPrice) {
+      amount = this.roundBySetting(unitPrice * quantity, mode);
+    }
+    const normalized = {
       date: item.date || '',
       name: String(item.name || '').trim(),
       unitPrice,
       quantity,
       amount
     };
+    if (showUnit) normalized.unit = String(item.unit || '').trim();
+    return normalized;
   },
 
-  calcFromItems(items, taxMode, taxRate) {
-    const rate = Number(taxRate) || this.TAX_RATE;
-    const normalized = (items || []).map(it => this.normalizeItem(it, taxMode, rate));
-    const itemsSubtotal = normalized.reduce((sum, it) => sum + it.amount, 0);
+  calcFromItems(items, taxSettings) {
+    const ts = this.normalizeTaxSettings({ taxSettings });
+    const rate = ts.taxRate;
+    const normalized = (items || []).map(it => this.normalizeItem(it, ts.lineRounding, ts.showUnit));
+    const itemsSum = normalized.reduce((sum, it) => sum + it.amount, 0);
 
-    if (taxMode === 'taxExcluded') {
-      const subtotal = itemsSubtotal;
-      const tax = Math.round(subtotal * rate / 100);
+    if (ts.taxDisplayMode === 'taxExcluded') {
+      const subtotal = itemsSum;
+      const tax = rate > 0
+        ? this.roundBySetting(subtotal * rate / 100, ts.taxRounding)
+        : 0;
       const total = subtotal + tax;
-      return { items: normalized, subtotal, tax, total, taxExcluded: subtotal, taxIncluded: total };
+      return {
+        items: normalized,
+        subtotal,
+        tax,
+        total,
+        taxExcluded: subtotal,
+        taxIncluded: total,
+        taxSettings: ts
+      };
     }
 
-    const total = itemsSubtotal;
-    const taxExcluded = Math.round(total / (1 + rate / 100));
-    const tax = total - taxExcluded;
-    return { items: normalized, subtotal: taxExcluded, tax, total, taxExcluded, taxIncluded: total };
+    const total = itemsSum;
+    const tax = rate > 0
+      ? this.roundBySetting(total * rate / (100 + rate), ts.taxRounding)
+      : 0;
+    const taxExcluded = total - tax;
+    return {
+      items: normalized,
+      subtotal: taxExcluded,
+      tax,
+      total,
+      taxExcluded,
+      taxIncluded: total,
+      taxSettings: ts
+    };
   },
 
   suggestNumber(documents, type) {
@@ -147,18 +260,15 @@ const DocumentsBrain = {
     const today = this.todayISO();
     const isInvoice = type === 'invoice';
     const defs = isInvoice ? this.INVOICE_DEFAULTS : this.ESTIMATE_DEFAULTS;
-    const taxMode = isInvoice ? 'taxIncluded' : 'taxExcluded';
-    const unitPrice = defs.unitPrice;
-    const quantity = defs.quantity;
-    const amount = isInvoice ? unitPrice : Math.round(unitPrice * quantity);
+    const taxSettings = this.defaultTaxSettings();
     const items = [{
-      date: today,
+      date: isInvoice ? today : '',
       name: defs.itemName,
-      unitPrice: isInvoice ? unitPrice : unitPrice,
-      quantity,
-      amount: isInvoice ? unitPrice : amount
+      unitPrice: defs.unitPrice,
+      quantity: defs.quantity,
+      amount: this.roundBySetting(defs.unitPrice * defs.quantity, taxSettings.lineRounding)
     }];
-    const calc = this.calcFromItems(items, taxMode, this.TAX_RATE);
+    const calc = this.calcFromItems(items, taxSettings);
     return {
       id: '',
       type,
@@ -173,8 +283,9 @@ const DocumentsBrain = {
       subtotal: calc.subtotal,
       tax: calc.tax,
       total: calc.total,
-      taxMode,
-      taxRate: this.TAX_RATE,
+      taxSettings: calc.taxSettings,
+      taxMode: 'taxExcluded',
+      taxRate: calc.taxSettings.taxRate,
       note: defs.note,
       bankInfo: isInvoice ? this.DEFAULT_BANK_INFO : '',
       issuer: this.defaultIssuer(),
@@ -186,11 +297,11 @@ const DocumentsBrain = {
   normalizeDocument(raw) {
     const doc = raw && typeof raw === 'object' ? { ...raw } : {};
     const type = doc.type === 'estimate' ? 'estimate' : 'invoice';
-    const taxMode = doc.taxMode === 'taxExcluded' ? 'taxExcluded' : 'taxIncluded';
-    const taxRate = Number(doc.taxRate) || this.TAX_RATE;
-    const calc = this.calcFromItems(doc.items || [], taxMode, taxRate);
+    const taxSettings = this.normalizeTaxSettings(doc, doc.taxMode);
+    const calc = this.calcFromItems(doc.items || [], taxSettings);
     const issuer = { ...this.defaultIssuer(), ...(doc.issuer || {}) };
     issuer.sealImage = issuer.sealImage || this.SEAL_IMAGE;
+    const taxMode = taxSettings.taxDisplayMode === 'taxIncluded' ? 'taxIncluded' : 'taxExcluded';
     return {
       id: doc.id || '',
       type,
@@ -205,8 +316,9 @@ const DocumentsBrain = {
       subtotal: calc.subtotal,
       tax: calc.tax,
       total: calc.total,
+      taxSettings: calc.taxSettings,
       taxMode,
-      taxRate,
+      taxRate: calc.taxSettings.taxRate,
       note: String(doc.note || '').trim(),
       bankInfo: String(doc.bankInfo || (type === 'invoice' ? this.DEFAULT_BANK_INFO : '')).trim(),
       issuer,
@@ -237,22 +349,32 @@ const DocumentsBrain = {
       .replace(/\n/g, '<br>');
   },
 
+  taxDisplayNote(ts) {
+    const cat = this.taxCategoryLabel(ts.taxCategory);
+    const mode = ts.taxDisplayMode === 'taxIncluded' ? '内税' : '外税';
+    if (ts.taxRate === 0) return `（${mode}・${cat}）`;
+    return `（${mode}・${ts.taxRate}%・${cat}）`;
+  },
+
   renderDocumentSheet(doc, escFn) {
     const esc = escFn || (s => String(s || ''));
     const d = this.normalizeDocument(doc);
+    const ts = d.taxSettings;
     const isInvoice = d.type === 'invoice';
     const title = isInvoice ? '請求書' : '見積書';
     const amountLabel = isInvoice ? 'ご請求金額' : '御見積金額';
-    const taxModeNote = d.taxMode === 'taxIncluded'
-      ? '（税込入力・10%）'
-      : '（税抜入力・10%）';
+    const taxModeNote = this.taxDisplayNote(ts);
+    const showUnit = ts.showUnit;
+    const showTaxRow = ts.showZeroTax || d.tax > 0;
 
+    const unitHeader = showUnit ? '<th class="doc-col-unit">単位</th>' : '';
     const itemRows = d.items.map(it => `
       <tr>
-        <td class="doc-col-date">${esc(it.date || '')}</td>
+        ${isInvoice ? `<td class="doc-col-date">${esc(it.date || '')}</td>` : ''}
         <td class="doc-col-name">${esc(it.name)}</td>
         <td class="doc-col-price num">${esc(this.formatYen(it.unitPrice))}</td>
         <td class="doc-col-qty num">${esc(it.quantity)}</td>
+        ${showUnit ? `<td class="doc-col-unit">${esc(it.unit || '')}</td>` : ''}
         <td class="doc-col-amount num">${esc(this.formatYen(it.amount))}</td>
       </tr>`).join('');
 
@@ -275,9 +397,12 @@ const DocumentsBrain = {
       <div class="doc-meta-row"><span class="doc-meta-label">発行日</span><span class="doc-meta-value">${esc(d.issueDate)}</span></div>
       <div class="doc-meta-row"><span class="doc-meta-label">件名</span><span class="doc-meta-value">${esc(d.title)}</span></div>`;
 
-    const taxBreakdown = isInvoice ? `
+    let taxBreakdown = '';
+    if (ts.showTaxBreakdown) {
+      if (ts.taxDisplayMode === 'taxIncluded') {
+        taxBreakdown = `
       <div class="doc-tax-breakdown">
-        <h3 class="doc-section-title">税率別内訳（${d.taxRate}%）</h3>
+        <h3 class="doc-section-title">税率別内訳（${ts.taxRate > 0 ? ts.taxRate + '%' : this.taxCategoryLabel(ts.taxCategory)}）</h3>
         <table class="doc-table doc-table-compact">
           <thead><tr><th>税抜金額</th><th>消費税額</th><th>税込金額</th></tr></thead>
           <tbody><tr>
@@ -286,18 +411,23 @@ const DocumentsBrain = {
             <td class="num">${esc(this.formatYen(d.total))}</td>
           </tr></tbody>
         </table>
-      </div>` : `
+      </div>`;
+      } else {
+        const rateLabel = ts.taxRate > 0 ? `${ts.taxRate}%対象` : this.taxCategoryLabel(ts.taxCategory);
+        taxBreakdown = `
       <div class="doc-tax-breakdown">
-        <h3 class="doc-section-title">内訳 ${taxModeNote}</h3>
+        <h3 class="doc-section-title">内訳 ${rateLabel}</h3>
         <table class="doc-table doc-table-compact">
-          <thead><tr><th>小計（税抜）</th><th>消費税（${d.taxRate}%）</th><th>合計（税込）</th></tr></thead>
+          <thead><tr><th>小計（税抜）</th>${showTaxRow ? '<th>消費税</th>' : ''}<th>合計（税込）</th></tr></thead>
           <tbody><tr>
             <td class="num">${esc(this.formatYen(d.subtotal))}</td>
-            <td class="num">${esc(this.formatYen(d.tax))}</td>
+            ${showTaxRow ? `<td class="num">${esc(this.formatYen(d.tax))}</td>` : ''}
             <td class="num">${esc(this.formatYen(d.total))}</td>
           </tr></tbody>
         </table>
       </div>`;
+      }
+    }
 
     const bankBlock = isInvoice && d.bankInfo ? `
       <div class="doc-bank">
@@ -312,6 +442,23 @@ const DocumentsBrain = {
       </div>` : '';
 
     const dateHeader = isInvoice ? '<th class="doc-col-date">納品日</th>' : '';
+
+    let totalsBlock;
+    if (ts.taxDisplayMode === 'taxIncluded') {
+      totalsBlock = `
+        <div class="doc-totals">
+          <div class="doc-totals-row"><span>小計</span><span class="num">${esc(this.formatYen(d.subtotal))}</span></div>
+          ${showTaxRow ? `<div class="doc-totals-row"><span>うち消費税額合計</span><span class="num">${esc(this.formatYen(d.tax))}</span></div>` : ''}
+          <div class="doc-totals-row doc-totals-grand"><span>合計</span><span class="num">${esc(this.formatYen(d.total))}</span></div>
+        </div>`;
+    } else {
+      totalsBlock = `
+        <div class="doc-totals">
+          <div class="doc-totals-row"><span>小計</span><span class="num">${esc(this.formatYen(d.subtotal))}</span></div>
+          ${showTaxRow ? `<div class="doc-totals-row"><span>消費税</span><span class="num">${esc(this.formatYen(d.tax))}</span></div>` : ''}
+          <div class="doc-totals-row doc-totals-grand"><span>合計</span><span class="num">${esc(this.formatYen(d.total))}</span></div>
+        </div>`;
+    }
 
     return `
       <div class="doc-sheet" data-doc-id="${esc(d.id)}">
@@ -340,16 +487,13 @@ const DocumentsBrain = {
               <th class="doc-col-name">品目</th>
               <th class="doc-col-price">単価</th>
               <th class="doc-col-qty">数量</th>
+              ${unitHeader}
               <th class="doc-col-amount">価格</th>
             </tr>
           </thead>
           <tbody>${itemRows}</tbody>
         </table>
-        <div class="doc-totals">
-          <div class="doc-totals-row"><span>小計</span><span class="num">${esc(this.formatYen(d.subtotal))}</span></div>
-          <div class="doc-totals-row"><span>うち消費税額合計</span><span class="num">${esc(this.formatYen(d.tax))}</span></div>
-          <div class="doc-totals-row doc-totals-grand"><span>合計</span><span class="num">${esc(this.formatYen(d.total))}</span></div>
-        </div>
+        ${totalsBlock}
         ${taxBreakdown}
         ${bankBlock}
         ${noteBlock}
@@ -360,16 +504,6 @@ const DocumentsBrain = {
     const src = this.normalizeDocument(estimate);
     if (src.type !== 'estimate') return null;
     const today = this.todayISO();
-    const rate = src.taxRate || this.TAX_RATE;
-    const items = src.items.map(it => {
-      if (src.taxMode === 'taxExcluded') {
-        const unitPrice = Math.round(it.unitPrice * (1 + rate / 100));
-        const amount = Math.round(it.amount * (1 + rate / 100));
-        return { ...it, unitPrice, amount };
-      }
-      return { ...it };
-    });
-    const calc = this.calcFromItems(items, 'taxIncluded', rate);
     return {
       ...src,
       id: '',
@@ -378,12 +512,8 @@ const DocumentsBrain = {
       issueDate: today,
       dueDate: this.defaultDueDate(today),
       status: 'draft',
-      taxMode: 'taxIncluded',
-      items: calc.items,
-      subtotal: calc.subtotal,
-      tax: calc.tax,
-      total: calc.total,
       bankInfo: this.DEFAULT_BANK_INFO,
+      taxSettings: { ...src.taxSettings },
       sourceEstimateId: src.id,
       createdAt: '',
       updatedAt: ''

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.4.9">
+  <link rel="stylesheet" href="css/style.css?v=4.4.9.1">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.4.9</small>
+          <small>AI経営脳みそ v4.4.9.1</small>
         </div>
       </div>
       <nav class="nav">
@@ -159,7 +159,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.4.9</small>
+        <small>Budil v4.4.9.1</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -181,7 +181,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">毎朝5分で、今日やること・売上・利益・需要・受付・作業予定を確認</p>
             </div>
-            <span class="exec-home-version">v4.4.9</span>
+            <span class="exec-home-version">v4.4.9.1</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <div id="exec-home-start-guide" class="exec-home-start-guide hidden"></div>
@@ -403,7 +403,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.4.9</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.4.9.1</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -2028,23 +2028,56 @@
               <label for="doc-title">件名</label>
               <input type="text" id="doc-title" placeholder="例: エアコンクリーニング">
             </div>
-            <div class="form-row form-row-2">
-              <div class="form-group">
-                <label for="doc-tax-mode">税入力方式</label>
-                <select id="doc-tax-mode">
-                  <option value="taxIncluded">税込入力（請求書向け）</option>
-                  <option value="taxExcluded">税抜入力（見積書向け）</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>税計算プレビュー</label>
-                <div id="doc-tax-preview" class="doc-tax-preview">—</div>
-              </div>
+            <div class="form-group">
+              <label>税計算プレビュー</label>
+              <div id="doc-tax-preview" class="doc-tax-preview">—</div>
             </div>
 
             <h3 class="doc-form-subtitle">明細</h3>
             <div id="doc-items-editor" class="doc-items-editor"></div>
             <button type="button" class="btn btn-secondary btn-sm" id="btn-doc-add-item">行を追加</button>
+
+            <details class="doc-tax-settings-details" id="doc-tax-settings-panel">
+              <summary class="doc-tax-settings-summary">税・端数設定</summary>
+              <div class="doc-tax-settings-body">
+                <div class="form-row form-row-2">
+                  <div class="form-group">
+                    <label for="doc-tax-display-mode">消費税の表示方式</label>
+                    <select id="doc-tax-display-mode">
+                      <option value="taxExcluded">外税</option>
+                      <option value="taxIncluded">内税</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="doc-tax-category">消費税率</label>
+                    <select id="doc-tax-category"></select>
+                  </div>
+                </div>
+                <div class="form-row form-row-2">
+                  <div class="form-group">
+                    <label for="doc-tax-rounding">消費税の端数処理</label>
+                    <select id="doc-tax-rounding">
+                      <option value="floor">切り捨て</option>
+                      <option value="ceil">切り上げ</option>
+                      <option value="round">四捨五入</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="doc-line-rounding">明細行ごとの端数処理</label>
+                    <select id="doc-line-rounding">
+                      <option value="floor">切り捨て</option>
+                      <option value="ceil">切り上げ</option>
+                      <option value="round">四捨五入</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-row form-row-2 doc-tax-settings-checks">
+                  <label class="doc-checkbox-label"><input type="checkbox" id="doc-show-unit"> 単位欄を使用する</label>
+                  <label class="doc-checkbox-label"><input type="checkbox" id="doc-show-zero-tax"> 消費税0円の場合も消費税欄を表示する</label>
+                  <label class="doc-checkbox-label"><input type="checkbox" id="doc-show-tax-breakdown" checked> 消費税の内訳欄を表示する</label>
+                </div>
+              </div>
+            </details>
 
             <div class="form-group doc-bank-group">
               <label for="doc-bank-info">振込先（請求書のみ）</label>
@@ -3011,29 +3044,29 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.4.9"></script>
-  <script src="js/messages.js?v=4.4.9"></script>
-  <script src="js/demand-brain.js?v=4.4.9"></script>
-  <script src="js/demand-radar.js?v=4.4.9"></script>
-  <script src="js/sales-brain.js?v=4.4.9"></script>
-  <script src="js/management-brain.js?v=4.4.9"></script>
-  <script src="js/revenue-brain.js?v=4.4.9"></script>
-  <script src="js/revenue-summary-brain.js?v=4.4.9"></script>
-  <script src="js/reception-brain.js?v=4.4.9"></script>
-  <script src="js/map-brain.js?v=4.4.9"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.4.9"></script>
-  <script src="js/external-check-brain.js?v=4.4.9"></script>
-  <script src="js/action-brain.js?v=4.4.9"></script>
-  <script src="js/work-order-brain.js?v=4.4.9"></script>
-  <script src="js/follow-up-brain.js?v=4.4.9"></script>
-  <script src="js/work-completion-brain.js?v=4.4.9"></script>
-  <script src="js/profit-brain.js?v=4.4.9"></script>
-  <script src="js/analytics-brain.js?v=4.4.9"></script>
-  <script src="js/monthly-results-brain.js?v=4.4.9"></script>
-  <script src="js/documents-brain.js?v=4.4.9"></script>
-  <script src="js/executive-brain.js?v=4.4.9"></script>
-  <script src="js/card-ocr.js?v=4.4.9"></script>
-  <script src="js/data-backup.js?v=4.4.9"></script>
-  <script src="js/app.js?v=4.4.9"></script>
+  <script src="js/storage.js?v=4.4.9.1"></script>
+  <script src="js/messages.js?v=4.4.9.1"></script>
+  <script src="js/demand-brain.js?v=4.4.9.1"></script>
+  <script src="js/demand-radar.js?v=4.4.9.1"></script>
+  <script src="js/sales-brain.js?v=4.4.9.1"></script>
+  <script src="js/management-brain.js?v=4.4.9.1"></script>
+  <script src="js/revenue-brain.js?v=4.4.9.1"></script>
+  <script src="js/revenue-summary-brain.js?v=4.4.9.1"></script>
+  <script src="js/reception-brain.js?v=4.4.9.1"></script>
+  <script src="js/map-brain.js?v=4.4.9.1"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.4.9.1"></script>
+  <script src="js/external-check-brain.js?v=4.4.9.1"></script>
+  <script src="js/action-brain.js?v=4.4.9.1"></script>
+  <script src="js/work-order-brain.js?v=4.4.9.1"></script>
+  <script src="js/follow-up-brain.js?v=4.4.9.1"></script>
+  <script src="js/work-completion-brain.js?v=4.4.9.1"></script>
+  <script src="js/profit-brain.js?v=4.4.9.1"></script>
+  <script src="js/analytics-brain.js?v=4.4.9.1"></script>
+  <script src="js/monthly-results-brain.js?v=4.4.9.1"></script>
+  <script src="js/documents-brain.js?v=4.4.9.1"></script>
+  <script src="js/executive-brain.js?v=4.4.9.1"></script>
+  <script src="js/card-ocr.js?v=4.4.9.1"></script>
+  <script src="js/data-backup.js?v=4.4.9.1"></script>
+  <script src="js/app.js?v=4.4.9.1"></script>
 </body>
 </html>
