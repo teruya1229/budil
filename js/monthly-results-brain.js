@@ -1,5 +1,5 @@
 /**
- * Budil v4.4.6 - 月次実績（過去月まとめ入力）
+ * Budil v4.4.7 - 月次実績（過去月まとめ入力）
  * budil_revenue_records とは独立。経営判断・実績補正用。
  */
 const MonthlyResultsBrain = {

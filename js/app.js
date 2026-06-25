@@ -784,8 +784,8 @@
       </div>
       ${(s.cautions || []).map(c => `<p class="exec-work-warn">${esc(c)}</p>`).join('')}
       <div class="exec-work-actions">
-        <button type="button" class="btn btn-sm btn-secondary exec-home-revenue-link">売上番頭</button>
-        <button type="button" class="btn btn-sm btn-secondary exec-home-profit-link">利益番頭</button>
+        <button type="button" class="btn btn-sm btn-secondary exec-home-revenue-link">売上登録</button>
+        <button type="button" class="btn btn-sm btn-secondary exec-home-profit-link">利益サマリー</button>
       </div>`;
   }
 
@@ -812,7 +812,7 @@
     return `
       <p class="exec-follow-summary">${esc(summary)}</p>
       ${items}
-      <button type="button" class="btn btn-sm btn-secondary exec-home-follow-link">フォロー番頭へ</button>`;
+      <button type="button" class="btn btn-sm btn-secondary exec-home-follow-link">フォローへ</button>`;
   }
 
   function renderExecutiveAnalyticsDemandHtml(section) {
@@ -825,8 +825,8 @@
       ${lines.length ? `<div class="exec-analytics-lines">${lines.map(l => `<p>${esc(l)}</p>`).join('')}</div>` : ''}
       ${(s.demandLines || []).length ? `<ul class="exec-demand-lines">${s.demandLines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
       <div class="exec-work-actions">
-        <button type="button" class="btn btn-sm btn-secondary exec-home-analytics-link">アナリティクス番頭</button>
-        <button type="button" class="btn btn-sm btn-secondary exec-home-pickup-link">需要番頭</button>
+        <button type="button" class="btn btn-sm btn-secondary exec-home-analytics-link">アナリティクス</button>
+        <button type="button" class="btn btn-sm btn-secondary exec-home-pickup-link">需要ピックアップ</button>
         <button type="button" class="btn btn-sm btn-secondary" id="btn-exec-browser-prompt">ブラウザー番頭プロンプトをコピー</button>
       </div>`;
   }
@@ -920,6 +920,9 @@
       area: goToAreaView,
       sales: () => navigateToView('sales'),
       report: () => scrollToElement('#business-report-dash'),
+      'morning-report': () => scrollToElement('#morning-report'),
+      'monthly-results': () => navigateToView('monthly-results'),
+      'external-check': () => navigateToView('external-check'),
       diagnostic: () => { navigateToView('data'); setTimeout(() => scrollToElement('#btn-run-diagnostics'), 120); },
       backup: goToDataBackup,
       kurokuro: goToKurokuroPrompt
@@ -1170,7 +1173,7 @@
     el.classList.remove('hidden');
     const quickSteps = [
       { n: 1, text: 'デモデータを作成して全体の流れを確認', action: 'demo', btn: 'デモ作成' },
-      { n: 2, text: '経営司令塔ホームで今日の結論と最優先3つを見る', action: 'home', btn: 'この画面を見る' },
+      { n: 2, text: '経営ホームで今日の結論と最優先3つを見る', action: 'home', btn: 'この画面を見る' },
       { n: 3, text: '受付を1件入れて、作業予定・売上登録まで試す', action: 'reception', btn: '受付へ' }
     ];
     el.innerHTML = `
@@ -1678,7 +1681,7 @@
     if (!summary.count) {
       el.innerHTML = `
         <h3>累計売上</h3>
-        <p class="placeholder-text">この営業先に紐付いた売上はまだありません。作業が終わったら売上番頭から登録できます。</p>`;
+        <p class="placeholder-text">この営業先に紐付いた売上はまだありません。作業が終わったら売上登録から登録できます。</p>`;
       return;
     }
     el.innerHTML = `
@@ -2508,7 +2511,7 @@
       lines.push(`<p class="revenue-bantou-comment">${esc(comment)}</p>`);
     }
     if (opts.showLink) {
-      lines.push('<button type="button" class="btn btn-sm btn-secondary" id="btn-go-revenue">売上番頭を開く</button>');
+      lines.push('<button type="button" class="btn btn-sm btn-secondary" id="btn-go-revenue">売上登録を開く</button>');
     }
     return lines.join('');
   }
@@ -2624,7 +2627,7 @@
     { title: '売上を見える化', desc: '月間目標・達成率・未紐付け売上を確認', action: 'revenue' },
     { title: '営業先を管理', desc: '次の一手・保留・活動履歴を整理', action: 'sales' },
     { title: '今日やることを整理', desc: '優先タスクを毎朝確認', action: 'task' },
-    { title: '需要を拾う', desc: 'クロクロ調査結果を需要番頭に取り込み', action: 'pickup' },
+    { title: '需要を拾う', desc: 'クロクロ調査結果を需要ピックアップに取り込み', action: 'pickup' },
     { title: '受付・予約をつなぐ', desc: 'AI番頭の受付結果を営業・タスク・売上へ', action: 'reception' },
     { title: '予約・作業予定を管理', desc: '作業予定から今日やること・売上登録へ', action: 'work-order' },
     { title: '作業後フォローをつなぐ', desc: 'お礼・口コミ依頼・リピート提案を文面生成', action: 'follow-up' },
@@ -2702,13 +2705,13 @@
         <details class="onboarding-demo-order-details">
           <summary>おすすめ確認順を見る</summary>
           <ol class="onboarding-demo-order">
-            <li>経営司令塔ホーム</li>
-            <li>受付・予約番頭</li>
-            <li>予約・作業予定番頭</li>
-            <li>売上番頭</li>
-            <li>作業後フォロー番頭</li>
-            <li>利益番頭</li>
-            <li>アナリティクス番頭</li>
+            <li>経営ホーム</li>
+            <li>受付・予約</li>
+            <li>作業予定</li>
+            <li>売上登録</li>
+            <li>フォロー</li>
+            <li>利益サマリー</li>
+            <li>アナリティクス</li>
             <li>経営レポート</li>
             <li>データ診断</li>
           </ol>
@@ -2748,9 +2751,9 @@
       <div class="onboarding-workflow-hint">
         <h3 class="onboarding-subtitle">受付〜売上の流れ</h3>
         <ul class="onboarding-workflow-list">
-          <li>受付・予約番頭でAI番頭の結果を取り込み、「作業予定を作成」で予約化</li>
-          <li>作業完了後は作業後フォロー番頭でお礼LINE・口コミ依頼・リピート提案</li>
-          <li>予約・作業予定番頭から売上フォームへ反映して売上登録</li>
+          <li>受付・予約でAI番頭の結果を取り込み、「作業予定を作成」で予約化</li>
+          <li>作業完了後はフォローでお礼LINE・口コミ依頼・リピート提案</li>
+          <li>作業予定から売上フォームへ反映して売上登録</li>
         </ul>
       </div>
       ${mode === 'detail' ? `
@@ -2864,21 +2867,21 @@
         <button type="button" id="btn-delete-demo-data" class="btn btn-secondary" ${hasDemo ? '' : 'disabled'}>デモデータを削除</button>
       </div>
       <div id="demo-data-guide" class="demo-data-guide ${demoGuideVisible ? '' : 'hidden'}">
-        <p class="demo-data-guide-text">デモデータを作成しました。<br>初めて見る方は、まず<strong>経営司令塔ホーム</strong>で全体像を確認してください。おすすめの確認順は下のとおりです。</p>
+        <p class="demo-data-guide-text">デモデータを作成しました。<br>初めて見る方は、まず<strong>経営ホーム</strong>で全体像を確認してください。おすすめの確認順は下のとおりです。</p>
         <ol class="demo-data-guide-order">
-          <li>経営司令塔ホーム</li>
-          <li>受付・予約番頭</li>
-          <li>予約・作業予定番頭</li>
-          <li>売上番頭</li>
-          <li>作業後フォロー番頭</li>
-          <li>利益番頭</li>
-          <li>アナリティクス番頭</li>
+          <li>経営ホーム</li>
+          <li>受付・予約</li>
+          <li>作業予定</li>
+          <li>売上登録</li>
+          <li>フォロー</li>
+          <li>利益サマリー</li>
+          <li>アナリティクス</li>
           <li>経営レポート</li>
           <li>データ診断</li>
         </ol>
         <div class="demo-data-guide-actions">
-          <button type="button" class="btn btn-sm btn-primary" data-demo-nav="home">経営司令塔ホームを見る</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-demo-nav="pickup">需要番頭を見る</button>
+          <button type="button" class="btn btn-sm btn-primary" data-demo-nav="home">経営ホームを見る</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-demo-nav="pickup">需要ピックアップを見る</button>
           <button type="button" class="btn btn-sm btn-secondary" data-demo-nav="report">経営レポートを見る</button>
           <button type="button" class="btn btn-sm btn-secondary" data-demo-nav="diagnostics">データ診断を実行</button>
         </div>
@@ -2979,8 +2982,8 @@
         <div class="recommended-ops-block">
           <h3>毎朝5分</h3>
           <ol>
-            <li>経営番頭ホームを見る</li>
-            <li>クロクロ調査結果を需要番頭に入れる</li>
+            <li>経営ホームを見る</li>
+            <li>クロクロ調査結果を需要ピックアップに入れる</li>
             <li>今日やることを確認</li>
             <li>今日の確認完了を押す</li>
           </ol>
@@ -3931,7 +3934,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.4.6</span>
+        <span class="business-report-version">v4.4.7</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -7010,7 +7013,7 @@
       }
     });
     refreshCalendarCandidateViews();
-    alert('作業予定に反映しました。売上は売上番頭で確定してください。');
+    alert('作業予定に反映しました。売上は売上登録で確定してください。');
   }
 
   function skipCalendarCandidate(workOrderId) {
@@ -7405,14 +7408,14 @@
     const latest = Storage.getLatestExternalCheckReport();
     if (!latest) {
       el.innerHTML = `
-        <h2>外部チェック（Browser番頭）</h2>
-        <p class="placeholder-text">Browser番頭の【Budil貼り付け用】レポートはまだ保存されていません。</p>
+        <h2>外部チェック</h2>
+        <p class="placeholder-text">【Budil貼り付け用】レポートはまだ保存されていません。</p>
         <button type="button" class="btn btn-sm btn-primary" id="btn-dash-go-external-check">外部チェックを見る</button>
       `;
     } else {
       el.innerHTML = `
         <div class="external-check-dash-header">
-          <h2>外部チェック（Browser番頭）</h2>
+          <h2>外部チェック</h2>
           <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-external-check">外部チェックを見る</button>
         </div>
         ${renderExternalCheckSummaryBlock(latest, true)}
@@ -7614,7 +7617,7 @@
     const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
     if (!wo) return;
     if (isWorkOrderRevenueLocked(wo)) {
-      alert('売上確定済みの作業予定はキャンセルできません。売上番頭で対応してください。');
+      alert('売上確定済みの作業予定はキャンセルできません。売上登録で対応してください。');
       return;
     }
     if (wo.status === 'cancelled') {
@@ -8375,7 +8378,7 @@
         <p class="follow-up-target-meta">${FollowUpBrain.formatFollowUpBadges(latest.followUp)}</p>
         <p class="follow-up-target-meta">状態：${esc(FollowUpBrain.formatFollowUpStatus(latest))}</p>` : ''}
       ${nextMaint ? `<p class="follow-up-target-meta">次回メンテナンス予定：${esc(nextMaint)}</p>` : ''}
-      <button type="button" class="btn btn-sm btn-secondary" data-lead-open-follow-up>作業後フォロー番頭を開く</button>`;
+      <button type="button" class="btn btn-sm btn-secondary" data-lead-open-follow-up>フォローを開く</button>`;
     const btn = el.querySelector('[data-lead-open-follow-up]');
     if (btn) btn.addEventListener('click', goToFollowUp);
   }
@@ -11844,7 +11847,7 @@
         `<li>${esc(area)}：${esc(RevenueBrain.formatYen(total))}</li>`
       ).join('')}</ul>
       ${unknownCount ? `<p class="revenue-area-brief-warn">エリア不明の売上：${unknownCount}件</p>` : ''}
-      <button type="button" class="btn btn-sm btn-secondary" id="btn-revenue-go-area">エリア番頭を開く</button>`;
+      <button type="button" class="btn btn-sm btn-secondary" id="btn-revenue-go-area">エリアを開く</button>`;
     const btn = el.querySelector('#btn-revenue-go-area');
     if (btn) btn.addEventListener('click', goToAreaView);
   }
@@ -11955,7 +11958,7 @@
     const topServiceNames = (compact.topServices || []).map(s => s.name).join(' / ') || '—';
 
     el.innerHTML = `
-      <p class="revenue-agg-scope-note">確定売上のみ集計（売上番頭で「確定」「完了」登録済み）。見込み・候補は含みません。</p>
+      <p class="revenue-agg-scope-note">確定売上のみ集計（売上登録で「確定」「完了」登録済み）。見込み・候補は含みません。</p>
       <div class="revenue-agg-compact">
         <div class="revenue-agg-compact-item revenue-agg-highlight">
           <span>今月確定売上</span>

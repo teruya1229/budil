@@ -13,100 +13,116 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.4.6</small>
+          <small>AI経営脳みそ v4.4.7</small>
         </div>
       </div>
       <nav class="nav">
-        <p class="nav-hint">必要な番頭を分類から選んでください</p>
+        <p class="nav-hint">経営番頭の業務メニュー</p>
 
         <details class="nav-group" open>
-          <summary class="nav-group-title"><span class="nav-group-icon">🏠</span><span class="nav-group-label">ホーム</span></summary>
-          <p class="nav-group-hint">司令塔・今日やること・朝レポート</p>
+          <summary class="nav-group-title"><span class="nav-group-icon">🎯</span><span class="nav-group-label">経営ホーム</span></summary>
+          <p class="nav-group-hint">毎朝の判断・ダッシュボード</p>
           <div class="nav-group-items">
             <button class="nav-item nav-item-main active" data-view="dashboard">
-              <span class="nav-icon">📊</span><span class="nav-label">ダッシュボード</span>
+              <span class="nav-icon">📊</span><span class="nav-label">経営ホーム</span>
             </button>
             <button class="nav-item nav-item-sub" data-view="dashboard" data-scroll="#executive-home">
-              <span class="nav-icon">🎯</span><span class="nav-label">経営司令塔</span>
+              <span class="nav-icon">🎯</span><span class="nav-label">司令塔サマリー</span>
             </button>
-            <button class="nav-item nav-item-sub" data-view="dashboard" data-scroll=".card-daily-action-tasks">
+          </div>
+        </details>
+
+        <details class="nav-group" open>
+          <summary class="nav-group-title"><span class="nav-group-icon">✅</span><span class="nav-group-label">今日やること</span></summary>
+          <p class="nav-group-hint">今日の実行タスク</p>
+          <div class="nav-group-items">
+            <button class="nav-item nav-item-main" data-view="dashboard" data-scroll=".card-daily-action-tasks">
               <span class="nav-icon">✅</span><span class="nav-label">今日やること</span>
             </button>
-            <button class="nav-item nav-item-sub" data-view="dashboard" data-scroll="#morning-report">
-              <span class="nav-icon">🌅</span><span class="nav-label">朝レポート</span>
-            </button>
-            <button class="nav-item nav-item-main" data-view="external-check">
-              <span class="nav-icon">🔍</span><span class="nav-label">外部チェック</span>
-            </button>
           </div>
         </details>
 
         <details class="nav-group" open>
-          <summary class="nav-group-title"><span class="nav-group-icon">📈</span><span class="nav-group-label">集客・需要</span></summary>
-          <p class="nav-group-hint">見られているもの、伸びそうな需要</p>
-          <div class="nav-group-items">
-            <button class="nav-item nav-item-main" data-view="radar">
-              <span class="nav-icon">📡</span><span class="nav-label">需要レーダー</span>
-            </button>
-            <button class="nav-item nav-item-main" data-view="pickup">
-              <span class="nav-icon">📥</span><span class="nav-label">需要番頭</span>
-            </button>
-            <button class="nav-item nav-item-main" data-view="demand">
-              <span class="nav-icon">🔍</span><span class="nav-label">需要リサーチ</span>
-            </button>
-            <button class="nav-item nav-item-main" data-view="analytics">
-              <span class="nav-icon">📈</span><span class="nav-label">アナリティクス</span>
-            </button>
-          </div>
-        </details>
-
-        <details class="nav-group" open>
-          <summary class="nav-group-title"><span class="nav-group-icon">📅</span><span class="nav-group-label">受付・予定</span></summary>
+          <summary class="nav-group-title"><span class="nav-group-icon">📞</span><span class="nav-group-label">受付・予定</span></summary>
           <p class="nav-group-hint">受付、予定、候補、エリア</p>
           <div class="nav-group-items">
             <button class="nav-item nav-item-main" data-view="reception">
               <span class="nav-icon">📞</span><span class="nav-label">受付・予約</span>
             </button>
             <button class="nav-item nav-item-main" data-view="work-order">
-              <span class="nav-icon">📅</span><span class="nav-label">予約・作業予定</span>
+              <span class="nav-icon">📅</span><span class="nav-label">作業予定</span>
             </button>
             <button class="nav-item nav-item-main" data-view="calendar-candidate">
-              <span class="nav-icon">📋</span><span class="nav-label">予定候補取り込み</span>
+              <span class="nav-icon">📋</span><span class="nav-label">予定候補</span>
             </button>
             <button class="nav-item nav-item-main" data-view="area">
-              <span class="nav-icon">🗺️</span><span class="nav-label">エリア番頭</span>
+              <span class="nav-icon">🗺️</span><span class="nav-label">エリア</span>
             </button>
           </div>
         </details>
 
         <details class="nav-group" open>
           <summary class="nav-group-title"><span class="nav-group-icon">💰</span><span class="nav-group-label">売上・利益</span></summary>
-          <p class="nav-group-hint">確定売上、利益、フォロー</p>
+          <p class="nav-group-hint">売上登録、月次実績、利益、フォロー</p>
           <div class="nav-group-items">
             <button class="nav-item nav-item-main" data-view="revenue">
-              <span class="nav-icon">💰</span><span class="nav-label">売上番頭</span>
+              <span class="nav-icon">💰</span><span class="nav-label">売上登録</span>
             </button>
             <button class="nav-item nav-item-sub" data-view="revenue" data-scroll="#revenue-aggregation-card">
-              <span class="nav-icon">📊</span><span class="nav-label">売上集計</span>
+              <span class="nav-icon">📊</span><span class="nav-label">売上一覧</span>
             </button>
             <button class="nav-item nav-item-main" data-view="monthly-results">
               <span class="nav-icon">📅</span><span class="nav-label">月次実績</span>
             </button>
             <button class="nav-item nav-item-main" data-view="profit">
-              <span class="nav-icon">📊</span><span class="nav-label">利益番頭</span>
+              <span class="nav-icon">📈</span><span class="nav-label">利益サマリー</span>
             </button>
             <button class="nav-item nav-item-main" data-view="follow-up">
-              <span class="nav-icon">💬</span><span class="nav-label">作業後フォロー</span>
+              <span class="nav-icon">💬</span><span class="nav-label">フォロー</span>
             </button>
           </div>
         </details>
 
         <details class="nav-group" open>
-          <summary class="nav-group-title"><span class="nav-group-icon">🤝</span><span class="nav-group-label">営業・顧客</span></summary>
-          <p class="nav-group-hint">営業先、追客、名刺</p>
+          <summary class="nav-group-title"><span class="nav-group-icon">📈</span><span class="nav-group-label">集客・需要</span></summary>
+          <p class="nav-group-hint">アクセス、需要、外部チェック、広告</p>
           <div class="nav-group-items">
+            <button class="nav-item nav-item-main" data-view="analytics">
+              <span class="nav-icon">📈</span><span class="nav-label">アナリティクス</span>
+            </button>
+            <button class="nav-item nav-item-main" data-view="external-check">
+              <span class="nav-icon">🔍</span><span class="nav-label">外部チェック</span>
+            </button>
+            <button class="nav-item nav-item-main" data-view="radar">
+              <span class="nav-icon">📡</span><span class="nav-label">需要レーダー</span>
+            </button>
+            <button class="nav-item nav-item-main" data-view="pickup">
+              <span class="nav-icon">📥</span><span class="nav-label">需要ピックアップ</span>
+            </button>
+            <button class="nav-item nav-item-main" data-view="demand">
+              <span class="nav-icon">🔎</span><span class="nav-label">需要リサーチ</span>
+            </button>
+            <button class="nav-item nav-item-sub" data-view="pickup" data-scroll="#pickup-ad-action">
+              <span class="nav-icon">📣</span><span class="nav-label">広告</span>
+            </button>
+          </div>
+        </details>
+
+        <details class="nav-group" open>
+          <summary class="nav-group-title"><span class="nav-group-icon">📝</span><span class="nav-group-label">レポート・記録</span></summary>
+          <p class="nav-group-hint">朝レポート、経営レポート、営業記録</p>
+          <div class="nav-group-items">
+            <button class="nav-item nav-item-main" data-view="dashboard" data-scroll="#morning-report">
+              <span class="nav-icon">🌅</span><span class="nav-label">朝レポート</span>
+            </button>
+            <button class="nav-item nav-item-main" data-view="dashboard" data-scroll="#business-report-dash">
+              <span class="nav-icon">📋</span><span class="nav-label">経営レポート</span>
+            </button>
+            <button class="nav-item nav-item-sub" data-view="external-check" data-scroll=".card-external-check-history">
+              <span class="nav-icon">🗂</span><span class="nav-label">外部チェック履歴</span>
+            </button>
             <button class="nav-item nav-item-main" data-view="sales">
-              <span class="nav-icon">📋</span><span class="nav-label">営業番頭</span>
+              <span class="nav-icon">🤝</span><span class="nav-label">営業先</span>
             </button>
             <button class="nav-item nav-item-main" data-view="followup">
               <span class="nav-icon">📨</span><span class="nav-label">追客管理</span>
@@ -118,7 +134,7 @@
         </details>
 
         <details class="nav-group" open>
-          <summary class="nav-group-title"><span class="nav-group-icon">🗂</span><span class="nav-group-label">管理</span></summary>
+          <summary class="nav-group-title"><span class="nav-group-icon">⚙️</span><span class="nav-group-label">設定・バックアップ</span></summary>
           <p class="nav-group-hint">データ、バックアップ、診断</p>
           <div class="nav-group-items">
             <button class="nav-item nav-item-main" data-view="data">
@@ -140,7 +156,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.4.6</small>
+        <small>Budil v4.4.7</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -159,16 +175,17 @@
         <div id="executive-home" class="card card-wide card-executive-home card-command-tower">
           <div class="exec-home-header">
             <div>
-              <h2>経営司令塔ホーム</h2>
+              <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">毎朝5分で、今日やること・売上・利益・需要・受付・作業予定を確認</p>
             </div>
-            <span class="exec-home-version">v4.4.6</span>
+            <span class="exec-home-version">v4.4.7</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <div id="exec-home-start-guide" class="exec-home-start-guide hidden"></div>
           <div class="exec-quick-section">
             <p class="exec-quick-label">よく使うメニュー</p>
             <div id="exec-home-quick-actions-primary" class="exec-home-quick-actions exec-quick-primary"></div>
+            <div id="exec-home-quick-actions-secondary" class="exec-home-quick-actions exec-quick-secondary"></div>
           </div>
           <div class="exec-tower-grid">
             <div class="exec-home-block exec-home-block-hero exec-tower-span-full">
@@ -214,7 +231,6 @@
                   <a href="sales.html" class="btn btn-sm btn-secondary">販売ページを見る</a>
                   <a href="sales.html#pricing" class="btn btn-sm btn-secondary">無料体験案内</a>
                 </div>
-                <div id="exec-home-quick-actions-secondary" class="exec-home-quick-actions exec-quick-secondary"></div>
               </div>
             </details>
             <details class="exec-collapse exec-tower-span-full" id="exec-collapse-check">
@@ -384,7 +400,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.4.6</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.4.7</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -599,15 +615,15 @@
         </div>
       </section>
 
-      <!-- 需要番頭（需要ピックアップ受信箱） -->
+      <!-- 需要ピックアップ -->
       <section id="view-pickup" class="view">
         <header class="view-header">
-          <h1>需要番頭</h1>
+          <h1>需要ピックアップ</h1>
           <p class="view-subtitle">クロクロ調査結果を受け取り、今日の行動に変換する</p>
         </header>
 
         <div class="card card-wide card-pickup-comment">
-          <h2>需要番頭コメント</h2>
+          <h2>需要ピックアップコメント</h2>
           <div id="pickup-today-summary" class="pickup-today-summary"></div>
         </div>
 
@@ -809,10 +825,10 @@
         </div>
       </section>
 
-      <!-- 需要サーチ番頭 -->
+      <!-- 需要リサーチ -->
       <section id="view-demand" class="view">
         <header class="view-header">
-          <h1>需要サーチ番頭</h1>
+          <h1>需要リサーチ</h1>
           <p class="view-subtitle">朝の需要チェック入力 → 分析 → 朝レポートへ反映</p>
         </header>
 
@@ -924,10 +940,10 @@
         </div>
       </section>
 
-      <!-- 営業番頭 -->
+      <!-- 営業先 -->
       <section id="view-sales" class="view">
         <header class="view-header">
-          <h1>営業番頭</h1>
+          <h1>営業先</h1>
           <p class="view-subtitle">営業先の管理と文面生成</p>
         </header>
 
@@ -1286,11 +1302,11 @@
       <section id="view-card" class="view">
         <header class="view-header">
           <h1>名刺登録モード</h1>
-          <p class="view-subtitle">名刺を撮影 → 確認 → 営業番頭へ登録（OCR APIは将来接続）</p>
+          <p class="view-subtitle">名刺を撮影 → 確認 → 営業先へ登録（OCR APIは将来接続）</p>
         </header>
 
         <div id="card-register-success" class="card card-success card-wide hidden">
-          <p>✓ 営業番頭へ登録しました</p>
+          <p>✓ 営業先へ登録しました</p>
           <small>今日営業すべき会社・朝レポートに反映されます</small>
         </div>
 
@@ -1372,22 +1388,22 @@
               </div>
 
               <div class="card-form-actions">
-                <button type="submit" id="btn-add-to-leads" class="btn btn-primary" disabled>営業番頭へ登録</button>
+                <button type="submit" id="btn-add-to-leads" class="btn btn-primary" disabled>営業先へ登録</button>
               </div>
             </form>
           </div>
         </div>
       </section>
 
-      <!-- 受付・予約番頭 -->
+      <!-- 受付・予約 -->
       <section id="view-reception" class="view">
         <header class="view-header">
-          <h1>受付・予約番頭</h1>
+          <h1>受付・予約</h1>
           <p class="view-subtitle">AI番頭の受付結果を取り込み、営業・タスク・売上へつなげる</p>
         </header>
 
         <div class="card card-wide card-reception-comment">
-          <h2>受付番頭コメント</h2>
+          <h2>受付コメント</h2>
           <div id="reception-today-summary" class="reception-today-summary"></div>
         </div>
 
@@ -1476,15 +1492,15 @@
         </div>
       </section>
 
-      <!-- 予約・作業予定番頭 -->
+      <!-- 作業予定 -->
       <section id="view-work-order" class="view">
         <header class="view-header">
-          <h1>予約・作業予定番頭</h1>
+          <h1>作業予定</h1>
           <p class="view-subtitle">受付・営業先から作業予定をつなぎ、今日/今週の作業と売上見込みを管理する</p>
         </header>
 
         <div class="card card-wide card-work-order-calendar-link">
-          <p class="work-order-calendar-link-text">Googleカレンダーの予定は <button type="button" class="btn btn-sm btn-secondary" id="btn-go-calendar-candidate">予定候補取り込み番頭</button> から候補として取り込めます（売上確定ではありません）。</p>
+          <p class="work-order-calendar-link-text">Googleカレンダーの予定は <button type="button" class="btn btn-sm btn-secondary" id="btn-go-calendar-candidate">予定候補</button> から候補として取り込めます（売上確定ではありません）。</p>
           <div id="work-order-calendar-candidates-brief" class="work-order-calendar-candidates-brief"></div>
         </div>
 
@@ -1612,15 +1628,15 @@
         </div>
       </section>
 
-      <!-- 予定候補取り込み番頭 -->
+      <!-- 予定候補 -->
       <section id="view-calendar-candidate" class="view">
         <header class="view-header">
-          <h1>予定候補取り込み番頭</h1>
+          <h1>予定候補</h1>
           <p class="view-subtitle">Googleカレンダー/ブラウザー番頭の予定を貼り付けて作業予定候補にする（売上確定ではありません）</p>
         </header>
 
         <div class="card card-wide card-calendar-candidate">
-          <p class="calendar-candidate-notice"><strong>これは売上ではありません。</strong> 予定候補として取り込み、現場後に売上番頭で確定してください。</p>
+          <p class="calendar-candidate-notice"><strong>これは売上ではありません。</strong> 予定候補として取り込み、現場後に売上登録で確定してください。</p>
 
           <h2>ブラウザー番頭用プロンプト</h2>
           <div id="calendar-candidate-prompt-preview" class="calendar-candidate-prompt-preview"></div>
@@ -1651,7 +1667,7 @@
             <div class="calendar-candidate-collapse-body">
               <ul class="calendar-candidate-notes">
                 <li>カレンダー予定は予定変更・キャンセル・金額変更が起きやすいため、売上確定には使いません。</li>
-                <li>作業予定へ反映後も、売上は売上番頭で確定してください。</li>
+                <li>作業予定へ反映後も、売上は売上登録で確定してください。</li>
                 <li>予定金額は見込みであり、売上集計には混ぜません。</li>
               </ul>
             </div>
@@ -1695,15 +1711,15 @@
         </div>
       </section>
 
-      <!-- エリア番頭 -->
+      <!-- エリア -->
       <section id="view-area" class="view">
         <header class="view-header">
-          <h1>エリア番頭</h1>
+          <h1>エリア</h1>
           <p class="view-subtitle">エリア別の営業先・受付・売上を把握し、移動効率を確認する</p>
         </header>
 
         <div class="card card-wide card-area-comment">
-          <h2>エリア番頭コメント</h2>
+          <h2>エリアコメント</h2>
           <div id="area-today-summary" class="area-today-summary"></div>
         </div>
 
@@ -1738,10 +1754,10 @@
         </div>
       </section>
 
-      <!-- 売上番頭 -->
+      <!-- 売上登録 -->
       <section id="view-revenue" class="view">
         <header class="view-header">
-          <h1>売上番頭</h1>
+          <h1>売上登録</h1>
           <p class="view-subtitle">今月の売上・入金・目標差分を把握する</p>
         </header>
 
@@ -1923,10 +1939,10 @@
         </div>
       </section>
 
-      <!-- 作業後フォロー番頭 -->
+      <!-- フォロー -->
       <section id="view-follow-up" class="view">
         <header class="view-header">
-          <h1>作業後フォロー番頭</h1>
+          <h1>フォロー</h1>
           <p class="view-subtitle">作業完了後のお礼・口コミ依頼・リピート提案をつなぐ</p>
         </header>
 
@@ -1951,10 +1967,10 @@
         </div>
       </section>
 
-      <!-- 利益番頭 -->
+      <!-- 利益サマリー -->
       <section id="view-profit" class="view">
         <header class="view-header">
-          <h1>利益番頭</h1>
+          <h1>利益サマリー</h1>
           <p class="view-subtitle">売上・支出・粗利を概算で見て、現場経営の判断に使う</p>
         </header>
 
@@ -2151,10 +2167,10 @@
         </div>
       </section>
 
-      <!-- アナリティクス番頭 -->
+      <!-- アナリティクス -->
       <section id="view-analytics" class="view">
         <header class="view-header">
-          <h1>アナリティクス番頭</h1>
+          <h1>アナリティクス</h1>
           <p class="view-subtitle">GA4・Search Consoleの手入力データから、自然需要とLP改善の優先順位を読む</p>
         </header>
 
@@ -2317,7 +2333,7 @@
         </div>
 
         <div class="card card-wide">
-          <h2>需要番頭への反映</h2>
+          <h2>需要ピックアップへの反映</h2>
           <div id="analytics-pickup-bridge" class="analytics-pickup-bridge"></div>
         </div>
       </section>

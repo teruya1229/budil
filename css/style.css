@@ -6647,6 +6647,12 @@ body {
 
 .exec-quick-secondary {
   grid-template-columns: repeat(2, 1fr);
+  margin-top: 0.5rem;
+}
+
+.exec-quick-secondary .btn {
+  font-size: 0.8rem;
+  min-height: 2.25rem;
 }
 
 .exec-source-badge {
@@ -6876,13 +6882,17 @@ body {
 
 @media (min-width: 640px) {
   .exec-home-quick-actions.exec-quick-primary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .exec-home-quick-actions.exec-quick-secondary {
     grid-template-columns: repeat(3, 1fr);
   }
 }
 
 @media (min-width: 900px) {
   .exec-home-quick-actions.exec-quick-primary {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 

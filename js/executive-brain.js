@@ -2,7 +2,7 @@
  * Budil v4.4 - 経営司令塔ホーム（毎朝5分・全番頭統合）
  */
 const ExecutiveBrain = {
-  VERSION: 'v4.4.6',
+  VERSION: 'v4.4.7',
 
   CHECK_ITEMS: [
     { id: 'workOrders', label: '作業予定を確認した' },
@@ -15,21 +15,13 @@ const ExecutiveBrain = {
   ],
 
   QUICK_LINKS: [
-    { id: 'reception', label: '受付番頭を開く', view: 'reception', tier: 'primary' },
-    { id: 'work-order', label: '作業予定番頭を開く', view: 'work-order', tier: 'primary' },
-    { id: 'calendar-candidate', label: '予定候補取り込み', view: 'calendar-candidate', tier: 'primary' },
-    { id: 'revenue', label: '売上を登録', view: 'revenue', tier: 'primary' },
-    { id: 'tasks', label: '今日やることを開く', action: 'tasks', tier: 'primary' },
-    { id: 'profit', label: '利益番頭を開く', view: 'profit', tier: 'primary' },
-    { id: 'analytics', label: 'アナリティクス番頭', view: 'analytics', tier: 'primary' },
-    { id: 'pickup', label: '需要番頭', view: 'pickup', tier: 'secondary' },
-    { id: 'area', label: 'エリア番頭', view: 'area', tier: 'secondary' },
-    { id: 'sales', label: '営業番頭', view: 'sales', tier: 'secondary' },
-    { id: 'follow-up', label: '作業後フォロー', view: 'follow-up', tier: 'secondary' },
-    { id: 'report', label: '経営レポート', action: 'report', tier: 'secondary' },
-    { id: 'diagnostic', label: 'データ診断', action: 'diagnostic', tier: 'secondary' },
-    { id: 'backup', label: 'バックアップ', action: 'backup', tier: 'secondary' },
-    { id: 'kurokuro', label: 'クロクロ調査プロンプト', action: 'kurokuro', tier: 'secondary' }
+    { id: 'reception', label: '受付・予定', view: 'reception', tier: 'primary' },
+    { id: 'revenue', label: '売上・利益', view: 'revenue', tier: 'primary' },
+    { id: 'analytics', label: '集客・需要', view: 'analytics', tier: 'primary' },
+    { id: 'tasks', label: '今日やること', action: 'tasks', tier: 'primary' },
+    { id: 'monthly-results', label: '月次実績を入れる', view: 'monthly-results', tier: 'secondary' },
+    { id: 'external-check', label: '外部チェックを保存', view: 'external-check', tier: 'secondary' },
+    { id: 'morning-report', label: '朝レポートを見る', action: 'morning-report', tier: 'secondary' }
   ],
 
   hasHomeData(ctx) {
@@ -203,7 +195,7 @@ const ExecutiveBrain = {
         reason: wo.startTime
           ? `今日${wo.startTime}〜の確定作業。作業後に売上登録まで行う`
           : '今日の確定作業。作業後に売上登録まで行う',
-        source: '予約・作業予定番頭',
+        source: '作業予定',
         sourceKey: 'work-order',
         workOrderId: wo.id,
         dedupeKey: ['exec-priority', today, 'work-order', wo.id].join('|'),
@@ -225,7 +217,7 @@ const ExecutiveBrain = {
         reason: needsSchedule
           ? `新規受付。${intake.serviceText || '作業内容'}の日程調整が必要`
           : `新規受付。${intake.source || '依頼元'}からの問い合わせ`,
-        source: '受付・予約番頭',
+        source: '受付・予約',
         sourceKey: 'reception',
         intakeId: intake.id,
         dedupeKey: ['exec-priority', today, 'intake', intake.id].join('|'),
@@ -243,7 +235,7 @@ const ExecutiveBrain = {
         reason: target.needsThanks
           ? '作業完了済み・お礼未送信'
           : '作業完了済み・口コミ依頼未対応',
-        source: '作業後フォロー番頭',
+        source: 'フォロー',
         sourceKey: 'follow-up',
         followTargetId: target.id,
         followType: type,
@@ -259,7 +251,7 @@ const ExecutiveBrain = {
         rank: 4,
         title: `LP改善：${page.pageName}`,
         reason: `閲覧${page.views}・直帰率${page.bounceRate}%。CTAとファーストビュー改善を優先`,
-        source: 'アナリティクス番頭',
+        source: 'アナリティクス',
         sourceKey: 'analytics',
         analyticsId: page.id,
         dedupeKey: ['exec-priority', today, 'analytics', page.id || page.pageName].join('|')
@@ -273,7 +265,7 @@ const ExecutiveBrain = {
         rank: 5,
         title: hint.title || '利益改善を確認',
         reason: hint.detail || '支出・粗利の注意点を確認',
-        source: '利益番頭',
+        source: '利益サマリー',
         sourceKey: 'profit',
         dedupeKey: ['exec-priority', today, 'profit', hint.type].join('|')
       });
@@ -287,8 +279,8 @@ const ExecutiveBrain = {
         id: 'demand-' + (rec.pickupId || rec.topic),
         rank: 6,
         title: `需要：${rec.topic}`,
-        reason: rec.nextStep || rec.reason || '需要番頭の高優先アクション',
-        source: '需要番頭',
+        reason: rec.nextStep || rec.reason || '需要ピックアップの高優先アクション',
+        source: '需要ピックアップ',
         sourceKey: 'pickup',
         pickupId: rec.pickupId,
         dedupeKey: ['exec-priority', today, 'demand', rec.topic].join('|')
