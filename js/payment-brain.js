@@ -93,9 +93,10 @@ const PaymentBrain = {
     const total = this.getTotal(record);
     const status = this.migratePaymentStatus(record && record.paymentStatus, 'pending');
     if (status === 'paid') return total;
-    if (status === 'partial') return this.parseAmount(record && record.paidAmount);
+    if (status === 'partial') return Math.min(total, this.parseAmount(record && record.paidAmount));
+    if (status === 'cancelled') return 0;
     if (record && record.paidAmount != null && record.paidAmount !== '') {
-      return this.parseAmount(record.paidAmount);
+      return Math.min(total, this.parseAmount(record.paidAmount));
     }
     if (status === 'paid') return total;
     return 0;
@@ -195,7 +196,7 @@ const PaymentBrain = {
 
     let paidAmount;
     if (src.paidAmount != null && src.paidAmount !== '') {
-      paidAmount = this.parseAmount(src.paidAmount);
+      paidAmount = Math.min(total, this.parseAmount(src.paidAmount));
     } else if (paymentStatus === 'paid') {
       paidAmount = total;
     } else {
@@ -217,8 +218,10 @@ const PaymentBrain = {
       paidAmount = total;
       unpaidAmount = 0;
     } else if (paymentStatus === 'partial') {
+      paidAmount = Math.min(total, paidAmount);
       unpaidAmount = Math.max(0, total - paidAmount);
     } else if (paymentStatus === 'cancelled') {
+      paidAmount = 0;
       unpaidAmount = 0;
     }
 
@@ -261,7 +264,7 @@ const PaymentBrain = {
     if (paidAmount == null || paidAmount === '') {
       paidAmount = paymentStatus === 'paid' ? total : 0;
     } else {
-      paidAmount = this.parseAmount(paidAmount);
+      paidAmount = Math.min(total, this.parseAmount(paidAmount));
     }
     if (unpaidAmount == null || unpaidAmount === '') {
       unpaidAmount = paymentStatus === 'paid' ? 0 : Math.max(0, total - paidAmount);
@@ -270,6 +273,12 @@ const PaymentBrain = {
     }
     if (paymentStatus === 'paid') {
       paidAmount = total;
+      unpaidAmount = 0;
+    } else if (paymentStatus === 'partial') {
+      paidAmount = Math.min(total, paidAmount);
+      unpaidAmount = Math.max(0, total - paidAmount);
+    } else if (paymentStatus === 'cancelled') {
+      paidAmount = 0;
       unpaidAmount = 0;
     }
 
@@ -313,7 +322,12 @@ const PaymentBrain = {
   },
 
   buildCancelledPatch() {
-    return { paymentStatus: 'cancelled' };
+    return {
+      paymentStatus: 'cancelled',
+      paidDate: '',
+      paidAmount: 0,
+      unpaidAmount: 0
+    };
   },
 
   syncLinkedPayment(sourceKind, sourceId, patch, storage) {
@@ -428,7 +442,6 @@ const PaymentBrain = {
       const linkedRev = doc.linkedRevenueId
         ? revList.find(r => r.id === doc.linkedRevenueId)
         : null;
-      if (linkedRev && !this.isReceivablePending(linkedRev)) return;
       const key = doc.linkedRevenueId
         ? 'link:rev:' + doc.linkedRevenueId
         : (doc.linkedDocumentId ? 'link:doc:' + doc.id : 'document:' + doc.id);
