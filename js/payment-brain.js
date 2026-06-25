@@ -323,7 +323,14 @@ const PaymentBrain = {
   },
 
   syncLinkedPayment(sourceKind, sourceId, patch, storage) {
-    if (!storage || !sourceId || !patch) return;
+    if (sourceKind && typeof sourceKind === 'object') {
+      const opts = sourceKind;
+      sourceKind = opts.sourceType || opts.sourceKind;
+      sourceId = opts.sourceId;
+      patch = opts.paymentPatch || opts.patch;
+      storage = opts.storage;
+    }
+    if (!storage || !sourceKind || !sourceId || !patch) return { updated: false };
     const revenues = storage.getRevenueRecords();
     const documents = storage.getDocuments();
     let revenue = null;
@@ -334,31 +341,55 @@ const PaymentBrain = {
       if (revenue && revenue.linkedDocumentId) {
         document = documents.find(d => d.id === revenue.linkedDocumentId);
       }
+      if (!document) {
+        document = documents.find(d => d.linkedRevenueId === sourceId);
+      }
     } else if (sourceKind === 'document') {
       document = documents.find(d => d.id === sourceId);
       if (document && document.linkedRevenueId) {
         revenue = revenues.find(r => r.id === document.linkedRevenueId);
       }
+      if (!revenue) {
+        revenue = revenues.find(r => r.linkedDocumentId === sourceId);
+      }
     }
 
-    const applyPatch = (target, total, updater) => {
-      let merged = { ...patch };
-      if (patch.paymentStatus === 'paid') {
-        merged = { ...merged, ...this.buildPaidPatch(total, patch.paidDate) };
-      } else if (patch.paymentStatus === 'partial') {
-        merged = { ...merged, ...this.buildPartialPatch(total, patch.paidAmount) };
-      } else if (patch.paymentStatus === 'cancelled') {
-        merged = { ...merged, ...this.buildCancelledPatch() };
-      }
-      updater(merged);
+    const buildTargetPaymentPatch = (target, total) => {
+      const allowed = [
+        'paymentMethod',
+        'paymentStatus',
+        'expectedPaymentDate',
+        'paidDate',
+        'paidAmount',
+        'unpaidAmount',
+        'paymentMemo'
+      ];
+      const base = {};
+      allowed.forEach(key => {
+        if (Object.prototype.hasOwnProperty.call(patch, key)) base[key] = patch[key];
+      });
+      const status = this.migratePaymentStatus(base.paymentStatus || target.paymentStatus, 'pending');
+      const normalized = this.applyPaymentStatusDefaults(
+        { ...target, ...base, paymentStatus: status },
+        total,
+        base.paidDate || patch.paidDate || this.todayISO()
+      );
+      const result = { ...base };
+      ['paymentStatus', 'paidDate', 'paidAmount', 'unpaidAmount'].forEach(key => {
+        result[key] = normalized[key];
+      });
+      return result;
     };
 
     if (revenue && sourceKind === 'document') {
-      applyPatch(revenue, revenue.amount, data => storage.updateRevenueRecord(revenue.id, data));
+      storage.updateRevenueRecord(revenue.id, buildTargetPaymentPatch(revenue, revenue.amount));
+      return { updated: true, targetType: 'revenue', targetId: revenue.id };
     }
     if (document && sourceKind === 'revenue') {
-      applyPatch(document, document.total, data => storage.updateDocument(document.id, data));
+      storage.updateDocument(document.id, buildTargetPaymentPatch(document, document.total));
+      return { updated: true, targetType: 'document', targetId: document.id };
     }
+    return { updated: false };
   },
 
   linkRevenueAndDocument(revenueId, documentId, storage) {

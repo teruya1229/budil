@@ -1,6 +1,16 @@
 # Budil status
 
-最終更新: 2026-06-25
+最終更新: 2026-06-26
+
+## v4.4.9.2.2 実装内容（請求書→売上 linked入金同期修正）
+
+- 表示バージョンを v4.4.9.2.2 に更新
+- CSS/JS のキャッシュバスターを `v4.4.9.2.2` に更新
+- `PaymentBrain.syncLinkedPayment()` を強化し、請求書側で入金済み/入金待ちにした時に linked売上側へ確実に同期
+- 売上側で入金済み/入金待ちにした時の linked請求書側同期も維持
+- linked先の探索を `document.linkedRevenueId` と `revenue.linkedDocumentId` の両方から行うよう防御
+- 同期時の `paidAmount` / `unpaidAmount` は各レコード自身の `total` / `amount` で補正
+- 入金予定一覧の linked重複防止、請求書優先表示、売上集計非影響は維持
 
 ## v4.4.9.2.1 実装内容（入金待ち切替時の未入金額補正）
 

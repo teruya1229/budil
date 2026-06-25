@@ -3950,7 +3950,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.4.9.2.1</span>
+        <span class="business-report-version">v4.4.9.2.2</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -11767,13 +11767,23 @@
       if (!rev) return;
       const patch = PaymentBrain.buildPaidPatch(rev.amount, today);
       Storage.updateRevenueRecord(item.primaryId, patch);
-      PaymentBrain.syncLinkedPayment('revenue', item.primaryId, patch, Storage);
+      PaymentBrain.syncLinkedPayment({
+        sourceType: 'revenue',
+        sourceId: item.primaryId,
+        paymentPatch: patch,
+        storage: Storage
+      });
     } else {
       const doc = Storage.getDocumentById(item.primaryId);
       if (!doc) return;
       const patch = PaymentBrain.buildPaidPatch(doc.total, today);
       Storage.updateDocument(item.primaryId, patch);
-      PaymentBrain.syncLinkedPayment('document', item.primaryId, patch, Storage);
+      PaymentBrain.syncLinkedPayment({
+        sourceType: 'document',
+        sourceId: item.primaryId,
+        paymentPatch: patch,
+        storage: Storage
+      });
     }
     renderReceivablesView();
     renderRevenueView();
@@ -12507,14 +12517,20 @@
     let newRecord = null;
     if (id) {
       Storage.updateRevenueRecord(id, data);
-      PaymentBrain.syncLinkedPayment('revenue', id, data, Storage);
     } else {
       newRecord = Storage.addRevenueRecord(data);
-      if (newRecord) PaymentBrain.syncLinkedPayment('revenue', newRecord.id, data, Storage);
     }
     const revId = id || (newRecord && newRecord.id);
     if (linkedDocId && revId) {
       PaymentBrain.linkRevenueAndDocument(revId, linkedDocId, Storage);
+    }
+    if (revId) {
+      PaymentBrain.syncLinkedPayment({
+        sourceType: 'revenue',
+        sourceId: revId,
+        paymentPatch: data,
+        storage: Storage
+      });
     }
     if (workOrderId) {
       const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
@@ -12962,10 +12978,22 @@
     let saved;
     if (id) {
       saved = Storage.updateDocument(id, data);
-      PaymentBrain.syncLinkedPayment('document', id, payment, Storage);
+      PaymentBrain.syncLinkedPayment({
+        sourceType: 'document',
+        sourceId: id,
+        paymentPatch: payment,
+        storage: Storage
+      });
     } else {
       saved = Storage.addDocument(data);
-      if (saved) PaymentBrain.syncLinkedPayment('document', saved.id, payment, Storage);
+      if (saved) {
+        PaymentBrain.syncLinkedPayment({
+          sourceType: 'document',
+          sourceId: saved.id,
+          paymentPatch: payment,
+          storage: Storage
+        });
+      }
     }
     if (!saved) {
       alert('保存に失敗しました');
