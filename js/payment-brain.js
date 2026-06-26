@@ -1,5 +1,5 @@
 /**
- * Budil v4.4.9.3 - 入金予定・支払方法管理（整合性重視）
+ * Budil v4.4.9.3.1 - 入金予定・支払方法管理（整合性重視）
  * 売上・請求書の支払方法・入金状態を共通で扱う
  */
 const PaymentBrain = {
@@ -309,9 +309,14 @@ const PaymentBrain = {
     } else {
       next.paymentStatus = currentStatus;
     }
+    if (method === 'cash' && (opts.forceStatusDefault === true || opts.forceExpectedDate === true)) {
+      next.paidDate = baseDate;
+    }
     const normalized = this.normalizePaymentAmounts(next, total, baseDate);
     const calculatedExpectedDate = this.calculateExpectedPaymentDate(method, baseDate);
-    if (method !== 'other' && method !== 'card' && (opts.forceExpectedDate === true || !next.expectedPaymentDate)) {
+    if ((method === 'other' || method === 'card') && opts.forceExpectedDate === true) {
+      next.expectedPaymentDate = '';
+    } else if (method !== 'other' && method !== 'card' && (opts.forceExpectedDate === true || !next.expectedPaymentDate)) {
       next.expectedPaymentDate = calculatedExpectedDate;
     } else if (method === 'cash' && opts.forceExpectedDate === true) {
       next.expectedPaymentDate = calculatedExpectedDate;
