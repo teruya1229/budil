@@ -3950,7 +3950,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.4.9.2.2</span>
+        <span class="business-report-version">v4.4.9.3</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -11645,6 +11645,13 @@
     set('revenue-paid-amount', r.paidAmount);
     set('revenue-unpaid-amount', r.unpaidAmount);
     set('revenue-payment-memo', r.paymentMemo);
+    updateRevenuePaymentRuleHint(r.paymentMethod);
+  }
+
+  function updateRevenuePaymentRuleHint(method) {
+    const el = document.getElementById('revenue-payment-rule-hint');
+    if (!el) return;
+    el.textContent = PaymentBrain.getPaymentMethodRuleLabel(method || document.getElementById('revenue-payment-method')?.value || 'cash');
   }
 
   function suggestRevenuePaymentFromMethod(preserveUserInput, forceStatusDefault) {
@@ -11653,7 +11660,20 @@
     const method = document.getElementById('revenue-payment-method')?.value || 'cash';
     const current = preserveUserInput ? readRevenuePaymentFieldsFromForm() : {};
     const next = PaymentBrain.applyMethodChange(current, method, amount, workDate, {
-      forceStatusDefault: forceStatusDefault === true
+      forceStatusDefault: forceStatusDefault === true,
+      forceExpectedDate: true
+    });
+    writeRevenuePaymentFieldsToForm({ ...current, ...next, amount, workDate });
+  }
+
+  function recalculateRevenueExpectedPaymentDate() {
+    const amount = Number(document.getElementById('revenue-amount')?.value) || 0;
+    const workDate = document.getElementById('revenue-work-date')?.value || TODAY();
+    const method = document.getElementById('revenue-payment-method')?.value || 'cash';
+    const current = readRevenuePaymentFieldsFromForm();
+    const next = PaymentBrain.applyMethodChange(current, method, amount, workDate, {
+      forceStatusDefault: false,
+      forceExpectedDate: true
     });
     writeRevenuePaymentFieldsToForm({ ...current, ...next, amount, workDate });
   }
@@ -11695,7 +11715,14 @@
     set('doc-unpaid-amount', d.unpaidAmount);
     set('doc-payment-memo', d.paymentMemo);
     updateDocPaymentStatusDisplay(d);
+    updateDocumentPaymentRuleHint(d.paymentMethod);
     toggleDocPaymentFields(d.type);
+  }
+
+  function updateDocumentPaymentRuleHint(method) {
+    const el = document.getElementById('doc-payment-rule-hint');
+    if (!el) return;
+    el.textContent = PaymentBrain.getPaymentMethodRuleLabel(method || document.getElementById('doc-payment-method')?.value || 'bank_transfer');
   }
 
   function updateDocPaymentStatusDisplay(doc) {
@@ -11726,7 +11753,22 @@
     const method = document.getElementById('doc-payment-method')?.value || 'bank_transfer';
     const current = preserveUserInput ? readDocumentPaymentFieldsFromForm() : {};
     const next = PaymentBrain.applyMethodChange(current, method, calc.total, issueDate, {
-      forceStatusDefault: forceStatusDefault === true
+      forceStatusDefault: forceStatusDefault === true,
+      forceExpectedDate: true
+    });
+    writeDocumentPaymentFieldsToForm({ ...collectDocumentFormData(), ...current, ...next, total: calc.total, issueDate });
+  }
+
+  function recalculateDocumentExpectedPaymentDate() {
+    const items = readDocItemsFromForm();
+    const taxSettings = readTaxSettingsFromForm();
+    const calc = DocumentsBrain.calcFromItems(items, taxSettings);
+    const issueDate = document.getElementById('doc-issue-date')?.value || TODAY();
+    const method = document.getElementById('doc-payment-method')?.value || 'bank_transfer';
+    const current = readDocumentPaymentFieldsFromForm();
+    const next = PaymentBrain.applyMethodChange(current, method, calc.total, issueDate, {
+      forceStatusDefault: false,
+      forceExpectedDate: true
     });
     writeDocumentPaymentFieldsToForm({ ...collectDocumentFormData(), ...current, ...next, total: calc.total, issueDate });
   }
@@ -12567,6 +12609,7 @@
     document.getElementById('revenue-form').addEventListener('submit', handleRevenueSubmit);
     document.getElementById('btn-revenue-cancel').addEventListener('click', resetRevenueForm);
     document.getElementById('revenue-payment-method')?.addEventListener('change', () => suggestRevenuePaymentFromMethod(true, true));
+    document.getElementById('btn-revenue-recalc-payment-date')?.addEventListener('click', recalculateRevenueExpectedPaymentDate);
     document.getElementById('revenue-amount')?.addEventListener('change', applyRevenuePaymentStatusDefaults);
     document.getElementById('revenue-payment-status')?.addEventListener('change', applyRevenuePaymentStatusDefaults);
     document.getElementById('revenue-lead').addEventListener('change', () => {
@@ -12922,6 +12965,9 @@
     writeDocumentPaymentFieldsToForm(base);
     toggleDocFormFields(base.type);
     renderDocItemsEditor(base.items, base.type);
+    if (!doc) {
+      recalculateDocumentExpectedPaymentDate();
+    }
     document.getElementById('documents-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -13214,6 +13260,7 @@
       fillDocStatusOptions(e.target.value, 'draft');
     });
     document.getElementById('doc-payment-method')?.addEventListener('change', () => suggestDocumentPaymentFromMethod(true, true));
+    document.getElementById('btn-doc-recalc-payment-date')?.addEventListener('click', recalculateDocumentExpectedPaymentDate);
     document.getElementById('doc-payment-status')?.addEventListener('change', () => {
       applyDocumentPaymentStatusDefaults();
     });

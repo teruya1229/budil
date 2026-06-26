@@ -8873,6 +8873,10 @@ body.sales-page {
   margin: 0.25rem 0 0.75rem;
 }
 
+.payment-date-recalc-btn {
+  margin-top: 0.4rem;
+}
+
 .revenue-payment-pending,
 .revenue-payment-partial,
 .revenue-payment-uncollected { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }

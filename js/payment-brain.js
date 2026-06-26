@@ -1,12 +1,14 @@
 /**
- * Budil v4.4.9.2 - 入金予定・支払方法管理（整合性重視）
+ * Budil v4.4.9.3 - 入金予定・支払方法管理（整合性重視）
  * 売上・請求書の支払方法・入金状態を共通で扱う
  */
 const PaymentBrain = {
   PAYMENT_METHODS: [
     { value: 'cash', label: '現金' },
     { value: 'bank_transfer', label: '銀行振込' },
-    { value: 'card', label: 'カード決済' },
+    { value: 'touch_payment', label: 'タッチ決済' },
+    { value: 'online_payment', label: 'オンライン決済' },
+    { value: 'square_card', label: 'Squareカード決済' },
     { value: 'kurashi_deferred', label: 'くらし後払い' },
     { value: 'kurashi_card', label: 'くらしカード決済' },
     { value: 'corporate_monthly', label: '法人月末請求' },
@@ -16,11 +18,27 @@ const PaymentBrain = {
   PAYMENT_METHOD_LABELS: {
     cash: '現金',
     bank_transfer: '銀行振込',
-    card: 'カード決済',
+    touch_payment: 'タッチ決済',
+    online_payment: 'オンライン決済',
+    square_card: 'Squareカード決済',
     kurashi_deferred: 'くらし後払い',
     kurashi_card: 'くらしカード決済',
     corporate_monthly: '法人月末請求',
-    other: 'その他'
+    other: 'その他',
+    card: 'カード決済（旧）'
+  },
+
+  PAYMENT_METHOD_RULE_LABELS: {
+    cash: '当日入金済み',
+    bank_transfer: '月末締翌月末日払',
+    touch_payment: '毎月5日払（1〜4日は当月5日、5日以降は翌月5日）',
+    online_payment: '月末締翌月末日払',
+    square_card: '毎週水曜締・同週金曜払',
+    kurashi_deferred: '月末締め・翌月末払い',
+    kurashi_card: '毎月1日払・4営業日前締（土日のみ除外、祝日は未対応）',
+    corporate_monthly: '初期値は翌月末。翌々月末払いの場合は手入力してください。',
+    other: '手入力',
+    card: '旧カード決済：手入力または既存予定日を優先'
   },
 
   PAYMENT_STATUSES: [
@@ -62,6 +80,84 @@ const PaymentBrain = {
 
   formatYen(amount) {
     return Number(amount || 0).toLocaleString('ja-JP') + '円';
+  },
+
+  parseISODate(date) {
+    const s = String(date || '').trim();
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return null;
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0, 0);
+  },
+
+  toISODate(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  },
+
+  addDaysISO(date, days) {
+    const d = this.parseISODate(date) || this.parseISODate(this.todayISO());
+    d.setDate(d.getDate() + Number(days || 0));
+    return this.toISODate(d);
+  },
+
+  monthEndISO(year, monthIndex) {
+    return this.toISODate(new Date(year, monthIndex + 1, 0, 12, 0, 0, 0));
+  },
+
+  nextMonthEndISO(baseDate) {
+    const d = this.parseISODate(baseDate) || this.parseISODate(this.todayISO());
+    return this.monthEndISO(d.getFullYear(), d.getMonth() + 1);
+  },
+
+  firstOfMonthISO(year, monthIndex) {
+    return this.toISODate(new Date(year, monthIndex, 1, 12, 0, 0, 0));
+  },
+
+  subtractBusinessDaysISO(date, count) {
+    const d = this.parseISODate(date) || this.parseISODate(this.todayISO());
+    let remaining = Number(count || 0);
+    while (remaining > 0) {
+      d.setDate(d.getDate() - 1);
+      const day = d.getDay();
+      if (day !== 0 && day !== 6) remaining -= 1;
+    }
+    return this.toISODate(d);
+  },
+
+  calculateExpectedPaymentDate(paymentMethod, baseDate) {
+    const method = String(paymentMethod || '').trim();
+    const base = this.parseISODate(baseDate) || this.parseISODate(this.todayISO());
+    const iso = this.toISODate(base);
+    const year = base.getFullYear();
+    const month = base.getMonth();
+    const day = base.getDate();
+    const weekday = base.getDay();
+
+    if (method === 'cash') return iso;
+    if (['bank_transfer', 'online_payment', 'kurashi_deferred', 'corporate_monthly'].includes(method)) {
+      return this.nextMonthEndISO(iso);
+    }
+    if (method === 'touch_payment') {
+      const targetMonth = day <= 4 ? month : month + 1;
+      return this.toISODate(new Date(year, targetMonth, 5, 12, 0, 0, 0));
+    }
+    if (method === 'square_card') {
+      const daysToFriday = weekday <= 3 ? 5 - weekday : 12 - weekday;
+      return this.addDaysISO(iso, daysToFriday);
+    }
+    if (method === 'kurashi_card') {
+      const candidate = this.firstOfMonthISO(year, month + 1);
+      const cutoff = this.subtractBusinessDaysISO(candidate, 4);
+      if (iso <= cutoff) return candidate;
+      return this.firstOfMonthISO(year, month + 2);
+    }
+    return '';
+  },
+
+  getPaymentMethodRuleLabel(paymentMethod) {
+    return this.PAYMENT_METHOD_RULE_LABELS[paymentMethod] || '手入力';
   },
 
   migratePaymentStatus(raw, fallback) {
@@ -140,13 +236,14 @@ const PaymentBrain = {
   suggestDefaultsForMethod(method, total, date) {
     const amt = this.parseAmount(total);
     const baseDate = date || this.todayISO();
+    const expectedPaymentDate = this.calculateExpectedPaymentDate(method, baseDate);
     if (method === 'cash') {
       return {
         paymentStatus: 'paid',
         paidDate: baseDate,
         paidAmount: amt,
         unpaidAmount: 0,
-        expectedPaymentDate: ''
+        expectedPaymentDate
       };
     }
     return {
@@ -154,7 +251,7 @@ const PaymentBrain = {
       paidDate: '',
       paidAmount: 0,
       unpaidAmount: amt,
-      expectedPaymentDate: ''
+      expectedPaymentDate
     };
   },
 
@@ -201,6 +298,7 @@ const PaymentBrain = {
     const opts = options || {};
     const method = opts.method || (record && record.paymentMethod) || 'cash';
     const next = { ...(record || {}), paymentMethod: method };
+    const baseDate = opts.date || next.workDate || next.issueDate || this.todayISO();
     const currentStatus = this.migratePaymentStatus(next.paymentStatus, method === 'cash' ? 'paid' : 'pending');
     const shouldUseMethodDefault = opts.forceStatusDefault === true
       || !next.paymentStatus
@@ -211,7 +309,13 @@ const PaymentBrain = {
     } else {
       next.paymentStatus = currentStatus;
     }
-    const normalized = this.normalizePaymentAmounts(next, total, opts.date || next.workDate || next.issueDate);
+    const normalized = this.normalizePaymentAmounts(next, total, baseDate);
+    const calculatedExpectedDate = this.calculateExpectedPaymentDate(method, baseDate);
+    if (method !== 'other' && method !== 'card' && (opts.forceExpectedDate === true || !next.expectedPaymentDate)) {
+      next.expectedPaymentDate = calculatedExpectedDate;
+    } else if (method === 'cash' && opts.forceExpectedDate === true) {
+      next.expectedPaymentDate = calculatedExpectedDate;
+    }
     return { ...next, ...normalized };
   },
 
