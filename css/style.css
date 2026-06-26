@@ -5583,6 +5583,10 @@ body {
   color: var(--text-muted, #64748b);
 }
 
+.reception-saved-memo {
+  white-space: pre-wrap;
+}
+
 .reception-saved-actions {
   display: flex;
   flex-wrap: wrap;
@@ -5751,6 +5755,121 @@ body {
 .reception-saved-map,
 .reception-next-actions {
   margin-top: 0.5rem;
+}
+
+/* v4.8.3 受付入力の視認性改善（ライトカード上の文字・ボタン） */
+#view-reception {
+  --reception-text: #111827;
+  --reception-text-secondary: #334155;
+  --reception-text-muted: #475569;
+  --reception-surface: #ffffff;
+  --reception-surface-alt: #f8fafc;
+  --reception-border: #cbd5e1;
+}
+
+#view-reception .card {
+  background: var(--reception-surface);
+  color: var(--reception-text);
+  border-color: var(--reception-border);
+}
+
+#view-reception .view-header,
+#view-reception .view-subtitle,
+#view-reception h2,
+#view-reception label {
+  color: var(--reception-text-secondary);
+}
+
+#view-reception h1,
+#view-reception .reception-next-title,
+#view-reception .reception-saved-title strong {
+  color: var(--reception-text);
+}
+
+#view-reception .pickup-paste-hint,
+#view-reception .reception-summary-comment,
+#view-reception .reception-next-meta,
+#view-reception .reception-saved-meta,
+#view-reception .reception-saved-date,
+#view-reception .reception-next-draft-note,
+#view-reception .reception-placeholder,
+#view-reception .map-no-address,
+#view-reception .label-muted,
+#view-reception .placeholder-text {
+  color: var(--reception-text-muted);
+}
+
+#view-reception .reception-next-item,
+#view-reception .reception-saved-item {
+  background: var(--reception-surface-alt);
+  border-color: var(--reception-border);
+}
+
+#view-reception input,
+#view-reception textarea,
+#view-reception select {
+  color: var(--reception-text);
+  background: #fff;
+  border-color: var(--reception-border);
+}
+
+#view-reception input::placeholder,
+#view-reception textarea::placeholder {
+  color: #94a3b8;
+}
+
+#view-reception .btn-secondary {
+  border-color: #94a3b8;
+  color: #1e293b;
+  background: #fff;
+}
+
+#view-reception .btn-secondary:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #64748b;
+  color: #0f172a;
+}
+
+#view-reception .btn-secondary:disabled {
+  opacity: 1;
+  color: #64748b;
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+#view-reception .btn-primary {
+  color: #fff;
+}
+
+#view-reception .map-open-btn,
+#view-reception .map-copy-btn {
+  font-weight: 600;
+}
+
+#view-reception .reception-next-draft-note {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  font-size: 0.88rem;
+}
+
+@media (max-width: 480px) {
+  #view-reception .form-row,
+  #view-reception .pickup-paste-actions,
+  #view-reception .reception-saved-actions,
+  #view-reception .reception-next-actions,
+  #view-reception .map-actions-inline {
+    max-width: 100%;
+  }
+
+  #view-reception input,
+  #view-reception textarea,
+  #view-reception select,
+  #view-reception .btn {
+    max-width: 100%;
+  }
 }
 
 .card-area-comment {

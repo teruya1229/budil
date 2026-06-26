@@ -3968,7 +3968,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.8.2</span>
+        <span class="business-report-version">v4.8.3</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -10083,6 +10083,7 @@
     const parsed = ReceptionBrain.parseAiBantouPaste(text);
     setReceptionFormData(parsed);
     syncReceptionAreaFromAddress();
+    renderReceptionNextActions();
   }
 
   function saveReceptionFromForm() {
@@ -10131,30 +10132,47 @@
       ${comment ? `<p class="reception-summary-comment">${esc(comment)}</p>` : ''}`;
   }
 
+  function getReceptionFormDraftIntake() {
+    const data = getReceptionFormData();
+    if (!(data.customerName || data.address || data.serviceText || data.source || data.phone)) {
+      return null;
+    }
+    return ReceptionBrain.normalizeIntake(data);
+  }
+
   function renderReceptionNextActions() {
     const el = document.getElementById('reception-next-actions');
     if (!el) return;
-    const actions = ReceptionBrain.getNextActionsFromIntakes(Storage.getReceptionIntakes(), 5);
+    const savedActions = ReceptionBrain.getNextActionsFromIntakes(Storage.getReceptionIntakes(), 5);
+    const draft = getReceptionFormDraftIntake();
+    const draftActions = draft ? ReceptionBrain.getNextActionsFromDraft(draft, 3) : [];
+    const actions = savedActions.length ? savedActions : draftActions;
     if (!actions.length) {
-      el.innerHTML = '<p class="placeholder-text">次の一手はありません。新規受付を取り込むと提案が表示されます。</p>';
+      el.innerHTML = '<p class="placeholder-text reception-placeholder">次の一手はありません。AI番頭の結果を貼り付けてフォームに反映してください。</p>';
       return;
     }
-    el.innerHTML = actions.map(a => {
+    const draftBanner = savedActions.length === 0 && draft
+      ? '<p class="reception-next-draft-note">入力中の受付データからの提案です。保存すると一覧にも反映されます。</p>'
+      : '';
+    el.innerHTML = draftBanner + actions.map(a => {
       let mapHtml = '';
-      if (a.intakeId) {
-        const intake = Storage.getReceptionIntakes().find(i => i.id === a.intakeId);
-        if (intake) {
-          const area = MapBrain.getIntakeArea(intake);
-          mapHtml = renderMapActionsHtml(intake.address, { area, showNoAddress: true });
-        }
+      const intake = a.intakeId
+        ? Storage.getReceptionIntakes().find(i => i.id === a.intakeId)
+        : (a.isDraft ? draft : null);
+      if (intake) {
+        const area = MapBrain.getIntakeArea(intake);
+        mapHtml = renderMapActionsHtml(intake.address, { area, showNoAddress: true });
       }
+      const openBtn = a.intakeId
+        ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open="${esc(a.intakeId)}">受付を開く</button>`
+        : '';
       return `
       <div class="reception-next-item">
-        <strong>${esc(a.title)}</strong>
-        <p class="reception-next-meta">理由：${esc(a.reason)}</p>
+        <strong class="reception-next-title">${esc(a.title)}</strong>
+        <p class="reception-next-meta">${esc(a.reason)}</p>
         <div class="reception-next-actions">
           ${mapHtml}
-          ${a.intakeId ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open="${esc(a.intakeId)}">受付を開く</button>` : ''}
+          ${openBtn}
         </div>
       </div>`;
     }).join('');
@@ -10196,9 +10214,13 @@
           ${hasWorkOrder ? '<span class="reception-work-order-badge">作業予定あり</span>' : ''}
         </div>
         <p class="reception-saved-title"><strong>${esc(intake.customerName || '（名前なし）')}</strong> / ${esc(intake.source || '—')}</p>
+        <p class="reception-saved-meta">電話：${esc(intake.phone || '—')}</p>
+        <p class="reception-saved-meta">住所：${esc(addr || '—')}</p>
         <p class="reception-saved-meta">エリア：${esc(area)} ${renderAreaDistanceBadge(area, addr)}</p>
         <p class="reception-saved-meta">作業：${esc(intake.serviceText || '—')}</p>
         <p class="reception-saved-meta">希望日：${esc(intake.preferredDatesText || '—')}</p>
+        <p class="reception-saved-meta">概算金額：${intake.estimateAmount ? esc(RevenueBrain.formatYen(intake.estimateAmount)) : '—'}</p>
+        ${intake.memo ? `<p class="reception-saved-meta reception-saved-memo">受付メモ：${esc(intake.memo)}</p>` : ''}
         <p class="reception-saved-meta">関連営業先：${esc(leadLabel)} / 売上：${esc(revLabel)}</p>
         <div class="reception-saved-map">${renderMapActionsHtml(addr, { area, showNoAddress: true })}</div>
         <div class="reception-saved-actions">
@@ -10381,7 +10403,25 @@
     const savePasteBtn = document.getElementById('btn-reception-save-paste');
     if (savePasteBtn) savePasteBtn.addEventListener('click', saveReceptionFromPaste);
     const clearBtn = document.getElementById('btn-reception-clear');
-    if (clearBtn) clearBtn.addEventListener('click', clearReceptionForm);
+    if (clearBtn) clearBtn.addEventListener('click', () => {
+      clearReceptionForm();
+      renderReceptionNextActions();
+    });
+    ['reception-customer', 'reception-phone', 'reception-address', 'reception-service', 'reception-dates', 'reception-memo', 'reception-source'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input', () => {
+        if (id === 'reception-address') syncReceptionAreaFromAddress();
+        renderReceptionNextActions();
+      });
+    });
+    const areaEl = document.getElementById('reception-area');
+    if (areaEl) {
+      areaEl.addEventListener('change', () => {
+        areaEl.dataset.manual = areaEl.value ? '1' : '';
+        renderReceptionNextActions();
+      });
+    }
   }
 
   function renderDemandPickup() {

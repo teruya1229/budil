@@ -1,5 +1,5 @@
 /**
- * Budil v3.4 - 受付・予約番頭（AI番頭連携入口）
+ * Budil v4.8.3 - 受付・予約番頭（AI番頭連携入口）
  */
 const ReceptionBrain = {
   STATUSES: ['new', 'lead_created', 'task_created', 'work_scheduled', 'revenue_candidate', 'done', 'archived'],
@@ -14,17 +14,21 @@ const ReceptionBrain = {
     archived: '保管'
   },
 
-  PASTE_LABELS: [
-    { key: 'source', labels: ['依頼元：', '依頼元:', 'source：', 'source:'] },
-    { key: 'customerName', labels: ['お客様名：', 'お客様名:', '顧客名：', '顧客名:', 'customerName：', 'customerName:'] },
-    { key: 'phone', labels: ['電話番号：', '電話番号:', '電話：', '電話:', 'phone：', 'phone:'] },
-    { key: 'address', labels: ['住所：', '住所:', 'address：', 'address:'] },
-    { key: 'serviceText', labels: ['作業内容：', '作業内容:', 'サービス：', 'サービス:', 'serviceText：', 'serviceText:'] },
-    { key: 'preferredDatesText', labels: ['希望日：', '希望日:', 'preferredDatesText：', 'preferredDatesText:'] },
-    { key: 'memo', labels: ['受付メモ：', '受付メモ:', 'メモ：', 'メモ:', 'memo：', 'memo:'] },
-    { key: 'estimateAmount', labels: ['概算金額：', '概算金額:', '金額：', '金額:', 'estimateAmount：', 'estimateAmount:'] },
-    { key: 'handlingStatus', labels: ['対応状況：', '対応状況:', 'handlingStatus：', 'handlingStatus:'] }
+  PASTE_FIELD_DEFS: [
+    { key: 'source', labels: ['依頼元', 'source'] },
+    { key: 'customerName', labels: ['氏名', '名前', 'お客様名', '顧客名', 'customerName'] },
+    { key: 'phone', labels: ['電話番号', '電話', 'phone'] },
+    { key: 'address', labels: ['住所', 'address'], multiline: true },
+    { key: 'serviceText', labels: ['作業内容', 'サービス', 'serviceText'] },
+    { key: 'preferredDatesText', labels: ['希望日', 'preferredDatesText'] },
+    { key: 'memo', labels: ['補足', '受付メモ', 'メモ', 'memo'], multiline: true },
+    { key: 'estimateAmount', labels: ['概算金額', '金額', 'estimateAmount'] },
+    { key: 'handlingStatus', labels: ['対応状況', 'handlingStatus'] },
+    { key: '_date', labels: ['日付', '作業日', '予約日'] },
+    { key: '_time', labels: ['時間', '開始時間'] }
   ],
+
+  PASTE_MULTILINE_KEYS: new Set(['address', 'memo']),
 
   normalizeIntake(raw) {
     const now = new Date().toISOString();
@@ -73,20 +77,138 @@ const ReceptionBrain = {
     const jsonResult = this._tryParseJson(trimmed);
     if (jsonResult) return this.normalizeIntake(jsonResult);
 
-    const parsed = {};
-    const lines = trimmed.split(/\r?\n/);
-    lines.forEach(line => {
-      const row = line.trim();
-      if (!row) return;
-      this.PASTE_LABELS.forEach(({ key, labels }) => {
-        labels.forEach(label => {
-          if (row.startsWith(label)) {
-            parsed[key] = row.slice(label.length).trim();
-          }
-        });
-      });
+    const extracted = this._extractLabeledFields(trimmed);
+    return this.normalizeIntake(extracted);
+  },
+
+  _matchPasteFieldLine(line) {
+    const trimmed = (line || '').trim();
+    if (!trimmed) return null;
+    const defs = [...this.PASTE_FIELD_DEFS].sort((a, b) => {
+      const al = Math.max(...a.labels.map(l => l.length));
+      const bl = Math.max(...b.labels.map(l => l.length));
+      return bl - al;
     });
-    return this.normalizeIntake(parsed);
+    for (const def of defs) {
+      for (const label of def.labels) {
+        const fullColon = label + '：';
+        const halfColon = label + ':';
+        if (trimmed.startsWith(fullColon)) {
+          return {
+            key: def.key,
+            value: trimmed.slice(fullColon.length).trim(),
+            multiline: !!def.multiline
+          };
+        }
+        if (trimmed.startsWith(halfColon)) {
+          return {
+            key: def.key,
+            value: trimmed.slice(halfColon.length).trim(),
+            multiline: !!def.multiline
+          };
+        }
+      }
+    }
+    return null;
+  },
+
+  _extractLabeledFields(text) {
+    const lines = text.split(/\r?\n/);
+    const fields = {};
+    let currentKey = null;
+    let currentLines = [];
+    let currentMultiline = false;
+
+    const flush = () => {
+      if (!currentKey) return;
+      const joined = currentLines.map(l => l.trim()).filter((l, idx, arr) => {
+        if (currentKey === 'memo') return true;
+        return l !== '' || (idx > 0 && idx < arr.length - 1);
+      });
+      let value = joined.join(currentKey === 'memo' ? '\n' : ' ').trim();
+      if (currentKey === 'memo') {
+        value = joined
+          .map(l => l.replace(/^[・•\-]\s*/, '').trim())
+          .filter(Boolean)
+          .join('\n');
+      }
+      if (value || currentKey === 'memo') {
+        fields[currentKey] = value;
+      }
+      currentKey = null;
+      currentLines = [];
+      currentMultiline = false;
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const rawLine = lines[i];
+      const match = this._matchPasteFieldLine(rawLine);
+
+      if (match) {
+        flush();
+        currentKey = match.key;
+        currentMultiline = match.multiline;
+        currentLines = match.value ? [match.value] : [];
+        continue;
+      }
+
+      if (!currentKey) continue;
+
+      const trimmed = rawLine.trim();
+      if (!currentMultiline) {
+        flush();
+        i -= 1;
+        continue;
+      }
+
+      if (currentKey === 'address' && trimmed === '') {
+        flush();
+        continue;
+      }
+
+      if (currentKey === 'memo' && trimmed === '' && currentLines.length === 0) {
+        continue;
+      }
+
+      currentLines.push(rawLine);
+    }
+
+    flush();
+
+    const datePart = fields._date || '';
+    const timePart = fields._time || '';
+    if (datePart || timePart) {
+      fields.preferredDatesText = [datePart, timePart].filter(Boolean).join(' ');
+    }
+    delete fields._date;
+    delete fields._time;
+
+    return fields;
+  },
+
+  getIntakeMissingFields(intake) {
+    const n = this.normalizeIntake(intake);
+    const missing = [];
+    if (!n.customerName) missing.push('お客様名');
+    if (!n.address) missing.push('住所');
+    if (!n.phone) missing.push('電話番号');
+    if (!n.serviceText) missing.push('作業内容');
+    if (!n.id) missing.push('受付保存');
+    return missing;
+  },
+
+  buildActionReason(intake, options) {
+    const opts = options || {};
+    const n = this.normalizeIntake(intake);
+    const parts = [];
+    if (n.serviceText) parts.push(n.serviceText);
+    const missing = this.getIntakeMissingFields(n).filter(item => {
+      if (item === '受付保存' && opts.includeSaveHint === false) return false;
+      return true;
+    });
+    if (missing.length) parts.push('不足：' + missing.join(' / '));
+    if (!parts.length) return opts.fallback || '受付データから営業先へ変換';
+    return parts.join(' — ');
   },
 
   _tryParseJson(text) {
@@ -355,7 +477,7 @@ const ReceptionBrain = {
         actions.push({
           intakeId: intake.id,
           title: `${intake.customerName || '受付'}：営業先を作成`,
-          reason: intake.serviceText || '受付データから営業先へ変換',
+          reason: this.buildActionReason(intake, { includeSaveHint: false }),
           kind: 'create-lead'
         });
       }
@@ -363,7 +485,10 @@ const ReceptionBrain = {
         actions.push({
           intakeId: intake.id,
           title: `写真確認：${intake.customerName || 'お客様'}`,
-          reason: '型番・写真確認が必要',
+          reason: this.buildActionReason(intake, {
+            includeSaveHint: false,
+            fallback: '型番・写真確認が必要'
+          }),
           kind: 'photo-check'
         });
       }
@@ -371,7 +496,9 @@ const ReceptionBrain = {
         actions.push({
           intakeId: intake.id,
           title: `日程確認：${intake.customerName || 'お客様'}`,
-          reason: intake.preferredDatesText || '希望日の調整',
+          reason: intake.preferredDatesText
+            ? this.buildActionReason(intake, { includeSaveHint: false, fallback: intake.preferredDatesText })
+            : this.buildActionReason(intake, { includeSaveHint: false, fallback: '希望日の調整' }),
           kind: 'schedule'
         });
       }
@@ -382,5 +509,39 @@ const ReceptionBrain = {
       seen.add(a.title);
       return true;
     }).slice(0, limit || 5);
+  },
+
+  getNextActionsFromDraft(intake, limit) {
+    const normalized = this.normalizeIntake(intake);
+    if (!(normalized.customerName || normalized.address || normalized.serviceText || normalized.source)) {
+      return [];
+    }
+    const actions = [];
+    actions.push({
+      intakeId: '',
+      title: `${normalized.customerName || '受付'}：営業先を作成`,
+      reason: this.buildActionReason(normalized),
+      kind: 'create-lead',
+      isDraft: true
+    });
+    if (normalized.address && actions.length < (limit || 5)) {
+      actions.push({
+        intakeId: '',
+        title: `${normalized.customerName || '受付'}：住所を確認`,
+        reason: this.buildActionReason(normalized, { fallback: normalized.address }),
+        kind: 'address-check',
+        isDraft: true
+      });
+    }
+    if ((normalized.preferredDatesText || /日程/.test(normalized.handlingStatus)) && actions.length < (limit || 5)) {
+      actions.push({
+        intakeId: '',
+        title: `日程確認：${normalized.customerName || 'お客様'}`,
+        reason: normalized.preferredDatesText || this.buildActionReason(normalized, { fallback: '希望日の調整' }),
+        kind: 'schedule',
+        isDraft: true
+      });
+    }
+    return actions.slice(0, limit || 5);
   }
 };
