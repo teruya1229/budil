@@ -1,5 +1,5 @@
 /**
- * Budil v4.7.0 - 入金予定・支払方法管理（整合性重視）
+ * Budil v4.7.1 - 入金予定・支払方法管理（整合性重視）
  * 売上・請求書の支払方法・入金状態を共通で扱う
  */
 const PaymentBrain = {
@@ -505,6 +505,18 @@ const PaymentBrain = {
     if (!storage || !revenueId || !documentId) return;
     storage.updateRevenueRecord(revenueId, { linkedDocumentId: documentId });
     storage.updateDocument(documentId, { linkedRevenueId: revenueId });
+  },
+
+  unlinkRevenueDocument(revenueId, storage) {
+    if (!storage || !revenueId) return false;
+    storage.updateRevenueRecord(revenueId, { linkedDocumentId: '' });
+    return true;
+  },
+
+  unlinkDocumentRevenue(documentId, storage) {
+    if (!storage || !documentId) return false;
+    storage.updateDocument(documentId, { linkedRevenueId: '' });
+    return true;
   },
 
   getCounterparty(record) {

@@ -795,7 +795,8 @@
       <div class="exec-home-receivables">
         <div><span>入金待ち合計</span><strong>${esc(PaymentBrain.formatYen(s.receivables.pendingTotal || 0))}</strong></div>
         <div><span>今月入金予定</span><strong>${esc(PaymentBrain.formatYen(s.receivables.thisMonthExpected || 0))}</strong></div>
-        <div class="${s.receivables.overdueCount ? 'exec-home-receivables-warn' : ''}"><span>入金遅れ件数</span><strong>${s.receivables.overdueCount || 0}件</strong></div>
+        <div><span>来月入金予定</span><strong>${esc(PaymentBrain.formatYen(s.receivables.nextMonthExpected || 0))}</strong></div>
+        <div class="${s.receivables.overdueCount ? 'exec-home-receivables-warn' : ''}"><span>入金遅れ</span><strong>${s.receivables.overdueCount || 0}件</strong></div>
       </div>` : ''}
       <div class="exec-work-actions">
         <button type="button" class="btn btn-sm btn-secondary exec-home-revenue-link">売上登録</button>
@@ -3952,7 +3953,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.7.0</span>
+        <span class="business-report-version">v4.7.1</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -11849,19 +11850,98 @@
     return `<span class="revenue-payment-method-badge">${esc(label)}</span>`;
   }
 
+  const LINK_UNLINK_CONFIRM = 'リンクだけ解除します。売上・請求書データは削除されません。よろしいですか？';
+
+  function renderReceivableBrokenLinkButtons(item) {
+    if (!item.linkedBroken) return '';
+    if (item.linkedBroken === 'document' && item.primaryKind === 'revenue') {
+      return `
+        <button type="button" class="btn btn-sm btn-secondary" data-unlink-revenue-link="${esc(item.primaryId)}">リンク解除</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-recreate-invoice-revenue="${esc(item.primaryId)}">請求書を再作成</button>`;
+    }
+    if (item.linkedBroken === 'revenue' && item.primaryKind === 'document') {
+      return `
+        <button type="button" class="btn btn-sm btn-secondary" data-unlink-document-link="${esc(item.primaryId)}">リンク解除</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-reflect-doc-revenue="${esc(item.primaryId)}">売上登録に反映</button>`;
+    }
+    return '';
+  }
+
+  function unlinkReceivableLink(item) {
+    if (!item || !item.linkedBroken) return;
+    if (!confirm(LINK_UNLINK_CONFIRM)) return;
+    if (item.linkedBroken === 'document' && item.primaryKind === 'revenue') {
+      PaymentBrain.unlinkRevenueDocument(item.primaryId, Storage);
+    } else if (item.linkedBroken === 'revenue' && item.primaryKind === 'document') {
+      PaymentBrain.unlinkDocumentRevenue(item.primaryId, Storage);
+    } else {
+      return;
+    }
+    renderReceivablesView();
+    renderRevenueView();
+    renderDocumentsView();
+    renderDashboard();
+    showAppToast('リンクを解除しました');
+  }
+
+  function recreateInvoiceFromBrokenLink(revenueId) {
+    if (!revenueId) return;
+    PaymentBrain.unlinkRevenueDocument(revenueId, Storage);
+    createInvoiceFromRevenue(revenueId);
+  }
+
+  function reflectDocumentToRevenueForm(docId) {
+    const doc = Storage.getDocumentById(docId);
+    const prefill = DocumentsBrain.toRevenuePrefill(doc);
+    if (!prefill) return;
+    navigateToView('revenue');
+    resetRevenueForm();
+    pendingLinkedDocumentId = docId;
+    document.getElementById('revenue-work-date').value = prefill.workDate;
+    document.getElementById('revenue-customer').value = prefill.customerName;
+    const serviceEl = document.getElementById('revenue-service');
+    if (serviceEl) {
+      const exists = Array.from(serviceEl.options).some(o => o.value === prefill.service);
+      if (!exists && prefill.service) {
+        const opt = document.createElement('option');
+        opt.value = prefill.service;
+        opt.textContent = prefill.service;
+        serviceEl.appendChild(opt);
+      }
+      serviceEl.value = prefill.service;
+    }
+    document.getElementById('revenue-amount').value = prefill.amount;
+    document.getElementById('revenue-status').value = prefill.status;
+    writeRevenuePaymentFieldsToForm(prefill);
+    document.getElementById('revenue-memo').value = prefill.memo;
+    document.getElementById('revenue-form-title').textContent = '売上登録（請求書から反映）';
+    showAppToast('売上登録フォームに反映しました。保存すると請求書とリンクされます。');
+    document.getElementById('revenue-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function reflectBrokenDocumentToRevenue(docId) {
+    if (!docId) return;
+    PaymentBrain.unlinkDocumentRevenue(docId, Storage);
+    reflectDocumentToRevenueForm(docId);
+  }
+
   function renderReceivableActionButtons(item) {
     const buttons = [];
     buttons.push(`<button type="button" class="btn btn-sm btn-primary" data-mark-paid="${esc(item.primaryKind)}:${esc(item.primaryId)}">入金済み</button>`);
     buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-receivable-detail="${esc(item.primaryKind)}:${esc(item.primaryId)}">詳細</button>`);
-    if (item.document && item.document.id) {
-      buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-open-document="${esc(item.document.id)}">請求書を開く</button>`);
-    } else if (item.primaryKind === 'document' && item.primaryId) {
-      buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-open-document="${esc(item.primaryId)}">請求書を開く</button>`);
-    }
-    if (item.revenue && item.revenue.id) {
-      buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-open-revenue="${esc(item.revenue.id)}">売上を開く</button>`);
-    } else if (item.primaryKind === 'revenue' && item.primaryId) {
-      buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-open-revenue="${esc(item.primaryId)}">売上を開く</button>`);
+    if (item.linkedBroken) {
+      buttons.push(renderReceivableBrokenLinkButtons(item));
+    } else {
+      if (item.document && item.document.id) {
+        buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-open-document="${esc(item.document.id)}">請求書を開く</button>`);
+      } else if (item.primaryKind === 'document' && item.primaryId) {
+        buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-open-document="${esc(item.primaryId)}">請求書を開く</button>`);
+      }
+      if (item.revenue && item.revenue.id) {
+        buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-open-revenue="${esc(item.revenue.id)}">売上を開く</button>`);
+      } else if (item.primaryKind === 'revenue' && item.primaryId) {
+        buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-open-revenue="${esc(item.primaryId)}">売上を開く</button>`);
+      }
     }
     return `<div class="receivables-card-actions">${buttons.join('')}</div>`;
   }
@@ -11903,6 +11983,26 @@
         navigateToView('revenue');
         openRevenueEdit(id);
       });
+    });
+    document.querySelectorAll('[data-unlink-revenue-link]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.unlinkRevenueLink;
+        const hit = items.find(i => i.linkedBroken === 'document' && i.primaryKind === 'revenue' && i.primaryId === id);
+        if (hit) unlinkReceivableLink(hit);
+      });
+    });
+    document.querySelectorAll('[data-unlink-document-link]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.unlinkDocumentLink;
+        const hit = items.find(i => i.linkedBroken === 'revenue' && i.primaryKind === 'document' && i.primaryId === id);
+        if (hit) unlinkReceivableLink(hit);
+      });
+    });
+    document.querySelectorAll('[data-recreate-invoice-revenue]').forEach(btn => {
+      btn.addEventListener('click', () => recreateInvoiceFromBrokenLink(btn.dataset.recreateInvoiceRevenue));
+    });
+    document.querySelectorAll('[data-reflect-doc-revenue]').forEach(btn => {
+      btn.addEventListener('click', () => reflectBrokenDocumentToRevenue(btn.dataset.reflectDocRevenue));
     });
   }
 
@@ -12204,7 +12304,10 @@
         <span class="revenue-linked-badge">請求書 linked済み</span>`;
     }
     if (link.state === 'missing') {
-      return '<span class="revenue-linked-missing">linked請求書が見つかりません</span>';
+      return `
+        <span class="revenue-linked-missing">linked先の請求書が見つかりません</span>
+        <button type="button" class="btn btn-sm btn-secondary" data-unlink-revenue-link="${esc(revenue.id)}">リンク解除</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-recreate-invoice-revenue="${esc(revenue.id)}">請求書を再作成</button>`;
     }
     return `<button type="button" class="btn btn-sm btn-primary" data-create-invoice-revenue="${esc(revenue.id)}" title="この売上データをもとに請求書を作成します。売上金額は変更されません。">請求書作成</button>`;
   }
@@ -12265,8 +12368,7 @@
       return;
     }
     if (link.state === 'missing') {
-      alert('linked請求書が見つかりません。再作成は今回のMVPでは自動では行いません。');
-      return;
+      PaymentBrain.unlinkRevenueDocument(revenueId, Storage);
     }
     const draft = DocumentsBrain.buildInvoiceFromRevenue(normalized, Storage.getDocuments());
     if (!draft) {
@@ -12295,6 +12397,20 @@
     });
     document.querySelectorAll('[data-open-linked-invoice]').forEach(btn => {
       btn.addEventListener('click', () => openLinkedInvoiceFromRevenue(btn.dataset.openLinkedInvoice));
+    });
+    document.querySelectorAll('[data-unlink-revenue-link]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!confirm(LINK_UNLINK_CONFIRM)) return;
+        PaymentBrain.unlinkRevenueDocument(btn.dataset.unlinkRevenueLink, Storage);
+        renderRevenueView();
+        renderReceivablesView();
+        renderDocumentsView();
+        renderDashboard();
+        showAppToast('リンクを解除しました');
+      });
+    });
+    document.querySelectorAll('[data-recreate-invoice-revenue]').forEach(btn => {
+      btn.addEventListener('click', () => recreateInvoiceFromBrokenLink(btn.dataset.recreateInvoiceRevenue));
     });
   }
 
@@ -13364,32 +13480,7 @@
 
   function reflectDocumentToRevenue() {
     if (!currentDocPreviewId) return;
-    const doc = Storage.getDocumentById(currentDocPreviewId);
-    const prefill = DocumentsBrain.toRevenuePrefill(doc);
-    if (!prefill) return;
-    navigateToView('revenue');
-    resetRevenueForm();
-    pendingLinkedDocumentId = currentDocPreviewId;
-    document.getElementById('revenue-work-date').value = prefill.workDate;
-    document.getElementById('revenue-customer').value = prefill.customerName;
-    const serviceEl = document.getElementById('revenue-service');
-    if (serviceEl) {
-      const exists = Array.from(serviceEl.options).some(o => o.value === prefill.service);
-      if (!exists && prefill.service) {
-        const opt = document.createElement('option');
-        opt.value = prefill.service;
-        opt.textContent = prefill.service;
-        serviceEl.appendChild(opt);
-      }
-      serviceEl.value = prefill.service;
-    }
-    document.getElementById('revenue-amount').value = prefill.amount;
-    document.getElementById('revenue-status').value = prefill.status;
-    writeRevenuePaymentFieldsToForm(prefill);
-    document.getElementById('revenue-memo').value = prefill.memo;
-    document.getElementById('revenue-form-title').textContent = '売上登録（請求書から反映）';
-    showAppToast('売上登録フォームに反映しました。保存すると請求書とリンクされます。');
-    document.getElementById('revenue-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    reflectDocumentToRevenueForm(currentDocPreviewId);
   }
 
   function printDocument() {

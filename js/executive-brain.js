@@ -2,7 +2,7 @@
  * Budil v4.4 - 経営司令塔ホーム（毎朝5分・全番頭統合）
  */
 const ExecutiveBrain = {
-  VERSION: 'v4.7.0',
+  VERSION: 'v4.7.1',
 
   CHECK_ITEMS: [
     { id: 'workOrders', label: '作業予定を確認した' },
@@ -388,7 +388,7 @@ const ExecutiveBrain = {
         (ctx.documents || []),
         ctx.today
       )
-      : { pendingTotal: 0, thisMonthExpected: 0, overdueCount: 0, count: 0 };
+      : { pendingTotal: 0, thisMonthExpected: 0, nextMonthExpected: 0, overdueCount: 0, count: 0 };
     return {
       monthRevenue,
       monthlyTarget: summary.monthlyTarget || 0,

@@ -575,7 +575,14 @@ const DocumentsBrain = {
     const amount = this.parseAmount(rev.amount);
     if (amount <= 0) return null;
 
-    const subject = String(rev.service || rev.memo || '作業代金').trim() || '作業代金';
+    const subject = [
+      rev.memo,
+      rev.description,
+      rev.title,
+      rev.serviceName,
+      rev.service,
+      '作業代金'
+    ].map(s => String(s || '').trim()).find(Boolean) || '作業代金';
     const customerRaw = String(rev.customerName || rev.leadName || '').trim();
     const taxSettings = { ...this.defaultTaxSettings(), taxDisplayMode: 'taxIncluded' };
     const items = [{
