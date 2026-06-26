@@ -1,8 +1,19 @@
 /**
- * Budil v2.2 - データバックアップ・復元
+ * Budil v4.8.0 - データバックアップ・復元
  */
 const DataBackup = {
-  VERSION: '3.1',
+  VERSION: '4.0',
+  APP_VERSION: 'v4.8.0',
+
+  PAYMENT_FIELDS: [
+    'paymentMethod',
+    'paymentStatus',
+    'expectedPaymentDate',
+    'paidDate',
+    'paidAmount',
+    'unpaidAmount',
+    'paymentMemo'
+  ],
 
   BACKUP_KEYS: [
     'budil_leads',
@@ -30,9 +41,11 @@ const DataBackup = {
 
   exportPayload() {
     const data = {};
+    const dataKeys = [];
     this.BACKUP_KEYS.forEach(key => {
       const raw = localStorage.getItem(key);
       if (raw !== null) {
+        dataKeys.push(key);
         try {
           data[key] = JSON.parse(raw);
         } catch {
@@ -42,8 +55,11 @@ const DataBackup = {
     });
     return {
       version: this.VERSION,
+      backupVersion: this.APP_VERSION,
+      appVersion: this.APP_VERSION,
       exportedAt: new Date().toISOString(),
       app: 'Budil',
+      dataKeys,
       data
     };
   },
@@ -60,7 +76,123 @@ const DataBackup = {
     if (!keys.length) {
       return { valid: false, error: 'Budilのバックアップキーが含まれていません' };
     }
-    return { valid: true, data, keys, exportedAt: payload.exportedAt || null };
+    return {
+      valid: true,
+      data,
+      keys,
+      exportedAt: payload.exportedAt || null,
+      backupVersion: payload.backupVersion || payload.appVersion || null,
+      appVersion: payload.appVersion || payload.backupVersion || null,
+      dataKeys: payload.dataKeys || keys,
+      integrity: this.getIntegritySummaryFromData(data)
+    };
+  },
+
+  hasPaymentFields(record) {
+    if (!record || typeof record !== 'object') return false;
+    return this.PAYMENT_FIELDS.some(field => {
+      const val = record[field];
+      return val != null && val !== '';
+    });
+  },
+
+  getIntegritySummaryFromData(data) {
+    const src = data || {};
+    const revenues = Array.isArray(src.budil_revenue_records) ? src.budil_revenue_records : [];
+    const documents = Array.isArray(src.budil_documents) ? src.budil_documents : [];
+    const docIds = new Set(documents.filter(d => d && d.id).map(d => d.id));
+    const revIds = new Set(revenues.filter(r => r && r.id).map(r => r.id));
+
+    let linkedRevenueCount = 0;
+    let linkedDocumentCount = 0;
+    let linkedBrokenCount = 0;
+    let revenueWithPaymentFields = 0;
+    let revenueMissingPaymentFields = 0;
+    let documentsWithPaymentFields = 0;
+    let documentsMissingPaymentFields = 0;
+    let documentsWithTaxSettings = 0;
+
+    revenues.forEach(r => {
+      if (!r || typeof r !== 'object') return;
+      if (this.hasPaymentFields(r)) revenueWithPaymentFields++;
+      else revenueMissingPaymentFields++;
+      const linkedDocId = String(r.linkedDocumentId || '').trim();
+      if (linkedDocId) {
+        linkedRevenueCount++;
+        if (!docIds.has(linkedDocId)) linkedBrokenCount++;
+      }
+    });
+
+    documents.forEach(d => {
+      if (!d || typeof d !== 'object') return;
+      if (this.hasPaymentFields(d)) documentsWithPaymentFields++;
+      else documentsMissingPaymentFields++;
+      if (d.taxSettings || d.taxMode != null || d.taxRate != null) documentsWithTaxSettings++;
+      const linkedRevId = String(d.linkedRevenueId || '').trim();
+      if (linkedRevId) {
+        linkedDocumentCount++;
+        if (!revIds.has(linkedRevId)) linkedBrokenCount++;
+      }
+    });
+
+    const invoiceCount = documents.filter(d => d && d.type === 'invoice').length;
+    const estimateCount = documents.filter(d => d && d.type === 'estimate').length;
+
+    return {
+      dataKeys: Object.keys(src).filter(k => this.BACKUP_KEYS.includes(k)),
+      revenueCount: revenues.length,
+      documentCount: documents.length,
+      invoiceCount,
+      estimateCount,
+      monthlyResults: Array.isArray(src.budil_monthly_results) ? src.budil_monthly_results.length : 0,
+      externalCheck: Array.isArray(src.budil_external_check_reports) ? src.budil_external_check_reports.length : 0,
+      actionCandidates: Array.isArray(src.budil_action_candidates) ? src.budil_action_candidates.length : 0,
+      linkedRevenueCount,
+      linkedDocumentCount,
+      linkedCount: linkedRevenueCount + linkedDocumentCount,
+      linkedBrokenCount,
+      revenueWithPaymentFields,
+      revenueMissingPaymentFields,
+      documentsWithPaymentFields,
+      documentsMissingPaymentFields,
+      documentsWithTaxSettings
+    };
+  },
+
+  inspectBackupData(data, label) {
+    const summary = this.getIntegritySummaryFromData(data);
+    console.info('[Budil Backup]', label || 'inspect', summary);
+    return summary;
+  },
+
+  inspectCurrentData(label) {
+    const data = {};
+    this.BACKUP_KEYS.forEach(key => {
+      const raw = localStorage.getItem(key);
+      if (raw !== null) {
+        try {
+          data[key] = JSON.parse(raw);
+        } catch {
+          data[key] = raw;
+        }
+      }
+    });
+    return this.inspectBackupData(data, label || 'current');
+  },
+
+  buildIntegritySummaryLines(integrity) {
+    const s = integrity || {};
+    return [
+      '売上 ' + (s.revenueCount || 0) + '件',
+      '請求書/見積書 ' + (s.documentCount || 0) + '件（請求' + (s.invoiceCount || 0) + ' / 見積' + (s.estimateCount || 0) + '）',
+      '月次実績 ' + (s.monthlyResults || 0) + '件',
+      '外部チェック ' + (s.externalCheck || 0) + '件',
+      '今日やること候補 ' + (s.actionCandidates || 0) + '件',
+      'linked ID あり ' + (s.linkedCount || 0) + '件',
+      'linked切れ ' + (s.linkedBrokenCount || 0) + '件',
+      'payment fields あり（売上 ' + (s.revenueWithPaymentFields || 0) + ' / 請求書 ' + (s.documentsWithPaymentFields || 0) + '）',
+      'taxSettings あり ' + (s.documentsWithTaxSettings || 0) + '件'
+    ];
   },
 
   getSummaryFromData(data) {
@@ -95,12 +227,15 @@ const DataBackup = {
     const analyticsRecords = Array.isArray(data.budil_analytics_records) ? data.budil_analytics_records.length : 0;
     const monthlyResults = Array.isArray(data.budil_monthly_results) ? data.budil_monthly_results.length : 0;
     const documents = Array.isArray(data.budil_documents) ? data.budil_documents.length : 0;
+    const externalCheck = Array.isArray(data.budil_external_check_reports) ? data.budil_external_check_reports.length : 0;
+    const actionCandidates = Array.isArray(data.budil_action_candidates) ? data.budil_action_candidates.length : 0;
+    const integrity = this.getIntegritySummaryFromData(data);
 
     return {
       leads, followups, demandLogs, radarKw, messages, hasPosts, hasCardDraft,
       hasDemandNotes, hasSettings, revenueRecords, hasRevenueSettings,
       dailyTaskStates, manualTasks, demandPickups, receptionIntakes, workOrders, expenseRecords, analyticsRecords,
-      monthlyResults, documents
+      monthlyResults, documents, externalCheck, actionCandidates, integrity
     };
   },
 

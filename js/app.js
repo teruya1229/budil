@@ -2591,6 +2591,15 @@
     if (summary.analyticsRecords) items.push('アナリティクス ' + summary.analyticsRecords + '件');
     if (summary.monthlyResults) items.push('月次実績 ' + summary.monthlyResults + '件');
     if (summary.documents) items.push('請求書・見積書 ' + summary.documents + '件');
+    if (summary.externalCheck) items.push('外部チェック ' + summary.externalCheck + '件');
+    if (summary.actionCandidates) items.push('今日やること候補 ' + summary.actionCandidates + '件');
+    if (summary.integrity) {
+      const ig = summary.integrity;
+      if (ig.linkedCount) items.push('linked ID あり ' + ig.linkedCount + '件');
+      if (ig.linkedBrokenCount) items.push('linked切れ ' + ig.linkedBrokenCount + '件');
+      items.push('payment fields（売上 ' + (ig.revenueWithPaymentFields || 0) + ' / 請求書 ' + (ig.documentsWithPaymentFields || 0) + '）');
+      if (ig.documentsWithTaxSettings) items.push('taxSettings あり ' + ig.documentsWithTaxSettings + '件');
+    }
     return items;
   }
 
@@ -3187,6 +3196,12 @@
     const items = [
       ['営業先', counts.leads],
       ['売上', counts.revenue],
+      ['請求書/見積書', counts.documents],
+      ['月次実績', counts.monthlyResults],
+      ['外部チェック', counts.externalChecks],
+      ['入金待ち', counts.receivablesPending],
+      ['linked済み', counts.linkedCount],
+      ['linked切れ', counts.linkedBroken],
       ['今日やること', counts.dailyTasks],
       ['需要ピックアップ', counts.pickups],
       ['受付データ', counts.receptionIntakes],
@@ -3953,7 +3968,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.7.1</span>
+        <span class="business-report-version">v4.8.0</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -4034,17 +4049,26 @@
       const exported = result.exportedAt
         ? 'エクスポート日時: ' + DataBackup.formatBackupDate(result.exportedAt)
         : 'エクスポート日時: 不明';
-      meta.textContent = exported + ' / 復元キー: ' + result.keys.length + '件';
+      const version = result.backupVersion || result.appVersion || '';
+      const versionLabel = version ? ' / バックアップ版: ' + version : '';
+      meta.textContent = exported + versionLabel + ' / 復元キー: ' + result.keys.length + '件';
     }
+    const integrityLines = result.integrity
+      ? DataBackup.buildIntegritySummaryLines(result.integrity)
+      : [];
     if (list) {
-      list.innerHTML = buildDataSummaryItems(summary)
+      list.innerHTML = buildDataSummaryItems(summary).concat(integrityLines)
         .map(t => '<li>' + esc(t) + '</li>').join('');
+    }
+    if (result.integrity) {
+      DataBackup.inspectBackupData(result.data, 'restore-preview');
     }
     if (preview) preview.classList.remove('hidden');
   }
 
   function exportBudilData() {
     const payload = DataBackup.exportPayload();
+    DataBackup.inspectBackupData(payload.data, 'export');
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -4110,6 +4134,11 @@
     renderFollowupTable();
     renderFollowupOverdue();
     renderRevenueView();
+    renderReceivablesView();
+    renderDocumentsView();
+    renderProfitView();
+    renderMonthlyResultsView();
+    renderExternalCheckView();
     renderReceptionView();
     renderWorkOrderView();
     renderFollowUpView();
@@ -4152,13 +4181,17 @@
     document.getElementById('btn-import-confirm').addEventListener('click', () => {
       if (!pendingImport) return;
       const ok = confirm(
-        'バックアップデータで現在のBudilデータを上書き復元します。\n\n' +
-        '対象：営業先・売上・タスク・活動履歴・設定など\n' +
-        '本番データがある場合は、先にエクスポートしてください。\n\nよろしいですか？'
+        'このバックアップを復元します。\n' +
+        '現在のデータは上書きされます。\n' +
+        '必要なら先に現在データをバックアップしてください。\n\n' +
+        'よろしいですか？'
       );
       if (!ok) return;
 
+      const beforeIntegrity = DataBackup.inspectCurrentData('pre-restore');
       DataBackup.importData(pendingImport.data, pendingImport.keys);
+      const afterIntegrity = DataBackup.inspectCurrentData('post-restore');
+      console.info('[Budil Backup] restore compare', { before: beforeIntegrity, after: afterIntegrity });
       hideImportPreview();
       refreshAllViews();
       alert('データを復元しました');

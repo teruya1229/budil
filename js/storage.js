@@ -958,6 +958,12 @@ const Storage = {
     const counts = {
       leads: 0,
       revenue: 0,
+      documents: 0,
+      monthlyResults: 0,
+      externalChecks: 0,
+      receivablesPending: 0,
+      linkedCount: 0,
+      linkedBroken: 0,
       dailyTasks: 0,
       pickups: 0,
       receptionIntakes: 0,
@@ -1094,6 +1100,74 @@ const Storage = {
       }
     } else {
       add('ok', '売上 0件');
+    }
+
+    const docRaw = this._readRawKey(this.KEYS.DOCUMENTS);
+    let documents = [];
+    if (!docRaw.parseOk) {
+      add('critical', '請求書・見積書（budil_documents）を読み込めません');
+    } else if (docRaw.exists) {
+      documents = Array.isArray(docRaw.parsed) ? docRaw.parsed : [];
+      if (!Array.isArray(docRaw.parsed)) add('review', '請求書・見積書データが配列ではありません');
+      counts.documents = documents.length;
+      const invoiceCount = documents.filter(d => d && d.type === 'invoice').length;
+      const estimateCount = documents.filter(d => d && d.type === 'estimate').length;
+      add('ok', `請求書/見積書 ${counts.documents}件（請求${invoiceCount} / 見積${estimateCount}）`);
+    } else {
+      add('ok', '請求書/見積書 0件');
+    }
+
+    const monthlyRaw = this._readRawKey(this.KEYS.MONTHLY_RESULTS);
+    if (!monthlyRaw.parseOk) {
+      add('critical', '月次実績（budil_monthly_results）を読み込めません');
+    } else if (monthlyRaw.exists) {
+      const monthly = Array.isArray(monthlyRaw.parsed) ? monthlyRaw.parsed : [];
+      if (!Array.isArray(monthlyRaw.parsed)) add('review', '月次実績データが配列ではありません');
+      counts.monthlyResults = monthly.length;
+      add('ok', `月次実績 ${counts.monthlyResults}件`);
+    } else {
+      add('ok', '月次実績 0件');
+    }
+
+    const extRaw = this._readRawKey(this.KEYS.EXTERNAL_CHECK_REPORTS);
+    if (!extRaw.parseOk) {
+      add('critical', '外部チェック（budil_external_check_reports）を読み込めません');
+    } else if (extRaw.exists) {
+      const extList = Array.isArray(extRaw.parsed) ? extRaw.parsed : [];
+      if (!Array.isArray(extRaw.parsed)) add('review', '外部チェックデータが配列ではありません');
+      counts.externalChecks = extList.length;
+      add('ok', `外部チェック ${counts.externalChecks}件`);
+    } else {
+      add('ok', '外部チェック 0件');
+    }
+
+    if (typeof DataBackup !== 'undefined') {
+      const integrity = DataBackup.getIntegritySummaryFromData({
+        budil_revenue_records: revenues,
+        budil_documents: documents,
+        budil_monthly_results: monthlyRaw.exists && monthlyRaw.parseOk ? monthlyRaw.parsed : [],
+        budil_external_check_reports: extRaw.exists && extRaw.parseOk ? extRaw.parsed : [],
+        budil_action_candidates: this._readRawKey(this.KEYS.ACTION_CANDIDATES).parsed || []
+      });
+      counts.linkedCount = integrity.linkedCount || 0;
+      counts.linkedBroken = integrity.linkedBrokenCount || 0;
+      add('ok', `linked済み ${counts.linkedCount}件`);
+      if (counts.linkedBroken) add('caution', `linked切れ ${counts.linkedBroken}件`);
+      if (integrity.revenueMissingPaymentFields) {
+        add('caution', `payment fields欠落の売上 ${integrity.revenueMissingPaymentFields}件`);
+      }
+      if (integrity.documentsMissingPaymentFields) {
+        add('caution', `payment fields欠落の請求書 ${integrity.documentsMissingPaymentFields}件`);
+      }
+      const taxMissing = Math.max(0, (integrity.documentCount || 0) - (integrity.documentsWithTaxSettings || 0));
+      if (taxMissing) add('caution', `taxSettings欠落の請求書 ${taxMissing}件`);
+    }
+
+    if (typeof PaymentBrain !== 'undefined') {
+      const todayDiag = new Date().toISOString().slice(0, 10);
+      const receivables = PaymentBrain.summarizeReceivables(revenues, documents, todayDiag);
+      counts.receivablesPending = receivables.count || 0;
+      add('ok', `入金待ち ${counts.receivablesPending}件（未入金合計 ${PaymentBrain.formatYen(receivables.pendingTotal || 0)}）`);
     }
 
     const tasksRaw = this._readRawKey(this.KEYS.DAILY_ACTION_TASKS);
@@ -1450,6 +1524,12 @@ const Storage = {
     const c = result.counts || {};
     lines.push(`営業先: ${c.leads ?? '—'}件`);
     lines.push(`売上: ${c.revenue ?? '—'}件`);
+    lines.push(`請求書/見積書: ${c.documents ?? '—'}件`);
+    lines.push(`月次実績: ${c.monthlyResults ?? '—'}件`);
+    lines.push(`外部チェック: ${c.externalChecks ?? '—'}件`);
+    lines.push(`入金待ち: ${c.receivablesPending ?? '—'}件`);
+    lines.push(`linked済み: ${c.linkedCount ?? '—'}件`);
+    lines.push(`linked切れ: ${c.linkedBroken ?? '—'}件`);
     lines.push(`今日やること: ${c.dailyTasks ?? '—'}件`);
     lines.push(`需要ピックアップ: ${c.pickups ?? '—'}件`);
     lines.push(`受付データ: ${c.receptionIntakes ?? '—'}件`);

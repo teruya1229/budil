@@ -16,10 +16,20 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.7.1 |
-| 最新commit | `7e4410b`（feature: `5cd942e`） |
-| ブランチ | `main` push 済み |
-| GitHub Pages | 公開URL確認は Cursor 側で実施予定（v4.7.1） |
+| 最新バージョン | v4.8.0 |
+| 最新commit | （push後に更新） |
+| GitHub Pages | 公開URL確認は Cursor 側で実施予定（v4.8.0） |
+
+## v4.8.0で入ったもの
+
+- データ管理・バックアップ復元チェックMVP
+- バックアップメタ情報（backupVersion / appVersion / dataKeys）
+- 復元前の整合性サマリー（売上・請求書・linked・payment fields・taxSettings）
+- データ診断の入金/linked/payment 項目追加
+- 復元後再描画の漏れ修正（入金予定・請求書など）
+- 売上集計・linked同期・入金予定一覧は維持
+
+**意思決定：** お金まわりデータ増加に伴い、実運用前にバックアップ/復元の欠落リスクだけを塞ぐ。保存方式の大改造はしない。
 
 ## v4.7.1で入ったもの
 
