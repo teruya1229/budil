@@ -1,5 +1,5 @@
 /**
- * Budil v4.4.9.2 - 請求書・見積書（税・端数設定・入金管理）
+ * Budil v4.6.0 - 請求書・見積書（税・端数設定・入金管理）
  * localStorage: budil_documents
  */
 const DocumentsBrain = {
@@ -564,6 +564,69 @@ const DocumentsBrain = {
       paymentMemo: payment.paymentMemo || '',
       linkedDocumentId: d.id,
       memo: `請求書No.${d.number} ${d.title || ''}`.trim()
+    };
+  },
+
+  buildInvoiceFromRevenue(revenue, documents) {
+    const rev = typeof RevenueBrain !== 'undefined'
+      ? RevenueBrain.normalizeRevenueRecord(revenue)
+      : (revenue || {});
+    const today = this.todayISO();
+    const amount = this.parseAmount(rev.amount);
+    if (amount <= 0) return null;
+
+    const subject = String(rev.service || rev.memo || '作業代金').trim() || '作業代金';
+    const customerRaw = String(rev.customerName || rev.leadName || '').trim();
+    const taxSettings = { ...this.defaultTaxSettings(), taxDisplayMode: 'taxIncluded' };
+    const items = [{
+      date: rev.workDate || today,
+      name: subject,
+      unitPrice: amount,
+      quantity: 1,
+      amount
+    }];
+    const calc = this.calcFromItems(items, taxSettings);
+    const paymentSrc = typeof PaymentBrain !== 'undefined'
+      ? PaymentBrain.normalizeRevenuePayment(rev, { total: amount, defaultDate: rev.workDate || today })
+      : {};
+    const payment = typeof PaymentBrain !== 'undefined'
+      ? PaymentBrain.normalizeDocumentPayment(
+        { ...paymentSrc, paymentMemo: rev.paymentMemo || '' },
+        { total: calc.total, defaultDate: today }
+      )
+      : {
+        paymentMethod: 'bank_transfer',
+        paymentStatus: 'pending',
+        expectedPaymentDate: '',
+        paidDate: '',
+        paidAmount: 0,
+        unpaidAmount: calc.total,
+        paymentMemo: ''
+      };
+    const issueDate = today;
+    const expectedDate = payment.expectedPaymentDate || '';
+
+    return {
+      id: '',
+      type: 'invoice',
+      number: this.suggestNumber(documents, 'invoice'),
+      issueDate,
+      dueDate: expectedDate || this.defaultDueDate(issueDate),
+      customerName: customerRaw.replace(/\s*(様|御中)$/, ''),
+      customerHonorific: customerRaw.endsWith('御中') ? '御中' : '様',
+      title: subject,
+      status: 'draft',
+      items: calc.items,
+      subtotal: calc.subtotal,
+      tax: calc.tax,
+      total: calc.total,
+      taxSettings: calc.taxSettings,
+      note: String(rev.memo || '').trim(),
+      bankInfo: this.DEFAULT_BANK_INFO,
+      issuer: this.defaultIssuer(),
+      ...payment,
+      linkedRevenueId: rev.id || '',
+      linkedDocumentId: ''
     };
   }
 };

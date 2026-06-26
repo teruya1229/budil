@@ -9,6 +9,7 @@
   let pendingImport = null;
   let pendingRevenueWorkOrderId = '';
   let pendingLinkedDocumentId = '';
+  let pendingLinkedRevenueId = '';
   let selectedFollowUpTargetId = null;
   let currentSalesTab = 'email';
   let currentSalesMessages = null;
@@ -3950,7 +3951,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.4.9.3.1</span>
+        <span class="business-report-version">v4.6.0</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -12127,6 +12128,116 @@
     ).join('');
   }
 
+  function getRevenueLinkedDocumentState(revenue) {
+    const linkedId = String(revenue && revenue.linkedDocumentId || '').trim();
+    if (!linkedId) return { state: 'none' };
+    const doc = Storage.getDocumentById(linkedId);
+    if (!doc || doc.type !== 'invoice') return { state: 'missing', linkedId };
+    return { state: 'linked', doc: DocumentsBrain.normalizeDocument(doc), linkedId };
+  }
+
+  function renderRevenueInvoiceAction(revenue) {
+    const link = getRevenueLinkedDocumentState(revenue);
+    if (link.state === 'linked') {
+      return `
+        <button type="button" class="btn btn-sm btn-secondary" data-open-linked-invoice="${esc(link.doc.id)}">請求書を開く</button>
+        <span class="revenue-linked-badge">請求書 linked済み</span>`;
+    }
+    if (link.state === 'missing') {
+      return '<span class="revenue-linked-missing">linked請求書が見つかりません</span>';
+    }
+    return `<button type="button" class="btn btn-sm btn-primary" data-create-invoice-revenue="${esc(revenue.id)}" title="この売上データをもとに請求書を作成します。売上金額は変更されません。">請求書作成</button>`;
+  }
+
+  function updateDocFromRevenueNotice(revenue) {
+    const notice = document.getElementById('doc-from-revenue-notice');
+    const hint = document.getElementById('doc-from-revenue-hint');
+    if (!notice) return;
+    const rev = revenue || (pendingLinkedRevenueId
+      ? Storage.getRevenueRecords().find(r => r.id === pendingLinkedRevenueId)
+      : null);
+    if (!rev || !pendingLinkedRevenueId) {
+      notice.classList.add('hidden');
+      hint?.classList.add('hidden');
+      return;
+    }
+    const normalized = RevenueBrain.normalizeRevenueRecord(rev);
+    notice.classList.remove('hidden');
+    notice.innerHTML = `売上から作成中（${esc(normalized.customerName || '—')} / ${esc(RevenueBrain.formatYen(normalized.amount))}）：保存すると売上と請求書が linked されます。この売上データをもとに請求書を作成します。売上金額は変更されません。`;
+    if (hint) {
+      hint.classList.remove('hidden');
+      hint.textContent = '売上金額を請求合計として初期反映しています。外税にしたい場合は税・端数設定を変更してください。';
+    }
+    updateDocFromRevenueAmountWarn();
+  }
+
+  function updateDocFromRevenueAmountWarn() {
+    const warn = document.getElementById('doc-from-revenue-amount-warn');
+    if (!warn) return;
+    if (!pendingLinkedRevenueId) {
+      warn.classList.add('hidden');
+      return;
+    }
+    const rev = Storage.getRevenueRecords().find(r => r.id === pendingLinkedRevenueId);
+    if (!rev) {
+      warn.classList.add('hidden');
+      return;
+    }
+    const revAmount = Number(rev.amount) || 0;
+    const items = readDocItemsFromForm();
+    const taxSettings = readTaxSettingsFromForm();
+    const calc = DocumentsBrain.calcFromItems(items, taxSettings);
+    if (calc.total !== revAmount) {
+      warn.classList.remove('hidden');
+      warn.textContent = `売上金額（${RevenueBrain.formatYen(revAmount)}）と請求合計（${DocumentsBrain.formatYen(calc.total)}）が異なります。`;
+    } else {
+      warn.classList.add('hidden');
+    }
+  }
+
+  function createInvoiceFromRevenue(revenueId) {
+    const revenue = Storage.getRevenueRecords().find(r => r.id === revenueId);
+    if (!revenue) return;
+    const normalized = RevenueBrain.normalizeRevenueRecord(revenue);
+    const link = getRevenueLinkedDocumentState(normalized);
+    if (link.state === 'linked') {
+      openLinkedInvoiceFromRevenue(link.doc.id);
+      return;
+    }
+    if (link.state === 'missing') {
+      alert('linked請求書が見つかりません。再作成は今回のMVPでは自動では行いません。');
+      return;
+    }
+    const draft = DocumentsBrain.buildInvoiceFromRevenue(normalized, Storage.getDocuments());
+    if (!draft) {
+      alert('請求書を作成できません。売上金額を確認してください。');
+      return;
+    }
+    pendingLinkedRevenueId = revenueId;
+    navigateToView('documents');
+    openDocumentForm('invoice', draft, { fromRevenue: true });
+    showAppToast('請求書フォームに売上データを反映しました。保存するとリンクされます。');
+  }
+
+  function openLinkedInvoiceFromRevenue(docId) {
+    const doc = Storage.getDocumentById(docId);
+    if (!doc) {
+      alert('linked請求書が見つかりません。');
+      return;
+    }
+    navigateToView('documents');
+    openDocumentPreview(docId);
+  }
+
+  function bindRevenueInvoiceActions() {
+    document.querySelectorAll('[data-create-invoice-revenue]').forEach(btn => {
+      btn.addEventListener('click', () => createInvoiceFromRevenue(btn.dataset.createInvoiceRevenue));
+    });
+    document.querySelectorAll('[data-open-linked-invoice]').forEach(btn => {
+      btn.addEventListener('click', () => openLinkedInvoiceFromRevenue(btn.dataset.openLinkedInvoice));
+    });
+  }
+
   function renderRevenueRowActions(id) {
     return `
       <button type="button" class="btn-edit" data-edit-revenue="${esc(id)}">編集</button>
@@ -12167,7 +12278,10 @@
           <td><span class="revenue-status-badge revenue-status-${esc(r.status)}">${esc(r.status)}</span></td>
           <td>${renderPaymentMethodBadge(r)}</td>
           <td>${renderPaymentStatusBadge(r)}</td>
-          <td class="actions">${renderRevenueRowActions(r.id)}</td>
+          <td class="actions revenue-actions-cell">
+            <div class="revenue-invoice-action">${renderRevenueInvoiceAction(r)}</div>
+            ${renderRevenueRowActions(r.id)}
+          </td>
         </tr>`;
       }).join('');
     }
@@ -12204,12 +12318,14 @@
             ${renderPaymentStatusBadge(r)}
           </p>
           ${r.memo ? `<p class="revenue-card-meta">${esc(r.memo)}</p>` : ''}
+          <div class="revenue-card-invoice-action">${renderRevenueInvoiceAction(r)}</div>
           <div class="revenue-card-actions">${renderRevenueRowActions(r.id)}</div>
         </div>`;
       }).join('');
     }
 
     bindRevenueLeadListActions();
+    bindRevenueInvoiceActions();
 
     document.querySelectorAll('[data-edit-revenue]').forEach(btn => {
       btn.addEventListener('click', () => openRevenueEdit(btn.dataset.editRevenue));
@@ -12889,6 +13005,7 @@
     const modeLabel = ts.taxDisplayMode === 'taxIncluded' ? '内税' : '外税';
     const catLabel = DocumentsBrain.taxCategoryLabel(ts.taxCategory);
     preview.textContent = `${modeLabel} / ${catLabel} / 小計 ${DocumentsBrain.formatYen(calc.subtotal)} / 税 ${DocumentsBrain.formatYen(calc.tax)} / 合計 ${DocumentsBrain.formatYen(calc.total)}`;
+    updateDocFromRevenueAmountWarn();
   }
 
   function buildDocItemRow(item, showDate, showUnit) {
@@ -12938,9 +13055,12 @@
     document.getElementById('doc-edit-id').value = '';
     document.getElementById('documents-form')?.reset();
     currentDocPreviewId = null;
+    pendingLinkedRevenueId = '';
+    updateDocFromRevenueNotice(null);
   }
 
-  function openDocumentForm(type, doc) {
+  function openDocumentForm(type, doc, options) {
+    const opts = options || {};
     const documents = Storage.getDocuments();
     const base = doc
       ? DocumentsBrain.normalizeDocument(doc)
@@ -12949,9 +13069,12 @@
     showDocumentsPanel('form');
     document.getElementById('doc-edit-id').value = base.id || '';
     document.getElementById('doc-type').value = base.type;
-    document.getElementById('documents-form-title').textContent = base.id
-      ? DocumentsBrain.typeLabel(base.type) + '編集'
-      : '新規' + DocumentsBrain.typeLabel(base.type);
+    const fromRevenue = opts.fromRevenue === true || (!!base.linkedRevenueId && !base.id);
+    document.getElementById('documents-form-title').textContent = fromRevenue && !base.id
+      ? '請求書作成（売上から）'
+      : (base.id
+        ? DocumentsBrain.typeLabel(base.type) + '編集'
+        : '新規' + DocumentsBrain.typeLabel(base.type));
     document.getElementById('doc-number').value = base.number;
     document.getElementById('doc-issue-date').value = base.issueDate;
     document.getElementById('doc-due-date').value = base.dueDate || '';
@@ -12965,7 +13088,15 @@
     writeDocumentPaymentFieldsToForm(base);
     toggleDocFormFields(base.type);
     renderDocItemsEditor(base.items, base.type);
-    if (!doc) {
+    if (fromRevenue && base.linkedRevenueId) {
+      pendingLinkedRevenueId = base.linkedRevenueId;
+      const rev = Storage.getRevenueRecords().find(r => r.id === base.linkedRevenueId);
+      updateDocFromRevenueNotice(rev || null);
+    } else if (!opts.fromRevenue) {
+      pendingLinkedRevenueId = '';
+      updateDocFromRevenueNotice(null);
+    }
+    if (!doc && !fromRevenue) {
       recalculateDocumentExpectedPaymentDate();
     }
     document.getElementById('documents-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -13021,6 +13152,8 @@
     const payment = normalizeDocumentFormPayment(data);
     Object.assign(data, payment);
     const id = document.getElementById('doc-edit-id').value;
+    const linkedRevId = pendingLinkedRevenueId || data.linkedRevenueId || '';
+    if (linkedRevId) data.linkedRevenueId = linkedRevId;
     let saved;
     if (id) {
       saved = Storage.updateDocument(id, data);
@@ -13045,10 +13178,23 @@
       alert('保存に失敗しました');
       return;
     }
+    if (linkedRevId && saved.type === 'invoice') {
+      const rev = Storage.getRevenueRecords().find(r => r.id === linkedRevId);
+      if (rev) {
+        const existingDocId = String(rev.linkedDocumentId || '').trim();
+        if (!existingDocId || existingDocId === saved.id) {
+          PaymentBrain.linkRevenueAndDocument(linkedRevId, saved.id, Storage);
+          PaymentBrain.syncLinkedPayment('document', saved.id, payment, Storage);
+        }
+      }
+    }
+    pendingLinkedRevenueId = '';
+    updateDocFromRevenueNotice(null);
     showAppToast(id ? '書類を更新しました' : '書類を保存しました');
     openDocumentPreview(saved.id);
     renderDocumentsList();
     renderReceivablesView();
+    renderRevenueView();
     renderDashboard();
   }
 
@@ -13204,7 +13350,11 @@
 
   function initDocuments() {
     fillDocumentPaymentSelects();
-    document.getElementById('btn-doc-new-invoice')?.addEventListener('click', () => openDocumentForm('invoice'));
+    document.getElementById('btn-doc-new-invoice')?.addEventListener('click', () => {
+      pendingLinkedRevenueId = '';
+      updateDocFromRevenueNotice(null);
+      openDocumentForm('invoice');
+    });
     document.getElementById('btn-doc-new-estimate')?.addEventListener('click', () => openDocumentForm('estimate'));
     document.getElementById('btn-doc-back-list')?.addEventListener('click', () => {
       currentDocPreviewId = null;
