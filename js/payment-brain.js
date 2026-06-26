@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.1 - 入金予定・支払方法管理（整合性重視）
+ * Budil v4.8.2 - 入金予定・支払方法管理（整合性重視）
  * 売上・請求書の支払方法・入金状態を共通で扱う
  */
 const PaymentBrain = {
@@ -502,20 +502,78 @@ const PaymentBrain = {
   },
 
   linkRevenueAndDocument(revenueId, documentId, storage) {
-    if (!storage || !revenueId || !documentId) return;
-    storage.updateRevenueRecord(revenueId, { linkedDocumentId: documentId });
-    storage.updateDocument(documentId, { linkedRevenueId: revenueId });
+    if (!storage || !revenueId || !documentId) return { linked: false };
+    const revId = String(revenueId).trim();
+    const docId = String(documentId).trim();
+    if (!revId || !docId) return { linked: false };
+
+    const revenues = storage.getRevenueRecords();
+    const documents = storage.getDocuments();
+    const revenue = revenues.find(r => r.id === revId);
+    const document = documents.find(d => d.id === docId);
+    if (!revenue || !document) return { linked: false };
+
+    const prevDocId = String(revenue.linkedDocumentId || '').trim();
+    const prevRevId = String(document.linkedRevenueId || '').trim();
+
+    if (prevDocId && prevDocId !== docId) {
+      const prevDoc = documents.find(d => d.id === prevDocId);
+      if (prevDoc && String(prevDoc.linkedRevenueId || '').trim() === revId) {
+        storage.updateDocument(prevDocId, { linkedRevenueId: '' });
+      }
+    }
+    if (prevRevId && prevRevId !== revId) {
+      const prevRevenue = revenues.find(r => r.id === prevRevId);
+      if (prevRevenue && String(prevRevenue.linkedDocumentId || '').trim() === docId) {
+        storage.updateRevenueRecord(prevRevId, { linkedDocumentId: '' });
+      }
+    }
+
+    revenues.forEach(r => {
+      if (r.id !== revId && String(r.linkedDocumentId || '').trim() === docId) {
+        storage.updateRevenueRecord(r.id, { linkedDocumentId: '' });
+      }
+    });
+    documents.forEach(d => {
+      if (d.id !== docId && String(d.linkedRevenueId || '').trim() === revId) {
+        storage.updateDocument(d.id, { linkedRevenueId: '' });
+      }
+    });
+
+    storage.updateRevenueRecord(revId, { linkedDocumentId: docId });
+    storage.updateDocument(docId, { linkedRevenueId: revId });
+    return { linked: true, revenueId: revId, documentId: docId };
   },
 
   unlinkRevenueDocument(revenueId, storage) {
     if (!storage || !revenueId) return false;
-    storage.updateRevenueRecord(revenueId, { linkedDocumentId: '' });
+    const revId = String(revenueId).trim();
+    if (!revId) return false;
+    const revenue = storage.getRevenueRecords().find(r => r.id === revId);
+    const docId = String(revenue && revenue.linkedDocumentId || '').trim();
+    storage.updateRevenueRecord(revId, { linkedDocumentId: '' });
+    if (docId) {
+      const doc = storage.getDocuments().find(d => d.id === docId);
+      if (doc && String(doc.linkedRevenueId || '').trim() === revId) {
+        storage.updateDocument(docId, { linkedRevenueId: '' });
+      }
+    }
     return true;
   },
 
   unlinkDocumentRevenue(documentId, storage) {
     if (!storage || !documentId) return false;
-    storage.updateDocument(documentId, { linkedRevenueId: '' });
+    const docId = String(documentId).trim();
+    if (!docId) return false;
+    const doc = storage.getDocuments().find(d => d.id === docId);
+    const revId = String(doc && doc.linkedRevenueId || '').trim();
+    storage.updateDocument(docId, { linkedRevenueId: '' });
+    if (revId) {
+      const revenue = storage.getRevenueRecords().find(r => r.id === revId);
+      if (revenue && String(revenue.linkedDocumentId || '').trim() === docId) {
+        storage.updateRevenueRecord(revId, { linkedDocumentId: '' });
+      }
+    }
     return true;
   },
 

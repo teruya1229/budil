@@ -16,9 +16,21 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.8.1 |
-| 最新commit | （push後に更新） |
+| 最新バージョン | v4.8.2 |
+| 最新commit | （最終hashは `git log -1 --oneline` で確認） |
 | ブランチ | `main` push 済み |
+
+## v4.8.2で入ったもの
+
+- linked一対一安全修正
+- `PaymentBrain.linkRevenueAndDocument()` で新リンク作成前に旧リンク・競合リンクを解除
+- `Storage.deleteRevenueRecord()` / `Storage.deleteDocument()` で相手側 orphan linked ID を解除
+- 既linked請求書の「売上登録に反映」は新規売上作成ではなく linked 売上を開く
+- 売上→請求書再作成時は古い linked ID を残さず新しい請求書へ付け替え
+- `scripts/verify-v482-linked.mjs` を追加
+- 売上金額・請求書明細・payment fields・taxSettings・バックアップキーは非変更
+
+**意思決定：** v4.8.1 実運用前調査で見つかった「linked済み請求書から売上を二重作成できる」「一対一リンクが崩れ得る」重大リスクだけを塞ぐ。DB移行・同期方式の大改造・新機能追加はしない。
 
 ## v4.8.1で入ったもの
 

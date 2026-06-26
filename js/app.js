@@ -3968,7 +3968,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.8.1</span>
+        <span class="business-report-version">v4.8.2</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -11925,6 +11925,17 @@
 
   function reflectDocumentToRevenueForm(docId) {
     const doc = Storage.getDocumentById(docId);
+    const linked = getDocumentLinkedRevenueState(doc);
+    if (linked.state === 'linked') {
+      navigateToView('revenue');
+      openRevenueEdit(linked.rev.id);
+      showAppToast('linked売上を開きました');
+      return;
+    }
+    if (linked.state === 'missing') {
+      alert('linked売上が見つかりません。入金予定一覧またはデータ診断からリンク解除してから売上登録に反映してください。');
+      return;
+    }
     const prefill = DocumentsBrain.toRevenuePrefill(doc);
     if (!prefill) return;
     navigateToView('revenue');
@@ -12329,6 +12340,14 @@
     return { state: 'linked', doc: DocumentsBrain.normalizeDocument(doc), linkedId };
   }
 
+  function getDocumentLinkedRevenueState(doc) {
+    const linkedId = String(doc && doc.linkedRevenueId || '').trim();
+    if (!linkedId) return { state: 'none' };
+    const rev = Storage.getRevenueRecords().find(r => r.id === linkedId);
+    if (!rev) return { state: 'missing', linkedId };
+    return { state: 'linked', rev: RevenueBrain.normalizeRevenueRecord(rev), linkedId };
+  }
+
   function renderRevenueInvoiceAction(revenue) {
     const link = getRevenueLinkedDocumentState(revenue);
     if (link.state === 'linked') {
@@ -12544,6 +12563,8 @@
         if (confirm('この売上記録を削除しますか？')) {
           Storage.deleteRevenueRecord(btn.dataset.deleteRevenue);
           renderRevenueView();
+          renderReceivablesView();
+          renderDocumentsView();
           renderDashboard();
         }
       });
@@ -13396,11 +13417,8 @@
     if (linkedRevId && saved.type === 'invoice') {
       const rev = Storage.getRevenueRecords().find(r => r.id === linkedRevId);
       if (rev) {
-        const existingDocId = String(rev.linkedDocumentId || '').trim();
-        if (!existingDocId || existingDocId === saved.id) {
-          PaymentBrain.linkRevenueAndDocument(linkedRevId, saved.id, Storage);
-          PaymentBrain.syncLinkedPayment('document', saved.id, payment, Storage);
-        }
+        PaymentBrain.linkRevenueAndDocument(linkedRevId, saved.id, Storage);
+        PaymentBrain.syncLinkedPayment('document', saved.id, payment, Storage);
       }
     }
     pendingLinkedRevenueId = '';
@@ -13429,6 +13447,10 @@
     }
     if (revenueBtn) {
       revenueBtn.classList.toggle('hidden', normalized.type !== 'invoice');
+      if (normalized.type === 'invoice') {
+        const linked = getDocumentLinkedRevenueState(normalized);
+        revenueBtn.textContent = linked.state === 'linked' ? 'linked売上を開く' : '売上登録に反映';
+      }
     }
     document.getElementById('documents-preview-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -13493,6 +13515,9 @@
         showDocumentsPanel('list');
       }
       renderDocumentsList();
+      renderReceivablesView();
+      renderRevenueView();
+      renderDashboard();
       showAppToast('削除しました');
     }
   }

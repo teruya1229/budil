@@ -31,6 +31,45 @@
 
 ## 初期ログ例
 
+### 2026-06-26 Budil v4.8.2 linked一対一安全修正
+
+判断：
+v4.8.1実運用前調査で見つかった linked 一対一崩れと、既linked請求書からの売上二重作成リスクだけを最小修正で塞ぐ。
+
+理由：
+
+- 売上集計は売上レコード数に依存するため、請求書から同じ案件の売上を再作成できる導線は実運用前に危険
+- `linkedDocumentId` / `linkedRevenueId` が片側だけ残ると、入金予定一覧・linked切れ表示・再作成導線が混乱する
+- バックアップ/復元やpayment fields/taxSettingsはv4.8.1で安全確認済みなので、今回は触る範囲をリンクIDに限定する
+
+見た情報：
+
+- `PaymentBrain.linkRevenueAndDocument()`
+- `Storage.deleteRevenueRecord()` / `Storage.deleteDocument()`
+- `reflectDocumentToRevenueForm()`
+- 請求書保存時の `pendingLinkedRevenueId` フロー
+- `PaymentBrain.summarizeReceivables()`
+
+次の一手：
+
+- v4.8.2を公開URLで通常操作確認する
+- 破壊的な復元E2Eは公開URLでは行わず、必要時のみ手動バックアップ後に実施する
+
+期待する結果：
+
+- linked済み請求書から売上が二重作成されない
+- 新しい linked 作成時に古い相手側リンクが残らない
+- 削除後の orphan linked ID が残りにくい
+
+実行結果：
+ローカルで全JS構文チェック、既存 `scripts/verify-v481.mjs`、新規 `scripts/verify-v482-linked.mjs` が通過。
+
+振り返り：
+未記入
+
+次回改善：
+公開URLでv4.8.2の通常操作確認後に追記する
+
 ### 2026-06-16 Budil v1.7公開後の判断
 
 判断：

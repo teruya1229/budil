@@ -2,6 +2,17 @@
 
 最終更新: 2026-06-26
 
+## v4.8.2 実装内容（linked一対一安全修正）
+
+- 表示バージョンを v4.8.2 に更新（CSS/JSキャッシュバスターも揃え）
+- `PaymentBrain.linkRevenueAndDocument()` で `linkedDocumentId` / `linkedRevenueId` の一対一を保証
+- 新しい linked 作成時に、同じ請求書/売上を指す古い相手側リンクを解除
+- 売上削除・請求書削除時に、相手側の orphan linked ID を自動解除
+- 既に linked 済みの請求書から「売上登録に反映」しても新規売上を作らず、linked 売上を開く
+- 売上→請求書再作成時は古い請求書リンクを残さず、新しい請求書へ一対一で付け替え
+- 売上金額・請求書明細・payment fields・taxSettings・バックアップキーは変更しない
+- linked安全検証スクリプト `scripts/verify-v482-linked.mjs` を追加
+
 ## v4.8.1 実装内容（データ診断クラッシュ修正・バックアップ安全確認）
 
 - 表示バージョンを v4.8.1 に更新（CSS/JSキャッシュバスターも揃え）

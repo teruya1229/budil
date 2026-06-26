@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.3',
+  BUDIL_VERSION: 'v4.8.2',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -362,7 +362,17 @@ const Storage = {
   },
 
   deleteRevenueRecord(id) {
-    this.saveRevenueRecords(this.getRevenueRecords().filter(r => r.id !== id));
+    const revId = String(id || '').trim();
+    if (!revId) return;
+    const documents = this.getDocuments();
+    let changed = false;
+    const nextDocuments = documents.map(d => {
+      if (String(d.linkedRevenueId || '').trim() !== revId) return d;
+      changed = true;
+      return { ...d, linkedRevenueId: '', updatedAt: new Date().toISOString() };
+    });
+    if (changed) this.saveDocuments(nextDocuments);
+    this.saveRevenueRecords(this.getRevenueRecords().filter(r => r.id !== revId));
   },
 
   getDailyActionTasks() {
@@ -408,7 +418,7 @@ const Storage = {
     store.dailyChecks[d] = {
       checkedAt: (checkData && checkData.checkedAt) || prev.checkedAt || '',
       memo: (checkData && checkData.memo != null) ? checkData.memo : (prev.memo || ''),
-      version: (checkData && checkData.version) || prev.version || 'v4.3',
+      version: (checkData && checkData.version) || prev.version || this.BUDIL_VERSION,
       items
     };
     this.saveDailyActionTasksData(store);
@@ -569,7 +579,17 @@ const Storage = {
   },
 
   deleteDocument(id) {
-    this.saveDocuments(this.getDocuments().filter(d => d.id !== id));
+    const docId = String(id || '').trim();
+    if (!docId) return;
+    const revenues = this.getRevenueRecords();
+    let changed = false;
+    const nextRevenues = revenues.map(r => {
+      if (String(r.linkedDocumentId || '').trim() !== docId) return r;
+      changed = true;
+      return { ...r, linkedDocumentId: '', updatedAt: new Date().toISOString() };
+    });
+    if (changed) this.saveRevenueRecords(nextRevenues);
+    this.saveDocuments(this.getDocuments().filter(d => d.id !== docId));
   },
 
   getDocumentById(id) {
