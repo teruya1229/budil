@@ -16,9 +16,21 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.8.0 |
-| 最新commit | `c2cf09c` |
+| 最新バージョン | v4.8.1 |
+| 最新commit | （push後に更新） |
 | ブランチ | `main` push 済み |
+
+## v4.8.1で入ったもの
+
+- データ診断クラッシュ修正（`todayDiag is not defined`）
+- スマホ幅のデータ管理横スクロール修正
+- FollowUpBrain 診断の防御的 try/catch
+- ローカル復元 E2E 確認スクリプト（`scripts/verify-v481.mjs`）
+- バックアップメタ・復元プレビュー・既存 linked/payment 挙動は維持
+
+**意思決定：** v4.8.0 公開URL確認で見つかった実運用前の危険箇所だけを塞ぐ。新機能追加・復元ロジック大改造はしない。公開URLの破壊的復元は手動承認時のみ。
+
+**公開URL確認メモ（v4.8.0）：** Browser Automation 側 localStorage に v480 テストデータが残存。v4.8.1 公開後 Cursor 側で初期バックアップ復元または手動削除を推奨。
 
 ## v4.8.0で入ったもの
 

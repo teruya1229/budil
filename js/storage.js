@@ -954,6 +954,7 @@ const Storage = {
 
   runDataDiagnostics() {
     const ranAt = new Date().toISOString();
+    const todayDiag = new Date().toISOString().slice(0, 10);
     const levels = { ok: [], caution: [], review: [], critical: [] };
     const counts = {
       leads: 0,
@@ -1164,7 +1165,6 @@ const Storage = {
     }
 
     if (typeof PaymentBrain !== 'undefined') {
-      const todayDiag = new Date().toISOString().slice(0, 10);
       const receivables = PaymentBrain.summarizeReceivables(revenues, documents, todayDiag);
       counts.receivablesPending = receivables.count || 0;
       add('ok', `入金待ち ${counts.receivablesPending}件（未入金合計 ${PaymentBrain.formatYen(receivables.pendingTotal || 0)}）`);
@@ -1358,7 +1358,6 @@ const Storage = {
       let badStart = 0; let badEnd = 0; let badStatus = 0;
       let badLeadRef = 0; let badIntakeRef = 0; let badRevRef = 0;
       let completedNoRev = 0; let overdue = 0; let noAddress = 0; let unknownArea = 0;
-      const todayDiag = new Date().toISOString().slice(0, 10);
 
       workOrders.forEach(item => {
         if (!item || typeof item !== 'object') return;
@@ -1419,11 +1418,15 @@ const Storage = {
     }
 
     if (typeof FollowUpBrain !== 'undefined') {
-      const fuDiag = FollowUpBrain.getDiagnosticsCounts(workOrders, revenues, leads, todayDiag);
-      if (fuDiag.thanksPending) add('caution', `作業完了済み・お礼未送信 ${fuDiag.thanksPending}件`);
-      if (fuDiag.reviewPending) add('caution', `作業完了済み・口コミ依頼未送信 ${fuDiag.reviewPending}件`);
-      if (fuDiag.maintNear) add('caution', `次回メンテナンス日が近い ${fuDiag.maintNear}件`);
-      if (fuDiag.badFollowUp) add('caution', `followUp形式不正 ${fuDiag.badFollowUp}件`);
+      try {
+        const fuDiag = FollowUpBrain.getDiagnosticsCounts(workOrders, revenues, leads, todayDiag);
+        if (fuDiag.thanksPending) add('caution', `作業完了済み・お礼未送信 ${fuDiag.thanksPending}件`);
+        if (fuDiag.reviewPending) add('caution', `作業完了済み・口コミ依頼未送信 ${fuDiag.reviewPending}件`);
+        if (fuDiag.maintNear) add('caution', `次回メンテナンス日が近い ${fuDiag.maintNear}件`);
+        if (fuDiag.badFollowUp) add('caution', `followUp形式不正 ${fuDiag.badFollowUp}件`);
+      } catch (e) {
+        add('review', `フォロー診断の実行に失敗: ${e.message || e}`);
+      }
     }
 
     const expenseRaw = this._readRawKey(this.KEYS.EXPENSE_RECORDS);
