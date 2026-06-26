@@ -1,5 +1,5 @@
 /**
- * Budil v4.6.0 - 入金予定・支払方法管理（整合性重視）
+ * Budil v4.7.0 - 入金予定・支払方法管理（整合性重視）
  * 売上・請求書の支払方法・入金状態を共通で扱う
  */
 const PaymentBrain = {
@@ -524,16 +524,79 @@ const PaymentBrain = {
     return '売上';
   },
 
+  getSourceDisplayLabel(item) {
+    return '元データ：' + this.getSourceTypeLabel(item);
+  },
+
+  getLinkedBreakLabel(item) {
+    if (item.linkedBroken === 'revenue') return 'linked元の売上が見つかりません';
+    if (item.linkedBroken === 'document') return 'linked先の請求書が見つかりません';
+    return '';
+  },
+
   getDelayLabel(expectedDate, today) {
     const exp = String(expectedDate || '').trim();
-    if (!exp) return '—';
+    if (!exp) return '入金予定日未設定';
     const base = today || this.todayISO();
     if (exp >= base) {
       const diff = Math.round((new Date(exp + 'T12:00:00') - new Date(base + 'T12:00:00')) / 86400000);
-      return diff === 0 ? '本日' : `あと${diff}日`;
+      return diff === 0 ? '本日入金予定' : `入金予定まであと${diff}日`;
     }
     const overdue = Math.round((new Date(base + 'T12:00:00') - new Date(exp + 'T12:00:00')) / 86400000);
-    return `遅れ${overdue}日`;
+    return `${overdue}日遅れ`;
+  },
+
+  getMonthKey(date) {
+    return String(date || this.todayISO()).slice(0, 7);
+  },
+
+  getNextMonthKey(monthKey) {
+    const [y, m] = String(monthKey || this.getMonthKey()).split('-').map(Number);
+    if (m === 12) return `${y + 1}-01`;
+    return `${y}-${String(m + 1).padStart(2, '0')}`;
+  },
+
+  sortReceivableItems(items, today) {
+    const base = today || this.todayISO();
+    const rank = (item) => {
+      const exp = String(item.expectedPaymentDate || '').trim();
+      if (!exp) return { group: 2, sortKey: '9999-99-99' };
+      if (exp < base && this.isReceivablePending(item.record)) return { group: 0, sortKey: exp };
+      return { group: 1, sortKey: exp };
+    };
+    return [...(items || [])].sort((a, b) => {
+      const ra = rank(a);
+      const rb = rank(b);
+      if (ra.group !== rb.group) return ra.group - rb.group;
+      if (ra.sortKey !== rb.sortKey) return ra.sortKey.localeCompare(rb.sortKey);
+      return (b.unpaidAmount || 0) - (a.unpaidAmount || 0);
+    });
+  },
+
+  filterReceivables(items, filter, today) {
+    const base = today || this.todayISO();
+    const monthKey = this.getMonthKey(base);
+    const nextMonthKey = this.getNextMonthKey(monthKey);
+    const f = String(filter || 'all');
+    if (f === 'this_month') {
+      return (items || []).filter(i => String(i.expectedPaymentDate || '').startsWith(monthKey));
+    }
+    if (f === 'next_month') {
+      return (items || []).filter(i => String(i.expectedPaymentDate || '').startsWith(nextMonthKey));
+    }
+    if (f === 'overdue') {
+      return (items || []).filter(i => this.isOverdue(i.record, base));
+    }
+    if (f === 'corporate_monthly') {
+      return (items || []).filter(i => i.paymentMethod === 'corporate_monthly');
+    }
+    if (f === 'kurashi') {
+      return (items || []).filter(i => ['kurashi_deferred', 'kurashi_card'].includes(i.paymentMethod));
+    }
+    if (f === 'other') {
+      return (items || []).filter(i => !['corporate_monthly', 'kurashi_deferred', 'kurashi_card'].includes(i.paymentMethod));
+    }
+    return items || [];
   },
 
   isOverdue(record, today) {
@@ -574,6 +637,7 @@ const PaymentBrain = {
       const linkedRev = doc.linkedRevenueId
         ? revList.find(r => r.id === doc.linkedRevenueId)
         : null;
+      const linkedBroken = doc.linkedRevenueId && !linkedRev ? 'revenue' : '';
       const key = doc.linkedRevenueId
         ? 'link:rev:' + doc.linkedRevenueId
         : (doc.linkedDocumentId ? 'link:doc:' + doc.id : 'document:' + doc.id);
@@ -582,6 +646,7 @@ const PaymentBrain = {
       items.push({
         key,
         sourceType: linkedRev ? 'linked' : 'document',
+        linkedBroken,
         record: doc,
         revenue: linkedRev || null,
         document: doc,
@@ -604,6 +669,10 @@ const PaymentBrain = {
       if (rev.linkedDocumentId && docList.some(d => d.id === rev.linkedDocumentId && this.isReceivablePending(d))) {
         return;
       }
+      const linkedDoc = rev.linkedDocumentId
+        ? docList.find(d => d.id === rev.linkedDocumentId)
+        : null;
+      const linkedBroken = rev.linkedDocumentId && !linkedDoc ? 'document' : '';
       const key = rev.linkedDocumentId
         ? 'link:doc:' + rev.linkedDocumentId
         : 'revenue:' + rev.id;
@@ -612,9 +681,10 @@ const PaymentBrain = {
       items.push({
         key,
         sourceType: 'revenue',
+        linkedBroken,
         record: rev,
         revenue: rev,
-        document: null,
+        document: linkedDoc || null,
         counterparty: this.getCounterparty(rev),
         subject: this.getSubject(rev),
         total: this.getTotal(rev),
@@ -629,20 +699,17 @@ const PaymentBrain = {
       });
     });
 
-    return items.sort((a, b) => {
-      const da = a.expectedPaymentDate || '9999-99-99';
-      const db = b.expectedPaymentDate || '9999-99-99';
-      if (da !== db) return da.localeCompare(db);
-      return (b.unpaidAmount || 0) - (a.unpaidAmount || 0);
-    });
+    return this.sortReceivableItems(items, this.todayISO());
   },
 
   summarizeReceivables(revenues, documents, today) {
     const base = today || this.todayISO();
-    const monthKey = base.slice(0, 7);
+    const monthKey = this.getMonthKey(base);
+    const nextMonthKey = this.getNextMonthKey(monthKey);
     const items = this.buildReceivableItems(revenues, documents);
     let pendingTotal = 0;
     let thisMonthExpected = 0;
+    let nextMonthExpected = 0;
     let overdueCount = 0;
     items.forEach(item => {
       pendingTotal += item.unpaidAmount || 0;
@@ -650,9 +717,19 @@ const PaymentBrain = {
       if (exp && exp.startsWith(monthKey)) {
         thisMonthExpected += item.unpaidAmount || 0;
       }
+      if (exp && exp.startsWith(nextMonthKey)) {
+        nextMonthExpected += item.unpaidAmount || 0;
+      }
       if (this.isOverdue(item.record, base)) overdueCount += 1;
     });
-    return { pendingTotal, thisMonthExpected, overdueCount, count: items.length, items };
+    return {
+      pendingTotal,
+      thisMonthExpected,
+      nextMonthExpected,
+      overdueCount,
+      count: items.length,
+      items
+    };
   },
 
   getDocumentStatusLabel(doc) {

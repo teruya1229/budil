@@ -21,6 +21,7 @@
   let revenueAggregationFilter = { year: '', month: '', source: '', service: '' };
   let currentDocPreviewId = null;
   let documentsFormDirty = false;
+  let receivablesFilter = 'all';
 
   const SALES_TAB_FIELDS = { email: 'msg-email', form: 'msg-form', dm: 'msg-dm', phone: 'msg-phone' };
   const SALES_TAB_LOG = { email: 'メール送信', form: 'フォーム送信', dm: 'DM', phone: '電話' };
@@ -3951,7 +3952,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.6.0</span>
+        <span class="business-report-version">v4.7.0</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -11848,6 +11849,63 @@
     return `<span class="revenue-payment-method-badge">${esc(label)}</span>`;
   }
 
+  function renderReceivableActionButtons(item) {
+    const buttons = [];
+    buttons.push(`<button type="button" class="btn btn-sm btn-primary" data-mark-paid="${esc(item.primaryKind)}:${esc(item.primaryId)}">入金済み</button>`);
+    buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-receivable-detail="${esc(item.primaryKind)}:${esc(item.primaryId)}">詳細</button>`);
+    if (item.document && item.document.id) {
+      buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-open-document="${esc(item.document.id)}">請求書を開く</button>`);
+    } else if (item.primaryKind === 'document' && item.primaryId) {
+      buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-open-document="${esc(item.primaryId)}">請求書を開く</button>`);
+    }
+    if (item.revenue && item.revenue.id) {
+      buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-open-revenue="${esc(item.revenue.id)}">売上を開く</button>`);
+    } else if (item.primaryKind === 'revenue' && item.primaryId) {
+      buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-open-revenue="${esc(item.primaryId)}">売上を開く</button>`);
+    }
+    return `<div class="receivables-card-actions">${buttons.join('')}</div>`;
+  }
+
+  function bindReceivableListActions(items) {
+    document.querySelectorAll('[data-mark-paid]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const [kind, id] = (btn.dataset.markPaid || '').split(':');
+        const hit = items.find(i => i.primaryKind === kind && i.primaryId === id);
+        if (hit) markReceivablePaid(hit);
+      });
+    });
+    document.querySelectorAll('[data-receivable-detail]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const [kind, id] = (btn.dataset.receivableDetail || '').split(':');
+        const hit = items.find(i => i.primaryKind === kind && i.primaryId === id);
+        if (!hit) return;
+        if (kind === 'document') {
+          navigateToView('documents');
+          openDocumentPreview(id);
+        } else {
+          navigateToView('revenue');
+          openRevenueEdit(id);
+        }
+      });
+    });
+    document.querySelectorAll('[data-open-document]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.openDocument;
+        if (!id) return;
+        navigateToView('documents');
+        openDocumentPreview(id);
+      });
+    });
+    document.querySelectorAll('[data-open-revenue]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.openRevenue;
+        if (!id) return;
+        navigateToView('revenue');
+        openRevenueEdit(id);
+      });
+    });
+  }
+
   function renderReceivablesView() {
     try {
       const today = TODAY();
@@ -11861,8 +11919,8 @@
         summaryEl.innerHTML = [
           { label: '入金待ち合計', value: PaymentBrain.formatYen(summary.pendingTotal), warn: false },
           { label: '今月入金予定', value: PaymentBrain.formatYen(summary.thisMonthExpected), warn: false },
-          { label: '入金遅れ件数', value: (summary.overdueCount || 0) + '件', warn: summary.overdueCount > 0 },
-          { label: '一覧件数', value: (summary.count || 0) + '件', warn: false }
+          { label: '来月入金予定', value: PaymentBrain.formatYen(summary.nextMonthExpected), warn: false },
+          { label: '入金遅れ', value: (summary.overdueCount || 0) + '件', warn: summary.overdueCount > 0 }
         ].map(item => `
           <div class="receivables-summary-item${item.warn ? ' warn' : ''}">
             <span>${esc(item.label)}</span>
@@ -11870,78 +11928,80 @@
           </div>`).join('');
       }
 
+      document.querySelectorAll('[data-receivables-filter]').forEach(btn => {
+        btn.classList.toggle('active', (btn.dataset.receivablesFilter || 'all') === receivablesFilter);
+      });
+
+      const allItems = summary.items || [];
+      const items = PaymentBrain.filterReceivables(allItems, receivablesFilter, today);
+
       const tbody = document.getElementById('receivables-tbody');
       const cardList = document.getElementById('receivables-card-list');
-      const items = summary.items || [];
 
       if (!items.length) {
-        const empty = '<tr><td colspan="10" class="empty-state">入金待ちの案件はありません。</td></tr>';
+        const emptyMsg = allItems.length
+          ? 'この条件に該当する入金予定はありません。'
+          : '入金待ちの案件はありません。';
+        const empty = `<tr><td colspan="9" class="empty-state">${esc(emptyMsg)}</td></tr>`;
         if (tbody) tbody.innerHTML = empty;
-        if (cardList) cardList.innerHTML = '<p class="empty-state">入金待ちの案件はありません。</p>';
+        if (cardList) cardList.innerHTML = `<p class="empty-state">${esc(emptyMsg)}</p>`;
         return;
       }
 
       const rowHtml = item => {
         const delay = PaymentBrain.getDelayLabel(item.expectedPaymentDate, today);
         const delayClass = PaymentBrain.isOverdue(item.record, today) ? 'receivable-overdue' : '';
+        const breakLabel = PaymentBrain.getLinkedBreakLabel(item);
+        const sourceLabel = PaymentBrain.getSourceDisplayLabel(item);
         return `
         <tr data-receivable-key="${esc(item.key)}">
           <td>${esc(item.counterparty)}</td>
           <td>${esc(item.subject)}</td>
-          <td class="num">${esc(PaymentBrain.formatYen(item.total))}</td>
           <td class="num">${esc(PaymentBrain.formatYen(item.unpaidAmount))}</td>
           <td>${esc(PaymentBrain.getPaymentMethodLabel(item.record))}</td>
           <td>${esc(item.expectedPaymentDate || '—')}</td>
           <td>${renderPaymentStatusBadge(item.record)}</td>
           <td class="${delayClass}">${esc(delay)}</td>
-          <td>${esc(PaymentBrain.getSourceTypeLabel(item))}</td>
-          <td class="actions">
-            <button type="button" class="btn btn-sm btn-primary" data-mark-paid="${esc(item.primaryKind)}:${esc(item.primaryId)}">入金済み</button>
-            <button type="button" class="btn btn-sm btn-secondary" data-open-receivable="${esc(item.primaryKind)}:${esc(item.primaryId)}">開く</button>
+          <td>
+            <span class="receivables-source-label">${esc(sourceLabel)}</span>
+            ${breakLabel ? `<span class="receivables-linked-break">${esc(breakLabel)}</span>` : ''}
           </td>
+          <td class="actions receivables-actions-cell">${renderReceivableActionButtons(item)}</td>
         </tr>`;
       };
 
       if (tbody) tbody.innerHTML = items.map(rowHtml).join('');
 
       if (cardList) {
-        cardList.innerHTML = items.map(item => `
-          <div class="receivables-card">
-            <strong>${esc(item.counterparty)}</strong>
-            <p>${esc(item.subject)}</p>
-            <p>未入金：${esc(PaymentBrain.formatYen(item.unpaidAmount))} / ${esc(PaymentBrain.getPaymentMethodLabel(item.record))}</p>
-            <p>入金予定：${esc(item.expectedPaymentDate || '—')}（${esc(PaymentBrain.getDelayLabel(item.expectedPaymentDate, today))}）</p>
-            <p>${renderPaymentStatusBadge(item.record)} / ${esc(PaymentBrain.getSourceTypeLabel(item))}</p>
-            <div class="revenue-card-actions">
-              <button type="button" class="btn btn-sm btn-primary" data-mark-paid="${esc(item.primaryKind)}:${esc(item.primaryId)}">入金済み</button>
-              <button type="button" class="btn btn-sm btn-secondary" data-open-receivable="${esc(item.primaryKind)}:${esc(item.primaryId)}">開く</button>
+        cardList.innerHTML = items.map(item => {
+          const delay = PaymentBrain.getDelayLabel(item.expectedPaymentDate, today);
+          const delayClass = PaymentBrain.isOverdue(item.record, today) ? 'receivable-overdue' : '';
+          const breakLabel = PaymentBrain.getLinkedBreakLabel(item);
+          return `
+          <article class="receivables-card" data-receivable-key="${esc(item.key)}">
+            <div class="receivables-card-head">
+              <strong class="receivables-card-counterparty">${esc(item.counterparty)}</strong>
+              <span class="receivables-card-amount">${esc(PaymentBrain.formatYen(item.unpaidAmount))}</span>
             </div>
-          </div>`).join('');
+            <p class="receivables-card-subject">${esc(item.subject)}</p>
+            <div class="receivables-card-meta">
+              <span>${esc(PaymentBrain.getPaymentMethodLabel(item.record))}</span>
+              <span>入金予定：${esc(item.expectedPaymentDate || '—')}</span>
+            </div>
+            <p class="receivables-card-delay ${delayClass}">${esc(delay)}</p>
+            <p class="receivables-card-status">${renderPaymentStatusBadge(item.record)}</p>
+            <p class="receivables-card-source">${esc(PaymentBrain.getSourceDisplayLabel(item))}</p>
+            ${breakLabel ? `<p class="receivables-linked-break">${esc(breakLabel)}</p>` : ''}
+            ${renderReceivableActionButtons(item)}
+          </article>`;
+        }).join('');
       }
 
-      document.querySelectorAll('[data-mark-paid]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const [kind, id] = (btn.dataset.markPaid || '').split(':');
-          const hit = items.find(i => i.primaryKind === kind && i.primaryId === id);
-          if (hit) markReceivablePaid(hit);
-        });
-      });
-      document.querySelectorAll('[data-open-receivable]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const [kind, id] = (btn.dataset.openReceivable || '').split(':');
-          if (kind === 'document') {
-            navigateToView('documents');
-            openDocumentPreview(id);
-          } else {
-            navigateToView('revenue');
-            openRevenueEdit(id);
-          }
-        });
-      });
+      bindReceivableListActions(items);
     } catch (err) {
       console.error('[Budil] render error: 入金予定', err);
       const tbody = document.getElementById('receivables-tbody');
-      if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="section-render-error">表示中にエラーが発生しました。</td></tr>';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="section-render-error">表示中にエラーが発生しました。</td></tr>';
     }
   }
 
@@ -12925,6 +12985,12 @@
   }
 
   function initReceivables() {
+    document.querySelectorAll('[data-receivables-filter]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        receivablesFilter = btn.dataset.receivablesFilter || 'all';
+        renderReceivablesView();
+      });
+    });
     renderReceivablesView();
   }
 

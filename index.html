@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.6.0">
+  <link rel="stylesheet" href="css/style.css?v=4.7.0">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.6.0</small>
+          <small>AI経営脳みそ v4.7.0</small>
         </div>
       </div>
       <nav class="nav">
@@ -162,7 +162,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.6.0</small>
+        <small>Budil v4.7.0</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -184,7 +184,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">毎朝5分で、今日やること・売上・利益・需要・受付・作業予定を確認</p>
             </div>
-            <span class="exec-home-version">v4.6.0</span>
+            <span class="exec-home-version">v4.7.0</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <div id="exec-home-start-guide" class="exec-home-start-guide hidden"></div>
@@ -406,7 +406,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.6.0</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.7.0</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -1992,24 +1992,33 @@
       <section id="view-receivables" class="view">
         <header class="view-header">
           <h1>入金予定</h1>
-          <p class="view-subtitle">入金待ち・一部入金・未回収の回収状況（売上集計とは別管理）</p>
+          <p class="view-subtitle">回収状況です。売上集計とは別管理です。</p>
         </header>
 
-        <div class="card card-wide">
+        <div class="card card-wide receivables-summary-card">
           <h2>入金待ちサマリー</h2>
+          <p class="field-hint receivables-summary-hint">入金待ち・一部入金・未回収の未入金額を集計しています（入金済み・取消は含みません）。</p>
           <div id="receivables-summary" class="receivables-summary-grid"></div>
         </div>
 
-        <div class="card card-wide">
+        <div class="card card-wide receivables-list-card">
           <h2>入金予定一覧</h2>
           <p class="field-hint">売上と請求書がリンクされている場合は1件だけ表示します（請求書情報を優先）。</p>
+          <div class="receivables-filter-bar" id="receivables-filter-bar" role="toolbar" aria-label="入金予定フィルター">
+            <button type="button" class="btn btn-sm btn-secondary receivables-filter-btn active" data-receivables-filter="all">すべて</button>
+            <button type="button" class="btn btn-sm btn-secondary receivables-filter-btn" data-receivables-filter="this_month">今月</button>
+            <button type="button" class="btn btn-sm btn-secondary receivables-filter-btn" data-receivables-filter="next_month">来月</button>
+            <button type="button" class="btn btn-sm btn-secondary receivables-filter-btn" data-receivables-filter="overdue">遅れ</button>
+            <button type="button" class="btn btn-sm btn-secondary receivables-filter-btn" data-receivables-filter="corporate_monthly">法人月末請求</button>
+            <button type="button" class="btn btn-sm btn-secondary receivables-filter-btn" data-receivables-filter="kurashi">くらし</button>
+            <button type="button" class="btn btn-sm btn-secondary receivables-filter-btn" data-receivables-filter="other">その他</button>
+          </div>
           <div class="table-wrap receivables-table-wrap">
             <table class="data-table receivables-table" id="receivables-table">
               <thead>
                 <tr>
                   <th>相手先</th>
                   <th>件名 / 作業内容</th>
-                  <th>金額</th>
                   <th>未入金額</th>
                   <th>支払方法</th>
                   <th>入金予定日</th>
@@ -3173,30 +3182,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.6.0"></script>
-  <script src="js/messages.js?v=4.6.0"></script>
-  <script src="js/demand-brain.js?v=4.6.0"></script>
-  <script src="js/demand-radar.js?v=4.6.0"></script>
-  <script src="js/sales-brain.js?v=4.6.0"></script>
-  <script src="js/management-brain.js?v=4.6.0"></script>
-  <script src="js/payment-brain.js?v=4.6.0"></script>
-  <script src="js/revenue-brain.js?v=4.6.0"></script>
-  <script src="js/revenue-summary-brain.js?v=4.6.0"></script>
-  <script src="js/reception-brain.js?v=4.6.0"></script>
-  <script src="js/map-brain.js?v=4.6.0"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.6.0"></script>
-  <script src="js/external-check-brain.js?v=4.6.0"></script>
-  <script src="js/action-brain.js?v=4.6.0"></script>
-  <script src="js/work-order-brain.js?v=4.6.0"></script>
-  <script src="js/follow-up-brain.js?v=4.6.0"></script>
-  <script src="js/work-completion-brain.js?v=4.6.0"></script>
-  <script src="js/profit-brain.js?v=4.6.0"></script>
-  <script src="js/analytics-brain.js?v=4.6.0"></script>
-  <script src="js/monthly-results-brain.js?v=4.6.0"></script>
-  <script src="js/documents-brain.js?v=4.6.0"></script>
-  <script src="js/executive-brain.js?v=4.6.0"></script>
-  <script src="js/card-ocr.js?v=4.6.0"></script>
-  <script src="js/data-backup.js?v=4.6.0"></script>
-  <script src="js/app.js?v=4.6.0"></script>
+  <script src="js/storage.js?v=4.7.0"></script>
+  <script src="js/messages.js?v=4.7.0"></script>
+  <script src="js/demand-brain.js?v=4.7.0"></script>
+  <script src="js/demand-radar.js?v=4.7.0"></script>
+  <script src="js/sales-brain.js?v=4.7.0"></script>
+  <script src="js/management-brain.js?v=4.7.0"></script>
+  <script src="js/payment-brain.js?v=4.7.0"></script>
+  <script src="js/revenue-brain.js?v=4.7.0"></script>
+  <script src="js/revenue-summary-brain.js?v=4.7.0"></script>
+  <script src="js/reception-brain.js?v=4.7.0"></script>
+  <script src="js/map-brain.js?v=4.7.0"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.7.0"></script>
+  <script src="js/external-check-brain.js?v=4.7.0"></script>
+  <script src="js/action-brain.js?v=4.7.0"></script>
+  <script src="js/work-order-brain.js?v=4.7.0"></script>
+  <script src="js/follow-up-brain.js?v=4.7.0"></script>
+  <script src="js/work-completion-brain.js?v=4.7.0"></script>
+  <script src="js/profit-brain.js?v=4.7.0"></script>
+  <script src="js/analytics-brain.js?v=4.7.0"></script>
+  <script src="js/monthly-results-brain.js?v=4.7.0"></script>
+  <script src="js/documents-brain.js?v=4.7.0"></script>
+  <script src="js/executive-brain.js?v=4.7.0"></script>
+  <script src="js/card-ocr.js?v=4.7.0"></script>
+  <script src="js/data-backup.js?v=4.7.0"></script>
+  <script src="js/app.js?v=4.7.0"></script>
 </body>
 </html>

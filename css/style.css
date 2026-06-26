@@ -8815,8 +8815,18 @@ body.sales-page {
 
 .receivables-summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .receivables-summary-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.receivables-summary-hint {
+  margin-bottom: 0.75rem;
 }
 
 .receivables-summary-item {
@@ -8841,6 +8851,133 @@ body.sales-page {
 .receivables-summary-item.warn strong {
   color: #fbbf24;
 }
+
+.receivables-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.75rem 0 1rem;
+}
+
+.receivables-filter-btn.active {
+  background: rgba(59, 130, 246, 0.25);
+  border-color: rgba(96, 165, 250, 0.5);
+  color: #93c5fd;
+}
+
+.receivable-overdue {
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+.receivables-source-label {
+  display: block;
+  font-size: 0.85rem;
+}
+
+.receivables-linked-break {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+  color: #fbbf24;
+}
+
+.receivables-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+.receivables-actions-cell .receivables-card-actions {
+  margin-top: 0;
+}
+
+.receivables-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.receivables-card {
+  border: 1px solid var(--border, #334155);
+  border-radius: 10px;
+  padding: 0.85rem;
+  background: rgba(30, 41, 59, 0.45);
+}
+
+.receivables-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.receivables-card-counterparty {
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.receivables-card-amount {
+  font-size: 1rem;
+  font-weight: 700;
+  white-space: nowrap;
+  color: #e2e8f0;
+}
+
+.receivables-card-subject {
+  margin: 0.35rem 0 0.5rem;
+  font-size: 0.88rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+.receivables-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.82rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+.receivables-card-delay {
+  margin: 0.45rem 0 0.25rem;
+  font-size: 0.85rem;
+}
+
+.receivables-card-status {
+  margin: 0.25rem 0;
+}
+
+.receivables-card-source {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+@media (min-width: 900px) {
+  .receivables-table-wrap {
+    display: block;
+    margin-bottom: 1rem;
+  }
+  .receivables-card-list {
+    display: none;
+  }
+}
+
+@media (max-width: 899px) {
+  .receivables-table-wrap { display: none; }
+  .receivables-card-list {
+    display: flex;
+  }
+}
+
+@media (max-width: 768px) {
+  .exec-home-receivables {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── 入金予定一覧 v4.7.0 ── */
 
 .exec-home-receivables {
   display: grid;
@@ -8884,28 +9021,6 @@ body.sales-page {
 .revenue-payment-cancelled { background: rgba(100, 116, 139, 0.25); color: #94a3b8; }
 .revenue-payment-未入金 { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
 .revenue-payment-入金済み { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
-
-.receivables-card-list {
-  display: none;
-}
-
-@media (max-width: 768px) {
-  .receivables-table-wrap { display: none; }
-  .receivables-card-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  .receivables-card {
-    border: 1px solid var(--border, #334155);
-    border-radius: 8px;
-    padding: 0.75rem;
-    background: rgba(30, 41, 59, 0.45);
-  }
-  .exec-home-receivables {
-    grid-template-columns: 1fr;
-  }
-}
 
 /* ── 売上から請求書作成 v4.6.0 ── */
 .revenue-invoice-action,
