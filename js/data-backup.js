@@ -1,9 +1,9 @@
 /**
- * Budil v4.8.7 - データバックアップ・復元
+ * Budil v4.8.8 - データバックアップ・復元
  */
 const DataBackup = {
   VERSION: '4.0',
-  APP_VERSION: 'v4.8.7',
+  APP_VERSION: 'v4.8.8',
 
   PAYMENT_FIELDS: [
     'paymentMethod',
@@ -36,7 +36,9 @@ const DataBackup = {
     'budil_external_check_reports',
     'budil_action_candidates',
     'budil_monthly_results',
-    'budil_documents'
+    'budil_documents',
+    'budil_safety_backups',
+    'budil_operation_logs'
   ],
 
   exportPayload() {
@@ -100,6 +102,8 @@ const DataBackup = {
     const src = data || {};
     const revenues = Array.isArray(src.budil_revenue_records) ? src.budil_revenue_records : [];
     const documents = Array.isArray(src.budil_documents) ? src.budil_documents : [];
+    const safetyBackups = Array.isArray(src.budil_safety_backups) ? src.budil_safety_backups : [];
+    const operationLogs = Array.isArray(src.budil_operation_logs) ? src.budil_operation_logs : [];
     const docIds = new Set(documents.filter(d => d && d.id).map(d => d.id));
     const revIds = new Set(revenues.filter(r => r && r.id).map(r => r.id));
 
@@ -147,6 +151,8 @@ const DataBackup = {
       monthlyResults: Array.isArray(src.budil_monthly_results) ? src.budil_monthly_results.length : 0,
       externalCheck: Array.isArray(src.budil_external_check_reports) ? src.budil_external_check_reports.length : 0,
       actionCandidates: Array.isArray(src.budil_action_candidates) ? src.budil_action_candidates.length : 0,
+      safetyBackups: safetyBackups.length,
+      operationLogs: operationLogs.length,
       linkedRevenueCount,
       linkedDocumentCount,
       linkedCount: linkedRevenueCount + linkedDocumentCount,
@@ -188,6 +194,8 @@ const DataBackup = {
       '月次実績 ' + (s.monthlyResults || 0) + '件',
       '外部チェック ' + (s.externalCheck || 0) + '件',
       '今日やること候補 ' + (s.actionCandidates || 0) + '件',
+      '安全バックアップ ' + (s.safetyBackups || 0) + '件',
+      '操作ログ ' + (s.operationLogs || 0) + '件',
       'linked ID あり ' + (s.linkedCount || 0) + '件',
       'linked切れ ' + (s.linkedBrokenCount || 0) + '件',
       'payment fields あり（売上 ' + (s.revenueWithPaymentFields || 0) + ' / 請求書 ' + (s.documentsWithPaymentFields || 0) + '）',
@@ -229,13 +237,15 @@ const DataBackup = {
     const documents = Array.isArray(data.budil_documents) ? data.budil_documents.length : 0;
     const externalCheck = Array.isArray(data.budil_external_check_reports) ? data.budil_external_check_reports.length : 0;
     const actionCandidates = Array.isArray(data.budil_action_candidates) ? data.budil_action_candidates.length : 0;
+    const safetyBackups = Array.isArray(data.budil_safety_backups) ? data.budil_safety_backups.length : 0;
+    const operationLogs = Array.isArray(data.budil_operation_logs) ? data.budil_operation_logs.length : 0;
     const integrity = this.getIntegritySummaryFromData(data);
 
     return {
       leads, followups, demandLogs, radarKw, messages, hasPosts, hasCardDraft,
       hasDemandNotes, hasSettings, revenueRecords, hasRevenueSettings,
       dailyTaskStates, manualTasks, demandPickups, receptionIntakes, workOrders, expenseRecords, analyticsRecords,
-      monthlyResults, documents, externalCheck, actionCandidates, integrity
+      monthlyResults, documents, externalCheck, actionCandidates, safetyBackups, operationLogs, integrity
     };
   },
 

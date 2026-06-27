@@ -2692,6 +2692,8 @@
     if (summary.documents) items.push('請求書・見積書 ' + summary.documents + '件');
     if (summary.externalCheck) items.push('外部チェック ' + summary.externalCheck + '件');
     if (summary.actionCandidates) items.push('今日やること候補 ' + summary.actionCandidates + '件');
+    if (summary.safetyBackups) items.push('安全バックアップ ' + summary.safetyBackups + '件');
+    if (summary.operationLogs) items.push('操作ログ ' + summary.operationLogs + '件');
     if (summary.integrity) {
       const ig = summary.integrity;
       if (ig.linkedCount) items.push('linked ID あり ' + ig.linkedCount + '件');
@@ -3038,7 +3040,11 @@
         }
         const ok = confirm('デモデータ（isDemo / isTest）だけを削除します。本番データは残ります。よろしいですか？');
         if (!ok) return;
-        Storage.deleteDemoData();
+        const result = Storage.deleteDemoData();
+        if (!result.ok) {
+          alert('安全ガードによりデモデータ削除を停止しました。データ診断で安全バックアップと操作ログを確認してください。');
+          return;
+        }
         demoGuideVisible = false;
         refreshAllViews();
         alert('デモデータを削除しました');
@@ -3171,9 +3177,10 @@
   }
 
   function hasBudilTestData() {
-    const leads = Storage.getLeads().some(l => l.isTest === true);
-    const revenue = Storage.getRevenueRecords().some(r => r.isTest === true);
-    const manual = Storage.getDailyActionTasksData().manualTasks.some(t => t.isTest === true);
+    const isTestLike = item => item && (item.isTest === true || String(item.testRunId || '').trim());
+    const leads = Storage.getLeads().some(isTestLike);
+    const revenue = Storage.getRevenueRecords().some(isTestLike);
+    const manual = Storage.getDailyActionTasksData().manualTasks.some(isTestLike);
     return leads || revenue || manual;
   }
 
@@ -3184,12 +3191,14 @@
     }
     const today = TODAY();
     const nextContact = addDaysToDate(today, 30);
+    const testRunId = 'v488-' + Storage.generateId();
     const leadId = 'test_' + Storage.generateId();
     const leads = Storage.getLeads();
     leads.push({
       id: leadId,
       company: 'テスト工務店',
       isTest: true,
+      testRunId,
       createdAt: new Date().toISOString(),
       salesStatus: '成約',
       status: '成約',
@@ -3205,6 +3214,7 @@
         type: 'contact',
         title: 'LINEでお礼連絡',
         isTest: true,
+        testRunId,
         createdAt: new Date().toISOString()
       }]
     });
@@ -3212,6 +3222,7 @@
 
     Storage.addRevenueRecord({
       isTest: true,
+      testRunId,
       workDate: today,
       customerName: 'テスト工務店',
       service: RevenueBrain.SERVICES[0],
@@ -3226,6 +3237,7 @@
 
     Storage.addManualDailyTask({
       isTest: true,
+      testRunId,
       id: 'test_manual_' + Storage.generateId(),
       title: 'テスト確認タスク',
       targetName: 'テスト工務店',
@@ -3250,16 +3262,31 @@
     const ok = confirm('テストデータ（isTest）だけを削除します。本番データは残ります。よろしいですか？');
     if (!ok) return;
 
+    const isTestLike = item => item && (item.isTest === true || String(item.testRunId || '').trim());
     const testManualIds = Storage.getDailyActionTasksData().manualTasks
-      .filter(t => t.isTest === true)
+      .filter(isTestLike)
       .map(t => t.id);
 
-    Storage.saveLeads(Storage.getLeads().filter(l => l.isTest !== true));
-    Storage.saveRevenueRecords(Storage.getRevenueRecords().filter(r => r.isTest !== true));
+    const revenueResult = Storage.deleteTestRecordsByKey(Storage.KEYS.REVENUE_RECORDS, {
+      reason: 'before_delete_ui_test_revenue',
+      action: 'delete_ui_test_revenue'
+    });
+    if (!revenueResult.ok) {
+      alert('安全ガードによりテスト売上の削除を停止しました。データ診断で安全バックアップと操作ログを確認してください。');
+      return;
+    }
+
+    Storage.saveLeads(Storage.getLeads().filter(l => !isTestLike(l)));
 
     const store = Storage.getDailyActionTasksData();
-    store.manualTasks = store.manualTasks.filter(t => t.isTest !== true);
-    store.states = store.states.filter(s => s.isTest !== true && !testManualIds.includes(s.taskId));
+    Storage.createSafetyBackup({
+      reason: 'before_delete_ui_test_daily_tasks',
+      targetKey: Storage.KEYS.DAILY_ACTION_TASKS,
+      beforeCount: (store.manualTasks || []).length + (store.states || []).length,
+      data: store
+    });
+    store.manualTasks = store.manualTasks.filter(t => !isTestLike(t));
+    store.states = store.states.filter(s => !isTestLike(s) && !testManualIds.includes(s.taskId));
     Storage.saveDailyActionTasksData(store);
 
     refreshAllViews();
@@ -3309,7 +3336,9 @@
       ['アナリティクス', counts.analyticsRecords],
       ['活動履歴', counts.activityLogs],
       ['成果入力済み', counts.performanceEntered],
-      ['dailyChecks', counts.dailyChecks]
+      ['dailyChecks', counts.dailyChecks],
+      ['安全バックアップ', counts.safetyBackups],
+      ['操作ログ', counts.operationLogs]
     ];
     el.innerHTML = items.map(([label, val]) =>
       `<div class="data-diagnostics-count-item"><span>${esc(label)}</span><strong>${val != null ? val : '—'}</strong></div>`
@@ -4067,7 +4096,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.8.7</span>
+        <span class="business-report-version">v4.8.8</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'

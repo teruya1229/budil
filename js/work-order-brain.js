@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.7 - 予約・作業予定番頭
+ * Budil v4.8.8 - 予約・作業予定番頭
  */
 const WorkOrderBrain = {
   STATUSES: ['tentative', 'confirmed', 'completed', 'cancelled', 'archived'],

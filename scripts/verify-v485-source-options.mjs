@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.7 source option verification.
+ * Budil v4.8.8 source option verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -18,7 +18,7 @@ function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-console.log('== v4.8.7 source options check ==');
+console.log('== v4.8.8 source options check ==');
 for (const file of ['revenue-brain.js', 'revenue-summary-brain.js', 'reception-brain.js']) {
   execSync(`node --check "${join(jsDir, file)}"`, { stdio: 'inherit' });
 }
@@ -62,7 +62,7 @@ const result = runInContext(`
   });
 `, ctx);
 
-assert(JSON.stringify(result.sources) === JSON.stringify(['LP', '110番', 'くらしのマーケット', 'ヤマダ', 'コープ', 'その他']), 'RevenueBrain.SOURCES should be the v4.8.7 six options');
+assert(JSON.stringify(result.sources) === JSON.stringify(['LP', '110番', 'くらしのマーケット', 'ヤマダ', 'コープ', 'その他']), 'RevenueBrain.SOURCES should be the v4.8.8 six options');
 assert(result.matches.lp === 'LP', 'Google-like source should map to LP');
 assert(result.matches.tel === '110番', '110 source should map to 110番');
 assert(result.matches.market === 'くらしのマーケット', 'market source should stay market');

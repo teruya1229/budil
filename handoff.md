@@ -16,9 +16,30 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.8.7 |
+| 最新バージョン | v4.8.8 |
 | 最新commit | （push後に更新） |
 | ブランチ | `main` push 済み |
+
+## v4.8.8で入ったもの
+
+- データ保護・削除事故再発防止ガードを追加
+- `recovery/` は `.gitignore` でgit管理対象外。復元調査ファイルはcommitしない
+- 削除前安全バックアップ `budil_safety_backups` と操作ログ `budil_operation_logs` を追加
+- 売上削除は対象ID必須。存在しないID、最後の1件削除、件数不一致、`budil_revenue_records` の空配列上書きは保存前に停止
+- テストデータ削除は `isTest: true` または `testRunId` の対象IDだけ。顧客名一致・全件削除は禁止
+- データ診断に売上/請求書/受付/作業予定/安全バックアップ/操作ログ件数、売上0件警告、前回診断からの売上急減警告を追加
+- `scripts/verify-v488-data-safety.mjs` を追加
+
+## Cursor / Browser Automation 運用ルール
+
+- Cursor / Browser Automation は実データ削除をしない
+- テストデータ削除は `isTest` / `testRunId` の対象だけ
+- localStorage直接操作は禁止
+- 削除前に件数確認
+- 削除前に安全バックアップ
+- 売上・請求書・入金予定は全件削除禁止
+- 公開URL確認後のクリーンアップで `budil_revenue_records` を直接 `[]` にしない
+- `recovery/` はgit管理に入れない
 
 ## v4.8.7で入ったもの
 

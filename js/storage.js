@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.8.7',
+  BUDIL_VERSION: 'v4.8.8',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -26,7 +26,9 @@ const Storage = {
     EXTERNAL_CHECK_REPORTS: 'budil_external_check_reports',
     ACTION_CANDIDATES: 'budil_action_candidates',
     MONTHLY_RESULTS: 'budil_monthly_results',
-    DOCUMENTS: 'budil_documents'
+    DOCUMENTS: 'budil_documents',
+    SAFETY_BACKUPS: 'budil_safety_backups',
+    OPERATION_LOGS: 'budil_operation_logs'
   },
 
   get(key, defaultValue = null) {
@@ -44,6 +46,163 @@ const Storage = {
 
   generateId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  },
+
+  SAFETY_BACKUP_LIMIT: 30,
+  OPERATION_LOG_LIMIT: 80,
+  PROTECTED_DELETE_KEYS: [
+    'budil_revenue_records',
+    'budil_documents',
+    'budil_payment_records',
+    'budil_reception_intakes',
+    'budil_work_orders'
+  ],
+
+  cloneForSafety(data) {
+    try {
+      return JSON.parse(JSON.stringify(data));
+    } catch {
+      return data;
+    }
+  },
+
+  getSafetyBackups() {
+    const raw = this.get(this.KEYS.SAFETY_BACKUPS, []);
+    return Array.isArray(raw) ? raw : [];
+  },
+
+  saveSafetyBackups(list) {
+    this.set(this.KEYS.SAFETY_BACKUPS, Array.isArray(list) ? list.slice(0, this.SAFETY_BACKUP_LIMIT) : []);
+  },
+
+  getOperationLogs() {
+    const raw = this.get(this.KEYS.OPERATION_LOGS, []);
+    return Array.isArray(raw) ? raw : [];
+  },
+
+  saveOperationLogs(list) {
+    this.set(this.KEYS.OPERATION_LOGS, Array.isArray(list) ? list.slice(0, this.OPERATION_LOG_LIMIT) : []);
+  },
+
+  getRecordsByKey(key) {
+    switch (key) {
+      case this.KEYS.REVENUE_RECORDS: return this.getRevenueRecords();
+      case this.KEYS.DOCUMENTS: return this.getDocuments();
+      case this.KEYS.RECEPTION_INTAKES: return this.getReceptionIntakes();
+      case this.KEYS.WORK_ORDERS: return this.getWorkOrders();
+      default: {
+        const raw = this.get(key, []);
+        return Array.isArray(raw) ? raw : [];
+      }
+    }
+  },
+
+  saveRecordsByKey(key, list, options = {}) {
+    switch (key) {
+      case this.KEYS.REVENUE_RECORDS: return this.saveRevenueRecords(list, options);
+      case this.KEYS.DOCUMENTS: return this.saveDocuments(list);
+      case this.KEYS.RECEPTION_INTAKES: return this.saveReceptionIntakes(list);
+      case this.KEYS.WORK_ORDERS: return this.saveWorkOrders(list);
+      default:
+        this.set(key, list);
+        return true;
+    }
+  },
+
+  createSafetyBackup({ reason, targetKey, targetId = '', data = null, beforeCount = null }) {
+    const list = this.getSafetyBackups();
+    const snapshot = data != null ? data : this.getRecordsByKey(targetKey);
+    const backup = {
+      id: 'safety-backup-' + this.generateId(),
+      createdAt: new Date().toISOString(),
+      reason: reason || 'before_destructive_action',
+      targetKey,
+      targetId: String(targetId || ''),
+      beforeCount: beforeCount != null ? beforeCount : (Array.isArray(snapshot) ? snapshot.length : null),
+      data: this.cloneForSafety(snapshot)
+    };
+    list.unshift(backup);
+    this.saveSafetyBackups(list);
+    return backup;
+  },
+
+  recordOperationLog(entry) {
+    const logs = this.getOperationLogs();
+    const log = {
+      id: 'operation-log-' + this.generateId(),
+      createdAt: new Date().toISOString(),
+      ...entry
+    };
+    logs.unshift(log);
+    this.saveOperationLogs(logs);
+    return log;
+  },
+
+  isTestDeletionTarget(item, testRunId = '') {
+    if (!item || typeof item !== 'object') return false;
+    const runId = String(testRunId || '').trim();
+    return item.isTest === true || (!!runId && String(item.testRunId || '') === runId);
+  },
+
+  deleteTestRecordsByKey(targetKey, options = {}) {
+    const before = this.getRecordsByKey(targetKey);
+    const testRunId = String(options.testRunId || '').trim();
+    const candidates = before.filter(item => this.isTestDeletionTarget(item, testRunId));
+    if (!candidates.length) {
+      return { ok: true, targetKey, deleted: 0, beforeCount: before.length, afterCount: before.length, skipped: true };
+    }
+    if (candidates.some(item => !item || !item.id)) {
+      this.recordOperationLog({
+        action: 'delete_test_records_blocked',
+        targetKey,
+        reason: 'missing_target_id',
+        beforeCount: before.length,
+        candidateCount: candidates.length
+      });
+      return { ok: false, error: 'missing_target_id', targetKey, deleted: 0, beforeCount: before.length, afterCount: before.length };
+    }
+    if (candidates.length >= before.length) {
+      this.recordOperationLog({
+        action: 'delete_test_records_blocked',
+        targetKey,
+        reason: 'all_records_delete_blocked',
+        beforeCount: before.length,
+        candidateCount: candidates.length
+      });
+      return { ok: false, error: 'all_records_delete_blocked', targetKey, deleted: 0, beforeCount: before.length, afterCount: before.length };
+    }
+    const ids = new Set(candidates.map(item => item.id));
+    const next = before.filter(item => !ids.has(item && item.id));
+    if (before.length - next.length !== candidates.length) {
+      this.recordOperationLog({
+        action: 'delete_test_records_blocked',
+        targetKey,
+        reason: 'count_mismatch',
+        beforeCount: before.length,
+        candidateCount: candidates.length,
+        afterCount: next.length
+      });
+      return { ok: false, error: 'count_mismatch', targetKey, deleted: 0, beforeCount: before.length, afterCount: before.length };
+    }
+    const backup = this.createSafetyBackup({
+      reason: options.reason || 'before_delete_test_records',
+      targetKey,
+      targetId: candidates.map(item => item.id).join(','),
+      beforeCount: before.length,
+      data: before
+    });
+    this.saveRecordsByKey(targetKey, next, { allowEmptyRevenue: false });
+    this.recordOperationLog({
+      action: options.action || 'delete_test_records',
+      targetKey,
+      targetIds: candidates.map(item => item.id),
+      beforeCount: before.length,
+      afterCount: next.length,
+      deletedCount: candidates.length,
+      safeBackupId: backup.id,
+      testRunId
+    });
+    return { ok: true, targetKey, deleted: candidates.length, beforeCount: before.length, afterCount: next.length, safeBackupId: backup.id };
   },
 
   migrate() {
@@ -327,8 +486,21 @@ const Storage = {
     return Array.isArray(raw) ? raw : [];
   },
 
-  saveRevenueRecords(list) {
-    this.set(this.KEYS.REVENUE_RECORDS, list);
+  saveRevenueRecords(list, options = {}) {
+    const next = Array.isArray(list) ? list : [];
+    const before = this.getRevenueRecords();
+    if (!options.allowEmptyRevenue && before.length > 0 && next.length === 0) {
+      this.recordOperationLog({
+        action: 'save_revenue_blocked',
+        targetKey: this.KEYS.REVENUE_RECORDS,
+        reason: 'empty_array_overwrite_blocked',
+        beforeCount: before.length,
+        afterCount: 0
+      });
+      return false;
+    }
+    this.set(this.KEYS.REVENUE_RECORDS, next);
+    return true;
   },
 
   getRevenueSettings() {
@@ -363,7 +535,48 @@ const Storage = {
 
   deleteRevenueRecord(id) {
     const revId = String(id || '').trim();
-    if (!revId) return;
+    if (!revId) return { ok: false, error: 'missing_target_id' };
+    const beforeRevenues = this.getRevenueRecords();
+    const target = beforeRevenues.find(r => String(r.id || '').trim() === revId);
+    if (!target) {
+      this.recordOperationLog({
+        action: 'delete_revenue_blocked',
+        targetKey: this.KEYS.REVENUE_RECORDS,
+        targetId: revId,
+        reason: 'target_not_found',
+        beforeCount: beforeRevenues.length
+      });
+      return { ok: false, error: 'target_not_found', beforeCount: beforeRevenues.length };
+    }
+    if (beforeRevenues.length <= 1) {
+      this.recordOperationLog({
+        action: 'delete_revenue_blocked',
+        targetKey: this.KEYS.REVENUE_RECORDS,
+        targetId: revId,
+        reason: 'all_records_delete_blocked',
+        beforeCount: beforeRevenues.length
+      });
+      return { ok: false, error: 'all_records_delete_blocked', beforeCount: beforeRevenues.length };
+    }
+    const nextRevenues = beforeRevenues.filter(r => String(r.id || '').trim() !== revId);
+    if (nextRevenues.length !== beforeRevenues.length - 1) {
+      this.recordOperationLog({
+        action: 'delete_revenue_blocked',
+        targetKey: this.KEYS.REVENUE_RECORDS,
+        targetId: revId,
+        reason: 'count_mismatch',
+        beforeCount: beforeRevenues.length,
+        afterCount: nextRevenues.length
+      });
+      return { ok: false, error: 'count_mismatch', beforeCount: beforeRevenues.length, afterCount: nextRevenues.length };
+    }
+    const revenueBackup = this.createSafetyBackup({
+      reason: 'before_delete_revenue',
+      targetKey: this.KEYS.REVENUE_RECORDS,
+      targetId: revId,
+      beforeCount: beforeRevenues.length,
+      data: beforeRevenues
+    });
     const documents = this.getDocuments();
     let changed = false;
     const nextDocuments = documents.map(d => {
@@ -371,8 +584,28 @@ const Storage = {
       changed = true;
       return { ...d, linkedRevenueId: '', updatedAt: new Date().toISOString() };
     });
-    if (changed) this.saveDocuments(nextDocuments);
-    this.saveRevenueRecords(this.getRevenueRecords().filter(r => r.id !== revId));
+    let documentBackup = null;
+    if (changed) {
+      documentBackup = this.createSafetyBackup({
+        reason: 'before_unlink_document_from_deleted_revenue',
+        targetKey: this.KEYS.DOCUMENTS,
+        targetId: revId,
+        beforeCount: documents.length,
+        data: documents
+      });
+      this.saveDocuments(nextDocuments);
+    }
+    this.saveRevenueRecords(nextRevenues);
+    this.recordOperationLog({
+      action: 'delete_revenue',
+      targetKey: this.KEYS.REVENUE_RECORDS,
+      targetId: revId,
+      beforeCount: beforeRevenues.length,
+      afterCount: nextRevenues.length,
+      safeBackupId: revenueBackup.id,
+      linkedDocumentBackupId: documentBackup ? documentBackup.id : ''
+    });
+    return { ok: true, targetId: revId, beforeCount: beforeRevenues.length, afterCount: nextRevenues.length, safeBackupId: revenueBackup.id };
   },
 
   getDailyActionTasks() {
@@ -536,7 +769,9 @@ const Storage = {
     'budil_external_check_reports',
     'budil_action_candidates',
     'budil_monthly_results',
-    'budil_documents'
+    'budil_documents',
+    'budil_safety_backups',
+    'budil_operation_logs'
   ],
 
   getDocuments() {
@@ -580,7 +815,38 @@ const Storage = {
 
   deleteDocument(id) {
     const docId = String(id || '').trim();
-    if (!docId) return;
+    if (!docId) return { ok: false, error: 'missing_target_id' };
+    const beforeDocuments = this.getDocuments();
+    const target = beforeDocuments.find(d => String(d.id || '').trim() === docId);
+    if (!target) {
+      this.recordOperationLog({
+        action: 'delete_document_blocked',
+        targetKey: this.KEYS.DOCUMENTS,
+        targetId: docId,
+        reason: 'target_not_found',
+        beforeCount: beforeDocuments.length
+      });
+      return { ok: false, error: 'target_not_found', beforeCount: beforeDocuments.length };
+    }
+    const nextDocumentsOnly = beforeDocuments.filter(d => String(d.id || '').trim() !== docId);
+    if (nextDocumentsOnly.length !== beforeDocuments.length - 1) {
+      this.recordOperationLog({
+        action: 'delete_document_blocked',
+        targetKey: this.KEYS.DOCUMENTS,
+        targetId: docId,
+        reason: 'count_mismatch',
+        beforeCount: beforeDocuments.length,
+        afterCount: nextDocumentsOnly.length
+      });
+      return { ok: false, error: 'count_mismatch', beforeCount: beforeDocuments.length, afterCount: nextDocumentsOnly.length };
+    }
+    const documentBackup = this.createSafetyBackup({
+      reason: 'before_delete_document',
+      targetKey: this.KEYS.DOCUMENTS,
+      targetId: docId,
+      beforeCount: beforeDocuments.length,
+      data: beforeDocuments
+    });
     const revenues = this.getRevenueRecords();
     let changed = false;
     const nextRevenues = revenues.map(r => {
@@ -588,8 +854,28 @@ const Storage = {
       changed = true;
       return { ...r, linkedDocumentId: '', updatedAt: new Date().toISOString() };
     });
-    if (changed) this.saveRevenueRecords(nextRevenues);
-    this.saveDocuments(this.getDocuments().filter(d => d.id !== docId));
+    let revenueBackup = null;
+    if (changed) {
+      revenueBackup = this.createSafetyBackup({
+        reason: 'before_unlink_revenue_from_deleted_document',
+        targetKey: this.KEYS.REVENUE_RECORDS,
+        targetId: docId,
+        beforeCount: revenues.length,
+        data: revenues
+      });
+      this.saveRevenueRecords(nextRevenues);
+    }
+    this.saveDocuments(nextDocumentsOnly);
+    this.recordOperationLog({
+      action: 'delete_document',
+      targetKey: this.KEYS.DOCUMENTS,
+      targetId: docId,
+      beforeCount: beforeDocuments.length,
+      afterCount: nextDocumentsOnly.length,
+      safeBackupId: documentBackup.id,
+      linkedRevenueBackupId: revenueBackup ? revenueBackup.id : ''
+    });
+    return { ok: true, targetId: docId, beforeCount: beforeDocuments.length, afterCount: nextDocumentsOnly.length, safeBackupId: documentBackup.id };
   },
 
   getDocumentById(id) {
@@ -722,7 +1008,10 @@ const Storage = {
   },
 
   deleteDemoWorkOrders() {
-    this.saveWorkOrders(this.getWorkOrders().filter(w => !this.isDemoOrTestFlag(w)));
+    return this.deleteTestRecordsByKey(this.KEYS.WORK_ORDERS, {
+      reason: 'before_delete_demo_work_orders',
+      action: 'delete_demo_work_orders'
+    });
   },
 
   getExpenseRecords() {
@@ -769,7 +1058,7 @@ const Storage = {
   },
 
   deleteDemoExpenseRecords() {
-    this.saveExpenseRecords(this.getExpenseRecords().filter(e => !this.isDemoOrTestFlag(e)));
+    this.saveExpenseRecords(this.getExpenseRecords().filter(e => !this.isTestDeletionTarget(e)));
   },
 
   getAnalyticsRecords() {
@@ -817,7 +1106,7 @@ const Storage = {
   },
 
   deleteDemoAnalyticsRecords() {
-    this.saveAnalyticsRecords(this.getAnalyticsRecords().filter(r => !this.isDemoOrTestFlag(r)));
+    this.saveAnalyticsRecords(this.getAnalyticsRecords().filter(r => !this.isTestDeletionTarget(r)));
   },
 
   getMonthlyResults() {
@@ -936,7 +1225,10 @@ const Storage = {
   },
 
   deleteDemoReceptionIntakes() {
-    this.saveReceptionIntakes(this.getReceptionIntakes().filter(i => !this.isDemoOrTestFlag(i)));
+    return this.deleteTestRecordsByKey(this.KEYS.RECEPTION_INTAKES, {
+      reason: 'before_delete_demo_reception_intakes',
+      action: 'delete_demo_reception_intakes'
+    });
   },
 
   isValidDateStr(str) {
@@ -993,11 +1285,15 @@ const Storage = {
       analyticsRecords: 0,
       activityLogs: 0,
       performanceEntered: 0,
-      dailyChecks: 0
+      dailyChecks: 0,
+      safetyBackups: 0,
+      operationLogs: 0
     };
     const keyStatus = [];
     const backupKeys = [];
     const usage = this.getLocalStorageUsage();
+    const settings = this.getSettings();
+    const previousDiagnosticCounts = settings.lastDiagnosticCounts || null;
 
     const add = (level, msg) => {
       if (levels[level]) levels[level].push(msg);
@@ -1027,6 +1323,11 @@ const Storage = {
         backupKeys.push({ key, exists: info.exists, inBackupList: backupList.includes(key), parseOk: info.parseOk });
       }
     });
+
+    counts.safetyBackups = this.getSafetyBackups().length;
+    counts.operationLogs = this.getOperationLogs().length;
+    add('ok', `安全バックアップ ${counts.safetyBackups}件`);
+    add('ok', `操作ログ ${counts.operationLogs}件`);
 
     const missingCritical = this.CRITICAL_BACKUP_KEYS.filter(k => !backupList.includes(k));
     if (missingCritical.length) {
@@ -1088,6 +1389,13 @@ const Storage = {
       if (!Array.isArray(revRaw.parsed)) add('review', '売上データが配列ではありません');
       counts.revenue = revenues.length;
       add('ok', `売上 ${counts.revenue}件`);
+      if (counts.revenue === 0) {
+        add('critical', '警告：売上データが0件です。安全バックアップや手元の記録を確認してください。');
+      }
+      if (previousDiagnosticCounts && Number(previousDiagnosticCounts.revenue) > counts.revenue) {
+        const diff = Number(previousDiagnosticCounts.revenue) - counts.revenue;
+        if (diff >= 1) add('caution', `前回診断より売上件数が${diff}件減っています`);
+      }
 
       const revIds = new Set(revenues.filter(r => r && r.id).map(r => r.id));
       let noId = 0; let badAmount = 0; let noDate = 0; let badLeadRef = 0;
@@ -1121,6 +1429,10 @@ const Storage = {
       }
     } else {
       add('ok', '売上 0件');
+      add('critical', '警告：売上データが0件です。安全バックアップや手元の記録を確認してください。');
+      if (previousDiagnosticCounts && Number(previousDiagnosticCounts.revenue) > 0) {
+        add('caution', `前回診断より売上件数が${Number(previousDiagnosticCounts.revenue)}件減っています`);
+      }
     }
 
     const docRaw = this._readRawKey(this.KEYS.DOCUMENTS);
@@ -1520,8 +1832,8 @@ const Storage = {
       add('critical', '読み込みできないlocalStorageデータはありません');
     }
 
-    const settings = this.getSettings();
     settings.lastDiagnosticAt = ranAt;
+    settings.lastDiagnosticCounts = { ...counts };
     this.saveSettings(settings);
 
     return {
@@ -1562,6 +1874,8 @@ const Storage = {
     lines.push(`活動履歴: ${c.activityLogs ?? '—'}件`);
     lines.push(`成果入力済み: ${c.performanceEntered ?? '—'}件`);
     lines.push(`dailyChecks: ${c.dailyChecks ?? '—'}件`);
+    lines.push(`安全バックアップ: ${c.safetyBackups ?? '—'}件`);
+    lines.push(`操作ログ: ${c.operationLogs ?? '—'}件`);
     lines.push('');
     lines.push('【localStorageキー】');
     (result.keyStatus || []).forEach(k => {
@@ -1709,7 +2023,7 @@ const Storage = {
   },
 
   isDemoOrTestFlag(item) {
-    return !!(item && (item.isDemo === true || item.isTest === true));
+    return !!(item && (item.isDemo === true || item.isTest === true || String(item.testRunId || '').trim()));
   },
 
   getOnboardingStatus() {
@@ -1761,7 +2075,7 @@ const Storage = {
       : today;
     const now = new Date().toISOString();
     const demo = true;
-    const flag = { isDemo: demo, isTest: demo };
+    const flag = { isDemo: demo, isTest: demo, testRunId: 'demo-' + this.generateId() };
 
     const leadIds = [
       'demo_lead_' + this.generateId(),
@@ -2445,21 +2759,38 @@ const Storage = {
 
   deleteDemoData() {
     const testManualIds = (this.getDailyActionTasksData().manualTasks || [])
-      .filter(t => this.isDemoOrTestFlag(t))
+      .filter(t => this.isTestDeletionTarget(t))
       .map(t => t.id);
 
-    this.saveLeads(this.getLeads().filter(l => !this.isDemoOrTestFlag(l)));
-    this.saveRevenueRecords(this.getRevenueRecords().filter(r => !this.isDemoOrTestFlag(r)));
-    this.saveDemandPickups(this.getDemandPickups().filter(p => !this.isDemoOrTestFlag(p)));
-    this.deleteDemoReceptionIntakes();
-    this.deleteDemoWorkOrders();
+    const protectedResults = [
+      this.deleteTestRecordsByKey(this.KEYS.REVENUE_RECORDS, {
+        reason: 'before_delete_demo_revenue',
+        action: 'delete_demo_revenue'
+      }),
+      this.deleteDemoReceptionIntakes(),
+      this.deleteDemoWorkOrders()
+    ];
+    const blocked = protectedResults.find(r => r && r.ok === false);
+    if (blocked) {
+      return { ok: false, error: blocked.error || 'protected_delete_blocked', results: protectedResults };
+    }
+
+    this.saveLeads(this.getLeads().filter(l => !this.isTestDeletionTarget(l)));
+    this.saveDemandPickups(this.getDemandPickups().filter(p => !this.isTestDeletionTarget(p)));
     this.deleteDemoExpenseRecords();
     this.deleteDemoAnalyticsRecords();
 
     const store = this.getDailyActionTasksData();
-    store.manualTasks = (store.manualTasks || []).filter(t => !this.isDemoOrTestFlag(t));
+    const beforeTaskCount = (store.manualTasks || []).length + (store.states || []).length;
+    this.createSafetyBackup({
+      reason: 'before_delete_demo_daily_tasks',
+      targetKey: this.KEYS.DAILY_ACTION_TASKS,
+      beforeCount: beforeTaskCount,
+      data: store
+    });
+    store.manualTasks = (store.manualTasks || []).filter(t => !this.isTestDeletionTarget(t));
     store.states = (store.states || []).filter(s =>
-      !this.isDemoOrTestFlag(s) && !testManualIds.includes(s.taskId)
+      !this.isTestDeletionTarget(s) && !testManualIds.includes(s.taskId)
     );
     if (store.dailyChecks) {
       Object.keys(store.dailyChecks).forEach(date => {
@@ -2469,7 +2800,14 @@ const Storage = {
       });
     }
     this.saveDailyActionTasksData(store);
-    return { ok: true };
+    this.recordOperationLog({
+      action: 'delete_demo_data',
+      targetKey: 'multiple',
+      protectedResults,
+      beforeDailyTaskCount: beforeTaskCount,
+      afterDailyTaskCount: (store.manualTasks || []).length + (store.states || []).length
+    });
+    return { ok: true, results: protectedResults };
   },
 
   runSafeFormatCorrection() {
