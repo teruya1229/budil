@@ -1,5 +1,19 @@
 # Budil status
 
+## v4.8.5 実装内容（依頼元共通マスター最小修正）
+
+- 表示バージョンを v4.8.5 に更新（CSS/JSキャッシュバスターも揃え）
+- 受付フォーム `reception-source` を6択 select に変更
+- 売上登録フォーム `revenue-source` も同じ6択（LP / 110番 / くらしのマーケット / ヤマダ / コープ / その他）に統一
+- `RevenueBrain.normalizeSourceForForm()` を追加し、旧依頼元は編集時に `その他` へ寄せる（既存保存データは壊さない）
+- `ReceptionBrain.inferSourceFromText()` を追加し、AI受付貼り付け時に依頼元を自動推定
+- 受付→売上フォーム反映時の依頼元引き継ぎを修正（ヤマダ等が `その他` へ化けない）
+- 依頼元検証 `scripts/verify-v485-source-options.mjs` を追加
+- 受付カード主導線整理（v4.8.4）は維持
+- localStorageキー・売上集計・linked/payment/taxSettings・バックアップ形式は非変更
+
+最終更新: 2026-06-27
+
 ## v4.8.4 実装内容（受付カード主導線整理・重複ボタン削減）
 
 - 表示バージョンを v4.8.4 に更新（CSS/JSキャッシュバスターも揃え）

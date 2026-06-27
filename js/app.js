@@ -3992,7 +3992,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.8.4</span>
+        <span class="business-report-version">v4.8.5</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -10054,12 +10054,18 @@
   }
 
   // ── 受付・予約番頭 ──
+  function populateSourceSelect(el, value) {
+    if (!el) return;
+    el.innerHTML = RevenueBrain.SOURCES.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    el.value = RevenueBrain.normalizeSourceForForm(value);
+  }
+
   function getReceptionFormData() {
     const address = document.getElementById('reception-address').value;
     const areaVal = document.getElementById('reception-area').value;
     return ReceptionBrain.normalizeIntake({
       id: document.getElementById('reception-edit-id').value || '',
-      source: document.getElementById('reception-source').value,
+      source: RevenueBrain.normalizeSourceForForm(document.getElementById('reception-source').value),
       customerName: document.getElementById('reception-customer').value,
       phone: document.getElementById('reception-phone').value,
       address,
@@ -10075,7 +10081,7 @@
   function setReceptionFormData(data) {
     const item = ReceptionBrain.normalizeIntake(data || {});
     document.getElementById('reception-edit-id').value = item.id || '';
-    document.getElementById('reception-source').value = item.source || '';
+    populateSourceSelect(document.getElementById('reception-source'), item.source);
     document.getElementById('reception-customer').value = item.customerName || '';
     document.getElementById('reception-phone').value = item.phone || '';
     document.getElementById('reception-address').value = item.address || '';
@@ -10639,10 +10645,12 @@
     ['reception-customer', 'reception-phone', 'reception-address', 'reception-service', 'reception-dates', 'reception-memo', 'reception-source'].forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.addEventListener('input', () => {
+      const handler = () => {
         if (id === 'reception-address') syncReceptionAreaFromAddress();
         renderReceptionNextActionsV484();
-      });
+      };
+      el.addEventListener('input', handler);
+      el.addEventListener('change', handler);
     });
     const areaEl = document.getElementById('reception-area');
     if (areaEl) {
@@ -10651,6 +10659,7 @@
         renderReceptionNextActionsV484();
       });
     }
+    populateSourceSelect(document.getElementById('reception-source'), 'その他');
   }
 
   function renderDemandPickup() {
@@ -11834,7 +11843,7 @@
       workDate: document.getElementById('revenue-work-date').value || TODAY(),
       customerName,
       service: document.getElementById('revenue-service').value,
-      source: document.getElementById('revenue-source').value,
+      source: RevenueBrain.normalizeSourceForForm(document.getElementById('revenue-source').value),
       amount: Number(document.getElementById('revenue-amount').value) || 0,
       memo: document.getElementById('revenue-memo').value.trim()
     };
@@ -12512,8 +12521,10 @@
     if (serviceEl && !serviceEl.options.length) {
       serviceEl.innerHTML = RevenueBrain.SERVICES.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
     }
-    if (sourceEl && !sourceEl.options.length) {
+    if (sourceEl) {
+      const current = sourceEl.value;
       sourceEl.innerHTML = RevenueBrain.SOURCES.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+      sourceEl.value = RevenueBrain.normalizeSourceForForm(current || RevenueBrain.SOURCES[0]);
     }
   }
 
@@ -12545,7 +12556,7 @@
     document.getElementById('revenue-work-date').value = record.workDate || '';
     document.getElementById('revenue-customer').value = record.customerName || '';
     document.getElementById('revenue-service').value = record.service || RevenueBrain.SERVICES[0];
-    document.getElementById('revenue-source').value = record.source || RevenueBrain.SOURCES[0];
+    document.getElementById('revenue-source').value = RevenueBrain.normalizeSourceForForm(record.source);
     document.getElementById('revenue-amount').value = record.amount || '';
     document.getElementById('revenue-status').value = record.status || '予定';
     writeRevenuePaymentFieldsToForm(record);
@@ -12568,7 +12579,7 @@
       workDate: document.getElementById('revenue-work-date').value,
       customerName: document.getElementById('revenue-customer').value.trim(),
       service: document.getElementById('revenue-service').value,
-      source: document.getElementById('revenue-source').value,
+      source: RevenueBrain.normalizeSourceForForm(document.getElementById('revenue-source').value),
       amount: Number(document.getElementById('revenue-amount').value) || 0,
       status: document.getElementById('revenue-status').value,
       paymentConcern: document.getElementById('revenue-payment-concern').checked,

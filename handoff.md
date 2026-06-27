@@ -1,6 +1,6 @@
 # Budil handoff
 
-最終更新: 2026-06-26
+最終更新: 2026-06-27
 
 ## 正本
 
@@ -16,9 +16,18 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.8.4 |
+| 最新バージョン | v4.8.5 |
 | 最新commit | （push後に更新） |
 | ブランチ | `main` push 済み |
+
+## v4.8.5で入ったもの
+
+- 受付/売上の依頼元を LP / 110番 / くらしのマーケット / ヤマダ / コープ / その他 の6択に統一
+- 受付フォームを text input から select 化
+- `RevenueBrain.normalizeSourceForForm()` と `ReceptionBrain.inferSourceFromText()` を追加
+- 受付→売上フォーム反映時の依頼元引き継ぎ修正
+- `scripts/verify-v485-source-options.mjs` を追加
+- v4.8.4 受付カード主導線整理は維持
 
 ## v4.8.4で入ったもの
 

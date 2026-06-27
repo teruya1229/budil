@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.4 - 受付・予約番頭（AI番頭連携入口）
+ * Budil v4.8.5 - 受付・予約番頭（AI番頭連携入口）
  */
 const ReceptionBrain = {
   STATUSES: ['new', 'lead_created', 'task_created', 'work_scheduled', 'revenue_candidate', 'done', 'archived'],
@@ -47,7 +47,9 @@ const ReceptionBrain = {
       || (typeof MapBrain !== 'undefined' ? MapBrain.detectAreaFromAddress(address) : '');
     return {
       id: item.id || '',
-      source: String(item.source || '').trim(),
+      source: typeof RevenueBrain !== 'undefined'
+        ? RevenueBrain.normalizeSourceForForm(item.source)
+        : String(item.source || '').trim(),
       customerName: String(item.customerName || '').trim(),
       phone: String(item.phone || '').trim(),
       address,
@@ -70,14 +72,35 @@ const ReceptionBrain = {
     };
   },
 
+  inferSourceFromText(text) {
+    const t = String(text || '');
+    if (!t.trim()) return 'その他';
+    if (/ヤマダ電機|ヤマダ|YAMADA/i.test(t)) return 'ヤマダ';
+    if (/コープ|生協|\bcoop\b|COOP/i.test(t)) return 'コープ';
+    if (/くらしのマーケット|くらし/.test(t)) return 'くらしのマーケット';
+    if (/エアコン110番|生活110番|110番/.test(t)) return '110番';
+    if (/\bLP\b|ホームページ|\bHP\b|\bWeb\b|\bWEB\b|サイト/i.test(t)) return 'LP';
+    return 'その他';
+  },
+
+  _resolvePasteSource(fields, fullText) {
+    const labeled = String(fields.source || '').trim();
+    if (labeled) return this.matchRevenueSource(labeled);
+    return this.inferSourceFromText(fullText);
+  },
+
   parseAiBantouPaste(text) {
     const trimmed = (text || '').trim();
     if (!trimmed) return this.normalizeIntake({});
 
     const jsonResult = this._tryParseJson(trimmed);
-    if (jsonResult) return this.normalizeIntake(jsonResult);
+    if (jsonResult) {
+      jsonResult.source = this._resolvePasteSource(jsonResult, trimmed);
+      return this.normalizeIntake(jsonResult);
+    }
 
     const extracted = this._extractLabeledFields(trimmed);
+    extracted.source = this._resolvePasteSource(extracted, trimmed);
     return this.normalizeIntake(extracted);
   },
 
@@ -427,14 +450,9 @@ const ReceptionBrain = {
   },
 
   matchRevenueSource(source) {
-    const s = source || '';
-    if (typeof RevenueBrain === 'undefined') return 'その他';
-    const sources = RevenueBrain.SOURCES || [];
-    if (sources.includes(s)) return s;
-    if (/くらしのマーケット|ココナラ|おてがる/.test(s)) return 'くらしのマーケット';
-    if (/LINE/i.test(s)) return 'LINE';
-    if (/紹介/.test(s)) return '紹介';
-    if (/Google|GBP|ビジネスプロフィール/.test(s)) return 'Googleビジネスプロフィール';
+    if (typeof RevenueBrain !== 'undefined') {
+      return RevenueBrain.normalizeSourceForForm(source);
+    }
     return 'その他';
   },
 

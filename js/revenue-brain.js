@@ -7,9 +7,20 @@ const RevenueBrain = {
     '洗濯機クリーニング', 'レンジフード', 'キッチン', '浴室', '法人案件', 'その他'
   ],
   SOURCES: [
-    '直予約', 'LINE', 'Airリザーブ', 'くらしのマーケット', 'Google広告',
-    'Googleビジネスプロフィール', '紹介', '法人', 'その他'
+    'LP', '110番', 'くらしのマーケット', 'ヤマダ', 'コープ', 'その他'
   ],
+
+  normalizeSourceForForm(source) {
+    const s = String(source || '').trim();
+    if (!s || s === '不明') return 'その他';
+    if (this.SOURCES.includes(s)) return s;
+    if (/ヤマダ電機|ヤマダ|YAMADA/i.test(s)) return 'ヤマダ';
+    if (/コープ|生協|\bcoop\b|COOP/i.test(s)) return 'コープ';
+    if (/くらしのマーケット|くらし|ココナラ|おてがる/.test(s)) return 'くらしのマーケット';
+    if (/エアコン110番|生活110番|110番/.test(s)) return '110番';
+    if (/\bLP\b|ホームページ|\bHP\b|\bWeb\b|\bWEB\b|サイト/i.test(s)) return 'LP';
+    return 'その他';
+  },
   STATUSES: ['予定', '確定', '完了', 'キャンセル'],
   PAYMENT_STATUSES: ['pending', 'paid', 'partial', 'uncollected', 'cancelled'],
 

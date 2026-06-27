@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.4 linked one-to-one safety verification.
+ * Budil v4.8.5 linked one-to-one safety verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -69,7 +69,7 @@ function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-console.log('== v4.8.4 linked one-to-one check ==');
+console.log('== v4.8.5 linked one-to-one check ==');
 for (const file of ['storage.js', 'payment-brain.js', 'documents-brain.js', 'data-backup.js']) {
   execSync(`node --check "${join(jsDir, file)}"`, { stdio: 'inherit' });
 }
@@ -238,7 +238,7 @@ assert(doc(result.afterDeleteRevenue.documents, 'doc_b')?.linkedRevenueId === ''
 assert(!doc(result.afterDeleteDocument.documents, 'doc_d'), 'doc_d should be deleted');
 assert(rev(result.afterDeleteDocument.revenues, 'rev_d')?.linkedDocumentId === '', 'rev_d link should be cleared after document delete');
 
-assert(result.exported.appVersion === 'v4.8.4', 'backup appVersion should be v4.8.4');
+assert(result.exported.appVersion === 'v4.8.5', 'backup appVersion should be v4.8.5');
 assert(result.exported.dataKeys.includes('budil_revenue_records'), 'backup should include revenues');
 assert(result.exported.dataKeys.includes('budil_documents'), 'backup should include documents');
 
