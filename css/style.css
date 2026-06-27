@@ -8070,6 +8070,22 @@ body.sales-page {
   font-size: 0.85rem;
 }
 
+.calendar-past-recovery-safety {
+  margin-top: 0.65rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(34, 197, 94, 0.28);
+  border-radius: 6px;
+  background: rgba(34, 197, 94, 0.08);
+  color: #d1fae5;
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.calendar-past-recovery-safety ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1rem;
+}
+
 .calendar-past-recovery-summary strong {
   color: #e0f2fe;
 }

@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.8.11 not-needed candidate fix verification.
+ * Budil v4.8.12 not-needed candidate fix verification.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -73,7 +73,7 @@ function readSourceFiles(dir, out = []) {
   return out;
 }
 
-console.log('== v4.8.11 not-needed fix check ==');
+console.log('== v4.8.12 not-needed fix check ==');
 
 for (const file of ['action-brain.js', 'storage.js', 'app.js', 'data-backup.js']) {
   execSync(`node --check "${join(jsDir, file)}"`, { stdio: 'inherit' });
@@ -83,9 +83,9 @@ const indexHtml = load('index.html');
 const appJs = load('js/app.js');
 const storageJs = load('js/storage.js');
 
-assert(indexHtml.includes('AI経営脳みそ v4.8.11'), 'header version should be v4.8.11');
-assert(indexHtml.includes('Budil v4.8.11'), 'sidebar version should be v4.8.11');
-assert(indexHtml.includes('js/app.js?v=4.8.11'), 'app.js cache buster should be v4.8.11');
+assert(indexHtml.includes('AI経営脳みそ v4.8.12'), 'header version should be v4.8.12');
+assert(indexHtml.includes('Budil v4.8.12'), 'sidebar version should be v4.8.12');
+assert(indexHtml.includes('js/app.js?v=4.8.12'), 'app.js cache buster should be v4.8.12');
 assert(appJs.includes('compact') && appJs.includes('data-act-not-needed-report'), 'compact today action candidates should render not-needed buttons');
 assert(appJs.includes('data-exec-priority-not-needed'), 'top priority not-needed button should remain');
 assert(appJs.includes('data-act-not-needed="${esc(c.id)}"'), 'action candidate not-needed button should remain');
@@ -147,4 +147,4 @@ const sourceText = readSourceFiles(root).map(p => readFileSync(p, 'utf8')).join(
 assert(!(new RegExp('localStorage' + '\\.clear\\s*\\(')).test(sourceText), 'direct localStorage clear must not exist');
 assert(!(new RegExp('saveRevenueRecords' + '\\s*\\(\\s*\\[\\s*\\]\\s*\\)')).test(sourceText), 'empty revenue save must not exist');
 
-console.log('All v4.8.11 not-needed fix checks passed.');
+console.log('All v4.8.12 not-needed fix checks passed.');

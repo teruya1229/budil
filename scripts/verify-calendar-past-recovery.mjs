@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Calendar past recovery mode verification.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -87,11 +87,16 @@ const appJs = load('js/app.js');
 const calendarBrain = load('js/calendar-candidate-brain.js');
 const storageJs = load('js/storage.js');
 
-assert(indexHtml.includes('AI経営脳みそ v4.8.11'), 'header version should be v4.8.11');
-assert(indexHtml.includes('Budil v4.8.11'), 'sidebar version should be v4.8.11');
-assert(indexHtml.includes('js/app.js?v=4.8.11'), 'app.js cache buster should be v4.8.11');
+assert(indexHtml.includes('AI経営脳みそ v4.8.12'), 'header version should be v4.8.12');
+assert(indexHtml.includes('Budil v4.8.12'), 'sidebar version should be v4.8.12');
+assert(indexHtml.includes('js/app.js?v=4.8.12'), 'app.js cache buster should be v4.8.12');
 assert(indexHtml.includes('calendar-past-recovery-mode'), 'past recovery mode toggle should exist');
 assert(indexHtml.includes('btn-calendar-past-bulk-convert'), 'bulk convert button should exist');
+assert(indexHtml.includes('一括売上登録の前に安全バックアップを作成します'), 'past recovery safety backup note should exist');
+assert(indexHtml.includes('既存売上は上書きせず、新規分だけ追加します'), 'past recovery append-only note should exist');
+assert(indexHtml.includes('元のカレンダー候補は削除しません'), 'past recovery non-delete note should exist');
+assert(indexHtml.includes('売上実績候補が0件のときは一括売上登録できません'), 'past recovery zero-candidate note should exist');
+assert(indexHtml.includes('キャンセル、見積、日程調整中、金額なし、重複疑いは一括登録対象外です'), 'past recovery exclusion note should exist');
 assert(appJs.includes('bulkConvertCalendarPastCandidatesToRevenue'), 'app should call bulk conversion');
 assert(calendarBrain.includes('PAST_RECOVERY_REVENUE_CANDIDATE'), 'past recovery classifier should exist');
 assert(storageJs.includes('calendar_past_candidates_bulk_converted_to_revenue'), 'bulk operation log should exist');

@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.8.11 - 作業後の確定処理番頭
+ * Budil v4.8.12 - 作業後の確定処理番頭
  */
 const WorkCompletionBrain = {
   PAYMENT_METHODS: ['現金', 'カード', '振込', 'PayPay', 'その他'],
