@@ -8,6 +8,7 @@
   let currentMessageLeadId = null;
   let pendingImport = null;
   let pendingRevenueWorkOrderId = '';
+  let pendingRevenueIntakeId = '';
   let pendingLinkedDocumentId = '';
   let pendingLinkedRevenueId = '';
   let selectedFollowUpTargetId = null;
@@ -238,6 +239,22 @@
     const cur = selected || '';
     selectEl.innerHTML = '<option value="">住所から自動推定</option>'
       + areas.map(a => `<option value="${esc(a)}"${a === cur ? ' selected' : ''}>${esc(a)}</option>`).join('');
+  }
+
+  function getSourceOptions() {
+    return Array.isArray(RevenueBrain.SOURCES) ? RevenueBrain.SOURCES : ['LP', '110番', 'くらしのマーケット', 'ヤマダ', 'コープ', 'その他'];
+  }
+
+  function fillSourceSelectOptions(selectEl, selected, options) {
+    if (!selectEl) return;
+    const opts = options || {};
+    const cur = String(arguments.length >= 2 ? (selected || '') : (selectEl.value || '')).trim();
+    const sourceOptions = [...getSourceOptions()];
+    if (cur && !sourceOptions.includes(cur)) sourceOptions.push(cur);
+    const blank = opts.blankLabel ? `<option value=""${cur ? '' : ' selected'}>${esc(opts.blankLabel)}</option>` : '';
+    selectEl.innerHTML = blank + sourceOptions.map(s =>
+      `<option value="${esc(s)}"${s === cur ? ' selected' : ''}>${esc(s)}</option>`
+    ).join('');
   }
 
   function getCombinedAddress(address, region) {
@@ -3992,7 +4009,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.8.5</span>
+        <span class="business-report-version">v4.8.6</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -6814,7 +6831,9 @@
     const intakeEl = document.getElementById('work-order-intake');
     const leadEl = document.getElementById('work-order-lead');
     const areaEl = document.getElementById('work-order-area');
+    const sourceEl = document.getElementById('work-order-source');
     if (areaEl && !areaEl.options.length) fillAreaSelectOptions(areaEl, '');
+    fillSourceSelectOptions(sourceEl, sourceEl ? sourceEl.value : '', { blankLabel: '未選択' });
     if (intakeEl) {
       const selected = intakeEl.value;
       const intakes = Storage.getReceptionIntakes();
@@ -6839,7 +6858,7 @@
     document.getElementById('work-order-phone').value = wo.phone || '';
     document.getElementById('work-order-address').value = wo.address || '';
     fillAreaSelectOptions(document.getElementById('work-order-area'), wo.area || MapBrain.detectAreaFromAddress(wo.address));
-    document.getElementById('work-order-source').value = wo.source || '';
+    fillSourceSelectOptions(document.getElementById('work-order-source'), wo.source || '', { blankLabel: '未選択' });
     document.getElementById('work-order-service').value = wo.serviceText || '';
     document.getElementById('work-order-date').value = wo.scheduledDate || '';
     document.getElementById('work-order-start').value = wo.startTime || '';
@@ -6875,26 +6894,27 @@
     }
     if (id) {
       Storage.updateWorkOrder(id, data);
-      return Storage.getWorkOrders().find(w => w.id === id);
+      const saved = Storage.getWorkOrders().find(w => w.id === id);
+      if (saved && saved.intakeId) linkReceptionToWorkOrder(saved.intakeId, saved.id);
+      return saved;
     }
-    return Storage.addWorkOrder(data);
+    const saved = Storage.addWorkOrder(data);
+    if (saved && saved.intakeId) linkReceptionToWorkOrder(saved.intakeId, saved.id);
+    return saved;
   }
 
   function createWorkOrderFromIntake(intakeId) {
     const intake = Storage.getReceptionIntakes().find(i => i.id === intakeId);
     if (!intake) return;
+    const existingState = getReceptionWorkflowState(intake);
+    if (existingState.workOrder) {
+      openWorkOrderFromReceptionIntake(intakeId);
+      alert('この受付には既に作業予定があります。既存の作業予定を開きます。');
+      return;
+    }
     const payload = WorkOrderBrain.createFromIntake(intake);
     const workOrder = Storage.addWorkOrder(payload);
-    const relatedWorkOrderIds = Array.isArray(intake.relatedWorkOrderIds) ? [...intake.relatedWorkOrderIds] : [];
-    if (workOrder.id && !relatedWorkOrderIds.includes(workOrder.id)) relatedWorkOrderIds.push(workOrder.id);
-    const nextStatus = ['new', 'lead_created', 'task_created'].includes(intake.status)
-      ? 'work_scheduled'
-      : intake.status;
-    Storage.updateReceptionIntake(intakeId, {
-      relatedWorkOrderId: workOrder.id,
-      relatedWorkOrderIds,
-      status: nextStatus
-    });
+    linkReceptionToWorkOrder(intakeId, workOrder.id);
     navigateToView('work-order');
     setWorkOrderFormData(workOrder);
     renderReceptionView();
@@ -7664,9 +7684,7 @@
     if (serviceEl && !serviceEl.options.length) {
       serviceEl.innerHTML = RevenueBrain.SERVICES.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
     }
-    if (sourceEl && !sourceEl.options.length) {
-      sourceEl.innerHTML = RevenueBrain.SOURCES.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
-    }
+    fillSourceSelectOptions(sourceEl);
     if (methodEl && methodEl.options.length <= 1) {
       methodEl.innerHTML = '<option value="">未選択</option>'
         + WorkCompletionBrain.PAYMENT_METHODS.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
@@ -7695,7 +7713,7 @@
     document.getElementById('work-completion-customer').value = defaults.customerName;
     document.getElementById('work-completion-actual-service').value = defaults.actualService;
     document.getElementById('work-completion-service').value = defaults.service || RevenueBrain.SERVICES[0];
-    document.getElementById('work-completion-source').value = defaults.source || RevenueBrain.SOURCES[0];
+    fillSourceSelectOptions(document.getElementById('work-completion-source'), defaults.source || RevenueBrain.SOURCES[0]);
     document.getElementById('work-completion-amount').value = defaults.amount;
     document.getElementById('work-completion-gross-rate').value = defaults.grossMarginRate;
     document.getElementById('work-completion-payment-status').value = defaults.paymentStatus;
@@ -7784,6 +7802,8 @@
     const newRecord = Storage.addRevenueRecord(revenuePayload);
     const woPatch = WorkCompletionBrain.markWorkOrderCompleted(wo, newRecord, input);
     Storage.updateWorkOrder(workOrderId, woPatch);
+    const intakeId = getWorkOrderReceptionId(wo);
+    if (intakeId) linkReceptionToRevenue(intakeId, newRecord.id, workOrderId);
     closeWorkCompletionModal();
     refreshAfterWorkCompletion();
     alert('確定売上として登録しました。作業後フォロー番頭でお礼・口コミ対応を確認してください。');
@@ -7851,6 +7871,7 @@
   function refreshAfterWorkCompletion() {
     renderWorkOrderView();
     renderRevenueView();
+    renderReceptionView();
     renderDashboard();
     renderFollowUpView();
     renderAreaView();
@@ -7890,6 +7911,7 @@
       ${canConfirm ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-completion-open="${esc(wo.id)}">売上確定へ</button>` : ''}
       ${canConfirm ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-needs-review="${esc(wo.id)}">要確認</button>` : ''}
       ${canConfirm ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-cancel-open="${esc(wo.id)}">キャンセル</button>` : ''}
+      ${hasRevenue ? `<button type="button" class="btn btn-sm btn-primary" data-wo-open-revenue="${esc(wo.id)}">売上を開く</button>` : ''}
       ${hasRevenue ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-goto-follow="${esc(wo.id)}">フォローへ</button>` : ''}
       ${completed && !hasRevenue ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-fill-revenue="${esc(wo.id)}">売上フォームへ反映</button>` : ''}
       <button type="button" class="btn btn-sm btn-secondary" data-wo-edit="${esc(wo.id)}">編集</button>`;
@@ -7941,6 +7963,14 @@
     container.querySelectorAll('[data-wo-goto-follow]').forEach(btn => {
       btn.addEventListener('click', () => navigateToView('follow-up'));
     });
+    container.querySelectorAll('[data-wo-open-revenue]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const wo = Storage.getWorkOrders().find(w => w.id === btn.dataset.woOpenRevenue);
+        if (!wo || !wo.actualRevenueId) return;
+        navigateToView('revenue');
+        openRevenueEdit(wo.actualRevenueId);
+      });
+    });
     container.querySelectorAll('[data-wo-fill-revenue]').forEach(btn => {
       btn.addEventListener('click', () => fillRevenueFromWorkOrder(btn.dataset.woFillRevenue));
     });
@@ -7979,6 +8009,7 @@
       completedAt: new Date().toISOString()
     });
     renderWorkOrderView();
+    renderReceptionView();
     renderDashboard();
     renderAreaView();
     alert('作業を完了にしました。売上フォームへ反映して登録してください。');
@@ -7993,6 +8024,7 @@
     }
     const candidate = WorkOrderBrain.buildRevenueFormPayload(wo);
     pendingRevenueWorkOrderId = workOrderId;
+    pendingRevenueIntakeId = candidate.intakeId || getWorkOrderReceptionId(wo);
     fillRevenueSelects();
     navigateToView('revenue');
     resetRevenueForm();
@@ -8002,7 +8034,7 @@
     const serviceEl = document.getElementById('revenue-service');
     if (serviceEl) serviceEl.value = candidate.service || serviceEl.value;
     const sourceEl = document.getElementById('revenue-source');
-    if (sourceEl) sourceEl.value = candidate.source || sourceEl.value;
+    if (sourceEl) fillSourceSelectOptions(sourceEl, candidate.source || sourceEl.value);
     document.getElementById('revenue-amount').value = candidate.amount || '';
     document.getElementById('revenue-memo').value = candidate.memo || '';
     document.getElementById('revenue-status').value = '予定';
@@ -10054,18 +10086,12 @@
   }
 
   // ── 受付・予約番頭 ──
-  function populateSourceSelect(el, value) {
-    if (!el) return;
-    el.innerHTML = RevenueBrain.SOURCES.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
-    el.value = RevenueBrain.normalizeSourceForForm(value);
-  }
-
   function getReceptionFormData() {
     const address = document.getElementById('reception-address').value;
     const areaVal = document.getElementById('reception-area').value;
     return ReceptionBrain.normalizeIntake({
       id: document.getElementById('reception-edit-id').value || '',
-      source: RevenueBrain.normalizeSourceForForm(document.getElementById('reception-source').value),
+      source: document.getElementById('reception-source').value,
       customerName: document.getElementById('reception-customer').value,
       phone: document.getElementById('reception-phone').value,
       address,
@@ -10081,7 +10107,7 @@
   function setReceptionFormData(data) {
     const item = ReceptionBrain.normalizeIntake(data || {});
     document.getElementById('reception-edit-id').value = item.id || '';
-    populateSourceSelect(document.getElementById('reception-source'), item.source);
+    fillSourceSelectOptions(document.getElementById('reception-source'), item.source || '', { blankLabel: '未選択' });
     document.getElementById('reception-customer').value = item.customerName || '';
     document.getElementById('reception-phone').value = item.phone || '';
     document.getElementById('reception-address').value = item.address || '';
@@ -10453,6 +10479,59 @@
     });
   }
 
+  function getWorkOrderReceptionId(workOrder) {
+    const wo = WorkOrderBrain.normalizeWorkOrder(workOrder);
+    return wo.intakeId || wo.receptionIntakeId || wo.sourceIntakeId || '';
+  }
+
+  function getRevenueReceptionId(revenue) {
+    const r = revenue || {};
+    return String(r.intakeId || r.receptionIntakeId || r.sourceIntakeId || '').trim();
+  }
+
+  function getReceptionLinkedRevenue(intakeId) {
+    const id = String(intakeId || '').trim();
+    if (!id) return null;
+    const intake = Storage.getReceptionIntakes().find(i => i.id === id);
+    const revenues = Storage.getRevenueRecords();
+    if (intake && intake.relatedRevenueId) {
+      const linked = revenues.find(r => r.id === intake.relatedRevenueId);
+      if (linked) return linked;
+    }
+    return revenues.find(r => getRevenueReceptionId(r) === id) || null;
+  }
+
+  function linkReceptionToWorkOrder(intakeId, workOrderId) {
+    const intake = Storage.getReceptionIntakes().find(i => i.id === intakeId);
+    if (!intake || !workOrderId) return null;
+    const ids = Array.isArray(intake.relatedWorkOrderIds) ? [...intake.relatedWorkOrderIds] : [];
+    if (!ids.includes(workOrderId)) ids.push(workOrderId);
+    const nextStatus = ['new', 'lead_created', 'task_created'].includes(intake.status)
+      ? 'work_scheduled'
+      : intake.status;
+    return Storage.updateReceptionIntake(intakeId, {
+      relatedWorkOrderId: workOrderId,
+      relatedWorkOrderIds: ids,
+      status: nextStatus
+    });
+  }
+
+  function linkReceptionToRevenue(intakeId, revenueId, workOrderId) {
+    const intake = Storage.getReceptionIntakes().find(i => i.id === intakeId);
+    if (!intake || !revenueId) return null;
+    const patch = {
+      relatedRevenueId: revenueId,
+      status: intake.status === 'archived' ? intake.status : 'done'
+    };
+    if (workOrderId) {
+      const ids = Array.isArray(intake.relatedWorkOrderIds) ? [...intake.relatedWorkOrderIds] : [];
+      if (!ids.includes(workOrderId)) ids.push(workOrderId);
+      patch.relatedWorkOrderId = workOrderId;
+      patch.relatedWorkOrderIds = ids;
+    }
+    return Storage.updateReceptionIntake(intakeId, patch);
+  }
+
   function advanceReceptionIntake(intakeId) {
     const intake = Storage.getReceptionIntakes().find(i => i.id === intakeId);
     if (!intake) return;
@@ -10582,6 +10661,7 @@
     const intake = Storage.getReceptionIntakes().find(i => i.id === intakeId);
     if (!intake) return;
     const candidate = ReceptionBrain.buildRevenueCandidate(intake);
+    pendingRevenueIntakeId = intakeId;
     fillRevenueSelects();
     navigateToView('revenue');
     resetRevenueForm();
@@ -10591,7 +10671,7 @@
     if (serviceEl) serviceEl.value = serviceVal;
     const sourceEl = document.getElementById('revenue-source');
     const sourceVal = ReceptionBrain.matchRevenueSource(candidate.source);
-    if (sourceEl) sourceEl.value = sourceVal;
+    if (sourceEl) fillSourceSelectOptions(sourceEl, sourceVal);
     document.getElementById('revenue-amount').value = candidate.amount || '';
     document.getElementById('revenue-memo').value = candidate.memo || '';
     document.getElementById('revenue-status').value = '予定';
@@ -10625,6 +10705,7 @@
   function initReception() {
     const form = document.getElementById('reception-form');
     if (!form) return;
+    fillSourceSelectOptions(document.getElementById('reception-source'), '', { blankLabel: '未選択' });
     form.addEventListener('submit', e => {
       e.preventDefault();
       const saved = saveReceptionFromForm();
@@ -10645,12 +10726,13 @@
     ['reception-customer', 'reception-phone', 'reception-address', 'reception-service', 'reception-dates', 'reception-memo', 'reception-source'].forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
-      const handler = () => {
+      el.addEventListener('input', () => {
         if (id === 'reception-address') syncReceptionAreaFromAddress();
         renderReceptionNextActionsV484();
-      };
-      el.addEventListener('input', handler);
-      el.addEventListener('change', handler);
+      });
+      if (id === 'reception-source') {
+        el.addEventListener('change', () => renderReceptionNextActionsV484());
+      }
     });
     const areaEl = document.getElementById('reception-area');
     if (areaEl) {
@@ -10659,7 +10741,6 @@
         renderReceptionNextActionsV484();
       });
     }
-    populateSourceSelect(document.getElementById('reception-source'), 'その他');
   }
 
   function renderDemandPickup() {
@@ -11843,7 +11924,7 @@
       workDate: document.getElementById('revenue-work-date').value || TODAY(),
       customerName,
       service: document.getElementById('revenue-service').value,
-      source: RevenueBrain.normalizeSourceForForm(document.getElementById('revenue-source').value),
+      source: document.getElementById('revenue-source').value,
       amount: Number(document.getElementById('revenue-amount').value) || 0,
       memo: document.getElementById('revenue-memo').value.trim()
     };
@@ -12521,20 +12602,18 @@
     if (serviceEl && !serviceEl.options.length) {
       serviceEl.innerHTML = RevenueBrain.SERVICES.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
     }
-    if (sourceEl) {
-      const current = sourceEl.value;
-      sourceEl.innerHTML = RevenueBrain.SOURCES.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
-      sourceEl.value = RevenueBrain.normalizeSourceForForm(current || RevenueBrain.SOURCES[0]);
-    }
+    fillSourceSelectOptions(sourceEl);
   }
 
   function resetRevenueForm() {
     document.getElementById('revenue-edit-id').value = '';
     document.getElementById('revenue-form').reset();
     pendingRevenueWorkOrderId = '';
+    pendingRevenueIntakeId = '';
     pendingLinkedDocumentId = '';
     document.getElementById('revenue-work-date').value = TODAY();
     document.getElementById('revenue-status').value = '予定';
+    fillSourceSelectOptions(document.getElementById('revenue-source'), RevenueBrain.SOURCES[0]);
     fillRevenuePaymentSelects();
     writeRevenuePaymentFieldsToForm({ paymentMethod: 'cash', paymentStatus: 'paid', workDate: TODAY() });
     suggestRevenuePaymentFromMethod(false);
@@ -12556,12 +12635,14 @@
     document.getElementById('revenue-work-date').value = record.workDate || '';
     document.getElementById('revenue-customer').value = record.customerName || '';
     document.getElementById('revenue-service').value = record.service || RevenueBrain.SERVICES[0];
-    document.getElementById('revenue-source').value = RevenueBrain.normalizeSourceForForm(record.source);
+    fillSourceSelectOptions(document.getElementById('revenue-source'), record.source || RevenueBrain.SOURCES[0]);
     document.getElementById('revenue-amount').value = record.amount || '';
     document.getElementById('revenue-status').value = record.status || '予定';
     writeRevenuePaymentFieldsToForm(record);
     document.getElementById('revenue-payment-concern').checked = record.paymentConcern === true;
     document.getElementById('revenue-memo').value = record.memo || '';
+    pendingRevenueWorkOrderId = record.sourceWorkOrderId || record.workOrderId || '';
+    pendingRevenueIntakeId = getRevenueReceptionId(record);
     pendingLinkedDocumentId = record.linkedDocumentId || '';
     fillRevenueLeadSelect(record.leadId || '');
     document.getElementById('revenue-mark-won').checked = false;
@@ -12579,7 +12660,7 @@
       workDate: document.getElementById('revenue-work-date').value,
       customerName: document.getElementById('revenue-customer').value.trim(),
       service: document.getElementById('revenue-service').value,
-      source: RevenueBrain.normalizeSourceForForm(document.getElementById('revenue-source').value),
+      source: document.getElementById('revenue-source').value,
       amount: Number(document.getElementById('revenue-amount').value) || 0,
       status: document.getElementById('revenue-status').value,
       paymentConcern: document.getElementById('revenue-payment-concern').checked,
@@ -12596,6 +12677,12 @@
     } else {
       data.leadId = '';
       data.leadName = '';
+    }
+    if (pendingRevenueWorkOrderId) data.sourceWorkOrderId = pendingRevenueWorkOrderId;
+    if (pendingRevenueIntakeId) {
+      data.intakeId = pendingRevenueIntakeId;
+      data.receptionIntakeId = pendingRevenueIntakeId;
+      data.sourceIntakeId = pendingRevenueIntakeId;
     }
     return data;
   }
@@ -13181,6 +13268,26 @@
     const leadId = data.leadId;
     const id = document.getElementById('revenue-edit-id').value;
     const workOrderId = pendingRevenueWorkOrderId;
+    let intakeId = pendingRevenueIntakeId;
+    if (!intakeId && workOrderId) {
+      const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
+      intakeId = wo ? getWorkOrderReceptionId(wo) : '';
+    }
+    if (!id && intakeId) {
+      const existingRevenue = getReceptionLinkedRevenue(intakeId);
+      if (existingRevenue) {
+        alert('この受付には既に売上が登録されています。既存の売上を開きます。');
+        navigateToView('revenue');
+        openRevenueEdit(existingRevenue.id);
+        return;
+      }
+    }
+    if (workOrderId && !data.sourceWorkOrderId) data.sourceWorkOrderId = workOrderId;
+    if (intakeId && !data.intakeId) {
+      data.intakeId = intakeId;
+      data.receptionIntakeId = intakeId;
+      data.sourceIntakeId = intakeId;
+    }
     const linkedDocId = pendingLinkedDocumentId || data.linkedDocumentId || '';
     let newRecord = null;
     if (id) {
@@ -13210,6 +13317,8 @@
       if (revId) Storage.updateWorkOrder(workOrderId, { actualRevenueId: revId });
       pendingRevenueWorkOrderId = '';
     }
+    if (revId && intakeId) linkReceptionToRevenue(intakeId, revId, workOrderId);
+    pendingRevenueIntakeId = '';
     pendingLinkedDocumentId = '';
     if (markWon && leadId) {
       const updated = updateLeadStatusFromRevenue(leadId);
@@ -13220,6 +13329,7 @@
     renderReceivablesView();
     renderDocumentsView();
     renderWorkOrderView();
+    renderReceptionView();
     renderDashboard();
     if (currentMessageLeadId === leadId) {
       renderLeadDetailSubpanels(leadId);

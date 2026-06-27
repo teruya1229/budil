@@ -1,6 +1,6 @@
 # Budil handoff
 
-最終更新: 2026-06-27
+最終更新: 2026-06-26
 
 ## 正本
 
@@ -16,18 +16,21 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.8.5 |
+| 最新バージョン | v4.8.6 |
 | 最新commit | （push後に更新） |
 | ブランチ | `main` push 済み |
 
-## v4.8.5で入ったもの
+## v4.8.6で入ったもの
 
-- 受付/売上の依頼元を LP / 110番 / くらしのマーケット / ヤマダ / コープ / その他 の6択に統一
-- 受付フォームを text input から select 化
-- `RevenueBrain.normalizeSourceForForm()` と `ReceptionBrain.inferSourceFromText()` を追加
-- 受付→売上フォーム反映時の依頼元引き継ぎ修正
-- `scripts/verify-v485-source-options.mjs` を追加
-- v4.8.4 受付カード主導線整理は維持
+- 受付→作業予定→作業完了→売上登録→売上を開く、の主導線を一本道化
+- 依頼元6択（`LP` / `110番` / `くらしのマーケット` / `ヤマダ` / `コープ` / `その他`）を共通化
+- 受付から作業予定作成時に受付へ `relatedWorkOrderId` / `relatedWorkOrderIds` を保存
+- 作業予定側に受付由来ID（`intakeId` / `receptionIntakeId` / `sourceIntakeId`）を保持
+- 売上保存・作業完了売上化時に受付へ `relatedRevenueId` を戻し、売上側にも受付IDを保持
+- 受付カードの主ボタンを状態に応じて「作業予定を開く」「売上登録へ進む」「売上を開く」に変更
+- 受付由来の売上二重作成を通常導線で防止
+- `scripts/verify-v485-source-options.mjs` / `scripts/verify-v486-reception-flow.mjs` を追加
+- localStorageキー・既存データ移行・backup/restore形式・linked/payment/taxSettings は非変更
 
 ## v4.8.4で入ったもの
 

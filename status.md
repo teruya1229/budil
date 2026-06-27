@@ -1,18 +1,17 @@
 # Budil status
 
-## v4.8.5 実装内容（依頼元共通マスター最小修正）
+## v4.8.6 実装内容（受付→作業予定→売上の一本道化）
 
-- 表示バージョンを v4.8.5 に更新（CSS/JSキャッシュバスターも揃え）
-- 受付フォーム `reception-source` を6択 select に変更
-- 売上登録フォーム `revenue-source` も同じ6択（LP / 110番 / くらしのマーケット / ヤマダ / コープ / その他）に統一
-- `RevenueBrain.normalizeSourceForForm()` を追加し、旧依頼元は編集時に `その他` へ寄せる（既存保存データは壊さない）
-- `ReceptionBrain.inferSourceFromText()` を追加し、AI受付貼り付け時に依頼元を自動推定
-- 受付→売上フォーム反映時の依頼元引き継ぎを修正（ヤマダ等が `その他` へ化けない）
-- 依頼元検証 `scripts/verify-v485-source-options.mjs` を追加
-- 受付カード主導線整理（v4.8.4）は維持
-- localStorageキー・売上集計・linked/payment/taxSettings・バックアップ形式は非変更
-
-最終更新: 2026-06-27
+- 表示バージョンを v4.8.6 に更新（CSS/JSキャッシュバスターも揃え）
+- 依頼元マスターを `LP` / `110番` / `くらしのマーケット` / `ヤマダ` / `コープ` / `その他` に統一
+- 受付・作業予定・売上・作業完了の依頼元選択を共通化し、既存値も表示できるように維持
+- 受付から作業予定作成時に `relatedWorkOrderId` / `relatedWorkOrderIds` を受付へ保存
+- 作業予定側に `intakeId` / `receptionIntakeId` / `sourceIntakeId` を保持
+- 作業完了後・売上保存後に受付へ `relatedRevenueId` を戻し、売上側にも受付IDを保持
+- 受付カードの主ボタンを、作業予定あり・作業完了・売上登録済みに応じて「作業予定を開く」「売上登録へ進む」「売上を開く」に遷移
+- 受付由来の売上二重作成を通常導線で防止
+- 検証 `scripts/verify-v485-source-options.mjs` / `scripts/verify-v486-reception-flow.mjs` を追加
+- localStorageキー・既存データ移行・backup/restore形式・linked/payment/taxSettings は非変更
 
 ## v4.8.4 実装内容（受付カード主導線整理・重複ボタン削減）
 

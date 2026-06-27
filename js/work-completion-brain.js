@@ -1,5 +1,5 @@
 /**
- * Budil v4.4 - 作業後の確定処理番頭
+ * Budil v4.8.6 - 作業後の確定処理番頭
  */
 const WorkCompletionBrain = {
   PAYMENT_METHODS: ['現金', 'カード', '振込', 'PayPay', 'その他'],
@@ -152,6 +152,9 @@ const WorkCompletionBrain = {
       leadId: input.leadId || wo.leadId || '',
       leadName: '',
       sourceWorkOrderId: wo.id,
+      intakeId: wo.intakeId || '',
+      receptionIntakeId: wo.receptionIntakeId || wo.intakeId || '',
+      sourceIntakeId: wo.sourceIntakeId || wo.intakeId || '',
       confirmedFrom: 'work-order',
       confirmedAt: now,
       isConfirmedRevenue: true,

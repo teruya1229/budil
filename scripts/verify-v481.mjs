@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.5 local verification (diagnostics + backup restore E2E)
+ * Budil v4.8.6 local verification (diagnostics + backup restore E2E)
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -198,8 +198,8 @@ console.log('\n== backup restore E2E ==');
     ({ exported, integrity, preview, revenues, documents, receivables });
   `, ctx);
 
-  assert(e2e.exported.backupVersion === 'v4.8.5', 'backupVersion mismatch');
-  assert(e2e.exported.appVersion === 'v4.8.5', 'appVersion mismatch');
+  assert(e2e.exported.backupVersion === 'v4.8.6', 'backupVersion mismatch');
+  assert(e2e.exported.appVersion === 'v4.8.6', 'appVersion mismatch');
   assert(e2e.exported.dataKeys.includes('budil_revenue_records'), 'missing revenue key');
   assert(e2e.exported.dataKeys.includes('budil_documents'), 'missing documents key');
   assert(e2e.integrity.revenueCount === 4, 'revenue count in backup');
@@ -225,4 +225,4 @@ console.log('\n== backup restore E2E ==');
   console.log('OK: backup export/import round-trip');
 }
 
-console.log('\nAll v4.8.5 local checks passed.');
+console.log('\nAll v4.8.6 local checks passed.');

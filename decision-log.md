@@ -13,23 +13,46 @@
 
 ### YYYY-MM-DD 判断タイトル
 
-### 2026-06-27 Budil v4.8.5 依頼元共通マスター最小修正
+### 2026-06-27 Budil v4.8.6 受付→作業予定→売上の一本道化
 
 判断：
 
-- v4.8.4 公開URL確認で未実装だった依頼元6択・自動推定・受付→売上引き継ぎだけを最小修正する
-- 受付/売上フォームの新規候補を LP / 110番 / くらしのマーケット / ヤマダ / コープ / その他 に統一
-- 旧依頼元（LINE / 直予約 / 法人 等）は新規候補から外し、編集時は `normalizeSourceForForm()` で `その他` へ寄せる
-- 既存保存データの raw 値表示・売上集計ロジック・localStorageキーは変更しない
+- 受付、作業予定、売上の間に既存IDを保存し、主ボタンだけで次工程へ進めるようにする
+- localStorageキー変更・既存データ移行・backup/restore形式変更はしない
+- 作業予定と売上に受付由来IDを追加保持するが、既存フィールドを壊さない
+- 依頼元は6択マスターへ統一し、旧値は読み込み時に落とさない
 
 理由：
 
-- 7月運用で依頼元入力のブレと受付→売上の二度手間が実務上のボトルネック
-- v4.8.4 の受付カード主導線整理は公開確認済みのため、触る範囲を依頼元まわりに限定する
+- 7月運用では「受付からどこまで進んだか」が分からないことが一番の迷いになる
+- 売上は実データ運用上、二重作成を避ける必要があるため、受付に既存売上がある場合は新規作成ではなく既存売上を開く
+- 完全な双方向同期やデータ移行は影響範囲が大きいため、今回は既存IDの保持と通常導線の整理に限定する
 
-結果：
+見た情報：
 
-- （push後に追記）
+- `js/app.js` の受付カード、作業予定作成、作業完了、売上保存フロー
+- `js/reception-brain.js` の受付状態判定
+- `js/work-order-brain.js` / `js/work-completion-brain.js` の作業予定・売上payload
+- `js/revenue-brain.js` / `js/revenue-summary-brain.js` の依頼元マスターと集計正規化
+
+期待する結果：
+
+- 受付から作業予定を作ると受付側に作業予定IDが残る
+- 作業予定側からも受付IDが分かる
+- 作業完了後は受付カードから売上登録へ進める
+- 売上保存後は受付側に売上IDが残り、以後は「売上を開く」になる
+- 同じ受付から売上を通常導線で二重作成しにくい
+
+実行結果：
+
+- `node --check js/*.js` 通過
+- `node scripts/verify-v481.mjs` 通過
+- `node scripts/verify-v482-linked.mjs` 通過
+- `node scripts/verify-intake-parser.mjs` 通過
+- `node scripts/verify-reception-actions.mjs` 通過
+- `node scripts/verify-v485-source-options.mjs` 通過
+- `node scripts/verify-v486-reception-flow.mjs` 通過
+- `git diff --check` 通過
 
 ### 2026-06-26 Budil v4.8.4 受付カード主導線整理・重複ボタン削減
 

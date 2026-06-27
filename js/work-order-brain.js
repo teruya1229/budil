@@ -1,5 +1,5 @@
 /**
- * Budil v3.6 - 予約・作業予定番頭
+ * Budil v4.8.6 - 予約・作業予定番頭
  */
 const WorkOrderBrain = {
   STATUSES: ['tentative', 'confirmed', 'completed', 'cancelled', 'archived'],
@@ -29,9 +29,12 @@ const WorkOrderBrain = {
     const address = String(item.address || '').trim();
     const area = String(item.area || '').trim()
       || (typeof MapBrain !== 'undefined' ? MapBrain.detectAreaFromAddress(address) : '');
+    const intakeId = String(item.intakeId || item.receptionIntakeId || item.sourceIntakeId || '').trim();
     const normalized = {
       id: item.id || '',
-      intakeId: String(item.intakeId || '').trim(),
+      intakeId,
+      receptionIntakeId: String(item.receptionIntakeId || intakeId).trim(),
+      sourceIntakeId: String(item.sourceIntakeId || intakeId).trim(),
       leadId: String(item.leadId || '').trim(),
       customerName: String(item.customerName || '').trim(),
       phone: String(item.phone || '').trim(),
@@ -154,6 +157,8 @@ const WorkOrderBrain = {
       estimateAmount: normalized.estimateAmount,
       memo: memoParts.join('\n'),
       intakeId: normalized.id,
+      receptionIntakeId: normalized.id,
+      sourceIntakeId: normalized.id,
       leadId: normalized.relatedLeadId || '',
       status: 'tentative'
     });
@@ -363,7 +368,10 @@ const WorkOrderBrain = {
       amount: wo.estimateAmount,
       memo: wo.memo,
       leadId: wo.leadId || '',
-      workOrderId: wo.id
+      workOrderId: wo.id,
+      intakeId: wo.intakeId || '',
+      receptionIntakeId: wo.receptionIntakeId || wo.intakeId || '',
+      sourceIntakeId: wo.sourceIntakeId || wo.intakeId || ''
     };
   },
 
