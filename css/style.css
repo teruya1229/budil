@@ -5594,6 +5594,58 @@ body {
   margin-top: 0.75rem;
 }
 
+.reception-action-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.8rem;
+}
+
+.reception-primary-action {
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.reception-state-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.reception-state-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.35rem;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid #dbeafe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.74rem;
+  line-height: 1.2;
+}
+
+.reception-detail-actions {
+  margin-top: 0.1rem;
+}
+
+.reception-detail-actions summary {
+  cursor: pointer;
+  color: #475569;
+  font-size: 0.86rem;
+}
+
+.reception-detail-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.reception-legacy-actions.hidden {
+  display: none;
+}
+
 .mgmt-reception-list {
   margin: 0;
   padding-left: 1.1rem;
@@ -5603,6 +5655,14 @@ body {
   .reception-saved-actions .btn {
     flex: 1 1 calc(50% - 0.35rem);
     min-width: 0;
+  }
+
+  .reception-primary-action,
+  .reception-detail-action-buttons .btn,
+  .reception-next-actions .btn,
+  .exec-reception-actions-v484,
+  .exec-reception-actions-v484 .btn {
+    width: 100%;
   }
 }
 
@@ -6617,6 +6677,13 @@ body {
   flex-wrap: wrap;
   gap: 0.35rem;
   margin-top: 0.5rem;
+}
+
+.exec-reception-actions-v484 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
 }
 
 .exec-work-item,

@@ -1085,6 +1085,28 @@
     copyText(text).then(() => alert('コピーしました')).catch(() => alert('コピーに失敗しました'));
   }
 
+  function simplifyExecutiveReceptionActions(root) {
+    if (!root) return;
+    root.querySelectorAll('.exec-reception-item').forEach(item => {
+      if (item.querySelector('.exec-reception-actions-v484')) return;
+      const intakeId = item.dataset.intakeId;
+      const intake = Storage.getReceptionIntakes().find(i => i.id === intakeId);
+      if (!intake) return;
+      const actions = item.querySelector('.exec-work-actions');
+      if (!actions) return;
+      const state = getReceptionWorkflowState(intake);
+      actions.querySelectorAll('[data-exec-intake-lead], [data-exec-intake-wo], [data-exec-intake-task]').forEach(btn => {
+        btn.classList.add('hidden');
+      });
+      actions.insertAdjacentHTML('afterbegin', `
+        <span class="exec-reception-actions-v484">
+          ${renderReceptionPrimaryAction(intake.id, state, { compact: true })}
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-open="${esc(intake.id)}">受付を開く</button>
+        </span>`);
+      item.insertAdjacentHTML('beforeend', renderReceptionStateLabels(state));
+    });
+  }
+
   function bindExecutiveHomeEvents() {
     const root = document.getElementById('executive-home');
     if (!root) return;
@@ -1092,6 +1114,8 @@
     bindDailyActionTaskEvents(root);
     bindMapActionEvents(root);
     bindSalesOutcomeLeadLinks(root);
+    simplifyExecutiveReceptionActions(root);
+    bindReceptionListEvents(root);
 
     root.querySelectorAll('[data-exec-priority-add-task]').forEach(btn => {
       btn.addEventListener('click', () => addExecutivePriorityTask(btn.dataset.execPriorityAddTask));
@@ -3968,7 +3992,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.8.3</span>
+        <span class="business-report-version">v4.8.4</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -10083,7 +10107,7 @@
     const parsed = ReceptionBrain.parseAiBantouPaste(text);
     setReceptionFormData(parsed);
     syncReceptionAreaFromAddress();
-    renderReceptionNextActions();
+    renderReceptionNextActionsV484();
   }
 
   function saveReceptionFromForm() {
@@ -10140,6 +10164,72 @@
     return ReceptionBrain.normalizeIntake(data);
   }
 
+  function getReceptionWorkflowState(intake) {
+    return ReceptionBrain.getWorkflowState(intake, {
+      leads: Storage.getLeads(),
+      workOrders: Storage.getWorkOrders(),
+      revenues: Storage.getRevenueRecords()
+    });
+  }
+
+  function renderReceptionStateLabels(state) {
+    const labels = state && state.labels ? state.labels : [];
+    return `<div class="reception-state-labels">${labels.map(label =>
+      `<span class="reception-state-label">${esc(label)}</span>`
+    ).join('')}</div>`;
+  }
+
+  function renderReceptionPrimaryAction(intakeId, state, options) {
+    const opts = options || {};
+    const action = state && state.primaryAction || 'case';
+    const label = state && state.primaryLabel || '案件化する';
+    const attr = {
+      openRevenue: 'data-reception-open-revenue',
+      fillRevenue: 'data-reception-fill-revenue',
+      openWorkOrder: 'data-reception-open-work-order',
+      createWorkOrder: 'data-reception-create-work-order',
+      case: 'data-reception-main-case'
+    }[action] || 'data-reception-main-case';
+    const cls = opts.compact ? 'btn btn-sm btn-primary reception-primary-action' : 'btn btn-primary reception-primary-action';
+    return `<button type="button" class="${cls}" ${attr}="${esc(intakeId)}">${esc(label)}</button>`;
+  }
+
+  function renderReceptionDetailActions(intake, state) {
+    const id = intake.id;
+    const leadAction = state.hasLead
+      ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-lead="${esc(id)}">営業先を開く</button>`
+      : `<button type="button" class="btn btn-sm btn-secondary" data-reception-create-lead="${esc(id)}">営業先を作成</button>`;
+    const workAction = state.hasWorkOrder
+      ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-work-order="${esc(id)}">作業予定を開く</button>`
+      : `<button type="button" class="btn btn-sm btn-secondary" data-reception-create-work-order="${esc(id)}">作業予定を作成</button>`;
+    const revenueAction = state.hasRevenue
+      ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-revenue="${esc(id)}">売上を開く</button>`
+      : `<button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(id)}">売上フォームに反映</button>`;
+    return `
+      <details class="reception-detail-actions">
+        <summary>詳細操作</summary>
+        <div class="reception-detail-action-buttons">
+          ${leadAction}
+          ${workAction}
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-add-task="${esc(id)}">今日やることに追加</button>
+          ${revenueAction}
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-done="${esc(id)}">対応済みにする</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-archive="${esc(id)}">保管</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-edit="${esc(id)}">編集</button>
+        </div>
+      </details>`;
+  }
+
+  function renderReceptionActionBlock(intake, options) {
+    const state = getReceptionWorkflowState(intake);
+    return `
+      <div class="reception-action-block">
+        ${renderReceptionPrimaryAction(intake.id, state, options)}
+        ${renderReceptionStateLabels(state)}
+        ${renderReceptionDetailActions(intake, state)}
+      </div>`;
+  }
+
   function renderReceptionNextActions() {
     const el = document.getElementById('reception-next-actions');
     if (!el) return;
@@ -10186,6 +10276,61 @@
     });
   }
 
+  function renderReceptionNextActionsV484() {
+    const el = document.getElementById('reception-next-actions');
+    if (!el) return;
+    const savedActions = ReceptionBrain.getNextActionsFromIntakes(Storage.getReceptionIntakes(), 5);
+    const draft = getReceptionFormDraftIntake();
+    const draftActions = draft ? ReceptionBrain.getNextActionsFromDraft(draft, 3) : [];
+    const actions = savedActions.length ? savedActions : draftActions;
+    if (!actions.length) {
+      el.innerHTML = '<p class="placeholder-text reception-placeholder">次の一手はありません。AI番頭の結果を貼り付けてフォームに反映してください。</p>';
+      return;
+    }
+    const draftBanner = savedActions.length === 0 && draft
+      ? '<p class="reception-next-draft-note">入力中の受付データからの提案です。保存すると一覧にも反映されます。</p>'
+      : '';
+    el.innerHTML = draftBanner + actions.map(a => {
+      let mapHtml = '';
+      const intake = a.intakeId
+        ? Storage.getReceptionIntakes().find(i => i.id === a.intakeId)
+        : (a.isDraft ? draft : null);
+      if (intake) {
+        const area = MapBrain.getIntakeArea(intake);
+        mapHtml = renderMapActionsHtml(intake.address, { area, showNoAddress: true });
+      }
+      const primaryAction = a.intakeId && intake
+        ? renderReceptionPrimaryAction(a.intakeId, getReceptionWorkflowState(intake), { compact: true })
+        : '<button type="button" class="btn btn-sm btn-primary" data-reception-save-draft>受付を保存</button>';
+      const openBtn = a.intakeId
+        ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open="${esc(a.intakeId)}">受付を開く</button>`
+        : '';
+      return `
+      <div class="reception-next-item">
+        <strong class="reception-next-title">${esc(a.title)}</strong>
+        <p class="reception-next-meta">${esc(a.reason)}</p>
+        <div class="reception-next-actions">
+          ${primaryAction}
+          ${mapHtml}
+          ${openBtn}
+        </div>
+        ${a.intakeId && intake ? renderReceptionStateLabels(getReceptionWorkflowState(intake)) : ''}
+      </div>`;
+    }).join('');
+    bindMapActionEvents(el);
+    bindReceptionListEvents(el);
+    el.querySelectorAll('[data-reception-save-draft]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const saved = saveReceptionFromForm();
+        if (!saved) return;
+        renderReceptionView();
+        renderDashboard();
+        alert('受付データを保存しました。');
+      });
+    });
+    bindReceptionOpenButtons(el);
+  }
+
   function renderReceptionSavedList() {
     const el = document.getElementById('reception-saved-list');
     if (!el) return;
@@ -10205,7 +10350,8 @@
         ...(intake.relatedWorkOrderId ? [intake.relatedWorkOrderId] : []),
         ...(Array.isArray(intake.relatedWorkOrderIds) ? intake.relatedWorkOrderIds : [])
       ].filter(Boolean);
-      const hasWorkOrder = woIds.length > 0;
+      const workflow = getReceptionWorkflowState(intake);
+      const hasWorkOrder = workflow.hasWorkOrder;
       return `
       <div class="reception-saved-item" data-intake-id="${esc(intake.id)}">
         <div class="reception-saved-header">
@@ -10223,7 +10369,8 @@
         ${intake.memo ? `<p class="reception-saved-meta reception-saved-memo">受付メモ：${esc(intake.memo)}</p>` : ''}
         <p class="reception-saved-meta">関連営業先：${esc(leadLabel)} / 売上：${esc(revLabel)}</p>
         <div class="reception-saved-map">${renderMapActionsHtml(addr, { area, showNoAddress: true })}</div>
-        <div class="reception-saved-actions">
+        ${renderReceptionActionBlock(intake)}
+        <div class="reception-saved-actions reception-legacy-actions hidden">
           <button type="button" class="btn btn-sm btn-primary" data-reception-create-lead="${esc(intake.id)}">営業先を作成</button>
           <button type="button" class="btn btn-sm btn-secondary" data-reception-create-work-order="${esc(intake.id)}">作業予定を作成</button>
           <button type="button" class="btn btn-sm btn-secondary" data-reception-add-task="${esc(intake.id)}">今日やることに追加</button>
@@ -10241,6 +10388,19 @@
   function bindReceptionListEvents(container) {
     if (!container) return;
     bindMapActionEvents(container);
+    bindReceptionOpenButtons(container);
+    container.querySelectorAll('[data-reception-main-case]').forEach(btn => {
+      btn.addEventListener('click', () => advanceReceptionIntake(btn.dataset.receptionMainCase));
+    });
+    container.querySelectorAll('[data-reception-open-work-order]').forEach(btn => {
+      btn.addEventListener('click', () => openWorkOrderFromReceptionIntake(btn.dataset.receptionOpenWorkOrder));
+    });
+    container.querySelectorAll('[data-reception-open-revenue]').forEach(btn => {
+      btn.addEventListener('click', () => openRevenueFromReceptionIntake(btn.dataset.receptionOpenRevenue));
+    });
+    container.querySelectorAll('[data-reception-open-lead]').forEach(btn => {
+      btn.addEventListener('click', () => openLeadFromReceptionIntake(btn.dataset.receptionOpenLead));
+    });
     container.querySelectorAll('[data-reception-create-lead]').forEach(btn => {
       btn.addEventListener('click', () => createLeadFromReceptionIntake(btn.dataset.receptionCreateLead));
     });
@@ -10251,7 +10411,7 @@
       btn.addEventListener('click', () => addTaskFromReceptionIntake(btn.dataset.receptionAddTask));
     });
     container.querySelectorAll('[data-reception-fill-revenue]').forEach(btn => {
-      btn.addEventListener('click', () => fillRevenueFromReceptionIntake(btn.dataset.receptionFillRevenue));
+      btn.addEventListener('click', () => openRevenueFromReceptionIntake(btn.dataset.receptionFillRevenue));
     });
     container.querySelectorAll('[data-reception-revenue-candidate]').forEach(btn => {
       btn.addEventListener('click', () => markReceptionRevenueCandidate(btn.dataset.receptionRevenueCandidate));
@@ -10271,6 +10431,75 @@
         }
       });
     });
+  }
+
+  function bindReceptionOpenButtons(container) {
+    if (!container) return;
+    container.querySelectorAll('[data-reception-open]').forEach(btn => {
+      if (btn.dataset.receptionOpenBound === '1') return;
+      btn.dataset.receptionOpenBound = '1';
+      btn.addEventListener('click', () => {
+        const intake = Storage.getReceptionIntakes().find(i => i.id === btn.dataset.receptionOpen);
+        if (intake) setReceptionFormData(intake);
+        navigateToView('reception');
+        setTimeout(() => scrollToElement('#reception-form'), 120);
+      });
+    });
+  }
+
+  function advanceReceptionIntake(intakeId) {
+    const intake = Storage.getReceptionIntakes().find(i => i.id === intakeId);
+    if (!intake) return;
+    const state = getReceptionWorkflowState(intake);
+    if (state.hasLead && !state.hasWorkOrder) {
+      createWorkOrderFromIntake(intakeId);
+      return;
+    }
+    if (!state.hasLead) {
+      createLeadFromReceptionIntake(intakeId);
+      return;
+    }
+    createWorkOrderFromIntake(intakeId);
+  }
+
+  function openLeadFromReceptionIntake(intakeId) {
+    const intake = Storage.getReceptionIntakes().find(i => i.id === intakeId);
+    if (!intake) return;
+    const state = getReceptionWorkflowState(intake);
+    if (state.lead) {
+      openSalesDetail(state.lead.id, { navigate: true });
+      return;
+    }
+    createLeadFromReceptionIntake(intakeId);
+  }
+
+  function openWorkOrderFromReceptionIntake(intakeId) {
+    const intake = Storage.getReceptionIntakes().find(i => i.id === intakeId);
+    if (!intake) return;
+    const state = getReceptionWorkflowState(intake);
+    if (!state.workOrder) {
+      createWorkOrderFromIntake(intakeId);
+      return;
+    }
+    navigateToView('work-order');
+    setWorkOrderFormData(state.workOrder);
+    setTimeout(() => scrollToElement('#work-order-form'), 120);
+  }
+
+  function openRevenueFromReceptionIntake(intakeId) {
+    const intake = Storage.getReceptionIntakes().find(i => i.id === intakeId);
+    if (!intake) return;
+    const state = getReceptionWorkflowState(intake);
+    if (state.revenue) {
+      navigateToView('revenue');
+      openRevenueEdit(state.revenue.id);
+      return;
+    }
+    if (state.workOrder) {
+      fillRevenueFromWorkOrder(state.workOrder.id);
+      return;
+    }
+    fillRevenueFromReceptionIntake(intakeId);
   }
 
   function updateReceptionIntakeStatus(intakeId, status) {
@@ -10376,7 +10605,7 @@
   function renderReceptionView() {
     try {
       safeRenderSection(null, () => renderReceptionTodaySummary(), '受付サマリー');
-      safeRenderSection('reception-next-actions', () => renderReceptionNextActions(), '受付次の一手');
+      safeRenderSection('reception-next-actions', () => renderReceptionNextActionsV484(), '受付次の一手');
       safeRenderSection('reception-saved-list', () => renderReceptionSavedList(), '受付一覧');
     } catch (err) {
       console.error('[Budil] render error: 受付番頭', err);
@@ -10405,21 +10634,21 @@
     const clearBtn = document.getElementById('btn-reception-clear');
     if (clearBtn) clearBtn.addEventListener('click', () => {
       clearReceptionForm();
-      renderReceptionNextActions();
+      renderReceptionNextActionsV484();
     });
     ['reception-customer', 'reception-phone', 'reception-address', 'reception-service', 'reception-dates', 'reception-memo', 'reception-source'].forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
       el.addEventListener('input', () => {
         if (id === 'reception-address') syncReceptionAreaFromAddress();
-        renderReceptionNextActions();
+        renderReceptionNextActionsV484();
       });
     });
     const areaEl = document.getElementById('reception-area');
     if (areaEl) {
       areaEl.addEventListener('change', () => {
         areaEl.dataset.manual = areaEl.value ? '1' : '';
-        renderReceptionNextActions();
+        renderReceptionNextActionsV484();
       });
     }
   }

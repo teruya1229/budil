@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.3 - 受付・予約番頭（AI番頭連携入口）
+ * Budil v4.8.4 - 受付・予約番頭（AI番頭連携入口）
  */
 const ReceptionBrain = {
   STATUSES: ['new', 'lead_created', 'task_created', 'work_scheduled', 'revenue_candidate', 'done', 'archived'],
@@ -344,6 +344,69 @@ const ReceptionBrain = {
       leadId: normalized.relatedLeadId || '',
       intakeId: normalized.id,
       status: 'revenue_candidate'
+    };
+  },
+
+  getWorkflowState(intake, context) {
+    const normalized = this.normalizeIntake(intake);
+    const ctx = context || {};
+    const leads = Array.isArray(ctx.leads) ? ctx.leads : [];
+    const workOrders = Array.isArray(ctx.workOrders) ? ctx.workOrders : [];
+    const revenues = Array.isArray(ctx.revenues) ? ctx.revenues : [];
+    const lead = normalized.relatedLeadId
+      ? leads.find(l => l && l.id === normalized.relatedLeadId)
+      : null;
+    const workIds = [
+      normalized.relatedWorkOrderId,
+      ...(Array.isArray(normalized.relatedWorkOrderIds) ? normalized.relatedWorkOrderIds : [])
+    ].filter(Boolean);
+    const relatedWorkOrders = workOrders.filter(w =>
+      w && (workIds.includes(w.id) || (normalized.id && w.intakeId === normalized.id))
+    );
+    const primaryWorkOrder = relatedWorkOrders.find(w => w.id === normalized.relatedWorkOrderId)
+      || relatedWorkOrders[0]
+      || null;
+    const revenueId = normalized.relatedRevenueId
+      || (primaryWorkOrder && primaryWorkOrder.actualRevenueId)
+      || '';
+    const revenue = revenueId ? revenues.find(r => r && r.id === revenueId) : null;
+    const hasLead = !!lead;
+    const hasWorkOrder = !!primaryWorkOrder;
+    const hasRevenue = !!revenue;
+    const completedNoRevenue = hasWorkOrder && primaryWorkOrder.status === 'completed' && !hasRevenue;
+    let primaryAction = 'case';
+    let primaryLabel = '案件化する';
+    if (hasRevenue) {
+      primaryAction = 'openRevenue';
+      primaryLabel = '売上を開く';
+    } else if (completedNoRevenue) {
+      primaryAction = 'fillRevenue';
+      primaryLabel = '売上登録へ進む';
+    } else if (hasWorkOrder) {
+      primaryAction = 'openWorkOrder';
+      primaryLabel = '作業予定を開く';
+    } else if (hasLead) {
+      primaryAction = 'createWorkOrder';
+      primaryLabel = '作業予定を作成';
+    }
+    return {
+      intake: normalized,
+      lead,
+      workOrder: primaryWorkOrder,
+      revenue,
+      relatedWorkOrders,
+      hasLead,
+      hasWorkOrder,
+      hasRevenue,
+      completedNoRevenue,
+      primaryAction,
+      primaryLabel,
+      labels: [
+        '受付保存済み',
+        hasLead ? '営業先あり' : '未案件化',
+        hasWorkOrder ? '作業予定あり' : '予定未作成',
+        hasRevenue ? '売上登録済み' : '売上未登録'
+      ]
     };
   },
 
