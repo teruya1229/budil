@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.8.9',
+  BUDIL_VERSION: 'v4.8.10',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -944,9 +944,11 @@ const Storage = {
     const id = String(key || '').trim();
     if (!id) return null;
     const states = this.getActionCandidateStates();
+    const previous = states[id] || null;
+    if (previous && previous.state === state) return previous;
     const now = new Date().toISOString();
     const record = {
-      ...(states[id] || {}),
+      ...(previous || {}),
       key: id,
       state,
       title: meta.title || (states[id] && states[id].title) || '',
@@ -1013,21 +1015,48 @@ const Storage = {
     const list = this.getActionCandidates();
     let idx = list.findIndex(c => c.id === candidateId);
     const now = new Date().toISOString();
-    if (idx === -1 && fallback.sourceReportId && fallback.title && typeof ActionBrain !== 'undefined') {
-      const normalized = ActionBrain.createFromExternalCheck(fallback.sourceReportId, fallback.title);
+    const sourceReportId = String(fallback.sourceReportId || '').trim();
+    const title = String(fallback.title || '').trim();
+    const fallbackDedupeKey = sourceReportId && title
+      ? (typeof ActionBrain !== 'undefined'
+        ? ActionBrain.makeDedupeKey(sourceReportId, title)
+        : ['external-check', sourceReportId, title].join('|'))
+      : '';
+    const nextStatus = typeof ActionBrain !== 'undefined' ? ActionBrain.STATUS_NOT_NEEDED : 'not_needed';
+    let created = false;
+    if (idx === -1 && fallbackDedupeKey) {
+      const dedupeKey = fallbackDedupeKey;
+      idx = list.findIndex(c => c.dedupeKey === dedupeKey);
+    }
+    if (idx === -1 && fallbackDedupeKey) {
+      const normalized = typeof ActionBrain !== 'undefined'
+        ? ActionBrain.createFromExternalCheck(sourceReportId, title)
+        : {
+          id: 'actcand-' + this.generateId(),
+          createdAt: now,
+          source: 'external-check',
+          sourceReportId,
+          title,
+          status: 'todo',
+          memo: '外部チェック由来の行動候補（売上確定ではありません）',
+          doneAt: null,
+          dedupeKey: fallbackDedupeKey
+        };
       list.unshift({
         ...normalized,
         id: normalized.id || ('actcand-' + this.generateId()),
-        status: ActionBrain.STATUS_NOT_NEEDED,
+        status: nextStatus,
         notNeededAt: now,
         updatedAt: now
       });
       idx = 0;
+      created = true;
     }
     if (idx === -1) return null;
+    if (!created && list[idx].status === nextStatus) return list[idx];
     list[idx] = {
       ...list[idx],
-      status: typeof ActionBrain !== 'undefined' ? ActionBrain.STATUS_NOT_NEEDED : 'not_needed',
+      status: nextStatus,
       notNeededAt: now,
       updatedAt: now
     };

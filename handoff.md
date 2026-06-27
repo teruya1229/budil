@@ -16,9 +16,17 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.8.9 |
+| 最新バージョン | v4.8.10 |
 | 最新commit | （push後に更新） |
 | ブランチ | `main` push 済み |
+
+## v4.8.10で入ったもの
+
+- 今日やること候補のcompact表示にも「必要無し」ボタンを追加
+- `not_needed` の同一候補を再処理しても `action_candidate_not_needed` ログが1件だけになるよう冪等化
+- 最優先候補のクリックイベントに二重バインド防止を追加
+- v4.8.8 のデータ保護・削除ガードは維持
+- `scripts/verify-v4810-not-needed-fixes.mjs` を追加
 
 ## v4.8.9で入ったもの
 

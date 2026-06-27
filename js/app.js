@@ -1208,15 +1208,23 @@
     bindReceptionListEvents(root);
 
     root.querySelectorAll('[data-exec-priority-add-task]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
       btn.addEventListener('click', () => addExecutivePriorityTask(btn.dataset.execPriorityAddTask));
     });
     root.querySelectorAll('[data-exec-priority-done]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
       btn.addEventListener('click', () => completeExecutivePriorityTask(btn.dataset.execPriorityDone));
     });
     root.querySelectorAll('[data-exec-priority-nav]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
       btn.addEventListener('click', () => navigateExecutivePriority(btn.dataset.execPriorityNav));
     });
     root.querySelectorAll('[data-exec-priority-not-needed]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
       btn.addEventListener('click', () => markExecutivePriorityNotNeeded(btn.dataset.execPriorityNotNeeded, {
         title: btn.dataset.execPriorityTitle || '',
         source: btn.dataset.execPrioritySource || '',
@@ -4120,7 +4128,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.8.9</span>
+        <span class="business-report-version">v4.8.10</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -7394,7 +7402,11 @@
     const itemsHtml = displayActions.map(title => `
       <li class="external-check-today-action-item">
         <p class="external-check-today-action-title">${esc(title)}</p>
-        ${compact ? '' : `<div class="external-check-today-action-buttons">${renderActionCandidateButtons(report.id, title)}</div>`}
+        <div class="external-check-today-action-buttons">
+          ${compact
+            ? `<button type="button" class="btn btn-sm btn-not-needed" data-act-not-needed-report="${esc(report.id)}" data-act-title="${esc(title)}">必要無し</button>`
+            : renderActionCandidateButtons(report.id, title)}
+        </div>
       </li>
     `).join('');
 
