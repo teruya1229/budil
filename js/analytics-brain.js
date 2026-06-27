@@ -668,7 +668,7 @@ LINEクリック：0
   KPI_UNCONFIRMED: '未確認',
 
   SNAPSHOT_METRIC_LABELS: {
-    accessCount: ['対象期間アクセス', 'アクセス数', '総アクセス', 'ページビュー', 'PV', '表示回数'],
+    accessCount: ['対象期間アクセス', 'アクセス数', '総アクセス', 'ページビュー', 'PV'],
     users: ['ユーザー数', 'ユーザー', 'アクティブユーザー'],
     newUsers: ['新規ユーザー', '新規ユーザー数'],
     sessions: ['セッション数', 'セッション'],
@@ -692,6 +692,116 @@ LINEクリック：0
     direct: ['Direct', '直接流入', 'ダイレクト'],
     referral: ['Referral', '参照元', 'リファラル'],
     social: ['Organic Social', 'SNS流入', 'ソーシャル']
+  },
+
+  SNAPSHOT_SECTION_HEADERS: {
+    ga4: [/^GA4\s*$/i, /^Google Analytics\s*$/i],
+    inquiry: [/^問い合わせ導線\s*$/],
+    searchConsole: [/^Search Console\s*$/i, /^サーチコンソール\s*$/i, /^SC\s*$/i],
+    gbp: [/^Googleビジネスプロフィール\s*$/, /^Googleビジネス\s*$/, /^GBP\s*$/i],
+    lpTop: [/^LP別アクセス上位\s*$/, /^LP別上位\s*$/, /^ページ別アクセス上位\s*$/]
+  },
+
+  SNAPSHOT_SECTION_METRICS: {
+    ga4: {
+      accessCount: ['アクセス数', 'ページビュー', 'PV'],
+      users: ['ユーザー数', 'ユーザー', 'アクティブユーザー'],
+      newUsers: ['新規ユーザー', '新規ユーザー数'],
+      sessions: ['セッション数', 'セッション'],
+      searchTraffic: ['検索流入', '自然検索', 'Organic Search', 'オーガニック検索']
+    },
+    inquiry: {
+      lineClicks: ['LINEクリック', 'LINEタップ'],
+      phoneTaps: ['電話タップ', '電話クリック'],
+      formClicks: ['フォームクリック', 'フォーム送信クリック', '予約クリック'],
+      ctaClicks: ['CTAクリック']
+    },
+    searchConsole: {
+      searchImpressions: ['表示回数', 'インプレッション', '合計表示回数'],
+      searchClicks: ['クリック数', 'クリック'],
+      searchCtr: ['検索CTR', 'CTR', '平均CTR']
+    },
+    gbp: {
+      gbpViews: ['表示', 'プロフィール表示'],
+      gbpClicks: ['クリック', 'ウェブサイトクリック'],
+      gbpPhone: ['電話', '電話タップ']
+    }
+  },
+
+  allSnapshotSectionHeaderPatterns() {
+    return Object.values(this.SNAPSHOT_SECTION_HEADERS).flat();
+  },
+
+  extractSectionBlock(text, headerPatterns) {
+    const lines = String(text || '').split('\n');
+    const patterns = headerPatterns || [];
+    let startIdx = -1;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (patterns.some(re => re.test(line))) {
+        startIdx = i + 1;
+        break;
+      }
+    }
+    if (startIdx < 0) return '';
+    const stopPatterns = this.allSnapshotSectionHeaderPatterns();
+    const blockLines = [];
+    for (let i = startIdx; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line && stopPatterns.some(re => re.test(line))) break;
+      if (/^【/.test(line)) break;
+      blockLines.push(lines[i]);
+    }
+    return blockLines.join('\n');
+  },
+
+  applySectionMetrics(rawText, metrics) {
+    const m = metrics || {};
+    Object.entries(this.SNAPSHOT_SECTION_METRICS).forEach(([sectionKey, fieldMap]) => {
+      const block = this.extractSectionBlock(rawText, this.SNAPSHOT_SECTION_HEADERS[sectionKey]);
+      if (!block.trim()) return;
+      Object.entries(fieldMap).forEach(([metricKey, labels]) => {
+        const value = this.extractMetricByLabels(block, labels);
+        if (value !== null) m[metricKey] = value;
+      });
+    });
+    return m;
+  },
+
+  parseLpTopAccessSection(text) {
+    const block = this.extractSectionBlock(text, this.SNAPSHOT_SECTION_HEADERS.lpTop);
+    if (!block.trim()) return [];
+    const pages = [];
+    block.split('\n').forEach(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      const numbered = trimmed.match(/^\d+[\.\)、．]\s*(.+?)[：:]\s*([\d,.]+(?:\.\d+)?)\s*$/);
+      if (numbered) {
+        pages.push({
+          pageName: numbered[1].trim(),
+          url: '',
+          views: this.normalizeMetricNumber(numbered[2]),
+          clicks: null,
+          lineClicks: null,
+          phoneTaps: null,
+          formClicks: null
+        });
+        return;
+      }
+      const plain = trimmed.match(/^(.+?)[：:]\s*([\d,.]+(?:\.\d+)?)\s*$/);
+      if (plain && !/^(表示|クリック|電話|アクセス)/.test(plain[1])) {
+        pages.push({
+          pageName: plain[1].trim(),
+          url: '',
+          views: this.normalizeMetricNumber(plain[2]),
+          clicks: null,
+          lineClicks: null,
+          phoneTaps: null,
+          formClicks: null
+        });
+      }
+    });
+    return pages.filter(p => p.pageName || p.views !== null);
   },
 
   stripPageBlocks(text) {
@@ -767,9 +877,10 @@ LINEクリック：0
     Object.entries(this.SNAPSHOT_METRIC_LABELS).forEach(([key, labels]) => {
       metrics[key] = this.extractMetricByLabels(headerText, labels);
     });
+    this.applySectionMetrics(rawText, metrics);
 
     const readPageMetric = value => this.normalizeMetricNumber(value);
-    const pages = (r.pages || []).map(p => {
+    let pages = (r.pages || []).map(p => {
       const views = readPageMetric(p.views);
       const cta = readPageMetric(p.ctaClicks);
       const line = readPageMetric(p.lineClicks);
@@ -786,6 +897,12 @@ LINEクリック：0
         formClicks: booking
       };
     }).filter(p => p.pageName || p.url || p.views !== null || p.clicks !== null);
+
+    const lpTopPages = this.parseLpTopAccessSection(rawText);
+    if (lpTopPages.length) {
+      const blockPagesHaveViews = pages.some(p => p.views !== null && p.views > 0);
+      if (!pages.length || !blockPagesHaveViews) pages = lpTopPages;
+    }
 
     if (metrics.accessCount === null && pages.length) {
       metrics.accessCount = pages.reduce((sum, p) => sum + (Number(p.views) || 0), 0);
