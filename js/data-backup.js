@@ -1,9 +1,9 @@
 /**
- * Budil v4.8.14 - データバックアップ・復元
+ * Budil v4.8.15 - データバックアップ・復元
  */
 const DataBackup = {
   VERSION: '4.0',
-  APP_VERSION: 'v4.8.14',
+  APP_VERSION: 'v4.8.15',
 
   PAYMENT_FIELDS: [
     'paymentMethod',
@@ -33,6 +33,7 @@ const DataBackup = {
     'budil_work_orders',
     'budil_expense_records',
     'budil_analytics_records',
+    'budil_analytics_snapshots',
     'budil_external_check_reports',
     'budil_action_candidates',
     'budil_action_candidate_states',

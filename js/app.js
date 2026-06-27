@@ -7771,6 +7771,7 @@
 
   function refreshActionCandidateViews() {
     renderExternalCheckView();
+    renderAnalyticsView();
     renderDashboard();
   }
 
@@ -9689,6 +9690,155 @@
     alert('アナリティクスデータを保存しました。');
   }
 
+  function kpiMetricValue(value, suffix = '') {
+    if (value === null || value === undefined || value === '') return '未確認';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return esc(String(value));
+    const text = Number.isInteger(n) ? n.toLocaleString('ja-JP') : n.toLocaleString('ja-JP', { maximumFractionDigits: 1 });
+    return esc(text + suffix);
+  }
+
+  function snapshotHasKpiData(snapshot) {
+    if (!snapshot) return false;
+    if (snapshot.hasData) return true;
+    const metrics = snapshot.metrics || {};
+    return Object.values(metrics).some(v => v !== null && v !== undefined && v !== '')
+      || (snapshot.pages || []).length > 0;
+  }
+
+  function renderKpiMetricRows(snapshot) {
+    const m = (snapshot && snapshot.metrics) || {};
+    const rows = [
+      ['アクセス数', m.accessCount],
+      ['ユーザー数', m.users],
+      ['新規ユーザー', m.newUsers],
+      ['セッション数', m.sessions],
+      ['検索流入', m.searchTraffic],
+      ['LINEクリック', m.lineClicks],
+      ['電話タップ', m.phoneTaps],
+      ['フォームクリック', m.formClicks],
+      ['問い合わせ導線クリック', m.inquiryClicks],
+      ['SC表示回数', m.searchImpressions],
+      ['SCクリック数', m.searchClicks],
+      ['検索CTR', m.searchCtr, '%'],
+      ['GBP表示', m.gbpViews],
+      ['GBPクリック', m.gbpClicks],
+      ['GBP電話', m.gbpPhone]
+    ];
+    return rows.map(([label, value, suffix]) => `
+      <div class="analytics-kpi-row">
+        <span>${esc(label)}</span>
+        <strong>${kpiMetricValue(value, suffix || '')}</strong>
+      </div>
+    `).join('');
+  }
+
+  function renderKpiTopPages(snapshot) {
+    const pages = (snapshot && snapshot.pages) || [];
+    if (!pages.length) return '<p class="placeholder-text">LP別アクセスは未確認です。</p>';
+    return `<ol class="analytics-kpi-page-list">${pages.slice(0, 3).map(p => `
+      <li>
+        <span>${esc(p.pageName || p.url || 'LP')}</span>
+        <strong>${kpiMetricValue(p.views)}</strong>
+      </li>
+    `).join('')}</ol>`;
+  }
+
+  function buildRevenueGoalKpiHtml() {
+    if (typeof RevenueBrain === 'undefined') return '';
+    const rev = getRevenueContext();
+    const s = rev.summary || {};
+    if (!s.monthlyTarget) {
+      return '<p class="analytics-kpi-goal-note">売上目標を設定すると、必要問い合わせ数の目安を表示できます。</p>';
+    }
+    const registeredSales = Number(s.planned || 0);
+    const shortage = Math.max(0, Number(s.monthlyTarget || 0) - registeredSales);
+    const activeCount = Number(s.recordCount || 0);
+    const averageUnit = activeCount > 0 ? Math.max(1, Math.round(registeredSales / activeCount)) : 15000;
+    const neededOrders = shortage > 0 ? Math.ceil(shortage / averageUnit) : 0;
+    const assumedCloseRate = 0.5;
+    const neededInquiries = neededOrders > 0 ? Math.ceil(neededOrders / assumedCloseRate) : 0;
+    return `
+      <div class="analytics-kpi-goal">
+        <p>今月目標まであと <strong>${esc(RevenueBrain.formatYen(shortage))}</strong>。</p>
+        <p>平均単価 ${esc(RevenueBrain.formatYen(averageUnit))}${activeCount ? '' : '（仮定）'}なら、あと${neededOrders}件の受注が目安です。</p>
+        <p>問い合わせ成約率50%（仮定）で見ると、あと${neededInquiries}件の問い合わせが目安です。</p>
+        <p class="analytics-kpi-goal-note">売上データは読み取り専用で参照しています。</p>
+      </div>
+    `;
+  }
+
+  function renderKpiInsights(snapshot) {
+    const insights = (snapshot && snapshot.insights) || [];
+    if (!insights.length) return '<p class="placeholder-text">分析はまだありません。</p>';
+    return `<ul class="analytics-kpi-insights">${insights.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`;
+  }
+
+  function renderKpiActionCandidates(snapshot) {
+    const actions = (snapshot && snapshot.actionCandidates) || [];
+    if (!snapshot || !snapshot.id || !actions.length) {
+      return '<p class="placeholder-text">行動候補化できる分析はまだありません。</p>';
+    }
+    return `<ul class="analytics-kpi-action-list">${actions.map(title => `
+      <li>
+        <span>${esc(title)}</span>
+        <div class="analytics-kpi-action-buttons">${renderActionCandidateButtons(snapshot.id, title)}</div>
+      </li>
+    `).join('')}</ul>`;
+  }
+
+  function renderAnalyticsKpiSnapshot() {
+    const el = document.getElementById('analytics-kpi-snapshot');
+    if (!el) return;
+    const snapshot = Storage.getLatestAnalyticsSnapshot();
+    if (!snapshot) {
+      el.innerHTML = `
+        <p class="placeholder-text">外部レポートを貼り付けて保存すると、アクセスKPIがここに表示されます。</p>
+        <p class="analytics-kpi-note">未確認の項目は0ではありません。貼り付け内容から抽出できた範囲のみ表示します。</p>
+      `;
+      return;
+    }
+    const m = snapshot.metrics || {};
+    const anomaly = (snapshot.insights || []).some(i => /異常|ノイズ|減少|少ない|確認/.test(i));
+    el.innerHTML = `
+      <div class="analytics-kpi-meta">
+        <p><strong>対象期間：</strong>${esc(snapshot.periodLabel || snapshot.periodStart || snapshot.periodEnd || '未確認')}</p>
+        <p><strong>保存日時：</strong>${esc((snapshot.importedAt || snapshot.createdAt || '').slice(0, 16).replace('T', ' ') || '—')}</p>
+      </div>
+      <div class="analytics-kpi-card-grid">
+        <div class="analytics-kpi-card"><span>対象期間アクセス</span><strong>${kpiMetricValue(m.accessCount)}</strong></div>
+        <div class="analytics-kpi-card"><span>検索流入</span><strong>${kpiMetricValue(m.searchTraffic)}</strong></div>
+        <div class="analytics-kpi-card"><span>問い合わせ導線クリック</span><strong>${kpiMetricValue(m.inquiryClicks)}</strong></div>
+        <div class="analytics-kpi-card"><span>GBP電話タップ</span><strong>${kpiMetricValue(m.gbpPhone)}</strong></div>
+        <div class="analytics-kpi-card"><span>異常あり/なし</span><strong>${anomaly ? '要確認' : '大きな異常なし'}</strong></div>
+      </div>
+      <div class="analytics-kpi-subgrid">
+        <div class="analytics-kpi-block">
+          <h3>LP別上位</h3>
+          ${renderKpiTopPages(snapshot)}
+        </div>
+        <div class="analytics-kpi-block">
+          <h3>抽出KPI</h3>
+          <div class="analytics-kpi-rows">${renderKpiMetricRows(snapshot)}</div>
+        </div>
+      </div>
+      <div class="analytics-kpi-block">
+        <h3>簡易分析</h3>
+        ${renderKpiInsights(snapshot)}
+      </div>
+      <div class="analytics-kpi-block">
+        <h3>売上目標との目安</h3>
+        ${buildRevenueGoalKpiHtml()}
+      </div>
+      <div class="analytics-kpi-block">
+        <h3>行動候補化</h3>
+        ${renderKpiActionCandidates(snapshot)}
+      </div>
+      <p class="analytics-kpi-note">未確認の項目は0ではありません。貼り付け内容から抽出できた範囲のみ表示しています。</p>
+    `;
+    bindActionCandidateButtons(el);
+  }
+
   function renderAnalyticsSummary(ctx) {
     const conclusionEl = document.getElementById('analytics-today-conclusion');
     if (conclusionEl) {
@@ -9733,11 +9883,57 @@
     const parsed = AnalyticsBrain.parseBrowserBantouReport(text);
     parsed.rawText = text;
     const preview = AnalyticsBrain.buildImportPreview(parsed, Storage.getAnalyticsRecords());
+    if (preview.snapshot && preview.snapshot.rawTextHash) {
+      preview.duplicateSnapshot = Storage.findAnalyticsSnapshotDuplicate(
+        preview.snapshot.rawTextHash,
+        preview.snapshot.periodLabel
+      );
+      if (preview.duplicateSnapshot) {
+        preview.warnings.push('同じ貼り付け内容のKPIスナップショットが既に保存されています');
+      }
+    }
     lastBrowserBantouPreview = preview;
     renderBrowserBantouPreview(preview);
     const saveBtn = document.getElementById('btn-browser-bantou-save');
-    if (saveBtn) saveBtn.disabled = !preview.pages.length || preview.errors.length > 0;
+    if (saveBtn) saveBtn.disabled = (!preview.pages.length && !snapshotHasKpiData(preview.snapshot)) || preview.errors.length > 0;
     return preview;
+  }
+
+  function renderBrowserBantouKpiPreview(preview) {
+    const el = document.getElementById('browser-bantou-preview-kpi');
+    if (!el) return;
+    const snapshot = preview && preview.snapshot;
+    if (!snapshotHasKpiData(snapshot)) {
+      el.innerHTML = `
+        <div class="analytics-kpi-preview-empty">
+          <p>主要KPIはまだ抽出できていません。</p>
+          <p class="analytics-kpi-note">未確認の項目は0ではありません。貼り付け内容から抽出できた範囲のみ表示しています。</p>
+        </div>
+      `;
+      return;
+    }
+    const duplicate = preview && preview.duplicateSnapshot;
+    el.innerHTML = `
+      <div class="analytics-kpi-preview">
+        <div class="analytics-kpi-preview-header">
+          <h4>日次KPIプレビュー</h4>
+          ${duplicate ? '<span class="analytics-kpi-dup-label">重複候補あり</span>' : ''}
+        </div>
+        <p><strong>対象期間：</strong>${esc(snapshot.periodLabel || snapshot.periodStart || snapshot.periodEnd || '未確認')}</p>
+        <div class="analytics-kpi-preview-grid">
+          ${renderKpiMetricRows(snapshot)}
+        </div>
+        <div class="analytics-kpi-preview-pages">
+          <h5>LP別上位</h5>
+          ${renderKpiTopPages(snapshot)}
+        </div>
+        <div class="analytics-kpi-preview-insights">
+          <h5>簡易分析</h5>
+          ${renderKpiInsights(snapshot)}
+        </div>
+        <p class="analytics-kpi-note">未確認の項目は0ではありません。貼り付け内容から抽出できた範囲のみ表示しています。</p>
+      </div>
+    `;
   }
 
   function renderBrowserBantouPreview(preview) {
@@ -9764,6 +9960,7 @@
     }
 
     if (previewPanel) previewPanel.classList.remove('hidden');
+    renderBrowserBantouKpiPreview(preview);
 
     const summaryEl = document.getElementById('browser-bantou-preview-summary');
     if (summaryEl) {
@@ -9827,7 +10024,7 @@
 
   function saveBrowserBantouImport() {
     const preview = lastBrowserBantouPreview;
-    if (!preview || !preview.pages.length) {
+    if (!preview || (!preview.pages.length && !snapshotHasKpiData(preview.snapshot))) {
       alert('先にレポートを解析してください。');
       return;
     }
@@ -9839,6 +10036,10 @@
       const ok = confirm(`既存あり：上書きせず追加しますか？\n重複候補 ${preview.duplicates.length}件`);
       if (!ok) return;
     }
+    if (preview.duplicateSnapshot) {
+      const ok = confirm('同じ貼り付け内容のKPIスナップショットが既にあります。上書きせず新規保存しますか？');
+      if (!ok) return;
+    }
     const text = document.getElementById('browser-bantou-paste')?.value || '';
     preview.pages.forEach(page => {
       Storage.addAnalyticsRecord({
@@ -9846,12 +10047,22 @@
         browserReportText: text.length > 500 ? text.slice(0, 500) + '…' : text
       });
     });
+    let savedSnapshot = null;
+    if (snapshotHasKpiData(preview.snapshot)) {
+      savedSnapshot = Storage.addAnalyticsSnapshot({
+        ...preview.snapshot,
+        createdActionCandidateIds: []
+      });
+    }
     lastBrowserBantouPreview = null;
     const saveBtn = document.getElementById('btn-browser-bantou-save');
     if (saveBtn) saveBtn.disabled = true;
     renderAnalyticsView();
     renderDashboard();
-    alert(`${preview.pages.length}件のアナリティクスデータを保存しました。`);
+    const parts = [];
+    if (preview.pages.length) parts.push(`${preview.pages.length}件のアナリティクスデータ`);
+    if (savedSnapshot) parts.push('KPIスナップショット1件');
+    alert(`${parts.join(' / ')}を保存しました。`);
   }
 
   function addBrowserBantouTask(index) {
@@ -10124,6 +10335,7 @@
       const dateEl = document.getElementById('analytics-date');
       if (dateEl && !dateEl.value) dateEl.value = TODAY();
       const ctx = getAnalyticsContext();
+      renderAnalyticsKpiSnapshot();
       renderAnalyticsSummary(ctx);
       renderAnalyticsRecordsList(ctx);
       if (selectedAnalyticsId) {

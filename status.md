@@ -1,5 +1,17 @@
 # Budil status
 
+## v4.8.15 実装内容（アクセスKPIスナップショット取り込みMVP）
+
+- 表示バージョンを v4.8.15 に更新（CSS/JSキャッシュバスターも揃え）
+- `集客・外部チェック > アクセス分析` の外部レポート取り込みに、日次KPIプレビューを追加
+- GA4 / Search Console / Googleビジネスプロフィール貼り付け結果から、アクセス数、ユーザー数、新規ユーザー、セッション数、検索流入、問い合わせ導線クリック、LINEクリック、電話タップ、フォームクリック、Search Console表示/クリック/CTR、GBP表示/クリック/電話を抽出
+- 新規 localStorage キー `budil_analytics_snapshots` を追加（既存 `budil_analytics_records` はページ別記録として維持）
+- 保存前プレビュー、完全一致 `rawTextHash` + 対象期間による重複警告、保存後KPIカード、簡易分析、行動候補化を追加
+- 売上目標との連動は `budil_revenue_settings` / `budil_revenue_records` の読み取り専用参照のみ。売上データには書き込まない
+- 外部確認プロンプトに、対象期間・総量KPI・Search Console・GBP項目を追加
+- v4.8.8安全ガード、v4.8.12過去分復元モード、v4.8.14名称整理は維持
+- 検証 `scripts/verify-v4815-analytics-kpi-snapshots.mjs` を追加
+
 ## v4.8.14 実装内容（集客クイックボタン旧名称修正）
 
 - 表示バージョンを v4.8.14 に更新（CSS/JSキャッシュバスターも揃え）

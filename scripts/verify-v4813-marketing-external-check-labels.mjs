@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.14 marketing / external check label verification.
+ * Budil v4.8.15 marketing / external check label verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -25,11 +25,11 @@ const storageJs = load('js/storage.js');
 const actionBrain = load('js/action-brain.js');
 const executiveBrain = load('js/executive-brain.js');
 
-console.log('== v4.8.14 marketing/external check labels ==');
+console.log('== v4.8.15 marketing/external check labels ==');
 
-assert(indexHtml.includes('AI経営脳みそ v4.8.14'), 'header version should be v4.8.14');
-assert(indexHtml.includes('Budil v4.8.14'), 'sidebar version should be v4.8.14');
-assert(indexHtml.includes('js/app.js?v=4.8.14'), 'app.js cache buster should be v4.8.14');
+assert(indexHtml.includes('AI経営脳みそ v4.8.15'), 'header version should be v4.8.15');
+assert(indexHtml.includes('Budil v4.8.15'), 'sidebar version should be v4.8.15');
+assert(indexHtml.includes('js/app.js?v=4.8.15'), 'app.js cache buster should be v4.8.15');
 assert(indexHtml.includes('集客・外部チェック'), 'marketing group label should exist');
 assert(indexHtml.includes('外部レポート取り込み'), 'external report import label should exist');
 assert(indexHtml.includes('外部確認プロンプト'), 'external check prompt label should exist');
@@ -50,4 +50,4 @@ assert(storageJs.includes('budil_action_candidate_states'), 'action candidate st
 assert(!appJs.includes('localStorage.' + 'clear()'), 'app should not clear localStorage');
 assert(!storageJs.includes('saveRevenueRecords(' + '[])'), 'storage should not save empty revenue records directly');
 
-console.log('All v4.8.14 marketing/external check label checks passed.');
+console.log('All v4.8.15 marketing/external check label checks passed.');

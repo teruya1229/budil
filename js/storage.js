@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.8.14',
+  BUDIL_VERSION: 'v4.8.15',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -23,6 +23,7 @@ const Storage = {
     WORK_ORDERS: 'budil_work_orders',
     EXPENSE_RECORDS: 'budil_expense_records',
     ANALYTICS_RECORDS: 'budil_analytics_records',
+    ANALYTICS_SNAPSHOTS: 'budil_analytics_snapshots',
     EXTERNAL_CHECK_REPORTS: 'budil_external_check_reports',
     ACTION_CANDIDATES: 'budil_action_candidates',
     ACTION_CANDIDATE_STATES: 'budil_action_candidate_states',
@@ -891,6 +892,7 @@ const Storage = {
     'budil_work_orders',
     'budil_expense_records',
     'budil_analytics_records',
+    'budil_analytics_snapshots',
     'budil_external_check_reports',
     'budil_action_candidates',
     'budil_action_candidate_states',
@@ -1342,6 +1344,44 @@ const Storage = {
     this.saveAnalyticsRecords(this.getAnalyticsRecords().filter(r => !this.isTestDeletionTarget(r)));
   },
 
+  getAnalyticsSnapshots() {
+    const raw = this.get(this.KEYS.ANALYTICS_SNAPSHOTS, []);
+    return Array.isArray(raw) ? raw : [];
+  },
+
+  saveAnalyticsSnapshots(list) {
+    this.set(this.KEYS.ANALYTICS_SNAPSHOTS, Array.isArray(list) ? list : []);
+  },
+
+  addAnalyticsSnapshot(item) {
+    const list = this.getAnalyticsSnapshots();
+    const now = new Date().toISOString();
+    const record = {
+      ...(item || {}),
+      id: (item && item.id) || ('analytics-snapshot-' + this.generateId()),
+      source: (item && item.source) || 'paste-import',
+      importedAt: (item && item.importedAt) || now,
+      createdAt: (item && item.createdAt) || now
+    };
+    list.unshift(record);
+    this.saveAnalyticsSnapshots(list);
+    return record;
+  },
+
+  getLatestAnalyticsSnapshot() {
+    const list = this.getAnalyticsSnapshots();
+    return list.length ? list[0] : null;
+  },
+
+  findAnalyticsSnapshotDuplicate(rawTextHash, periodLabel = '') {
+    const hash = String(rawTextHash || '').trim();
+    const period = String(periodLabel || '').trim();
+    if (!hash) return null;
+    return this.getAnalyticsSnapshots().find(s =>
+      s && s.rawTextHash === hash && (!period || String(s.periodLabel || '').trim() === period)
+    ) || null;
+  },
+
   getMonthlyResults() {
     const raw = this.get(this.KEYS.MONTHLY_RESULTS, []);
     return Array.isArray(raw) ? raw : [];
@@ -1516,6 +1556,7 @@ const Storage = {
       workOrders: 0,
       expenseRecords: 0,
       analyticsRecords: 0,
+      analyticsSnapshots: 0,
       activityLogs: 0,
       performanceEntered: 0,
       dailyChecks: 0,
@@ -2051,6 +2092,18 @@ const Storage = {
       }
     } else {
       add('ok', 'アナリティクス 0件');
+    }
+
+    const analyticsSnapshotRaw = this._readRawKey(this.KEYS.ANALYTICS_SNAPSHOTS);
+    if (!analyticsSnapshotRaw.parseOk) {
+      add('critical', 'アナリティクスKPI（budil_analytics_snapshots）を読み込めません');
+    } else if (analyticsSnapshotRaw.exists) {
+      const snapshots = Array.isArray(analyticsSnapshotRaw.parsed) ? analyticsSnapshotRaw.parsed : [];
+      if (!Array.isArray(analyticsSnapshotRaw.parsed)) add('review', 'アナリティクスKPIが配列ではありません');
+      counts.analyticsSnapshots = snapshots.length;
+      add('ok', `アナリティクスKPI ${counts.analyticsSnapshots}件`);
+    } else {
+      add('ok', 'アナリティクスKPI 0件');
     }
 
     if (typeof MapBrain !== 'undefined') {

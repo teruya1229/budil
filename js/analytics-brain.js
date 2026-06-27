@@ -665,6 +665,253 @@ LINEクリック：0
     };
   },
 
+  KPI_UNCONFIRMED: '未確認',
+
+  SNAPSHOT_METRIC_LABELS: {
+    accessCount: ['対象期間アクセス', 'アクセス数', '総アクセス', 'ページビュー', 'PV', '表示回数'],
+    users: ['ユーザー数', 'ユーザー', 'アクティブユーザー'],
+    newUsers: ['新規ユーザー', '新規ユーザー数'],
+    sessions: ['セッション数', 'セッション'],
+    searchTraffic: ['検索流入', '自然検索', 'Organic Search', 'オーガニック検索'],
+    inquiryClicks: ['問い合わせ導線クリック', '問い合わせクリック', '導線クリック', 'CTAクリック合計'],
+    ctaClicks: ['CTAクリック'],
+    lineClicks: ['LINEクリック', 'LINEタップ'],
+    phoneTaps: ['電話タップ', '電話クリック'],
+    formClicks: ['フォームクリック', 'フォーム送信クリック', '予約クリック'],
+    searchImpressions: ['検索表示回数', 'Search Console 表示回数', 'SC表示回数', '合計表示回数'],
+    searchClicks: ['検索クリック数', 'Search Console クリック数', 'SCクリック数', '合計クリック数'],
+    searchCtr: ['検索CTR', 'Search Console CTR', '平均CTR'],
+    gbpViews: ['Googleビジネス表示', 'GBP表示', 'Googleビジネスプロフィール表示'],
+    gbpClicks: ['Googleビジネスクリック', 'GBPクリック', 'Googleビジネスウェブサイトクリック'],
+    gbpPhone: ['Googleビジネス電話', 'GBP電話', 'GBP電話タップ', 'Googleビジネス電話タップ']
+  },
+
+  SNAPSHOT_TRAFFIC_LABELS: {
+    organic: ['Organic Search', '自然検索', 'オーガニック検索'],
+    paid: ['Paid Search', '広告流入', '有料検索'],
+    direct: ['Direct', '直接流入', 'ダイレクト'],
+    referral: ['Referral', '参照元', 'リファラル'],
+    social: ['Organic Social', 'SNS流入', 'ソーシャル']
+  },
+
+  stripPageBlocks(text) {
+    return String(text || '')
+      .replace(/【ページ\s*\d+】[\s\S]*?(?=\n【ページ\s*\d+】|\n【今日やること候補】|\n【需要番頭に送る候補】|$)/gi, '\n')
+      .replace(/```[\s\S]*?```/g, '\n');
+  },
+
+  normalizeMetricNumber(value) {
+    if (value == null) return null;
+    let s = String(value)
+      .replace(/[％%]/g, '')
+      .replace(/件|回|人|ユーザー|セッション|クリック|表示|タップ|約|およそ|以上/g, '')
+      .trim();
+    if (!s || /未確認|不明|なし|n\/a|na|[-—]/i.test(s)) return null;
+    const m = s.match(/-?\d+(?:,\d{3})*(?:\.\d+)?|-?\d+(?:\.\d+)?/);
+    if (!m) return null;
+    const n = Number(m[0].replace(/,/g, ''));
+    return Number.isFinite(n) ? n : null;
+  },
+
+  extractMetricByLabels(text, labels) {
+    const src = String(text || '');
+    for (const label of labels || []) {
+      const escaped = String(label).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(`(?:^|\\n)[ \\t]*(?:[-・*][ \\t]*)?${escaped}[ \\t]*[：:][ \\t]*([^\\n]*)`, 'i');
+      const m = src.match(re);
+      if (m) {
+        const n = this.normalizeMetricNumber(m[1]);
+        if (n !== null) return n;
+      }
+    }
+    return null;
+  },
+
+  extractPeriod(text, fallbackDate) {
+    const src = String(text || '');
+    const label = (src.match(/(?:対象期間|期間)[：:]\s*([^\n]+)/) || [])[1] || '';
+    const dates = [...src.matchAll(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/g)]
+      .map(m => `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`);
+    return {
+      periodLabel: label.trim() || (fallbackDate ? `${fallbackDate}確認分` : ''),
+      periodStart: dates[0] || '',
+      periodEnd: dates.length > 1 ? dates[dates.length - 1] : (dates[0] || fallbackDate || '')
+    };
+  },
+
+  hashText(text) {
+    const src = String(text || '');
+    let hash = 2166136261;
+    for (let i = 0; i < src.length; i++) {
+      hash ^= src.charCodeAt(i);
+      hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+    }
+    return ('0000000' + (hash >>> 0).toString(16)).slice(-8);
+  },
+
+  sumKnown(values) {
+    const nums = (values || []).filter(v => v !== null && v !== undefined && Number.isFinite(Number(v)));
+    if (!nums.length) return null;
+    return nums.reduce((sum, v) => sum + Number(v), 0);
+  },
+
+  hasKnownSnapshotMetric(metrics) {
+    return Object.values(metrics || {}).some(v => v !== null && v !== undefined && v !== '');
+  },
+
+  buildSnapshotFromReport(report) {
+    const r = report || {};
+    const rawText = r.rawText || '';
+    const headerText = this.stripPageBlocks(rawText);
+    const metrics = {};
+    Object.entries(this.SNAPSHOT_METRIC_LABELS).forEach(([key, labels]) => {
+      metrics[key] = this.extractMetricByLabels(headerText, labels);
+    });
+
+    const readPageMetric = value => this.normalizeMetricNumber(value);
+    const pages = (r.pages || []).map(p => {
+      const views = readPageMetric(p.views);
+      const cta = readPageMetric(p.ctaClicks);
+      const line = readPageMetric(p.lineClicks);
+      const booking = readPageMetric(p.bookingClicks);
+      const phone = readPageMetric(p.phoneClicks);
+      const clicks = this.sumKnown([cta, line, booking, phone]);
+      return {
+        pageName: (p.pageName || '').trim(),
+        url: (p.url || '').trim(),
+        views,
+        clicks,
+        lineClicks: line,
+        phoneTaps: phone,
+        formClicks: booking
+      };
+    }).filter(p => p.pageName || p.url || p.views !== null || p.clicks !== null);
+
+    if (metrics.accessCount === null && pages.length) {
+      metrics.accessCount = pages.reduce((sum, p) => sum + (Number(p.views) || 0), 0);
+    }
+    if (metrics.lineClicks === null && pages.length) {
+      metrics.lineClicks = this.sumKnown(pages.map(p => p.lineClicks));
+    }
+    if (metrics.phoneTaps === null && pages.length) {
+      metrics.phoneTaps = this.sumKnown(pages.map(p => p.phoneTaps));
+    }
+    if (metrics.formClicks === null && pages.length) {
+      metrics.formClicks = this.sumKnown(pages.map(p => p.formClicks));
+    }
+    if (metrics.inquiryClicks === null) {
+      metrics.inquiryClicks = this.sumKnown([
+        metrics.ctaClicks, metrics.lineClicks, metrics.phoneTaps, metrics.formClicks
+      ]);
+    }
+
+    const trafficSources = {};
+    Object.entries(this.SNAPSHOT_TRAFFIC_LABELS).forEach(([key, labels]) => {
+      trafficSources[key] = this.extractMetricByLabels(headerText, labels);
+    });
+    if (metrics.searchTraffic === null && trafficSources.organic !== null) {
+      metrics.searchTraffic = trafficSources.organic;
+    }
+
+    const period = this.extractPeriod(rawText, r.date || '');
+    const gbp = {
+      views: metrics.gbpViews,
+      clicks: metrics.gbpClicks,
+      phone: metrics.gbpPhone
+    };
+    const searchConsole = {
+      impressions: metrics.searchImpressions,
+      clicks: metrics.searchClicks,
+      ctr: metrics.searchCtr
+    };
+    const topPages = pages.slice().sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
+    const warnings = [];
+    if (!this.hasKnownSnapshotMetric(metrics) && !pages.length) warnings.push('KPI数値を抽出できませんでした');
+    if (metrics.accessCount !== null && pages.length && !this.extractMetricByLabels(headerText, this.SNAPSHOT_METRIC_LABELS.accessCount)) {
+      warnings.push('アクセス数はページ別表示回数の合計から算出しています');
+    }
+    const insights = this.buildSnapshotInsights({ metrics, pages: topPages, gbp, searchConsole, rawText });
+    return {
+      source: 'paste-import',
+      periodLabel: period.periodLabel,
+      periodStart: period.periodStart,
+      periodEnd: period.periodEnd,
+      rawTextHash: this.hashText(rawText),
+      metrics,
+      pages: topPages,
+      trafficSources,
+      gbp,
+      searchConsole,
+      warnings,
+      insights,
+      actionCandidates: this.buildSnapshotActionCandidates({ metrics, pages: topPages, gbp, searchConsole, rawText }),
+      hasData: this.hasKnownSnapshotMetric(metrics) || pages.length > 0
+    };
+  },
+
+  buildSnapshotInsights(snapshot) {
+    const s = snapshot || {};
+    const m = s.metrics || {};
+    const pages = s.pages || [];
+    const lines = [];
+    const access = m.accessCount;
+    const search = m.searchTraffic;
+    const inquiry = m.inquiryClicks;
+    const gbpPhone = m.gbpPhone;
+    const add = text => { if (text && !lines.includes(text)) lines.push(text); };
+
+    if (access === null) add('アクセス数は未確認です。GA4の対象期間アクセスを確認してください。');
+    else if (access > 0) add('アクセスは確認できています。問い合わせ導線クリックとセットで見てください。');
+    else add('対象期間のアクセスが0または非常に少ない可能性があります。計測期間とGA4設定を確認してください。');
+
+    if (search === null) add('検索流入は未確認です。Search ConsoleまたはGA4の自然検索を確認してください。');
+    else if (search > 0) add('検索流入はあります。検索語句とLPの問い合わせ導線を確認しましょう。');
+    else add('検索流入が少ない可能性があります。検索語句、タイトル、記事導線を確認してください。');
+
+    if (inquiry === null) add('問い合わせ導線クリックは未確認です。LINE・電話・フォームのクリック計測を確認してください。');
+    else if (access && access >= 20 && inquiry < 2) add('アクセスはありますが、問い合わせ導線クリックが少ない可能性があります。LPのCTAを確認してください。');
+    else if (inquiry > 0) add('問い合わせ導線クリックは確認できています。どの導線が強いかを見て伸ばしましょう。');
+
+    if (gbpPhone === null) add('GBP電話タップは未確認です。Googleビジネスプロフィールの行動を確認してください。');
+    else if ((m.gbpViews || 0) > 0 && gbpPhone < 1) add('GBP表示はありますが、電話タップが少ない可能性があります。口コミ・投稿・電話導線を確認してください。');
+    else if (gbpPhone > 0) add('GBPからの電話タップが確認できています。口コミ依頼と投稿を継続しましょう。');
+
+    if (pages.length >= 2 && pages[0].views > Math.max(1, pages[1].views * 3)) {
+      add(`LP別アクセスが「${pages[0].pageName || '上位LP'}」に偏っています。上位LPから問い合わせ導線への流れを優先確認してください。`);
+    }
+    if (/異常|急増|急減|海外|スパム|ノイズ|落ちて|減少/.test(String(s.rawText || ''))) {
+      add('貼り付け内容に異常・ノイズの記述があります。期間・流入元・海外アクセスを確認してください。');
+    } else {
+      add('大きな異常記述は見当たりません。未確認項目を埋めながら継続観測してください。');
+    }
+    return lines.slice(0, 6);
+  },
+
+  buildSnapshotActionCandidates(snapshot) {
+    const s = snapshot || {};
+    const m = s.metrics || {};
+    const titles = [];
+    const add = title => { if (title && !titles.includes(title)) titles.push(title); };
+    if (m.inquiryClicks === null || ((m.accessCount || 0) >= 20 && (m.inquiryClicks || 0) < 2)) {
+      add('問い合わせ導線クリックを確認する');
+      add('LPのCTAを確認する');
+    }
+    if (m.searchTraffic === null || (m.searchTraffic || 0) === 0) {
+      add('検索語句を確認する');
+    }
+    if ((m.gbpViews || 0) > 0 && (m.gbpPhone || 0) < 1) {
+      add('Google口コミ依頼をする');
+      add('Googleビジネス投稿を作る');
+    }
+    if (/異常|急減|減少|落ちて|ノイズ|海外/.test(String(s.rawText || ''))) {
+      add('アクセス減少の原因を確認する');
+    }
+    if ((m.accessCount || 0) > 0 && (m.inquiryClicks || 0) > 0) {
+      add('広告再開を検討する');
+    }
+    return titles.slice(0, 6);
+  },
+
   normalizeImportedAnalyticsRecord(raw, reportMeta) {
     const meta = reportMeta || {};
     const numeric = {};
@@ -745,17 +992,22 @@ LINEクリック：0
       browserReportText: report.rawText || ''
     };
     const records = (report.pages || []).map(p => this.normalizeImportedAnalyticsRecord(p, meta));
+    const snapshot = this.buildSnapshotFromReport(report);
     const validation = this.validateImportedRecords(records, existingRecords);
+    const errors = snapshot.hasData
+      ? validation.errors.filter(e => e !== '保存できるページがありません')
+      : validation.errors;
     return {
       date: report.date,
       overallComment: report.overallComment || '',
       adDecision: report.adDecision || '',
       pages: records,
       pageCount: records.length,
+      snapshot,
       todayTasks: report.todayTasks || [],
       demandCandidates: report.demandCandidates || [],
       warnings: [...(report.warnings || []), ...validation.warnings],
-      errors: [...(report.errors || []), ...validation.errors],
+      errors: [...(report.errors || []), ...errors],
       duplicates: validation.duplicates,
       sourceFormat: report.sourceFormat || 'structured'
     };
@@ -810,10 +1062,19 @@ ${profileLines.length ? '\n' + profileLines.join('\n') : ''}
 - 洗濯機クリーニング関連ページ
 
 確認してほしいこと：
+- 対象期間
+- アクセス数
+- ユーザー数
+- 新規ユーザー
+- セッション数
+- 検索流入
 - どのページが見られているか
 - どのページの直帰率が高いか
 - どのページの滞在/イベント/CTAが良いか
 - LINE/予約/電話クリックがあるか
+- フォームクリックがあるか
+- Search Consoleの表示回数/クリック数/検索CTR
+- Googleビジネスプロフィールの表示/クリック/電話
 - どの検索クエリが伸びているか
 - どのサービスに需要が出ていそうか
 - 広告を使うべきか、まだLP改善を優先すべきか
@@ -823,6 +1084,22 @@ ${profileLines.length ? '\n' + profileLines.join('\n') : ''}
 
 【Budilアナリティクス取り込み】
 日付：YYYY-MM-DD
+対象期間：
+アクセス数：
+ユーザー数：
+新規ユーザー：
+セッション数：
+検索流入：
+LINEクリック：
+電話タップ：
+フォームクリック：
+Search Console 表示回数：
+Search Console クリック数：
+検索CTR：
+Googleビジネス表示：
+Googleビジネスクリック：
+Googleビジネス電話：
+気づいた異常：
 全体コメント：
 広告判断：
 

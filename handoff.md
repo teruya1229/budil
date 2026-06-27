@@ -1,6 +1,6 @@
 # Budil handoff
 
-最終更新: 2026-06-27
+最終更新: 2026-06-28
 
 ## 正本
 
@@ -16,9 +16,22 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.8.14 |
+| 最新バージョン | v4.8.15 |
 | 最新commit | （push後に更新） |
 | ブランチ | `main` push 済み |
+
+## v4.8.15で入ったもの
+
+- 表示バージョンを v4.8.15 に更新
+- `アクセス分析` の外部レポート取り込みで、GA4 / Search Console / GBP の総量KPIを保存前プレビューできるようにした
+- 新規 localStorage キー `budil_analytics_snapshots` を追加。`budil_analytics_records` は既存どおりページ別記録として維持
+- KPIカードは対象期間アクセス、検索流入、問い合わせ導線クリック、LP別上位、GBP電話タップ、異常あり/なしをスマホ向けに表示
+- 未確認項目は0扱いせず `未確認` と表示。空欄はスナップショット上 `null` のまま保持
+- 完全一致 `rawTextHash` + 対象期間で重複警告を出す。保存する場合も上書きせず新規保存
+- 売上目標との目安は売上設定・売上記録を読み取り専用で参照し、平均単価/成約率の仮定を明示
+- 分析結果は既存 `budil_action_candidates` へ行動候補化でき、`必要無し` / `対応済み` と共存
+- GA4 API / Search Console API / GBP API / OAuth は追加していない
+- `budil_revenue_records` への書き込みなし。v4.8.8安全ガード、v4.8.12過去分復元モード、v4.8.14名称整理は維持
 
 ## v4.8.14で入ったもの
 
@@ -805,6 +818,7 @@ GA4 / Search Console 読み取り → `【Budil貼り付け用】` 変換 → Bu
 |---|---|
 | `budil_revenue_records` | 売上記録（確定売上の正本） |
 | `budil_revenue_settings` | 月間目標など |
+| `budil_analytics_snapshots` | アクセスKPIスナップショット（GA4/SC/GBP貼り付け総量） |
 | `budil_external_check_reports` | 外部チェック（Browser番頭貼り付け）レポート |
 | `budil_action_candidates` | 行動候補（外部チェック由来など） |
 | `budil_daily_action_tasks` | 今日やることの完了・後回し・メモ・手動タスク |
@@ -862,6 +876,7 @@ GA4 / Search Console 読み取り → `【Budil貼り付け用】` 変換 → Bu
 | `budil_migrated_v17` | v1.7マイグレーション済みフラグ |
 | `budil_demand_pickups` | 需要ピックアップ（クロクロ調査結果・アクション案） |
 | `budil_analytics_records` | アナリティクス（GA4手入力） |
+| `budil_analytics_snapshots` | アクセスKPIスナップショット |
 | `budil_reception_intakes` | 受付・予約 |
 
 ## 次にやると良いこと（旧候補・v1.8以降）
