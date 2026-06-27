@@ -16,9 +16,21 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.8.10 |
+| 最新バージョン | v4.8.11 |
 | 最新commit | （push後に更新） |
 | ブランチ | `main` push 済み |
+
+## v4.8.11で入ったもの
+
+- 表示バージョンを v4.8.11 に更新
+- カレンダー予定候補に `過去分復元モード` を追加
+- 過去日付・金額あり・対象外ワードなし・重複なしの候補を `売上実績候補` に分類
+- 期間指定は任意。初期値は 2026-04-01 〜 2026-06-30
+- 一括売上登録時は既存売上を上書きせず、`calendarDedupeKey` / `sourceCandidateId` を売上側に保持
+- 元のカレンダー候補は削除せず、候補状態を `converted` に更新
+- 登録前に売上・作業予定の安全バックアップを作成
+- operation log `calendar_past_candidates_bulk_converted_to_revenue` を記録
+- 検証 `scripts/verify-calendar-past-recovery.mjs` を追加
 
 ## v4.8.10で入ったもの
 

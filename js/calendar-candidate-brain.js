@@ -6,7 +6,21 @@ const CalendarCandidateBrain = {
   IMPORT_SOURCE: 'calendar-paste',
   SOURCE_TYPE: 'work-order-candidate',
   BLOCK_MARKER: '【カレンダー予定】',
-  CANDIDATE_STATUSES: ['候補', '作業予定に追加済み', '要確認', 'スキップ'],
+  CANDIDATE_STATUSES: [
+    '候補',
+    '作業予定に追加済み',
+    '要確認',
+    'スキップ',
+    '売上実績候補',
+    'converted',
+    'excluded',
+    'duplicate_suspected'
+  ],
+  PAST_RECOVERY_REVENUE_CANDIDATE: '売上実績候補',
+  PAST_RECOVERY_CONVERTED: 'converted',
+  PAST_RECOVERY_EXCLUDED: 'excluded',
+  PAST_RECOVERY_DUPLICATE: 'duplicate_suspected',
+  PAST_RECOVERY_EXCLUDED_PATTERN: /キャンセル|取消|取り消し|中止|見積|見積もり|見積り|見積のみ|日程調整|調整中|仮予定|仮押さえ|未確定/,
 
   PASTE_LABELS: {
     '日付': 'scheduledDate',
@@ -55,7 +69,7 @@ const CalendarCandidateBrain = {
 
   isPendingCandidate(workOrder) {
     const st = this.getCandidateStatus(workOrder);
-    return st === '候補' || st === '要確認';
+    return st === '候補' || st === '要確認' || st === this.PAST_RECOVERY_REVENUE_CANDIDATE;
   },
 
   isPromotedCandidate(workOrder) {
@@ -236,6 +250,156 @@ const CalendarCandidateBrain = {
     ].join('|').toLowerCase();
   },
 
+  normalizeDedupeText(value) {
+    return String(value || '')
+      .trim()
+      .replace(/\s+/g, '')
+      .toLowerCase();
+  },
+
+  buildCalendarDedupeKey(candidate) {
+    const c = this.normalizeCandidate(candidate);
+    return [
+      'calendar-past-recovery',
+      c.scheduledDate,
+      this.normalizeDedupeText(c.customerName),
+      Number(c.estimateAmount || 0),
+      this.normalizeDedupeText(c.serviceText),
+      this.normalizeDedupeText(c.source)
+    ].join('|');
+  },
+
+  hasPastRecoveryExcludedWord(candidate) {
+    const c = this.normalizeCandidate(candidate);
+    const text = [
+      c.title,
+      c.customerName,
+      c.serviceText,
+      c.source,
+      c.memo,
+      c.confidence,
+      c.cautionNote
+    ].join(' ');
+    return this.PAST_RECOVERY_EXCLUDED_PATTERN.test(text);
+  },
+
+  isInPastRecoveryRange(candidate, options) {
+    const c = this.normalizeCandidate(candidate);
+    const opts = options || {};
+    if (!c.scheduledDate) return false;
+    if (opts.startDate && c.scheduledDate < opts.startDate) return false;
+    if (opts.endDate && c.scheduledDate > opts.endDate) return false;
+    const today = opts.today || new Date().toISOString().slice(0, 10);
+    return c.scheduledDate < today;
+  },
+
+  detectRevenueDuplicate(candidate, revenues) {
+    const c = this.normalizeCandidate(candidate);
+    const key = this.buildCalendarDedupeKey(c);
+    const customer = this.normalizeDedupeText(c.customerName);
+    const service = this.normalizeDedupeText(c.serviceText);
+    const source = this.normalizeDedupeText(c.source);
+    const amount = Number(c.estimateAmount || 0);
+    const sourceCandidateId = String(candidate && candidate.id || '').trim();
+    const matches = [];
+
+    (revenues || []).forEach(record => {
+      if (!record) return;
+      if (record.calendarDedupeKey && record.calendarDedupeKey === key) {
+        matches.push({ type: 'calendarDedupeKey', revenue: record, reason: 'calendarDedupeKeyが同じ売上があります' });
+        return;
+      }
+      if (sourceCandidateId && (
+        String(record.sourceCandidateId || '') === sourceCandidateId
+        || String(record.sourceWorkOrderId || '') === sourceCandidateId
+      )) {
+        matches.push({ type: 'sourceCandidateId', revenue: record, reason: '同じ候補IDから作成済みの売上があります' });
+        return;
+      }
+      const recCustomer = this.normalizeDedupeText(record.customerName);
+      const recService = this.normalizeDedupeText(record.service || record.actualService || '');
+      const recSource = this.normalizeDedupeText(record.source);
+      const recAmount = Number(record.amount || 0);
+      const near = (
+        String(record.workDate || '') === c.scheduledDate
+        && recCustomer
+        && customer
+        && recCustomer === customer
+        && recAmount === amount
+        && (recService === service || recSource === source)
+      );
+      if (near) {
+        matches.push({ type: 'near', revenue: record, reason: '日付・顧客名・金額が近い売上があります' });
+      }
+    });
+    return matches;
+  },
+
+  classifyPastRecoveryCandidate(candidate, revenues, options) {
+    const c = this.normalizeCandidate(candidate);
+    const reasons = [];
+    if (!this.isInPastRecoveryRange(c, options)) {
+      reasons.push('対象期間外、または過去日付ではありません');
+    }
+    if (!Number(c.estimateAmount || 0)) reasons.push('金額なし');
+    if (this.hasPastRecoveryExcludedWord(c)) reasons.push('対象外ワードあり');
+    if (candidate && candidate.actualRevenueId) reasons.push('作業予定に売上IDが登録済み');
+
+    if (reasons.length) {
+      return {
+        status: this.PAST_RECOVERY_EXCLUDED,
+        label: '対象外候補',
+        reasons,
+        calendarDedupeKey: this.buildCalendarDedupeKey(c),
+        duplicates: []
+      };
+    }
+
+    const duplicates = this.detectRevenueDuplicate(candidate, revenues);
+    if (duplicates.length) {
+      return {
+        status: this.PAST_RECOVERY_DUPLICATE,
+        label: '重複疑い',
+        reasons: duplicates.map(d => d.reason),
+        calendarDedupeKey: this.buildCalendarDedupeKey(c),
+        duplicates
+      };
+    }
+
+    return {
+      status: this.PAST_RECOVERY_REVENUE_CANDIDATE,
+      label: '売上実績候補',
+      reasons: [],
+      calendarDedupeKey: this.buildCalendarDedupeKey(c),
+      duplicates: []
+    };
+  },
+
+  buildPastRecoveryReport(workOrders, revenues, options) {
+    const list = (workOrders || [])
+      .filter(w => this.isCalendarCandidateWorkOrder(w))
+      .map(w => typeof WorkOrderBrain !== 'undefined' ? WorkOrderBrain.normalizeWorkOrder(w) : w)
+      .filter(w => this.getCandidateStatus(w) !== this.PAST_RECOVERY_CONVERTED);
+    const items = list.map(w => {
+      const classification = this.classifyPastRecoveryCandidate(w, revenues || [], options || {});
+      return { workOrder: w, classification };
+    });
+    const eligible = items.filter(i => i.classification.status === this.PAST_RECOVERY_REVENUE_CANDIDATE);
+    const excluded = items.filter(i => i.classification.status === this.PAST_RECOVERY_EXCLUDED);
+    const duplicateSuspects = items.filter(i => i.classification.status === this.PAST_RECOVERY_DUPLICATE);
+    const totalAmount = eligible.reduce((sum, i) => sum + Number(i.workOrder.estimateAmount || 0), 0);
+    return {
+      items,
+      eligible,
+      excluded,
+      duplicateSuspects,
+      eligibleCount: eligible.length,
+      excludedCount: excluded.length,
+      duplicateSuspectCount: duplicateSuspects.length,
+      totalAmount
+    };
+  },
+
   detectDuplicates(candidate, workOrders, savedCandidates) {
     const key = this.buildDedupeKey(candidate);
     const list = [...(workOrders || []), ...(savedCandidates || [])];
@@ -294,19 +458,36 @@ const CalendarCandidateBrain = {
     };
   },
 
+  attachPastRecoveryPreview(preview, revenues, options) {
+    if (!preview || !Array.isArray(preview.items)) return preview;
+    preview.items = preview.items.map(item => {
+      const classification = this.classifyPastRecoveryCandidate(item.candidate, revenues || [], options || {});
+      return {
+        ...item,
+        pastRecovery: classification
+      };
+    });
+    return preview;
+  },
+
   buildBrowserPrompt(options) {
     const opts = options || {};
     const profile = typeof Storage !== 'undefined' ? Storage.getBusinessProfile() : {};
     const area = (profile && profile.area) || '沖縄南部';
     const period = opts.periodLabel || '今週と来週（または指定された月）';
+    const pastRecoveryMode = opts.pastRecoveryMode === true;
     return [
       'Googleカレンダーを確認して、指定期間の作業予定をBudil取り込み用に整理してください。',
       '',
       '目的：',
-      '予定を売上確定ではなく、作業予定候補としてBudilに取り込むため。',
+      pastRecoveryMode
+        ? '過去分復元モードで、作業済みの売上実績候補としてBudilに取り込むため。'
+        : '予定を売上確定ではなく、作業予定候補としてBudilに取り込むため。',
       '',
       '重要：',
-      '売上確定ではありません。予定候補として出力してください。',
+      pastRecoveryMode
+        ? '過去日付・金額ありの作業済み候補を優先してください。キャンセル・見積のみ・日程調整中は注意欄に明記してください。'
+        : '売上確定ではありません。予定候補として出力してください。',
       '金額が不明な場合は空欄。',
       'キャンセルや仮予定は必ず分かるようにしてください。',
       '',
@@ -362,9 +543,54 @@ const CalendarCandidateBrain = {
       memo: [c.memo, c.cautionNote ? '注意：' + c.cautionNote : ''].filter(Boolean).join('\n'),
       status: 'tentative',
       candidateMeta: meta,
+      calendarDedupeKey: extra && extra.calendarDedupeKey ? extra.calendarDedupeKey : this.buildCalendarDedupeKey(c),
       isDemo: extra && extra.isDemo,
       isTest: extra && extra.isTest
     };
+  },
+
+  createRevenuePayloadFromPastCandidate(workOrder) {
+    const wo = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.normalizeWorkOrder(workOrder)
+      : workOrder;
+    const c = this.normalizeCandidate(wo);
+    const now = new Date().toISOString();
+    const source = typeof ReceptionBrain !== 'undefined'
+      ? ReceptionBrain.matchRevenueSource(c.source)
+      : c.source;
+    const service = typeof ReceptionBrain !== 'undefined'
+      ? ReceptionBrain.matchRevenueService(c.serviceText)
+      : c.serviceText;
+    const payload = {
+      workDate: c.scheduledDate || now.slice(0, 10),
+      customerName: c.customerName,
+      service,
+      source,
+      amount: Number(c.estimateAmount || 0),
+      status: '確定',
+      paymentStatus: '未入金',
+      paymentConcern: false,
+      memo: [wo.memo, 'Googleカレンダー過去分復元モードから一括売上登録'].filter(Boolean).join('\n'),
+      sourceWorkOrderId: wo.id || '',
+      sourceCandidateId: wo.id || '',
+      calendarDedupeKey: wo.calendarDedupeKey || this.buildCalendarDedupeKey(wo),
+      confirmedFrom: 'calendar-past-recovery',
+      confirmedAt: now,
+      isConfirmedRevenue: true,
+      candidateMeta: {
+        fromCandidate: true,
+        originalEstimateAmount: String(wo.estimateAmount || ''),
+        originalImportSource: this.IMPORT_SOURCE,
+        pastRecoveryMode: true
+      },
+      paymentDate: '',
+      paymentMethod: ''
+    };
+    if (typeof RevenueBrain !== 'undefined') {
+      const rate = RevenueBrain.getDefaultGrossProfitRateBySource(source);
+      if (rate !== null) payload.grossMarginRate = rate;
+    }
+    return payload;
   },
 
   buildTaskDedupeKey(candidate, taskType, today) {

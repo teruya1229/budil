@@ -8034,6 +8034,62 @@ body.sales-page {
   margin: 0.5rem 0 1rem;
 }
 
+.calendar-past-recovery-panel {
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  border-radius: 8px;
+  background: rgba(14, 165, 233, 0.08);
+}
+
+.calendar-past-recovery-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 700;
+  color: #bfdbfe;
+}
+
+.calendar-past-recovery-range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.calendar-past-recovery-range input {
+  min-width: 0;
+  max-width: 10.5rem;
+}
+
+.calendar-past-recovery-desc,
+.calendar-past-recovery-summary {
+  margin: 0.55rem 0 0;
+  color: #cbd5e1;
+  font-size: 0.85rem;
+}
+
+.calendar-past-recovery-summary strong {
+  color: #e0f2fe;
+}
+
+.calendar-past-recovery-list {
+  margin: 0.45rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.calendar-past-recovery-badge {
+  display: inline-block;
+  margin-top: 0.35rem;
+  padding: 0.16rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(96, 165, 250, 0.18);
+  color: #bfdbfe;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
 .calendar-candidate-preview-item {
   padding: 0.75rem;
   border: 1px solid var(--border);
@@ -8078,6 +8134,22 @@ body.sales-page {
 .calendar-candidate-status-badge.status-スキップ {
   background: rgba(148, 163, 184, 0.2);
   color: #94a3b8;
+}
+
+.calendar-candidate-status-badge.status-売上実績候補 {
+  background: rgba(96, 165, 250, 0.18);
+  color: #bfdbfe;
+}
+
+.calendar-candidate-status-badge.status-converted {
+  background: rgba(74, 222, 128, 0.15);
+  color: #86efac;
+}
+
+.calendar-candidate-status-badge.status-excluded,
+.calendar-candidate-status-badge.status-duplicate_suspected {
+  background: rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
 }
 
 .calendar-candidate-saved-actions {

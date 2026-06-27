@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Budil MVP v0.1 - メインアプリケーション
  */
 (function () {
@@ -4128,7 +4128,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.8.10</span>
+        <span class="business-report-version">v4.8.11</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -7058,10 +7058,37 @@
     return CalendarCandidateBrain.summarizeCandidates(Storage.getWorkOrders(), TODAY());
   }
 
+  function getCalendarPastRecoveryOptions() {
+    const enabled = document.getElementById('calendar-past-recovery-mode')?.checked === true;
+    return {
+      enabled,
+      startDate: document.getElementById('calendar-past-recovery-start')?.value || '',
+      endDate: document.getElementById('calendar-past-recovery-end')?.value || '',
+      today: TODAY()
+    };
+  }
+
+  function getCalendarPastRecoveryReport() {
+    if (typeof CalendarCandidateBrain === 'undefined') return null;
+    const options = getCalendarPastRecoveryOptions();
+    return CalendarCandidateBrain.buildPastRecoveryReport(
+      Storage.getWorkOrders(),
+      Storage.getRevenueRecords(),
+      options
+    );
+  }
+
   function renderCalendarCandidatePrompt() {
     const el = document.getElementById('calendar-candidate-prompt-preview');
     if (!el || typeof CalendarCandidateBrain === 'undefined') return;
-    const prompt = CalendarCandidateBrain.buildBrowserPrompt({ periodLabel: '今週と来週' });
+    const past = getCalendarPastRecoveryOptions();
+    const periodLabel = past.enabled
+      ? `${past.startDate || '開始未指定'}〜${past.endDate || '終了未指定'}（過去分復元モード）`
+      : '今週と来週';
+    const prompt = CalendarCandidateBrain.buildBrowserPrompt({
+      periodLabel,
+      pastRecoveryMode: past.enabled
+    });
     el.textContent = prompt;
   }
 
@@ -7070,6 +7097,14 @@
     if (typeof CalendarCandidateBrain === 'undefined') return;
     const parsed = CalendarCandidateBrain.parseCalendarText(text);
     lastCalendarCandidatePreview = CalendarCandidateBrain.buildImportPreview(parsed, Storage.getWorkOrders());
+    const past = getCalendarPastRecoveryOptions();
+    if (past.enabled) {
+      lastCalendarCandidatePreview = CalendarCandidateBrain.attachPastRecoveryPreview(
+        lastCalendarCandidatePreview,
+        Storage.getRevenueRecords(),
+        past
+      );
+    }
     renderCalendarCandidatePreview();
   }
 
@@ -7096,10 +7131,19 @@
           const dup = item.isDuplicate
             ? `<p class="calendar-candidate-dup">${esc((item.duplicates[0] && item.duplicates[0].reason) || '重複の可能性')}</p>`
             : '';
+          const past = item.pastRecovery;
+          const pastStatus = past
+            ? `<span class="calendar-past-recovery-badge">${esc(past.label)}</span>
+              ${(past.reasons || []).length ? `<p class="calendar-candidate-dup">${esc(past.reasons.join(' / '))}</p>` : ''}`
+            : '';
+          const notice = past && past.status === CalendarCandidateBrain.PAST_RECOVERY_REVENUE_CANDIDATE
+            ? '過去分復元モード：売上実績候補です（一括登録前は売上ではありません）'
+            : 'これは売上ではありません（候補）';
           return `<div class="calendar-candidate-preview-item${item.isDuplicate ? ' is-duplicate' : ''}">
             <p class="calendar-candidate-preview-title"><strong>${esc(c.customerName || '（名前なし）')}</strong> / ${esc(c.serviceText || '—')}</p>
             <p class="calendar-candidate-preview-meta">${esc(c.scheduledDate || '日付不明')} ${esc(c.startTime || '')}〜${esc(c.endTime || '')} / ${esc(c.source || '—')} / 見込み ${esc(WorkOrderBrain.formatYen(c.estimateAmount))}</p>
-            <p class="calendar-candidate-not-sale">これは売上ではありません（候補）</p>
+            <p class="calendar-candidate-not-sale">${esc(notice)}</p>
+            ${pastStatus}
             ${dup}
             <button type="button" class="btn btn-sm btn-primary" data-cal-save-one="${i}">候補として保存</button>
           </div>`;
@@ -7121,7 +7165,8 @@
     }
     const payload = CalendarCandidateBrain.createWorkOrderPayload(item.candidate, {
       originalText: preview.rawText,
-      candidateStatus: '候補'
+      candidateStatus: item.pastRecovery ? item.pastRecovery.status : '候補',
+      calendarDedupeKey: item.pastRecovery ? item.pastRecovery.calendarDedupeKey : ''
     });
     Storage.addWorkOrder(payload);
     refreshCalendarCandidateViews();
@@ -7139,7 +7184,8 @@
     preview.items.forEach(item => {
       const payload = CalendarCandidateBrain.createWorkOrderPayload(item.candidate, {
         originalText: preview.rawText,
-        candidateStatus: '候補'
+        candidateStatus: item.pastRecovery ? item.pastRecovery.status : '候補',
+        calendarDedupeKey: item.pastRecovery ? item.pastRecovery.calendarDedupeKey : ''
       });
       Storage.addWorkOrder(payload);
       saved += 1;
@@ -7154,6 +7200,7 @@
   }
 
   function refreshCalendarCandidateViews() {
+    renderCalendarPastRecoverySummary();
     renderCalendarCandidateSavedList();
     renderWorkOrderCalendarBrief();
     renderWorkOrderView();
@@ -7217,6 +7264,52 @@
     });
   }
 
+  function renderCalendarPastRecoverySummary() {
+    const el = document.getElementById('calendar-past-recovery-summary');
+    const btn = document.getElementById('btn-calendar-past-bulk-convert');
+    if (!el || typeof CalendarCandidateBrain === 'undefined') return;
+    const options = getCalendarPastRecoveryOptions();
+    if (!options.enabled) {
+      el.innerHTML = '';
+      if (btn) btn.disabled = true;
+      return;
+    }
+    const report = getCalendarPastRecoveryReport();
+    const eligible = report ? report.eligibleCount : 0;
+    const amount = report ? report.totalAmount : 0;
+    const excluded = report ? report.excludedCount : 0;
+    const duplicate = report ? report.duplicateSuspectCount : 0;
+    el.innerHTML = `
+      <p><strong>売上実績候補：${eligible}件 / ${esc(WorkOrderBrain.formatYen(amount))}</strong></p>
+      <p>対象外候補：${excluded}件 / 重複疑い：${duplicate}件</p>
+    `;
+    if (btn) btn.disabled = eligible <= 0;
+  }
+
+  function bulkConvertCalendarPastCandidatesToRevenue() {
+    const options = getCalendarPastRecoveryOptions();
+    if (!options.enabled) {
+      alert('過去分復元モードをONにしてください。');
+      return;
+    }
+    const report = getCalendarPastRecoveryReport();
+    const ids = report ? report.eligible.map(item => item.workOrder.id).filter(Boolean) : [];
+    if (!ids.length) {
+      alert('一括売上登録できる売上実績候補がありません。');
+      return;
+    }
+    const amountLabel = WorkOrderBrain.formatYen(report.totalAmount);
+    if (!confirm(`売上実績候補 ${ids.length}件 / ${amountLabel} を一括で確定売上に登録します。\n既存売上は上書きせず、重複疑いは除外します。よろしいですか？`)) return;
+    const result = Storage.bulkConvertCalendarPastCandidatesToRevenue(ids, options);
+    if (!result || !result.ok) {
+      alert('一括売上登録に失敗しました。売上データは更新していません。');
+      return;
+    }
+    refreshCalendarCandidateViews();
+    renderRevenueView();
+    alert(`一括売上登録が完了しました。\n追加：${result.added}件 / ${WorkOrderBrain.formatYen(result.addedAmount || 0)}\n重複・対象外スキップ：${result.skipped}件\n売上件数：${result.beforeCount}件 → ${result.afterCount}件`);
+  }
+
   function promoteCalendarCandidate(workOrderId) {
     const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
     if (!wo || !wo.candidateMeta) return;
@@ -7268,6 +7361,7 @@
 
   function renderCalendarCandidateView() {
     renderCalendarCandidatePrompt();
+    renderCalendarPastRecoverySummary();
     renderCalendarCandidateSavedList();
     renderCalendarCandidatePreview();
   }
@@ -7291,7 +7385,14 @@
     if (copyBtn && !copyBtn.dataset.bound) {
       copyBtn.dataset.bound = '1';
       copyBtn.addEventListener('click', () => {
-        const prompt = CalendarCandidateBrain.buildBrowserPrompt({ periodLabel: '今週と来週' });
+        const past = getCalendarPastRecoveryOptions();
+        const periodLabel = past.enabled
+          ? `${past.startDate || '開始未指定'}〜${past.endDate || '終了未指定'}（過去分復元モード）`
+          : '今週と来週';
+        const prompt = CalendarCandidateBrain.buildBrowserPrompt({
+          periodLabel,
+          pastRecoveryMode: past.enabled
+        });
         copyText(prompt).then(() => alert('カレンダー確認プロンプトをコピーしました')).catch(() => alert('コピーに失敗しました'));
       });
     }
@@ -7304,6 +7405,22 @@
     if (saveAllBtn && !saveAllBtn.dataset.bound) {
       saveAllBtn.dataset.bound = '1';
       saveAllBtn.addEventListener('click', () => saveAllCalendarCandidates(false));
+    }
+    ['calendar-past-recovery-mode', 'calendar-past-recovery-start', 'calendar-past-recovery-end'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el.dataset.bound) {
+        el.dataset.bound = '1';
+        el.addEventListener('change', () => {
+          renderCalendarCandidatePrompt();
+          renderCalendarPastRecoverySummary();
+          if (lastCalendarCandidatePreview) parseCalendarCandidatePaste();
+        });
+      }
+    });
+    const bulkBtn = document.getElementById('btn-calendar-past-bulk-convert');
+    if (bulkBtn && !bulkBtn.dataset.bound) {
+      bulkBtn.dataset.bound = '1';
+      bulkBtn.addEventListener('click', bulkConvertCalendarPastCandidatesToRevenue);
     }
     const goBtn = document.getElementById('btn-go-calendar-candidate');
     if (goBtn && !goBtn.dataset.bound) {

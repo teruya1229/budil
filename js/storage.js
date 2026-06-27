@@ -1,9 +1,9 @@
-/**
+﻿/**
  * Budil - localStorage 管理
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.8.10',
+  BUDIL_VERSION: 'v4.8.11',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -523,6 +523,130 @@ const Storage = {
     list.push(record);
     this.saveRevenueRecords(list);
     return record;
+  },
+
+  bulkConvertCalendarPastCandidatesToRevenue(workOrderIds, options = {}) {
+    const ids = new Set((workOrderIds || []).map(id => String(id || '').trim()).filter(Boolean));
+    if (!ids.size || typeof CalendarCandidateBrain === 'undefined') {
+      return { ok: false, error: 'no_candidates', added: 0, skipped: 0 };
+    }
+    const beforeRevenues = this.getRevenueRecords();
+    const beforeWorkOrders = this.getWorkOrders();
+    const nextRevenues = beforeRevenues.slice();
+    const nextWorkOrders = beforeWorkOrders.slice();
+    const now = new Date().toISOString();
+    const addedRecords = [];
+    const skipped = [];
+
+    nextWorkOrders.forEach((raw, idx) => {
+      const wo = typeof WorkOrderBrain !== 'undefined'
+        ? WorkOrderBrain.normalizeWorkOrder(raw)
+        : raw;
+      if (!wo || !ids.has(String(wo.id || ''))) return;
+      const classification = CalendarCandidateBrain.classifyPastRecoveryCandidate(wo, nextRevenues, {
+        ...options,
+        today: options.today || now.slice(0, 10)
+      });
+      if (classification.status !== CalendarCandidateBrain.PAST_RECOVERY_REVENUE_CANDIDATE) {
+        skipped.push({ id: wo.id, status: classification.status, reasons: classification.reasons || [] });
+        return;
+      }
+      const payload = CalendarCandidateBrain.createRevenuePayloadFromPastCandidate({
+        ...wo,
+        calendarDedupeKey: classification.calendarDedupeKey
+      });
+      const record = {
+        ...payload,
+        id: 'rev_' + this.generateId(),
+        createdAt: now,
+        updatedAt: now
+      };
+      nextRevenues.push(record);
+      addedRecords.push(record);
+      nextWorkOrders[idx] = {
+        ...raw,
+        status: 'completed',
+        completedAt: raw.completedAt || now,
+        actualRevenueId: record.id,
+        calendarDedupeKey: classification.calendarDedupeKey,
+        candidateMeta: {
+          ...(raw.candidateMeta || {}),
+          candidateStatus: CalendarCandidateBrain.PAST_RECOVERY_CONVERTED,
+          confirmedRevenue: true,
+          convertedRevenueId: record.id,
+          convertedAt: now,
+          pastRecoveryMode: true
+        },
+        completion: {
+          ...(raw.completion || {}),
+          status: 'completed',
+          completedAt: raw.completedAt || now,
+          revenueId: record.id,
+          actualAmount: Number(record.amount || 0),
+          actualService: record.service || raw.serviceText || '',
+          paymentStatus: record.paymentStatus || '未入金',
+          memo: 'Googleカレンダー過去分復元モードで一括売上登録',
+          needsReview: false,
+          updatedAt: now
+        },
+        updatedAt: now
+      };
+    });
+
+    if (!addedRecords.length) {
+      return {
+        ok: true,
+        added: 0,
+        skipped: skipped.length,
+        beforeCount: beforeRevenues.length,
+        afterCount: beforeRevenues.length,
+        addedAmount: 0,
+        skippedItems: skipped
+      };
+    }
+
+    const revenueBackup = this.createSafetyBackup({
+      reason: 'before_calendar_past_bulk_revenue_convert',
+      targetKey: this.KEYS.REVENUE_RECORDS,
+      beforeCount: beforeRevenues.length,
+      data: beforeRevenues
+    });
+    const workOrderBackup = this.createSafetyBackup({
+      reason: 'before_calendar_past_bulk_candidate_convert',
+      targetKey: this.KEYS.WORK_ORDERS,
+      beforeCount: beforeWorkOrders.length,
+      data: beforeWorkOrders
+    });
+    const savedRevenue = this.saveRevenueRecords(nextRevenues);
+    if (!savedRevenue) {
+      return { ok: false, error: 'save_revenue_failed', added: 0, skipped: skipped.length };
+    }
+    this.saveWorkOrders(nextWorkOrders);
+    const addedAmount = addedRecords.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+    this.recordOperationLog({
+      action: 'calendar_past_candidates_bulk_converted_to_revenue',
+      targetKey: this.KEYS.REVENUE_RECORDS,
+      beforeCount: beforeRevenues.length,
+      afterCount: nextRevenues.length,
+      addedCount: addedRecords.length,
+      skippedCount: skipped.length,
+      addedAmount,
+      safeBackupId: revenueBackup.id,
+      workOrderBackupId: workOrderBackup.id,
+      sourceCandidateIds: addedRecords.map(r => r.sourceCandidateId).filter(Boolean)
+    });
+    return {
+      ok: true,
+      added: addedRecords.length,
+      skipped: skipped.length,
+      beforeCount: beforeRevenues.length,
+      afterCount: nextRevenues.length,
+      addedAmount,
+      addedRecords,
+      skippedItems: skipped,
+      safeBackupId: revenueBackup.id,
+      workOrderBackupId: workOrderBackup.id
+    };
   },
 
   updateRevenueRecord(id, data) {

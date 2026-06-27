@@ -1,5 +1,16 @@
 # Budil status
 
+## v4.8.11 実装内容（Googleカレンダー過去分復元モード）
+
+- 表示バージョンを v4.8.11 に更新（CSS/JSキャッシュバスターも揃え）
+- カレンダー予定候補に `過去分復元モード` を追加
+- 2026年4月〜6月など任意の過去期間を指定し、過去日付・金額あり・対象外ワードなし・既存売上重複なしの候補を `売上実績候補` として分類
+- 対象外候補・重複疑い・売上実績候補の件数と合計金額を表示
+- 一括売上登録は既存売上を上書きせず、`calendarDedupeKey` / `sourceCandidateId` を売上側へ保持
+- 登録前に売上・作業予定の安全バックアップを作成し、候補状態を `converted` に更新
+- operation log `calendar_past_candidates_bulk_converted_to_revenue` を記録
+- 検証 `scripts/verify-calendar-past-recovery.mjs` を追加
+
 ## v4.8.10 実装内容（必要無し候補の表示・ログ重複修正）
 
 - 表示バージョンを v4.8.10 に更新（CSS/JSキャッシュバスターも揃え）
@@ -68,7 +79,7 @@
 - 受付主導線の簡易検証 `scripts/verify-reception-actions.mjs` を追加
 - 売上・請求書・入金予定・linked/payment/taxSettings・バックアップ形式は非変更
 
-最終更新: 2026-06-26
+最終更新: 2026-06-27
 
 ## v4.8.3 実装内容（受付入力の視認性・AI結果反映改善）
 
