@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Calendar past recovery mode verification.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -87,9 +87,9 @@ const appJs = load('js/app.js');
 const calendarBrain = load('js/calendar-candidate-brain.js');
 const storageJs = load('js/storage.js');
 
-assert(indexHtml.includes('AI経営脳みそ v4.8.12'), 'header version should be v4.8.12');
-assert(indexHtml.includes('Budil v4.8.12'), 'sidebar version should be v4.8.12');
-assert(indexHtml.includes('js/app.js?v=4.8.12'), 'app.js cache buster should be v4.8.12');
+assert(indexHtml.includes('AI経営脳みそ v4.8.13'), 'header version should be v4.8.13');
+assert(indexHtml.includes('Budil v4.8.13'), 'sidebar version should be v4.8.13');
+assert(indexHtml.includes('js/app.js?v=4.8.13'), 'app.js cache buster should be v4.8.13');
 assert(indexHtml.includes('calendar-past-recovery-mode'), 'past recovery mode toggle should exist');
 assert(indexHtml.includes('btn-calendar-past-bulk-convert'), 'bulk convert button should exist');
 assert(indexHtml.includes('一括売上登録の前に安全バックアップを作成します'), 'past recovery safety backup note should exist');

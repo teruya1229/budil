@@ -11,7 +11,7 @@ const SalesBrain = {
 
   PRODUCTS: {
     'AI帳票番頭': ['建設', '工務', '現場', '土木', '帳票', '経理', '請求', '伝票', '工事', '施工'],
-    '広告番頭': ['飲食', '美容', 'サロン', '小売', '店舗', '集客', 'MEO', 'SEO', '広告', 'ホテル', '民宿'],
+    '広告・集客支援': ['飲食', '美容', 'サロン', '小売', '店舗', '集客', 'MEO', 'SEO', '広告', 'ホテル', '民宿'],
     'AI導入コンサル': ['士業', 'コンサル', '事務', 'DX', 'AI', '効率化', '自動化', '会計', '法律'],
     'BCサービス': ['清掃', 'クリーニング', 'ハウス', '管理会社', '民泊', '賃貸', '不動産', 'マンション', '洗濯', 'エアコン', '浴室']
   },
@@ -137,7 +137,7 @@ const SalesBrain = {
         const map = this.DEMAND_BC_MAP[s.name];
         if (map) scores[map.product] = (scores[map.product] || 0) + (5 - i);
         if (/AI|帳票/.test(s.name)) scores['AI帳票番頭'] = (scores['AI帳票番頭'] || 0) + (4 - i);
-        if (/広告/.test(s.name)) scores['広告番頭'] = (scores['広告番頭'] || 0) + (4 - i);
+        if (/広告/.test(s.name)) scores['広告・集客支援'] = (scores['広告・集客支援'] || 0) + (4 - i);
       });
     }
 
@@ -315,7 +315,7 @@ const SalesBrain = {
       } else if (/AI|帳票/.test(svc)) {
         missions.unshift({ text: '現場業・工務店へAI帳票番頭提案', type: 'demand-link', highlight: true });
       } else if (/広告/.test(svc)) {
-        missions.unshift({ text: '集客課題のある店舗へ広告番頭提案', type: 'demand-link', highlight: true });
+        missions.unshift({ text: '集客課題のある店舗へ広告・集客支援提案', type: 'demand-link', highlight: true });
       }
     }
 

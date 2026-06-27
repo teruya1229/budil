@@ -58,12 +58,12 @@
       memoTemplate: '【AI帳票番頭を売る】\n・受付〜請求〜帳票の手間を減らす\n・まず現状ヒアリングから提案'
     },
     ads: {
-      label: '広告番頭を売る',
-      service: '広告番頭',
+      label: '広告・集客支援を売る',
+      service: '広告・集客支援',
       priority: 'B',
       status: '未接触',
       nextContactOffsetDays: 5,
-      memoTemplate: '【広告番頭を売る】\n・問い合わせ導線の整理\n・最初の一歩から相談'
+      memoTemplate: '【広告・集客支援を売る】\n・問い合わせ導線の整理\n・最初の一歩から相談'
     },
     ai_consult: {
       label: 'AI導入コンサルを売る',
@@ -925,7 +925,7 @@
       <div class="exec-work-actions">
         <button type="button" class="btn btn-sm btn-secondary exec-home-analytics-link">アナリティクス</button>
         <button type="button" class="btn btn-sm btn-secondary exec-home-pickup-link">需要ピックアップ</button>
-        <button type="button" class="btn btn-sm btn-secondary" id="btn-exec-browser-prompt">ブラウザー番頭プロンプトをコピー</button>
+        <button type="button" class="btn btn-sm btn-secondary" id="btn-exec-browser-prompt">外部確認プロンプトをコピー</button>
       </div>`;
   }
 
@@ -1279,7 +1279,7 @@
     if (browserPromptBtn) {
       browserPromptBtn.addEventListener('click', () => {
         copyText(AnalyticsBrain.buildBrowserBantouPrompt(Storage.getSettings()))
-          .then(() => alert('ブラウザー番頭プロンプトをコピーしました'))
+          .then(() => alert('外部確認プロンプトをコピーしました'))
           .catch(() => alert('コピーに失敗しました'));
       });
     }
@@ -3854,17 +3854,19 @@
         lines.push(analyticsSection);
         const browserPickups = (Storage.getDemandPickups() || []).filter(p =>
           p.source === 'ブラウザー番頭/アナリティクス'
+          || p.source === '外部確認/アナリティクス'
         );
         const browserTasks = (Storage.getDailyActionTasksData().manualTasks || []).filter(t =>
           (t.pickupDedupeKey || '').startsWith('browser-bantou|')
           || (t.reason || '') === 'ブラウザー番頭/アナリティクス'
+          || (t.reason || '') === '外部確認/アナリティクス'
         );
         if (browserPickups.length) {
-          lines.push('需要番頭へ送った候補（ブラウザー番頭）：');
+          lines.push('需要ピックアップへ送った候補（外部確認）：');
           browserPickups.slice(0, 5).forEach(p => lines.push(`・${p.topic}`));
         }
         if (browserTasks.length) {
-          lines.push('今日やること化した候補（ブラウザー番頭）：');
+          lines.push('今日やること化した候補（外部確認）：');
           browserTasks.slice(0, 5).forEach(t => lines.push(`・${t.title}`));
         }
         lines.push('');
@@ -3941,7 +3943,7 @@
       `${areaIndustry}として、売上・営業・需要・投稿・広告の状況を見て、次の7日間で優先すべき行動を3〜5個に絞って提案してください。`,
       '売上だけでなく、粗利・支出・広告費・遠方案件も見て、次の7日間の優先行動を提案してください。',
       'GA4/Search Consoleの手入力データから、どのLPを改善すべきか、どの記事・SNS投稿を出すべきか、広告を使うべきかを判断してください。',
-      'ブラウザー番頭が確認したGA4/Search Console/GBPの出力も踏まえて、LP改善・記事/SNS・広告判断をしてください。',
+      '外部確認レポートのGA4/Search Console/GBPの出力も踏まえて、LP改善・記事/SNS・広告判断をしてください。',
       '毎朝5分で見るべき優先順位として、作業予定・受付・売上/利益・フォロー・アナリティクス需要・注意点を統合して判断してください。',
       '月別・年別・依頼元別・サービス別の売上から、伸ばすべき集客経路とサービスを判断してください。'
     ];
@@ -9705,7 +9707,7 @@
       <div class="analytics-summary-item"><span>需要強い</span><strong>${ctx.strongCount || 0}件</strong></div>
       <div class="analytics-summary-item"><span>離脱注意</span><strong>${ctx.bounceCount || 0}件</strong></div>
       <div class="analytics-summary-item"><span>広告判断</span><strong>${esc(adLabel)}</strong></div>
-      ${bb.hasTodayImport ? `<div class="analytics-summary-item"><span>ブラウザー番頭</span><strong>今日取り込み済</strong></div>` : ''}
+      ${bb.hasTodayImport ? `<div class="analytics-summary-item"><span>外部レポート</span><strong>今日取り込み済</strong></div>` : ''}
       ${ctx.priority ? `<p class="analytics-summary-priority">${esc(ctx.priority.actionSummary || ctx.priority.pageName)}</p>` : ''}`;
   }
 
@@ -9722,7 +9724,7 @@
   function copyBrowserBantouPrompt() {
     const prompt = AnalyticsBrain.buildBrowserBantouPrompt(Storage.getSettings());
     copyText(prompt).then(() => {
-      alert('ブラウザー番頭プロンプトをコピーしました。');
+      alert('外部確認プロンプトをコピーしました。');
     }).catch(() => alert('コピーに失敗しました。'));
   }
 

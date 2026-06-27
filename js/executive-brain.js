@@ -1,8 +1,8 @@
-﻿/**
+/**
  * Budil v4.4 - 経営司令塔ホーム（毎朝5分・全番頭統合）
  */
 const ExecutiveBrain = {
-  VERSION: 'v4.8.12',
+  VERSION: 'v4.8.13',
 
   CHECK_ITEMS: [
     { id: 'workOrders', label: '作業予定を確認した' },
@@ -111,7 +111,7 @@ const ExecutiveBrain = {
       const analyticsComment = typeof AnalyticsBrain !== 'undefined'
         ? AnalyticsBrain.buildHomeComment(c.analyticsCtx)
         : '';
-      if (analyticsComment) push(analyticsComment.replace(/^ブラウザー番頭確認：/, ''));
+      if (analyticsComment) push(analyticsComment.replace(/^ブラウザー番頭確認：/, '').replace(/^外部確認：/, ''));
     }
 
     const intakeComment = ReceptionBrain.buildReceptionHomeCommentFromIntakes(c.intakes);

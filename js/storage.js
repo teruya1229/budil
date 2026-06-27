@@ -1,9 +1,9 @@
-﻿/**
+/**
  * Budil - localStorage 管理
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.8.12',
+  BUDIL_VERSION: 'v4.8.13',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -2044,7 +2044,7 @@ const Storage = {
         if (aDiag.badStatus) add('caution', `status想定外 ${aDiag.badStatus}件`);
         if (aDiag.highBounce) add('caution', `高直帰率ページ ${aDiag.highBounce}件`);
         if (aDiag.noCta) add('caution', `CTAなしページ ${aDiag.noCta}件`);
-        if (aDiag.browserImport) add('ok', `ブラウザー番頭取り込み ${aDiag.browserImport}件`);
+        if (aDiag.browserImport) add('ok', `外部レポート取り込み ${aDiag.browserImport}件`);
         if (aDiag.browserNoUrl) add('caution', `browser-bantou由来でURLなし ${aDiag.browserNoUrl}件`);
         if (aDiag.browserMissingNumeric) add('caution', `browser-bantou由来で数値欠落が多い ${aDiag.browserMissingNumeric}件`);
         if (aDiag.browserDuplicateCandidates) add('caution', `同日同URLの重複候補 ${aDiag.browserDuplicateCandidates}件`);

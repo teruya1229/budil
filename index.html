@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.8.12">
+  <link rel="stylesheet" href="css/style.css?v=4.8.13">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.8.12</small>
+          <small>AI経営脳みそ v4.8.13</small>
         </div>
       </div>
       <nav class="nav">
@@ -90,11 +90,11 @@
         </details>
 
         <details class="nav-group" open>
-          <summary class="nav-group-title"><span class="nav-group-icon">📈</span><span class="nav-group-label">集客・需要</span></summary>
-          <p class="nav-group-hint">アクセス、需要、外部チェック、広告</p>
+          <summary class="nav-group-title"><span class="nav-group-icon">📈</span><span class="nav-group-label">集客・外部チェック</span></summary>
+          <p class="nav-group-hint">外部チェック、アクセス分析、広告・集客メモ</p>
           <div class="nav-group-items">
             <button class="nav-item nav-item-main" data-view="analytics">
-              <span class="nav-icon">📈</span><span class="nav-label">アナリティクス</span>
+              <span class="nav-icon">📈</span><span class="nav-label">アクセス分析</span>
             </button>
             <button class="nav-item nav-item-main" data-view="external-check">
               <span class="nav-icon">🔍</span><span class="nav-label">外部チェック</span>
@@ -109,7 +109,7 @@
               <span class="nav-icon">🔎</span><span class="nav-label">需要リサーチ</span>
             </button>
             <button class="nav-item nav-item-sub" data-view="pickup" data-scroll="#pickup-ad-action">
-              <span class="nav-icon">📣</span><span class="nav-label">広告</span>
+              <span class="nav-icon">📣</span><span class="nav-label">広告・集客支援</span>
             </button>
           </div>
         </details>
@@ -162,7 +162,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.8.12</small>
+        <small>Budil v4.8.13</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -184,7 +184,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">毎朝5分で、今日やること・売上・利益・需要・受付・作業予定を確認</p>
             </div>
-            <span class="exec-home-version">v4.8.12</span>
+            <span class="exec-home-version">v4.8.13</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <div id="exec-home-start-guide" class="exec-home-start-guide hidden"></div>
@@ -406,7 +406,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.8.12</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.8.13</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -965,7 +965,7 @@
                 <label for="sales-preset-select" class="sales-preset-label">営業プリセット</label>
                 <select id="sales-preset-select" class="sales-preset-select">
                   <option value="ai_docs">AI帳票番頭を売る</option>
-                  <option value="ads">広告番頭を売る</option>
+                  <option value="ads">広告・集客支援を売る</option>
                   <option value="ai_consult">AI導入コンサルを売る</option>
                   <option value="bc_clean">BCサービス清掃営業</option>
                   <option value="washer">洗濯機クリーニング営業</option>
@@ -1638,7 +1638,7 @@
       <section id="view-calendar-candidate" class="view">
         <header class="view-header">
           <h1>予定候補</h1>
-          <p class="view-subtitle">Googleカレンダー/ブラウザー番頭の予定を貼り付けて作業予定候補にする（売上確定ではありません）</p>
+          <p class="view-subtitle">Googleカレンダー/外部確認レポートの予定を貼り付けて作業予定候補にする（売上確定ではありません）</p>
         </header>
 
         <div class="card card-wide card-calendar-candidate">
@@ -1672,7 +1672,7 @@
             </div>
           </div>
 
-          <h2>ブラウザー番頭用プロンプト</h2>
+          <h2>外部確認プロンプト</h2>
           <div id="calendar-candidate-prompt-preview" class="calendar-candidate-prompt-preview"></div>
           <div class="calendar-candidate-actions">
             <button type="button" id="btn-calendar-candidate-copy-prompt" class="btn btn-sm btn-primary">カレンダー確認プロンプトをコピー</button>
@@ -1712,14 +1712,14 @@
       <!-- 外部チェック -->
       <section id="view-external-check" class="view">
         <header class="view-header">
-          <h1>外部チェック</h1>
-          <p class="view-subtitle">GA4・Search Console・GBPなどの外部確認結果を保存し、今日やること候補へ変換します。売上確定ではありません。</p>
+          <h1>集客・外部チェック</h1>
+          <p class="view-subtitle">外部チェック、アクセス分析、広告・集客メモをまとめて確認し、今日やること候補へ変換します。売上確定ではありません。</p>
         </header>
 
         <div class="card card-wide card-external-check-form">
-          <p class="external-check-notice"><strong>これは売上確定ではありません。</strong> Browser番頭が見た情報を記録する受け皿です。予定候補・GBP反応は候補/集客情報として扱います。</p>
+          <p class="external-check-notice"><strong>これは売上確定ではありません。</strong> 外部確認レポートを記録する受け皿です。予定候補・GBP反応は候補/集客情報として扱います。</p>
 
-          <h2>レポート貼り付け</h2>
+          <h2>外部チェック結果</h2>
           <textarea id="external-check-paste" class="external-check-paste" rows="14" placeholder="【Budil貼り付け用】&#10;種別：外部チェックレポート&#10;確認日：2026-06-19&#10;..."></textarea>
           <div class="external-check-actions">
             <button type="button" id="btn-external-check-save" class="btn btn-sm btn-primary">保存</button>
@@ -1734,7 +1734,7 @@
         </div>
 
         <div class="card card-wide card-external-check-actions">
-          <h2>行動候補一覧</h2>
+          <h2>改善アクション候補</h2>
           <p class="external-check-actions-note">外部チェック由来の候補です。売上確定ではありません。</p>
           <div id="external-check-action-candidates" class="external-check-action-candidates-list"></div>
         </div>
@@ -2483,8 +2483,8 @@
       <!-- アナリティクス -->
       <section id="view-analytics" class="view">
         <header class="view-header">
-          <h1>アナリティクス</h1>
-          <p class="view-subtitle">GA4・Search Consoleの手入力データから、自然需要とLP改善の優先順位を読む</p>
+          <h1>アクセス分析</h1>
+          <p class="view-subtitle">GA4・Search Consoleの手入力データと外部確認レポートから、自然需要とLP改善の優先順位を読む</p>
         </header>
 
         <div class="card card-wide card-analytics-policy">
@@ -2492,18 +2492,18 @@
         </div>
 
         <div class="card card-wide card-browser-bantou">
-          <h2>ブラウザー番頭連携</h2>
-          <p class="browser-bantou-lead">ブラウザー番頭にGA4/Search Console/GBPを確認させ、出力を貼り付けて複数ページをまとめて取り込みます。</p>
+          <h2>外部レポート取り込み</h2>
+          <p class="browser-bantou-lead">GA4/Search Console/GBPなどの外部確認結果を貼り付けて、複数ページをまとめて取り込みます。</p>
 
           <div class="browser-bantou-section">
             <h3>今日の確認プロンプト</h3>
             <pre id="browser-bantou-prompt-preview" class="browser-bantou-prompt-preview"></pre>
-            <button type="button" class="btn btn-primary btn-sm" id="btn-browser-bantou-copy-prompt">ブラウザー番頭プロンプトをコピー</button>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-browser-bantou-copy-prompt">外部確認プロンプトをコピー</button>
           </div>
 
           <div class="browser-bantou-section">
-            <h3>ブラウザー番頭レポートを貼り付け</h3>
-            <textarea id="browser-bantou-paste" class="browser-bantou-paste" rows="12" placeholder="ブラウザー番頭の日次アナリティクスレポートをここに貼り付け"></textarea>
+            <h3>外部確認レポートを貼り付け</h3>
+            <textarea id="browser-bantou-paste" class="browser-bantou-paste" rows="12" placeholder="外部確認の日次アナリティクスレポートをここに貼り付け"></textarea>
             <div class="browser-bantou-actions">
               <button type="button" class="btn btn-primary btn-sm" id="btn-browser-bantou-parse">レポートを解析</button>
               <button type="button" class="btn btn-primary btn-sm" id="btn-browser-bantou-save" disabled>解析結果をまとめて保存</button>
@@ -3217,30 +3217,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.8.12"></script>
-  <script src="js/messages.js?v=4.8.12"></script>
-  <script src="js/demand-brain.js?v=4.8.12"></script>
-  <script src="js/demand-radar.js?v=4.8.12"></script>
-  <script src="js/sales-brain.js?v=4.8.12"></script>
-  <script src="js/management-brain.js?v=4.8.12"></script>
-  <script src="js/payment-brain.js?v=4.8.12"></script>
-  <script src="js/revenue-brain.js?v=4.8.12"></script>
-  <script src="js/revenue-summary-brain.js?v=4.8.12"></script>
-  <script src="js/reception-brain.js?v=4.8.12"></script>
-  <script src="js/map-brain.js?v=4.8.12"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.8.12"></script>
-  <script src="js/external-check-brain.js?v=4.8.12"></script>
-  <script src="js/action-brain.js?v=4.8.12"></script>
-  <script src="js/work-order-brain.js?v=4.8.12"></script>
-  <script src="js/follow-up-brain.js?v=4.8.12"></script>
-  <script src="js/work-completion-brain.js?v=4.8.12"></script>
-  <script src="js/profit-brain.js?v=4.8.12"></script>
-  <script src="js/analytics-brain.js?v=4.8.12"></script>
-  <script src="js/monthly-results-brain.js?v=4.8.12"></script>
-  <script src="js/documents-brain.js?v=4.8.12"></script>
-  <script src="js/executive-brain.js?v=4.8.12"></script>
-  <script src="js/card-ocr.js?v=4.8.12"></script>
-  <script src="js/data-backup.js?v=4.8.12"></script>
-  <script src="js/app.js?v=4.8.12"></script>
+  <script src="js/storage.js?v=4.8.13"></script>
+  <script src="js/messages.js?v=4.8.13"></script>
+  <script src="js/demand-brain.js?v=4.8.13"></script>
+  <script src="js/demand-radar.js?v=4.8.13"></script>
+  <script src="js/sales-brain.js?v=4.8.13"></script>
+  <script src="js/management-brain.js?v=4.8.13"></script>
+  <script src="js/payment-brain.js?v=4.8.13"></script>
+  <script src="js/revenue-brain.js?v=4.8.13"></script>
+  <script src="js/revenue-summary-brain.js?v=4.8.13"></script>
+  <script src="js/reception-brain.js?v=4.8.13"></script>
+  <script src="js/map-brain.js?v=4.8.13"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.8.13"></script>
+  <script src="js/external-check-brain.js?v=4.8.13"></script>
+  <script src="js/action-brain.js?v=4.8.13"></script>
+  <script src="js/work-order-brain.js?v=4.8.13"></script>
+  <script src="js/follow-up-brain.js?v=4.8.13"></script>
+  <script src="js/work-completion-brain.js?v=4.8.13"></script>
+  <script src="js/profit-brain.js?v=4.8.13"></script>
+  <script src="js/analytics-brain.js?v=4.8.13"></script>
+  <script src="js/monthly-results-brain.js?v=4.8.13"></script>
+  <script src="js/documents-brain.js?v=4.8.13"></script>
+  <script src="js/executive-brain.js?v=4.8.13"></script>
+  <script src="js/card-ocr.js?v=4.8.13"></script>
+  <script src="js/data-backup.js?v=4.8.13"></script>
+  <script src="js/app.js?v=4.8.13"></script>
 </body>
 </html>

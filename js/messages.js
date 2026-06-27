@@ -3,7 +3,7 @@
  * 思想: 相手を評価・指摘しない。敬意と提案型。沖縄の現場業向け。
  */
 const MessageTemplates = {
-  PRODUCTS: ['AI帳票番頭', '広告番頭', 'AI導入コンサル', 'BCサービス'],
+  PRODUCTS: ['AI帳票番頭', '広告・集客支援', 'AI導入コンサル', 'BCサービス'],
 
   PRESETS: {
     ai_docs: {
@@ -16,8 +16,8 @@ const MessageTemplates = {
       }
     },
     ads: {
-      label: '広告番頭を売る',
-      product: '広告番頭',
+      label: '広告・集客支援を売る',
+      product: '広告・集客支援',
       copyOverride: {
         hook: 'Google広告やLP改善の判断を助ける提案',
         benefit: '検索やMEOなどから問い合わせにつながる導線を整え、成果に近づく動きを整理',
@@ -69,8 +69,8 @@ const MessageTemplates = {
       benefit: '現場と事務の間で起きがちな転記・確認の手間を減らす',
       offer: '御社の帳票フローに合わせた導入イメージを、15分ほどオンラインでお伝え'
     },
-    '広告番頭': {
-      label: '広告番頭',
+    '広告・集客支援': {
+      label: '広告・集客支援',
       hook: '沖縄の現場業向けに設計した集客・広告の仕組み',
       benefit: '検索やMEOを含め、問い合わせにつながる導線づくりを支援',
       offer: '現状の集客の整理と、取り組みやすい第一歩をご一緒に考えるお時間'

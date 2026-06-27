@@ -10,7 +10,7 @@ const DemandRadar = {
     { id: 'hood', name: 'レンジフード', triggers: ['レンジフード', '換気扇', '油汚れ'] },
     { id: 'bath', name: '浴室', triggers: ['浴室', '風呂', '水垢', 'ユニットバス'] },
     { id: 'ai-doc', name: 'AI帳票', triggers: ['AI帳票', '帳票', '請求書', 'OCR', '伝票', '経理'] },
-    { id: 'ads', name: '広告番頭', triggers: ['広告番頭', '広告', '集客', 'MEO', 'SEO', 'リスティング'] }
+    { id: 'ads', name: '広告・集客支援', triggers: ['広告・集客支援', '広告番頭', '広告', '集客', 'MEO', 'SEO', 'リスティング'] }
   ],
 
   UP_WORDS: ['増加', '上昇', '伸び', '急上昇', '人気', '問い合わせ', 'クリック', '表示'],

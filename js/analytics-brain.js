@@ -689,7 +689,7 @@ LINEクリック：0
       bookingClicks: numeric.bookingClicks,
       phoneClicks: numeric.phoneClicks,
       searchQueriesText: raw.searchQueriesText || '',
-      sourceMemo: raw.sourceMemo || 'ブラウザー番頭',
+      sourceMemo: raw.sourceMemo || '外部確認レポート',
       memo: raw.memo || '',
       recommendedActionText: raw.recommendedActionText || '',
       status: 'open',
@@ -779,7 +779,7 @@ LINEクリック：0
     if (googleReviewUrl) profileLines.push(`Google口コミURL：${googleReviewUrl}`);
     if (memo) profileLines.push(`メモ：${memo}`);
 
-    return `あなたは「ブラウザー番頭」です。
+    return `あなたはBudil用の外部確認レポート作成担当です。
 今日の目的は、GA4 / Search Console / Googleビジネスプロフィール / 必要なら広告状況を確認し、Budilに貼り付けられる形式で日次アナリティクスレポートを出すことです。
 
 対象事業：
@@ -886,13 +886,13 @@ LINEクリック：
     const clean = (title || '').trim();
     return {
       title: clean,
-      targetName: 'ブラウザー番頭',
+      targetName: '外部確認レポート',
       priority: '中',
       action: clean,
-      memo: 'ブラウザー番頭レポートの今日やること候補から追加',
+      memo: '外部確認レポートの今日やること候補から追加',
       dueDate: t,
       status: 'open',
-      reason: 'ブラウザー番頭/アナリティクス',
+      reason: '外部確認/アナリティクス',
       pickupDedupeKey: ['browser-bantou', t, clean].join('|')
     };
   },
@@ -902,7 +902,7 @@ LINEクリック：
     const topic = (candidate || '').trim();
     return {
       date: t,
-      source: 'ブラウザー番頭/アナリティクス',
+      source: '外部確認/アナリティクス',
       topic,
       summary: topic,
       demandScore: 55,
@@ -912,7 +912,7 @@ LINEクリック：
         { type: 'sales', title: 'LP・導線改善を検討' },
         { type: 'ad', title: '広告は保留（LP改善優先）' }
       ],
-      memo: 'ブラウザー番頭レポートの需要番頭候補から送付',
+      memo: '外部確認レポートの需要ピックアップ候補から送付',
       status: 'open'
     };
   },
@@ -926,7 +926,7 @@ LINEクリック：
       else if (c.todayConclusion) parts.push(c.todayConclusion);
       if (bb.adDecision) parts.push(bb.adDecision);
       if (parts.length) {
-        return `ブラウザー番頭確認：${parts.join(' ')}`;
+        return `外部確認：${parts.join(' ')}`;
       }
     }
     if (c.todayConclusion) return c.todayConclusion;
@@ -947,7 +947,7 @@ LINEクリック：
     const lines = [];
     const bb = c.browserBantou || {};
     if (bb.hasTodayImport) {
-      lines.push('ブラウザー番頭確認済み');
+      lines.push('外部確認レポート取り込み済み');
     }
     lines.push(`需要強いページ ${c.strongCount || 0}件`);
     lines.push(`離脱注意ページ ${c.bounceCount || 0}件`);
@@ -982,7 +982,7 @@ LINEクリック：
     if (periodLabel) lines.push(`対象期間：${periodLabel}`);
     const bb = c.browserBantou || {};
     if (bb.importCount) {
-      lines.push(`ブラウザー番頭取り込み：${bb.importCount}件`);
+      lines.push(`外部レポート取り込み：${bb.importCount}件`);
       if (bb.overallComment) lines.push(`全体コメント：${bb.overallComment}`);
       if (bb.adDecision) lines.push(`広告判断：${bb.adDecision}`);
     }
@@ -995,7 +995,7 @@ LINEクリック：
     lines.push('');
     const browserPages = (c.records || []).filter(r => r.importSource === 'browser-bantou').slice(0, 5);
     if (browserPages.length) {
-      lines.push('ブラウザー番頭由来の改善候補：');
+      lines.push('外部確認由来の改善候補：');
       browserPages.forEach(r => {
         const action = r.recommendedActionText || (r.recommendedActions || [])[0]?.text || r.actionSummary || '継続観測';
         lines.push(`・${r.pageName}：${action}`);
@@ -1117,7 +1117,7 @@ LINEクリック：
     };
   },
 
-  POLICY_TEXT: '広告番頭は広告費を使った後の判断用です。現段階では、まず自然に見られているページ・検索需要を読み、LP・記事・SNS・導線を改善してから広告を乗せる方針です。ブラウザー番頭がGA4/Search Console/GBPを確認した結果を貼り付けて取り込めます。'
+  POLICY_TEXT: '広告・集客支援は広告費を使った後の判断用です。現段階では、まず自然に見られているページ・検索需要を読み、LP・記事・SNS・導線を改善してから広告を乗せる方針です。外部確認レポートのGA4/Search Console/GBP結果を貼り付けて取り込めます。'
 };
 
 function eventsLow(record) {
