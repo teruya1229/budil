@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.8.6">
+  <link rel="stylesheet" href="css/style.css?v=4.8.7">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.8.6</small>
+          <small>AI経営脳みそ v4.8.7</small>
         </div>
       </div>
       <nav class="nav">
@@ -162,7 +162,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.8.6</small>
+        <small>Budil v4.8.7</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -184,7 +184,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">毎朝5分で、今日やること・売上・利益・需要・受付・作業予定を確認</p>
             </div>
-            <span class="exec-home-version">v4.8.6</span>
+            <span class="exec-home-version">v4.8.7</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <div id="exec-home-start-guide" class="exec-home-start-guide hidden"></div>
@@ -406,7 +406,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.8.6</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.8.7</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -1413,7 +1413,7 @@
           <div id="reception-today-summary" class="reception-today-summary"></div>
         </div>
 
-        <div class="card card-wide card-reception-next">
+        <div class="card card-wide card-reception-next hidden">
           <h2>受付からの次の一手</h2>
           <div id="reception-next-actions" class="reception-next-actions-list"></div>
         </div>
@@ -1487,7 +1487,7 @@
             <div id="reception-form-map-actions" class="map-actions-row"></div>
             <div class="pickup-form-actions">
               <button type="submit" class="btn btn-primary">保存</button>
-              <button type="button" id="btn-reception-clear" class="btn btn-secondary btn-sm">クリア</button>
+              <button type="button" id="btn-reception-clear" class="btn btn-secondary btn-sm">入力をクリア</button>
             </div>
           </form>
         </div>
@@ -1849,6 +1849,13 @@
                   <label for="revenue-amount">金額（円） *</label>
                   <input type="number" id="revenue-amount" min="0" step="1" required placeholder="8000">
                 </div>
+                <div class="form-group">
+                  <label for="revenue-gross-margin-rate">粗利率（%）</label>
+                  <input type="number" id="revenue-gross-margin-rate" min="0" max="100" step="1" placeholder="依頼元から自動入力">
+                  <small class="field-hint">ヤマダ60%、くらしのマーケット80%、LP100%。手入力した値は保持します。</small>
+                </div>
+              </div>
+              <div class="form-row form-row-2">
                 <div class="form-group">
                   <label for="revenue-status">売上ステータス *</label>
                   <select id="revenue-status" required>
@@ -3182,30 +3189,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.8.6"></script>
-  <script src="js/messages.js?v=4.8.6"></script>
-  <script src="js/demand-brain.js?v=4.8.6"></script>
-  <script src="js/demand-radar.js?v=4.8.6"></script>
-  <script src="js/sales-brain.js?v=4.8.6"></script>
-  <script src="js/management-brain.js?v=4.8.6"></script>
-  <script src="js/payment-brain.js?v=4.8.6"></script>
-  <script src="js/revenue-brain.js?v=4.8.6"></script>
-  <script src="js/revenue-summary-brain.js?v=4.8.6"></script>
-  <script src="js/reception-brain.js?v=4.8.6"></script>
-  <script src="js/map-brain.js?v=4.8.6"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.8.6"></script>
-  <script src="js/external-check-brain.js?v=4.8.6"></script>
-  <script src="js/action-brain.js?v=4.8.6"></script>
-  <script src="js/work-order-brain.js?v=4.8.6"></script>
-  <script src="js/follow-up-brain.js?v=4.8.6"></script>
-  <script src="js/work-completion-brain.js?v=4.8.6"></script>
-  <script src="js/profit-brain.js?v=4.8.6"></script>
-  <script src="js/analytics-brain.js?v=4.8.6"></script>
-  <script src="js/monthly-results-brain.js?v=4.8.6"></script>
-  <script src="js/documents-brain.js?v=4.8.6"></script>
-  <script src="js/executive-brain.js?v=4.8.6"></script>
-  <script src="js/card-ocr.js?v=4.8.6"></script>
-  <script src="js/data-backup.js?v=4.8.6"></script>
-  <script src="js/app.js?v=4.8.6"></script>
+  <script src="js/storage.js?v=4.8.7"></script>
+  <script src="js/messages.js?v=4.8.7"></script>
+  <script src="js/demand-brain.js?v=4.8.7"></script>
+  <script src="js/demand-radar.js?v=4.8.7"></script>
+  <script src="js/sales-brain.js?v=4.8.7"></script>
+  <script src="js/management-brain.js?v=4.8.7"></script>
+  <script src="js/payment-brain.js?v=4.8.7"></script>
+  <script src="js/revenue-brain.js?v=4.8.7"></script>
+  <script src="js/revenue-summary-brain.js?v=4.8.7"></script>
+  <script src="js/reception-brain.js?v=4.8.7"></script>
+  <script src="js/map-brain.js?v=4.8.7"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.8.7"></script>
+  <script src="js/external-check-brain.js?v=4.8.7"></script>
+  <script src="js/action-brain.js?v=4.8.7"></script>
+  <script src="js/work-order-brain.js?v=4.8.7"></script>
+  <script src="js/follow-up-brain.js?v=4.8.7"></script>
+  <script src="js/work-completion-brain.js?v=4.8.7"></script>
+  <script src="js/profit-brain.js?v=4.8.7"></script>
+  <script src="js/analytics-brain.js?v=4.8.7"></script>
+  <script src="js/monthly-results-brain.js?v=4.8.7"></script>
+  <script src="js/documents-brain.js?v=4.8.7"></script>
+  <script src="js/executive-brain.js?v=4.8.7"></script>
+  <script src="js/card-ocr.js?v=4.8.7"></script>
+  <script src="js/data-backup.js?v=4.8.7"></script>
+  <script src="js/app.js?v=4.8.7"></script>
 </body>
 </html>

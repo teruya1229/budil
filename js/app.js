@@ -257,6 +257,64 @@
     ).join('');
   }
 
+  function getDefaultGrossProfitRateBySource(source) {
+    if (typeof RevenueBrain !== 'undefined' && RevenueBrain.getDefaultGrossProfitRateBySource) {
+      return RevenueBrain.getDefaultGrossProfitRateBySource(source);
+    }
+    const map = { 'ヤマダ': 60, 'くらしのマーケット': 80, 'LP': 100 };
+    return Object.prototype.hasOwnProperty.call(map, source) ? map[source] : null;
+  }
+
+  function applyGrossMarginDefault(sourceEl, rateEl, options) {
+    if (!sourceEl || !rateEl) return;
+    const opts = options || {};
+    const nextRate = getDefaultGrossProfitRateBySource(sourceEl.value);
+    const current = String(rateEl.value || '').trim();
+    const previousAuto = String(rateEl.dataset.autoGrossMarginRate || '').trim();
+    const isManual = rateEl.dataset.manualGrossMarginRate === '1';
+    const matchesPreviousAuto = previousAuto && Number(current) === Number(previousAuto);
+    const canUpdate = opts.force || !current || (!isManual && matchesPreviousAuto);
+
+    if (nextRate == null) {
+      if (canUpdate && matchesPreviousAuto) rateEl.value = '';
+      rateEl.dataset.autoGrossMarginRate = '';
+      return;
+    }
+
+    if (!canUpdate) return;
+    rateEl.dataset.applyingGrossMarginDefault = '1';
+    rateEl.value = String(nextRate);
+    rateEl.dataset.autoGrossMarginRate = String(nextRate);
+    rateEl.dataset.manualGrossMarginRate = '';
+    rateEl.dataset.applyingGrossMarginDefault = '';
+  }
+
+  function bindGrossMarginManualTracking(rateEl) {
+    if (!rateEl || rateEl.dataset.grossMarginManualBound === '1') return;
+    rateEl.dataset.grossMarginManualBound = '1';
+    rateEl.addEventListener('input', () => {
+      if (rateEl.dataset.applyingGrossMarginDefault === '1') return;
+      rateEl.dataset.manualGrossMarginRate = String(rateEl.value || '').trim() ? '1' : '';
+      if (!rateEl.dataset.manualGrossMarginRate) rateEl.dataset.autoGrossMarginRate = '';
+    });
+  }
+
+  function applyRevenueGrossMarginDefault(options) {
+    applyGrossMarginDefault(
+      document.getElementById('revenue-source'),
+      document.getElementById('revenue-gross-margin-rate'),
+      options
+    );
+  }
+
+  function applyWorkCompletionGrossMarginDefault(options) {
+    applyGrossMarginDefault(
+      document.getElementById('work-completion-source'),
+      document.getElementById('work-completion-gross-rate'),
+      options
+    );
+  }
+
   function getCombinedAddress(address, region) {
     const a = (address || '').trim();
     const r = (region || '').trim();
@@ -4009,7 +4067,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.8.6</span>
+        <span class="business-report-version">v4.8.7</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -6917,6 +6975,7 @@
     linkReceptionToWorkOrder(intakeId, workOrder.id);
     navigateToView('work-order');
     setWorkOrderFormData(workOrder);
+    clearReceptionDraftInputs({ renderNext: false });
     renderReceptionView();
     renderWorkOrderView();
     renderDashboard();
@@ -7716,6 +7775,9 @@
     fillSourceSelectOptions(document.getElementById('work-completion-source'), defaults.source || RevenueBrain.SOURCES[0]);
     document.getElementById('work-completion-amount').value = defaults.amount;
     document.getElementById('work-completion-gross-rate').value = defaults.grossMarginRate;
+    document.getElementById('work-completion-gross-rate').dataset.manualGrossMarginRate = defaults.grossMarginRate ? '1' : '';
+    document.getElementById('work-completion-gross-rate').dataset.autoGrossMarginRate = '';
+    applyWorkCompletionGrossMarginDefault();
     document.getElementById('work-completion-payment-status').value = defaults.paymentStatus;
     document.getElementById('work-completion-payment-date').value = defaults.paymentDate;
     document.getElementById('work-completion-payment-method').value = defaults.paymentMethod;
@@ -8035,11 +8097,13 @@
     if (serviceEl) serviceEl.value = candidate.service || serviceEl.value;
     const sourceEl = document.getElementById('revenue-source');
     if (sourceEl) fillSourceSelectOptions(sourceEl, candidate.source || sourceEl.value);
+    applyRevenueGrossMarginDefault({ force: true });
     document.getElementById('revenue-amount').value = candidate.amount || '';
     document.getElementById('revenue-memo').value = candidate.memo || '';
     document.getElementById('revenue-status').value = '予定';
     fillRevenueLeadSelect(candidate.leadId || '');
     toggleRevenueLeadOptions();
+    if (pendingRevenueIntakeId) clearReceptionDraftInputs({ renderNext: false });
     setTimeout(() => scrollToElement('#revenue-form'), 120);
     alert('売上フォームに反映しました。内容を確認して保存してください。');
   }
@@ -8200,6 +8264,8 @@
         if (id) addTaskFromWorkCompletion(id, 'confirm');
       });
     }
+    bindGrossMarginManualTracking(document.getElementById('work-completion-gross-rate'));
+    document.getElementById('work-completion-source')?.addEventListener('change', () => applyWorkCompletionGrossMarginDefault());
     document.querySelectorAll('#work-completion-modal, #work-cancel-modal').forEach(modal => {
       modal.addEventListener('click', e => {
         if (e.target === modal) modal.classList.add('hidden');
@@ -10134,6 +10200,16 @@
     setReceptionFormData({});
   }
 
+  function clearReceptionDraftInputs(options) {
+    const opts = options || {};
+    clearReceptionForm();
+    const pasteEl = document.getElementById('reception-paste-area');
+    if (pasteEl) pasteEl.value = '';
+    const nextEl = document.getElementById('reception-next-actions');
+    if (nextEl) nextEl.innerHTML = '';
+    if (opts.renderNext !== false) renderReceptionNextActionsV484();
+  }
+
   function applyReceptionPaste() {
     const text = document.getElementById('reception-paste-area').value;
     const parsed = ReceptionBrain.parseAiBantouPaste(text);
@@ -10159,7 +10235,7 @@
     applyReceptionPaste();
     const saved = saveReceptionFromForm();
     if (!saved) return;
-    document.getElementById('reception-paste-area').value = '';
+    clearReceptionDraftInputs({ renderNext: false });
     renderReceptionView();
     renderDashboard();
     alert('受付データを保存しました。');
@@ -10355,6 +10431,7 @@
       btn.addEventListener('click', () => {
         const saved = saveReceptionFromForm();
         if (!saved) return;
+        clearReceptionDraftInputs({ renderNext: false });
         renderReceptionView();
         renderDashboard();
         alert('受付データを保存しました。');
@@ -10672,6 +10749,7 @@
     const sourceEl = document.getElementById('revenue-source');
     const sourceVal = ReceptionBrain.matchRevenueSource(candidate.source);
     if (sourceEl) fillSourceSelectOptions(sourceEl, sourceVal);
+    applyRevenueGrossMarginDefault({ force: true });
     document.getElementById('revenue-amount').value = candidate.amount || '';
     document.getElementById('revenue-memo').value = candidate.memo || '';
     document.getElementById('revenue-status').value = '予定';
@@ -10691,7 +10769,8 @@
   function renderReceptionView() {
     try {
       safeRenderSection(null, () => renderReceptionTodaySummary(), '受付サマリー');
-      safeRenderSection('reception-next-actions', () => renderReceptionNextActionsV484(), '受付次の一手');
+      const nextEl = document.getElementById('reception-next-actions');
+      if (nextEl) nextEl.innerHTML = '';
       safeRenderSection('reception-saved-list', () => renderReceptionSavedList(), '受付一覧');
     } catch (err) {
       console.error('[Budil] render error: 受付番頭', err);
@@ -10710,6 +10789,7 @@
       e.preventDefault();
       const saved = saveReceptionFromForm();
       if (!saved) return;
+      clearReceptionDraftInputs({ renderNext: false });
       renderReceptionView();
       renderDashboard();
       alert('受付データを保存しました。');
@@ -10720,7 +10800,7 @@
     if (savePasteBtn) savePasteBtn.addEventListener('click', saveReceptionFromPaste);
     const clearBtn = document.getElementById('btn-reception-clear');
     if (clearBtn) clearBtn.addEventListener('click', () => {
-      clearReceptionForm();
+      clearReceptionDraftInputs({ renderNext: false });
       renderReceptionNextActionsV484();
     });
     ['reception-customer', 'reception-phone', 'reception-address', 'reception-service', 'reception-dates', 'reception-memo', 'reception-source'].forEach(id => {
@@ -12521,6 +12601,7 @@
     document.getElementById('revenue-customer').value = lead.company || '';
     document.getElementById('revenue-service').value = matchRevenueService(lead.service);
     document.getElementById('revenue-source').value = RevenueBrain.SOURCES[0];
+    applyRevenueGrossMarginDefault({ force: true });
     document.getElementById('revenue-amount').value = '';
     document.getElementById('revenue-status').value = '予定';
     writeRevenuePaymentFieldsToForm({ paymentMethod: 'cash', paymentStatus: 'paid', workDate: TODAY() });
@@ -12615,6 +12696,13 @@
     document.getElementById('revenue-status').value = '予定';
     fillSourceSelectOptions(document.getElementById('revenue-source'), RevenueBrain.SOURCES[0]);
     fillRevenuePaymentSelects();
+    const grossEl = document.getElementById('revenue-gross-margin-rate');
+    if (grossEl) {
+      grossEl.value = '';
+      grossEl.dataset.manualGrossMarginRate = '';
+      grossEl.dataset.autoGrossMarginRate = '';
+    }
+    applyRevenueGrossMarginDefault({ force: true });
     writeRevenuePaymentFieldsToForm({ paymentMethod: 'cash', paymentStatus: 'paid', workDate: TODAY() });
     suggestRevenuePaymentFromMethod(false);
     document.getElementById('revenue-payment-concern').checked = false;
@@ -12637,6 +12725,12 @@
     document.getElementById('revenue-service').value = record.service || RevenueBrain.SERVICES[0];
     fillSourceSelectOptions(document.getElementById('revenue-source'), record.source || RevenueBrain.SOURCES[0]);
     document.getElementById('revenue-amount').value = record.amount || '';
+    const grossEl = document.getElementById('revenue-gross-margin-rate');
+    if (grossEl) {
+      grossEl.value = record.grossMarginRate != null && record.grossMarginRate !== '' ? record.grossMarginRate : '';
+      grossEl.dataset.manualGrossMarginRate = grossEl.value ? '1' : '';
+      grossEl.dataset.autoGrossMarginRate = '';
+    }
     document.getElementById('revenue-status').value = record.status || '予定';
     writeRevenuePaymentFieldsToForm(record);
     document.getElementById('revenue-payment-concern').checked = record.paymentConcern === true;
@@ -12656,12 +12750,14 @@
     const leadId = document.getElementById('revenue-lead').value;
     const leads = Storage.getLeads();
     const paymentFields = readRevenuePaymentFieldsFromForm();
+    const grossMarginRateInput = String(document.getElementById('revenue-gross-margin-rate')?.value || '').trim();
     const data = {
       workDate: document.getElementById('revenue-work-date').value,
       customerName: document.getElementById('revenue-customer').value.trim(),
       service: document.getElementById('revenue-service').value,
       source: document.getElementById('revenue-source').value,
       amount: Number(document.getElementById('revenue-amount').value) || 0,
+      grossMarginRate: grossMarginRateInput === '' ? '' : Number(grossMarginRateInput),
       status: document.getElementById('revenue-status').value,
       paymentConcern: document.getElementById('revenue-payment-concern').checked,
       memo: document.getElementById('revenue-memo').value.trim(),
@@ -13348,6 +13444,8 @@
     document.getElementById('btn-revenue-recalc-payment-date')?.addEventListener('click', recalculateRevenueExpectedPaymentDate);
     document.getElementById('revenue-amount')?.addEventListener('change', applyRevenuePaymentStatusDefaults);
     document.getElementById('revenue-payment-status')?.addEventListener('change', applyRevenuePaymentStatusDefaults);
+    bindGrossMarginManualTracking(document.getElementById('revenue-gross-margin-rate'));
+    document.getElementById('revenue-source')?.addEventListener('change', () => applyRevenueGrossMarginDefault());
     document.getElementById('revenue-lead').addEventListener('change', () => {
       toggleRevenueLeadOptions();
       document.getElementById('revenue-mark-won').checked = false;

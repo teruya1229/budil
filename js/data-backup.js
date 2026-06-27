@@ -1,9 +1,9 @@
 /**
- * Budil v4.8.6 - データバックアップ・復元
+ * Budil v4.8.7 - データバックアップ・復元
  */
 const DataBackup = {
   VERSION: '4.0',
-  APP_VERSION: 'v4.8.6',
+  APP_VERSION: 'v4.8.7',
 
   PAYMENT_FIELDS: [
     'paymentMethod',

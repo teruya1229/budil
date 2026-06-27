@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.6 - 売上番頭（経営判断用）・営業先連携
+ * Budil v4.8.7 - 売上番頭（経営判断用）・営業先連携
  */
 const RevenueBrain = {
   SERVICES: [
@@ -9,6 +9,19 @@ const RevenueBrain = {
   SOURCES: [
     'LP', '110番', 'くらしのマーケット', 'ヤマダ', 'コープ', 'その他'
   ],
+
+  DEFAULT_GROSS_MARGIN_RATES: {
+    'ヤマダ': 60,
+    'くらしのマーケット': 80,
+    'LP': 100
+  },
+
+  getDefaultGrossProfitRateBySource(source) {
+    const normalized = this.normalizeSourceForForm(source);
+    return Object.prototype.hasOwnProperty.call(this.DEFAULT_GROSS_MARGIN_RATES, normalized)
+      ? this.DEFAULT_GROSS_MARGIN_RATES[normalized]
+      : null;
+  },
 
   normalizeSourceForForm(source) {
     const s = String(source || '').trim();
