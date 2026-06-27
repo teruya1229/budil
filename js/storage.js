@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.8.8',
+  BUDIL_VERSION: 'v4.8.9',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -25,6 +25,7 @@ const Storage = {
     ANALYTICS_RECORDS: 'budil_analytics_records',
     EXTERNAL_CHECK_REPORTS: 'budil_external_check_reports',
     ACTION_CANDIDATES: 'budil_action_candidates',
+    ACTION_CANDIDATE_STATES: 'budil_action_candidate_states',
     MONTHLY_RESULTS: 'budil_monthly_results',
     DOCUMENTS: 'budil_documents',
     SAFETY_BACKUPS: 'budil_safety_backups',
@@ -768,6 +769,7 @@ const Storage = {
     'budil_analytics_records',
     'budil_external_check_reports',
     'budil_action_candidates',
+    'budil_action_candidate_states',
     'budil_monthly_results',
     'budil_documents',
     'budil_safety_backups',
@@ -923,6 +925,49 @@ const Storage = {
     this.set(this.KEYS.ACTION_CANDIDATES, list);
   },
 
+  getActionCandidateStates() {
+    const raw = this.get(this.KEYS.ACTION_CANDIDATE_STATES, {});
+    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  },
+
+  saveActionCandidateStates(states) {
+    this.set(this.KEYS.ACTION_CANDIDATE_STATES, states && typeof states === 'object' ? states : {});
+  },
+
+  getActionCandidateState(key) {
+    const id = String(key || '').trim();
+    if (!id) return null;
+    return this.getActionCandidateStates()[id] || null;
+  },
+
+  setActionCandidateState(key, state, meta = {}) {
+    const id = String(key || '').trim();
+    if (!id) return null;
+    const states = this.getActionCandidateStates();
+    const now = new Date().toISOString();
+    const record = {
+      ...(states[id] || {}),
+      key: id,
+      state,
+      title: meta.title || (states[id] && states[id].title) || '',
+      source: meta.source || (states[id] && states[id].source) || '',
+      sourceKey: meta.sourceKey || (states[id] && states[id].sourceKey) || '',
+      updatedAt: now
+    };
+    if (state === 'not_needed') record.notNeededAt = now;
+    states[id] = record;
+    this.saveActionCandidateStates(states);
+    this.recordOperationLog({
+      action: state === 'not_needed' ? 'action_candidate_not_needed' : 'action_candidate_state_changed',
+      targetKey: this.KEYS.ACTION_CANDIDATE_STATES,
+      targetId: id,
+      candidateTitle: record.title,
+      candidateSource: record.source,
+      candidateState: state
+    });
+    return record;
+  },
+
   findActionCandidateByDedupe(dedupeKey) {
     return this.getActionCandidates().find(c => c.dedupeKey === dedupeKey) || null;
   },
@@ -960,6 +1005,41 @@ const Storage = {
       updatedAt: now
     };
     this.saveActionCandidates(list);
+    return list[idx];
+  },
+
+  markActionCandidateNotNeeded(id, fallback = {}) {
+    const candidateId = String(id || '').trim();
+    const list = this.getActionCandidates();
+    let idx = list.findIndex(c => c.id === candidateId);
+    const now = new Date().toISOString();
+    if (idx === -1 && fallback.sourceReportId && fallback.title && typeof ActionBrain !== 'undefined') {
+      const normalized = ActionBrain.createFromExternalCheck(fallback.sourceReportId, fallback.title);
+      list.unshift({
+        ...normalized,
+        id: normalized.id || ('actcand-' + this.generateId()),
+        status: ActionBrain.STATUS_NOT_NEEDED,
+        notNeededAt: now,
+        updatedAt: now
+      });
+      idx = 0;
+    }
+    if (idx === -1) return null;
+    list[idx] = {
+      ...list[idx],
+      status: typeof ActionBrain !== 'undefined' ? ActionBrain.STATUS_NOT_NEEDED : 'not_needed',
+      notNeededAt: now,
+      updatedAt: now
+    };
+    this.saveActionCandidates(list);
+    this.recordOperationLog({
+      action: 'action_candidate_not_needed',
+      targetKey: this.KEYS.ACTION_CANDIDATES,
+      targetId: list[idx].id,
+      candidateTitle: list[idx].title || fallback.title || '',
+      candidateSource: list[idx].source || fallback.source || '',
+      sourceReportId: list[idx].sourceReportId || fallback.sourceReportId || ''
+    });
     return list[idx];
   },
 
@@ -1286,6 +1366,7 @@ const Storage = {
       activityLogs: 0,
       performanceEntered: 0,
       dailyChecks: 0,
+      actionCandidateStates: 0,
       safetyBackups: 0,
       operationLogs: 0
     };
@@ -1324,8 +1405,10 @@ const Storage = {
       }
     });
 
+    counts.actionCandidateStates = Object.keys(this.getActionCandidateStates()).length;
     counts.safetyBackups = this.getSafetyBackups().length;
     counts.operationLogs = this.getOperationLogs().length;
+    add('ok', `候補状態 ${counts.actionCandidateStates}件`);
     add('ok', `安全バックアップ ${counts.safetyBackups}件`);
     add('ok', `操作ログ ${counts.operationLogs}件`);
 
@@ -1874,6 +1957,7 @@ const Storage = {
     lines.push(`活動履歴: ${c.activityLogs ?? '—'}件`);
     lines.push(`成果入力済み: ${c.performanceEntered ?? '—'}件`);
     lines.push(`dailyChecks: ${c.dailyChecks ?? '—'}件`);
+    lines.push(`候補状態: ${c.actionCandidateStates ?? '—'}件`);
     lines.push(`安全バックアップ: ${c.safetyBackups ?? '—'}件`);
     lines.push(`操作ログ: ${c.operationLogs ?? '—'}件`);
     lines.push('');

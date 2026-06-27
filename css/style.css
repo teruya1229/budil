@@ -568,6 +568,16 @@ body {
   background: rgba(255, 255, 255, 0.05);
 }
 
+.btn-not-needed {
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  color: #cbd5e1;
+}
+
+.btn-not-needed:hover {
+  background: rgba(148, 163, 184, 0.18);
+}
+
 .btn-danger {
   background: transparent;
   border: 1px solid var(--danger);
@@ -8456,6 +8466,11 @@ body.sales-page {
   color: #cbd5e1;
 }
 
+.action-candidate-badge-not-needed {
+  background: rgba(148, 163, 184, 0.16);
+  color: #cbd5e1;
+}
+
 .action-candidate-badge-daily {
   background: rgba(167, 139, 250, 0.2);
   color: #c4b5fd;
@@ -8493,6 +8508,14 @@ body.sales-page {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.action-candidate-dash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  min-width: min(100%, 190px);
+}
+
 .action-candidate-dash-item p {
   margin: 0;
   font-size: 0.9rem;
@@ -8507,6 +8530,10 @@ body.sales-page {
 
 .action-candidate-list-item.is-done {
   opacity: 0.75;
+}
+
+.action-candidate-list-item.is-not-needed {
+  opacity: 0.72;
 }
 
 .action-candidate-list-title {
@@ -8528,6 +8555,19 @@ body.sales-page {
 .action-candidate-list-group h3 {
   margin: 0 0 0.5rem;
   font-size: 0.95rem;
+}
+
+@media (max-width: 480px) {
+  .action-candidate-dash-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-candidate-dash-actions,
+  .external-check-today-action-buttons,
+  .action-candidate-list-buttons {
+    justify-content: flex-start;
+  }
 }
 
 /* 月次実績 v4.4.4 */

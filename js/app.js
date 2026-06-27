@@ -607,7 +607,7 @@
   function buildExecutiveContext() {
     const today = TODAY();
     const followCtx = getFollowUpContext();
-    return ExecutiveBrain.buildContext({
+    const ctx = ExecutiveBrain.buildContext({
       today,
       workOrders: Storage.getWorkOrders(),
       intakes: Storage.getReceptionIntakes(),
@@ -628,6 +628,12 @@
       checkState: Storage.getTodayCheckState(today),
       diagnosticLevels: lastDiagnosticResult ? lastDiagnosticResult.levels : null
     });
+    ctx.topPriorities = (ctx.topPriorities || []).filter(p => {
+      const key = (p && (p.dedupeKey || p.id)) || '';
+      const state = Storage.getActionCandidateState(key);
+      return !(state && state.state === 'not_needed');
+    });
+    return ctx;
   }
 
   function formatDailyTaskTypeLabel(task) {
@@ -788,6 +794,7 @@
         <p class="exec-priority-reason">${esc(p.reason)}</p>
         <div class="exec-priority-actions">
           ${taskBtn}
+          <button type="button" class="btn btn-sm btn-not-needed" data-exec-priority-not-needed="${esc(p.dedupeKey || p.id)}" data-exec-priority-title="${esc(p.title)}" data-exec-priority-source="${esc(p.source)}" data-exec-priority-source-key="${esc(p.sourceKey)}">必要無し</button>
           <button type="button" class="btn btn-sm btn-secondary" data-exec-priority-nav="${esc(p.sourceKey)}">詳細へ</button>
         </div>
       </div>`;
@@ -1150,6 +1157,14 @@
     if (fn) fn();
   }
 
+  function markExecutivePriorityNotNeeded(key, meta) {
+    if (!key) return;
+    Storage.setActionCandidateState(key, 'not_needed', meta || {});
+    renderExecutiveHome();
+    renderMorningExecutiveSections();
+    showAppToast('必要無しにしました');
+  }
+
   function copyExecutiveFollowMessage(targetId, kind) {
     const target = findFollowUpTarget(targetId);
     if (!target) return;
@@ -1200,6 +1215,13 @@
     });
     root.querySelectorAll('[data-exec-priority-nav]').forEach(btn => {
       btn.addEventListener('click', () => navigateExecutivePriority(btn.dataset.execPriorityNav));
+    });
+    root.querySelectorAll('[data-exec-priority-not-needed]').forEach(btn => {
+      btn.addEventListener('click', () => markExecutivePriorityNotNeeded(btn.dataset.execPriorityNotNeeded, {
+        title: btn.dataset.execPriorityTitle || '',
+        source: btn.dataset.execPrioritySource || '',
+        sourceKey: btn.dataset.execPrioritySourceKey || ''
+      }));
     });
     root.querySelectorAll('[data-exec-wo-complete]').forEach(btn => {
       btn.addEventListener('click', () => completeWorkOrder(btn.dataset.execWoComplete));
@@ -2692,6 +2714,7 @@
     if (summary.documents) items.push('請求書・見積書 ' + summary.documents + '件');
     if (summary.externalCheck) items.push('外部チェック ' + summary.externalCheck + '件');
     if (summary.actionCandidates) items.push('今日やること候補 ' + summary.actionCandidates + '件');
+    if (summary.actionCandidateStates) items.push('候補状態 ' + summary.actionCandidateStates + '件');
     if (summary.safetyBackups) items.push('安全バックアップ ' + summary.safetyBackups + '件');
     if (summary.operationLogs) items.push('操作ログ ' + summary.operationLogs + '件');
     if (summary.integrity) {
@@ -3337,6 +3360,7 @@
       ['活動履歴', counts.activityLogs],
       ['成果入力済み', counts.performanceEntered],
       ['dailyChecks', counts.dailyChecks],
+      ['候補状態', counts.actionCandidateStates],
       ['安全バックアップ', counts.safetyBackups],
       ['操作ログ', counts.operationLogs]
     ];
@@ -4096,7 +4120,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営レポート</h2>
-        <span class="business-report-version">v4.8.8</span>
+        <span class="business-report-version">v4.8.9</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -7328,15 +7352,20 @@
     if (state === 'done') {
       return `<span class="action-candidate-badge action-candidate-badge-done">対応済み</span>`;
     }
+    if (state === 'not_needed') {
+      return `<span class="action-candidate-badge action-candidate-badge-not-needed">必要無し</span>`;
+    }
     if (state === 'added') {
       return `
         <span class="action-candidate-badge action-candidate-badge-added">追加済み</span>
         <button type="button" class="btn btn-sm btn-secondary" data-act-done="${esc(found.id)}">対応済みにする</button>
+        <button type="button" class="btn btn-sm btn-not-needed" data-act-not-needed="${esc(found.id)}">必要無し</button>
         ${inDaily ? '<span class="action-candidate-badge action-candidate-badge-daily">今日やること追加済み</span>' : `<button type="button" class="btn btn-sm btn-secondary" data-act-daily="${esc(reportId)}" data-act-title="${esc(title)}">今日やることに追加</button>`}
       `;
     }
     return `
       <button type="button" class="btn btn-sm btn-primary" data-act-add="${esc(reportId)}" data-act-title="${esc(title)}">行動候補に追加</button>
+      <button type="button" class="btn btn-sm btn-not-needed" data-act-not-needed-report="${esc(reportId)}" data-act-title="${esc(title)}">必要無し</button>
       ${inDaily ? '<span class="action-candidate-badge action-candidate-badge-daily">今日やること追加済み</span>' : `<button type="button" class="btn btn-sm btn-secondary" data-act-daily="${esc(reportId)}" data-act-title="${esc(title)}">今日やることに追加</button>`}
     `;
   }
@@ -7344,7 +7373,9 @@
   function renderExternalCheckTodayActionsSection(report, compact) {
     if (!report) return '';
     const s = report.summary || {};
-    const allActions = getExternalCheckActionItems(s);
+    const savedCandidates = Storage.getActionCandidates();
+    const allActions = getExternalCheckActionItems(s)
+      .filter(title => ActionBrain.isVisibleCandidateState(savedCandidates, report.id, title));
     const displayActions = compact ? ExternalCheckBrain.topItems(allActions, 3) : allActions;
     const count = allActions.length;
 
@@ -7428,7 +7459,7 @@
         <p><strong>確認対象：</strong>${esc(s.targets || ExternalCheckBrain.UNCONFIRMED)}</p>
         <p><strong>ソース：</strong>${esc(report.source || 'browser-bantou')}</p>
         ${renderExternalCheckSaveId(report)}
-        ${linked.length ? `<p><strong>行動候補：</strong>${linked.filter(c => c.status !== 'done').length}件未対応 / ${linked.filter(c => c.status === 'done').length}件対応済み</p>` : ''}
+        ${linked.length ? `<p><strong>行動候補：</strong>${linked.filter(c => c.status === ActionBrain.STATUS_TODO).length}件未対応 / ${linked.filter(c => c.status === ActionBrain.STATUS_DONE).length}件対応済み / ${linked.filter(c => c.status === ActionBrain.STATUS_NOT_NEEDED).length}件必要無し</p>` : ''}
       </div>
       ${renderExternalCheckTodayActionsSection(report, false)}
       ${renderExternalCheckNoiseSection(report, false)}
@@ -7471,7 +7502,10 @@
           ${top.map(c => `
             <li class="action-candidate-dash-item">
               <p>${esc(c.title)}</p>
-              <button type="button" class="btn btn-sm btn-secondary" data-act-done="${esc(c.id)}">対応済みにする</button>
+              <div class="action-candidate-dash-actions">
+                <button type="button" class="btn btn-sm btn-secondary" data-act-done="${esc(c.id)}">対応済みにする</button>
+                <button type="button" class="btn btn-sm btn-not-needed" data-act-not-needed="${esc(c.id)}">必要無し</button>
+              </div>
             </li>
           `).join('')}
         </ul>
@@ -7503,31 +7537,36 @@
 
     const todo = candidates.filter(c => c.status === ActionBrain.STATUS_TODO);
     const done = candidates.filter(c => c.status === ActionBrain.STATUS_DONE);
+    const notNeeded = candidates.filter(c => c.status === ActionBrain.STATUS_NOT_NEEDED);
 
     const reports = Storage.getExternalCheckReports();
     const renderItem = c => {
       const orphaned = ActionBrain.isOrphanedSource(c.sourceReportId, reports);
       return `
-      <div class="action-candidate-list-item${c.status === ActionBrain.STATUS_DONE ? ' is-done' : ''}${orphaned ? ' is-orphaned' : ''}">
+      <div class="action-candidate-list-item${c.status === ActionBrain.STATUS_DONE ? ' is-done' : ''}${c.status === ActionBrain.STATUS_NOT_NEEDED ? ' is-not-needed' : ''}${orphaned ? ' is-orphaned' : ''}">
         <p class="action-candidate-list-title">${esc(c.title)}${orphaned ? ' <span class="action-candidate-badge action-candidate-badge-orphan">元レポート削除済み</span>' : ''}</p>
         <p class="action-candidate-list-meta">レポート: ${esc(c.sourceReportId)} / 追加: ${esc(ActionBrain.formatCreatedAt(c.createdAt))}</p>
         <div class="action-candidate-list-buttons">
           ${c.status === ActionBrain.STATUS_DONE
             ? '<span class="action-candidate-badge action-candidate-badge-done">対応済み</span>'
+            : c.status === ActionBrain.STATUS_NOT_NEEDED
+              ? '<span class="action-candidate-badge action-candidate-badge-not-needed">必要無し</span>'
             : `<span class="action-candidate-badge action-candidate-badge-added">未対応</span>
-               <button type="button" class="btn btn-sm btn-secondary" data-act-done="${esc(c.id)}">対応済みにする</button>`}
+               <button type="button" class="btn btn-sm btn-secondary" data-act-done="${esc(c.id)}">対応済みにする</button>
+               <button type="button" class="btn btn-sm btn-not-needed" data-act-not-needed="${esc(c.id)}">必要無し</button>`}
         </div>
       </div>
     `;
     };
 
     el.innerHTML = `
-      <p class="action-candidates-summary">未対応 ${todo.length}件 / 対応済み ${done.length}件</p>
+      <p class="action-candidates-summary">未対応 ${todo.length}件 / 対応済み ${done.length}件 / 必要無し ${notNeeded.length}件</p>
       <div class="action-candidate-list-group">
         <h3>未対応</h3>
         ${todo.length ? todo.map(renderItem).join('') : '<p class="placeholder-text">未対応の行動候補はありません。</p>'}
       </div>
       ${done.length ? `<div class="action-candidate-list-group"><h3>対応済み</h3>${done.map(renderItem).join('')}</div>` : ''}
+      ${notNeeded.length ? `<div class="action-candidate-list-group"><h3>必要無し</h3>${notNeeded.map(renderItem).join('')}</div>` : ''}
     `;
     bindActionCandidateButtons(el);
   }
@@ -7589,6 +7628,16 @@
     showAppToast('対応済みにしました');
   }
 
+  function markActionCandidateNotNeeded(id, reportId, title) {
+    const updated = Storage.markActionCandidateNotNeeded(id, { sourceReportId: reportId, title });
+    if (!updated) {
+      showAppToast('行動候補が見つかりません');
+      return;
+    }
+    refreshActionCandidateViews();
+    showAppToast('必要無しにしました');
+  }
+
   function refreshActionCandidateViews() {
     renderExternalCheckView();
     renderDashboard();
@@ -7610,6 +7659,16 @@
       if (btn.dataset.bound) return;
       btn.dataset.bound = '1';
       btn.addEventListener('click', () => markActionCandidateDone(btn.dataset.actDone));
+    });
+    root.querySelectorAll('[data-act-not-needed]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => markActionCandidateNotNeeded(btn.dataset.actNotNeeded, '', ''));
+    });
+    root.querySelectorAll('[data-act-not-needed-report]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => markActionCandidateNotNeeded('', btn.dataset.actNotNeededReport, btn.dataset.actTitle));
     });
   }
 

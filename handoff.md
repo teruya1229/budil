@@ -16,9 +16,20 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.8.8 |
+| 最新バージョン | v4.8.9 |
 | 最新commit | （push後に更新） |
 | ブランチ | `main` push 済み |
+
+## v4.8.9で入ったもの
+
+- 最優先3つ、今日やること候補、行動候補に「必要無し」ボタンを追加
+- 「必要無し」は削除ではなく `not_needed` 状態として保存し、通常候補一覧から外す
+- 外部チェック由来の行動候補は `budil_action_candidates` の既存構造に `status: not_needed` を保存
+- 経営ホームの最優先候補は新規キー `budil_action_candidate_states` に状態だけ保存
+- 「対応済み」と「必要無し」は別状態。対応済みは完了、必要無しは今回はやらない判断
+- 操作ログに `action_candidate_not_needed` / `action_candidate_state_changed` を記録
+- 売上・請求書・受付・作業予定の削除や変更は行わず、v4.8.8 の安全ガードを維持
+- `scripts/verify-v489-not-needed-action-candidates.mjs` を追加
 
 ## v4.8.8で入ったもの
 

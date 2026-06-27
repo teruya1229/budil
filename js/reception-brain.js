@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.8 - 受付・予約番頭（AI番頭連携入口）
+ * Budil v4.8.9 - 受付・予約番頭（AI番頭連携入口）
  */
 const ReceptionBrain = {
   STATUSES: ['new', 'lead_created', 'task_created', 'work_scheduled', 'revenue_candidate', 'done', 'archived'],

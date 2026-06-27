@@ -6,20 +6,25 @@ const ActionBrain = {
   SOURCE_EXTERNAL_CHECK: 'external-check',
   STATUS_TODO: 'todo',
   STATUS_DONE: 'done',
+  STATUS_NOT_NEEDED: 'not_needed',
 
   normalizeCandidate(raw) {
     const item = raw && typeof raw === 'object' ? raw : {};
     const title = String(item.title || '').trim();
     const sourceReportId = String(item.sourceReportId || '').trim();
+    const status = [this.STATUS_TODO, this.STATUS_DONE, this.STATUS_NOT_NEEDED].includes(item.status)
+      ? item.status
+      : this.STATUS_TODO;
     return {
       id: item.id || '',
       createdAt: item.createdAt || '',
       source: item.source || this.SOURCE_EXTERNAL_CHECK,
       sourceReportId,
       title,
-      status: item.status === this.STATUS_DONE ? this.STATUS_DONE : this.STATUS_TODO,
+      status,
       memo: String(item.memo || '').trim(),
       doneAt: item.doneAt || null,
+      notNeededAt: item.notNeededAt || null,
       dedupeKey: item.dedupeKey || this.makeDedupeKey(sourceReportId, title)
     };
   },
@@ -40,7 +45,9 @@ const ActionBrain = {
   getCandidateState(candidates, sourceReportId, title) {
     const found = this.findByDedupeKey(candidates, this.makeDedupeKey(sourceReportId, title));
     if (!found) return 'none';
-    return found.status === this.STATUS_DONE ? 'done' : 'added';
+    if (found.status === this.STATUS_DONE) return 'done';
+    if (found.status === this.STATUS_NOT_NEEDED) return 'not_needed';
+    return 'added';
   },
 
   getTodoCandidates(candidates) {
@@ -53,6 +60,17 @@ const ActionBrain = {
     return (Array.isArray(candidates) ? candidates : [])
       .map(c => this.normalizeCandidate(c))
       .filter(c => c.status === this.STATUS_DONE);
+  },
+
+  getNotNeededCandidates(candidates) {
+    return (Array.isArray(candidates) ? candidates : [])
+      .map(c => this.normalizeCandidate(c))
+      .filter(c => c.status === this.STATUS_NOT_NEEDED);
+  },
+
+  isVisibleCandidateState(candidates, sourceReportId, title) {
+    const state = this.getCandidateState(candidates, sourceReportId, title);
+    return state !== 'done' && state !== 'not_needed';
   },
 
   getByReportId(candidates, reportId) {

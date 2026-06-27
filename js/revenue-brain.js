@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.8 - 売上番頭（経営判断用）・営業先連携
+ * Budil v4.8.9 - 売上番頭（経営判断用）・営業先連携
  */
 const RevenueBrain = {
   SERVICES: [

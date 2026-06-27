@@ -1,5 +1,16 @@
 # Budil status
 
+## v4.8.9 実装内容（必要無しアクション候補）
+
+- 表示バージョンを v4.8.9 に更新（CSS/JSキャッシュバスターも揃え）
+- 最優先3つ、今日やること候補、行動候補に「必要無し」ボタンを追加
+- 「必要無し」は削除ではなく `not_needed` 状態として保存し、通常候補一覧からだけ外す
+- 外部チェック由来の候補は `budil_action_candidates.status = not_needed` で永続化
+- 経営ホームの最優先候補は `budil_action_candidate_states` に `not_needed` 状態を保存
+- `Storage.recordOperationLog` で `action_candidate_not_needed` / `action_candidate_state_changed` を記録
+- 売上・請求書・受付・作業予定は変更せず、v4.8.8 の削除ガードと空配列上書き防止を維持
+- 検証 `scripts/verify-v489-not-needed-action-candidates.mjs` を追加
+
 ## v4.8.8 実装内容（データ保護・削除事故再発防止ガード）
 
 - 表示バージョンを v4.8.8 に更新（CSS/JSキャッシュバスターも揃え）
