@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.8.21 reception primary-action safety verification.
+ * Budil v4.8.22 reception primary-action safety verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -18,7 +18,7 @@ function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-console.log('== v4.8.21 reception primary-action check ==');
+console.log('== v4.8.22 reception primary-action check ==');
 execSync(`node --check "${join(jsDir, 'reception-brain.js')}"`, { stdio: 'inherit' });
 
 const ctx = createContext({

@@ -2484,10 +2484,34 @@
     return `<ul class="daily-upcoming-list">${lines}</ul>${more}${btn}`;
   }
 
+  function getRevenueConfirmationWorkOrderIds(today) {
+    const ids = new Set();
+    if (typeof WorkCompletionBrain === 'undefined') return ids;
+    (Storage.getWorkOrders() || []).forEach(raw => {
+      const wo = typeof WorkOrderBrain !== 'undefined'
+        ? WorkOrderBrain.normalizeWorkOrder(raw)
+        : raw;
+      if (WorkCompletionBrain.needsCompletionConfirm(wo, today)) ids.add(wo.id);
+    });
+    return ids;
+  }
+
+  function isDailyTaskLinkedToRevenueQueueWorkOrder(task, revenueConfirmWoIds) {
+    if (!task || !revenueConfirmWoIds || !revenueConfirmWoIds.size) return false;
+    if (task.workOrderId && revenueConfirmWoIds.has(task.workOrderId)) return true;
+    const key = String(task.pickupDedupeKey || '');
+    if (key.startsWith('work-order|')) {
+      const parts = key.split('|');
+      if (parts[2] && revenueConfirmWoIds.has(parts[2])) return true;
+    }
+    return false;
+  }
+
   function collectDailyPriorityItems() {
     const today = TODAY();
     const items = [];
     const seen = new Set();
+    const revenueConfirmWoIds = getRevenueConfirmationWorkOrderIds(today);
     const push = (title, reason, kind, meta) => {
       const key = [kind, title, reason].join('|');
       if (!title || seen.has(key)) return;
@@ -2497,6 +2521,7 @@
 
     const ctx = buildExecutiveContext();
     (ctx.topPriorities || []).slice(0, 3).forEach(p => {
+      if (p.workOrderId && revenueConfirmWoIds.has(p.workOrderId)) return;
       push(p.title, p.reason, 'priority', { priorityId: p.id, taskId: p.taskId });
     });
 
@@ -2513,7 +2538,10 @@
         t.status !== 'done' && !isDailyTaskSnoozedAway(t, today) && t.priority === '高'
       )
     ).slice(0, 2);
-    urgentTasks.forEach(t => push(t.title, t.reason || t.targetName || '緊急確認', 'task', { taskId: t.id }));
+    urgentTasks.forEach(t => {
+      if (isDailyTaskLinkedToRevenueQueueWorkOrder(t, revenueConfirmWoIds)) return;
+      push(t.title, t.reason || t.targetName || '緊急確認', 'task', { taskId: t.id });
+    });
 
     return items;
   }
@@ -4595,7 +4623,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.8.21</span>
+        <span class="business-report-version">v4.8.22</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -8678,8 +8706,16 @@
         workDate: input.workDate,
         customerName: input.customerName,
         service: input.service || input.actualService,
+        actualService: input.actualService,
+        source: input.source,
         amount: input.amount,
         memo: input.actualMemo,
+        paymentStatus: input.paymentStatus,
+        paymentDate: input.paymentDate,
+        paymentMethod: input.paymentMethod,
+        paymentConcern: input.paymentConcern,
+        grossMarginRate: input.grossMarginRate,
+        followMemo: input.followMemo,
         singleConvert: true
       }
     });
@@ -14473,6 +14509,15 @@
         return;
       }
     }
+    if (workOrderId) {
+      const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
+      if (wo && wo.actualRevenueId && wo.actualRevenueId !== id) {
+        alert('この作業予定はすでに別の売上と紐付いています。二重登録はできません。');
+        pendingRevenueWorkOrderId = '';
+        pendingRevenueIntakeId = '';
+        return;
+      }
+    }
     if (workOrderId && !data.sourceWorkOrderId) data.sourceWorkOrderId = workOrderId;
     if (intakeId && !data.intakeId) {
       data.intakeId = intakeId;
@@ -14498,14 +14543,8 @@
         storage: Storage
       });
     }
-    if (workOrderId) {
-      const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
-      if (wo && wo.actualRevenueId && wo.actualRevenueId !== id) {
-        alert('この作業予定はすでに別の売上と紐付いています。二重登録はできません。');
-        pendingRevenueWorkOrderId = '';
-        return;
-      }
-      if (revId) Storage.updateWorkOrder(workOrderId, { actualRevenueId: revId });
+    if (workOrderId && revId) {
+      Storage.updateWorkOrder(workOrderId, { actualRevenueId: revId });
       pendingRevenueWorkOrderId = '';
     }
     if (revId && intakeId) linkReceptionToRevenue(intakeId, revId, workOrderId);

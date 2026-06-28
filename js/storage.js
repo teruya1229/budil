@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.8.21',
+  BUDIL_VERSION: 'v4.8.22',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -531,11 +531,30 @@ const Storage = {
     const next = { ...payload };
     if (o.workDate) next.workDate = String(o.workDate).trim();
     if (o.customerName) next.customerName = String(o.customerName).trim();
-    if (o.service) next.service = String(o.service).trim();
+    const serviceVal = o.service || o.actualService;
+    if (serviceVal) next.service = String(serviceVal).trim();
+    if (o.source) next.source = String(o.source).trim();
     if (o.amount != null && o.amount !== '') next.amount = Number(o.amount) || 0;
     if (o.memo !== undefined) {
       const memo = String(o.memo || '').trim();
       next.memo = memo || next.memo;
+    }
+    if (o.paymentStatus) next.paymentStatus = String(o.paymentStatus).trim();
+    if (o.paymentDate !== undefined) next.paymentDate = String(o.paymentDate || '').trim();
+    if (o.paymentMethod !== undefined) next.paymentMethod = String(o.paymentMethod || '').trim();
+    if (o.paymentConcern !== undefined) next.paymentConcern = o.paymentConcern === true;
+    if (o.grossMarginRate !== '' && o.grossMarginRate != null) {
+      const rate = Number(o.grossMarginRate);
+      if (!Number.isNaN(rate)) next.grossMarginRate = rate;
+    }
+    if (o.followMemo !== undefined && String(o.followMemo).trim()) {
+      next.followUp = {
+        ...(next.followUp || {}),
+        memo: String(o.followMemo).trim(),
+        thanksStatus: (next.followUp && next.followUp.thanksStatus) || 'pending',
+        reviewStatus: (next.followUp && next.followUp.reviewStatus) || 'pending',
+        repeatStatus: (next.followUp && next.followUp.repeatStatus) || 'pending'
+      };
     }
     return next;
   },

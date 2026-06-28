@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.8.21 reception -> work order -> revenue flow verification.
+ * Budil v4.8.22 reception -> work order -> revenue flow verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -18,7 +18,7 @@ function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-console.log('== v4.8.21 reception flow check ==');
+console.log('== v4.8.22 reception flow check ==');
 for (const file of ['revenue-brain.js', 'reception-brain.js', 'work-order-brain.js', 'work-completion-brain.js', 'app.js']) {
   execSync(`node --check "${join(jsDir, file)}"`, { stdio: 'inherit' });
 }

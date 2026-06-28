@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.21 revenue confirmation queue verification.
+ * Budil v4.8.22 revenue confirmation queue verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -21,11 +21,11 @@ const appJs = load('js/app.js');
 const storageJs = load('js/storage.js');
 const css = load('css/style.css');
 
-console.log('== v4.8.21 revenue confirmation queue ==');
+console.log('== v4.8.22 revenue confirmation queue ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.21'), 'header version should be v4.8.21');
-assert(indexHtml.includes('Budil v4.8.21'), 'sidebar version should be v4.8.21');
-assert(indexHtml.includes('js/app.js?v=4.8.21'), 'app.js cache buster should be v4.8.21');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.22'), 'header version should be v4.8.22');
+assert(indexHtml.includes('Budil v4.8.22'), 'sidebar version should be v4.8.22');
+assert(indexHtml.includes('js/app.js?v=4.8.22'), 'app.js cache buster should be v4.8.22');
 
 assert(indexHtml.includes('daily-section-revenue-queue'), 'revenue queue section should exist');
 assert(indexHtml.includes('\u58f2\u4e0a\u78ba\u5b9a\u5f85\u3061'), 'revenue queue title should exist');
@@ -42,7 +42,8 @@ assert(appJs.includes('allItems.slice(0, 3)'), 'queue should cap at 3 items');
 assert(appJs.includes('wo.scheduledDate > today'), 'future work orders should be excluded from queue');
 assert(appJs.includes('actualRevenueId) return'), 'actualRevenueId work orders should be excluded');
 assert(appJs.includes('PAST_RECOVERY_REVENUE_CANDIDATE'), 'past recovery eligible filter should exist');
-assert(!appJs.match(/collectDailyPriorityItems\(\)[\s\S]{0,1200}pendingRevenue/), 'daily priority should not duplicate pending revenue');
+assert(appJs.includes('getRevenueConfirmationWorkOrderIds'), 'revenue queue dedupe helper should exist');
+assert(appJs.includes('revenueConfirmWoIds.has(p.workOrderId)'), 'daily priority should exclude revenue queue work orders');
 assert(appJs.includes('daily-revenue-confirmed-text'), 'post confirm notice block should exist');
 assert(appJs.includes('data-revenue-confirmed-copy-review'), 'post confirm review copy button should exist');
 assert(appJs.includes('data-revenue-confirmed-go-follow'), 'post confirm follow link should exist');
@@ -62,4 +63,4 @@ assert(css.includes('daily-revenue-queue-card'), 'queue card styles should exist
 assert(css.includes('daily-section-revenue-assist'), 'assist details styles should exist');
 assert(css.includes('overflow-x: hidden') || css.includes('overflow-x:hidden') || css.includes('min-width: 0'), 'layout should avoid horizontal scroll patterns');
 
-console.log('All v4.8.21 revenue confirmation queue checks passed.');
+console.log('All v4.8.22 revenue confirmation queue checks passed.');
