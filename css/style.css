@@ -7360,6 +7360,78 @@ body {
   margin-top: 0.5rem;
 }
 
+.daily-section-lead {
+  margin: 0 0 0.65rem;
+  color: #94a3b8;
+  font-size: 0.84rem;
+}
+
+.daily-section-revenue-assist > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.daily-section-revenue-assist > summary::-webkit-details-marker {
+  display: none;
+}
+
+.daily-revenue-queue-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.daily-revenue-queue-card {
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.daily-revenue-queue-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.65rem;
+  align-items: center;
+  font-size: 0.84rem;
+  margin-bottom: 0.45rem;
+}
+
+.daily-revenue-queue-name {
+  font-weight: 600;
+}
+
+.daily-revenue-queue-status {
+  font-size: 0.78rem;
+  color: #fbbf24;
+}
+
+.daily-revenue-queue-actions,
+.daily-revenue-queue-more-actions,
+.daily-revenue-confirmed-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.daily-revenue-queue-more {
+  margin: 0.55rem 0 0.35rem;
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+
+.daily-revenue-confirmed-notice {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  background: rgba(34, 197, 94, 0.12);
+  border-radius: 8px;
+}
+
+.daily-revenue-confirmed-text {
+  margin: 0 0 0.55rem;
+  font-size: 0.88rem;
+}
+
 .daily-improvement-actions {
   display: flex;
   flex-wrap: wrap;

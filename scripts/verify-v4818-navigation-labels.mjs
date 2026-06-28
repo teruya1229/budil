@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.20 concrete navigation label verification.
+ * Budil v4.8.21 concrete navigation label verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -20,11 +20,11 @@ const indexHtml = load('index.html');
 const appJs = load('js/app.js');
 const executiveBrain = load('js/executive-brain.js');
 
-console.log('== v4.8.20 navigation labels ==');
+console.log('== v4.8.21 navigation labels ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.20'), 'header version should be v4.8.20');
-assert(indexHtml.includes('Budil v4.8.20'), 'sidebar version should be v4.8.20');
-assert(indexHtml.includes('js/app.js?v=4.8.20'), 'app.js cache buster should be v4.8.20');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.21'), 'header version should be v4.8.21');
+assert(indexHtml.includes('Budil v4.8.21'), 'sidebar version should be v4.8.21');
+assert(indexHtml.includes('js/app.js?v=4.8.21'), 'app.js cache buster should be v4.8.21');
 
 assert(indexHtml.includes('\u30ab\u30ec\u30f3\u30c0\u30fc\u767b\u9332'), 'calendar registration nav should exist');
 assert(indexHtml.includes('\u904e\u53bb\u58f2\u4e0a\u5fa9\u5143'), 'past sales recovery nav should exist');
@@ -72,4 +72,4 @@ assert(!appJs.match(/\u884c\u52d5\u5019\u88dc\u306b\u8ffd\u52a0/), 'UI should no
 assert(!appJs.match(/\u4eca\u65e5\u3084\u308b\u3053\u3068\u5019\u88dc/), 'UI should not use daily task candidate in app.js');
 assert(!appJs.includes('\u5916\u90e8\u78ba\u8a8d\u30d7\u30ed\u30f3\u30d7\u30c8'), 'app should not show external check prompt label');
 
-console.log('All v4.8.20 navigation label checks passed.');
+console.log('All v4.8.21 navigation label checks passed.');

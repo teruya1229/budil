@@ -2500,17 +2500,6 @@
       push(p.title, p.reason, 'priority', { priorityId: p.id, taskId: p.taskId });
     });
 
-    const pendingRevenue = WorkOrderBrain.filterActive(Storage.getWorkOrders())
-      .filter(w => w.status === 'completed' && !w.actualRevenueId);
-    pendingRevenue.slice(0, 2).forEach(wo => {
-      push(
-        `売上登録：${wo.customerName || 'お客様'}`,
-        wo.serviceText || '作業後に売上登録',
-        'revenue',
-        { workOrderId: wo.id }
-      );
-    });
-
     if (typeof ActionBrain !== 'undefined') {
       Storage.getActionCandidates()
         .map(c => ActionBrain.normalizeCandidate(c))
@@ -2527,6 +2516,191 @@
     urgentTasks.forEach(t => push(t.title, t.reason || t.targetName || '緊急確認', 'task', { taskId: t.id }));
 
     return items;
+  }
+
+  function collectRevenueConfirmationQueue() {
+    const today = TODAY();
+    const workOrders = Storage.getWorkOrders();
+    const revenues = Storage.getRevenueRecords();
+    const workOrderItems = [];
+
+    (workOrders || []).forEach(raw => {
+      const wo = typeof WorkOrderBrain !== 'undefined'
+        ? WorkOrderBrain.normalizeWorkOrder(raw)
+        : raw;
+      if (typeof WorkCompletionBrain === 'undefined' || !WorkCompletionBrain.isOperationalWorkOrder(wo)) return;
+      if (wo.status === 'cancelled' || wo.status === 'archived') return;
+      if (wo.actualRevenueId) return;
+      if (wo.scheduledDate && wo.scheduledDate > today) return;
+
+      const isCompleted = wo.status === 'completed';
+      const isPastScheduled = WorkCompletionBrain.isPastScheduledActive(wo, today);
+      if (!isCompleted && !isPastScheduled && !(wo.completion && wo.completion.needsReview)) return;
+
+      let statusLabel = '売上未登録';
+      if (isCompleted) statusLabel = '完了済み';
+      else if (isPastScheduled || (wo.completion && wo.completion.needsReview)) statusLabel = '作業後確認';
+
+      workOrderItems.push({
+        type: 'work-order',
+        id: wo.id,
+        sortKey: isCompleted ? 0 : 1,
+        scheduledDate: wo.scheduledDate || '',
+        customerName: wo.customerName || 'お客様',
+        serviceText: wo.serviceText || '',
+        amount: wo.estimateAmount,
+        statusLabel
+      });
+    });
+
+    workOrderItems.sort((a, b) => {
+      if (a.sortKey !== b.sortKey) return a.sortKey - b.sortKey;
+      return (b.scheduledDate || '').localeCompare(a.scheduledDate || '');
+    });
+
+    const workOrderIds = new Set(workOrderItems.map(item => item.id));
+    const pastRecoveryItems = [];
+
+    if (typeof CalendarCandidateBrain !== 'undefined') {
+      const options = { today };
+      (workOrders || []).forEach(raw => {
+        const wo = typeof WorkOrderBrain !== 'undefined'
+          ? WorkOrderBrain.normalizeWorkOrder(raw)
+          : raw;
+        if (workOrderIds.has(wo.id)) return;
+        if (!CalendarCandidateBrain.isCalendarCandidateWorkOrder(wo)) return;
+        if ((wo.candidateMeta && wo.candidateMeta.importSource) !== CalendarCandidateBrain.IMPORT_SOURCE) return;
+        if (CalendarCandidateBrain.getCandidateStatus(wo) === CalendarCandidateBrain.PAST_RECOVERY_CONVERTED) return;
+        if (wo.actualRevenueId) return;
+        if (wo.scheduledDate && wo.scheduledDate > today) return;
+
+        const classification = CalendarCandidateBrain.classifyPastRecoveryCandidate(wo, revenues, options);
+        if (classification.status !== CalendarCandidateBrain.PAST_RECOVERY_REVENUE_CANDIDATE) return;
+
+        pastRecoveryItems.push({
+          type: 'past-recovery',
+          id: wo.id,
+          scheduledDate: wo.scheduledDate || '',
+          customerName: wo.customerName || 'お客様',
+          serviceText: wo.serviceText || '',
+          amount: wo.estimateAmount,
+          statusLabel: '過去売上復元'
+        });
+      });
+    }
+
+    pastRecoveryItems.sort((a, b) => (b.scheduledDate || '').localeCompare(a.scheduledDate || ''));
+
+    const allItems = [...workOrderItems, ...pastRecoveryItems];
+    return {
+      visible: allItems.slice(0, 3),
+      hiddenCount: Math.max(0, allItems.length - 3),
+      totalCount: allItems.length,
+      workOrderCount: workOrderItems.length,
+      pastRecoveryCount: pastRecoveryItems.length
+    };
+  }
+
+  function formatRevenueQueueDate(dateStr) {
+    if (!dateStr) return '—';
+    const parts = String(dateStr).split('-');
+    if (parts.length === 3) return `${Number(parts[1])}/${Number(parts[2])}`;
+    return dateStr;
+  }
+
+  function renderRevenueConfirmationQueueCard(item) {
+    const amountLabel = item.amount ? WorkOrderBrain.formatYen(item.amount) : '—';
+    const calendarBtn = item.type === 'past-recovery'
+      ? `<button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-past-recovery>過去売上復元を見る</button>`
+      : `<button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-calendar>カレンダー登録を見る</button>`;
+    return `<div class="daily-revenue-queue-card daily-revenue-queue-${esc(item.type)}">
+      <div class="daily-revenue-queue-meta">
+        <span class="daily-revenue-queue-date">${esc(formatRevenueQueueDate(item.scheduledDate))}</span>
+        <span class="daily-revenue-queue-name">${esc(item.customerName)}</span>
+        <span class="daily-revenue-queue-service">${esc((item.serviceText || '').slice(0, 24))}</span>
+        <span class="daily-revenue-queue-amount">${esc(amountLabel)}</span>
+        <span class="daily-revenue-queue-status">${esc(item.statusLabel)}</span>
+      </div>
+      <div class="daily-revenue-queue-actions">
+        <button type="button" class="btn btn-sm btn-primary" data-daily-revenue-confirm="${esc(item.id)}" data-daily-revenue-source="${esc(item.type)}">売上確定へ</button>
+        ${calendarBtn}
+      </div>
+    </div>`;
+  }
+
+  function copyReviewMessageForRevenue(revenueId) {
+    const rev = Storage.getRevenueRecords().find(r => r && r.id === revenueId);
+    if (!rev || typeof FollowUpBrain === 'undefined') return;
+    const profile = Storage.getBusinessProfile() || {};
+    const target = {
+      customerName: rev.customerName,
+      workDate: rev.workDate,
+      serviceText: rev.service,
+      amount: rev.amount
+    };
+    const text = FollowUpBrain.generateReviewRequest(target, profile);
+    copyText(text).then(() => showAppToast('口コミ依頼文をコピーしました')).catch(() => alert('コピーに失敗しました'));
+  }
+
+  function showRevenueConfirmedNotice(revenueRecord) {
+    const el = document.getElementById('daily-revenue-confirmed-notice');
+    if (!el || !revenueRecord) return;
+    el.classList.remove('hidden');
+    el.innerHTML = `
+      <p class="daily-revenue-confirmed-text">売上を確定しました。次に口コミ依頼を送れます。</p>
+      <div class="daily-revenue-confirmed-actions">
+        <button type="button" class="btn btn-sm btn-primary" data-revenue-confirmed-copy-review="${esc(revenueRecord.id)}">口コミ文をコピー</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-revenue-confirmed-go-follow>フォローを見る</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-revenue-confirmed-go-list>売上一覧を見る</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-revenue-confirmed-stay>この画面に残る</button>
+      </div>`;
+    el.querySelector('[data-revenue-confirmed-copy-review]')?.addEventListener('click', () => {
+      copyReviewMessageForRevenue(revenueRecord.id);
+    });
+    el.querySelector('[data-revenue-confirmed-go-follow]')?.addEventListener('click', () => goToFollowUp());
+    el.querySelector('[data-revenue-confirmed-go-list]')?.addEventListener('click', () => {
+      navigateToView('revenue', '#revenue-aggregation-card');
+    });
+    el.querySelector('[data-revenue-confirmed-stay]')?.addEventListener('click', () => {
+      el.classList.add('hidden');
+    });
+    scrollToElement('#daily-section-revenue-queue');
+  }
+
+  function bindDailyRevenueQueueEvents(root) {
+    if (!root) return;
+    root.querySelectorAll('[data-daily-revenue-confirm]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        openWorkCompletionModalFromQueue(btn.dataset.dailyRevenueConfirm, btn.dataset.dailyRevenueSource || 'work-order');
+      });
+    });
+    root.querySelectorAll('[data-daily-revenue-go-calendar]').forEach(btn => {
+      btn.addEventListener('click', () => goToReception());
+    });
+    root.querySelectorAll('[data-daily-revenue-go-past-recovery]').forEach(btn => {
+      btn.addEventListener('click', () => navigateToView('calendar-candidate'));
+    });
+  }
+
+  function renderDailyRevenueConfirmationQueue() {
+    const el = document.getElementById('daily-revenue-queue-list');
+    if (!el) return;
+    const queue = collectRevenueConfirmationQueue();
+    if (!queue.totalCount) {
+      el.innerHTML = '<p class="placeholder-text">売上確定待ちはありません。作業後または予定日が来た作業がここに表示されます。</p>';
+      bindDailyRevenueQueueEvents(el);
+      return;
+    }
+    const cards = queue.visible.map(renderRevenueConfirmationQueueCard).join('');
+    const more = queue.hiddenCount
+      ? `<p class="daily-revenue-queue-more">ほか${queue.hiddenCount}件あります</p>
+         <div class="daily-revenue-queue-more-actions">
+           <button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-calendar>カレンダー登録を見る</button>
+           <button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-past-recovery>過去売上復元を見る</button>
+         </div>`
+      : '';
+    el.innerHTML = `<div class="daily-revenue-queue-cards">${cards}</div>${more}`;
+    bindDailyRevenueQueueEvents(el);
   }
 
   function renderDailyPrioritySection() {
@@ -2657,6 +2831,7 @@
 
   function renderDailyActionTasks() {
     renderDailyPrioritySection();
+    renderDailyRevenueConfirmationQueue();
     const scheduleEl = document.getElementById('daily-upcoming-schedule');
     if (scheduleEl) {
       scheduleEl.innerHTML = renderDailyUpcomingScheduleHtml({ compact: false, limit: 3 });
@@ -4420,7 +4595,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.8.20</span>
+        <span class="business-report-version">v4.8.21</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -8416,9 +8591,17 @@
     return !!(wo && wo.actualRevenueId);
   }
 
+  function openWorkCompletionModalFromQueue(workOrderId, source) {
+    openWorkCompletionModal(workOrderId);
+    const sourceEl = document.getElementById('work-completion-queue-source');
+    if (sourceEl) sourceEl.value = source === 'past-recovery' ? 'past-recovery' : 'work-order';
+  }
+
   function openWorkCompletionModal(workOrderId) {
     const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
     if (!wo) return;
+    const sourceEl = document.getElementById('work-completion-queue-source');
+    if (sourceEl) sourceEl.value = 'work-order';
     if (isWorkOrderRevenueLocked(wo)) {
       alert('この作業予定はすでに売上確定済みです。二重登録はできません。');
       return;
@@ -8482,6 +8665,38 @@
     document.getElementById('work-cancel-modal').classList.add('hidden');
   }
 
+  function submitPastRecoveryFromModal(wo, input) {
+    const estimate = wo.estimateAmount || 0;
+    const diffMsg = estimate && estimate !== input.amount
+      ? `\n予定金額 ${WorkOrderBrain.formatYen(estimate)} → 実績 ${WorkOrderBrain.formatYen(input.amount)}`
+      : '';
+    if (!confirm(`過去売上復元から確定売上として登録します。${diffMsg}\n\n既存売上は上書きしません。よろしいですか？`)) return false;
+
+    const result = Storage.convertCalendarPastCandidateToRevenue(wo.id, {
+      today: TODAY(),
+      override: {
+        workDate: input.workDate,
+        customerName: input.customerName,
+        service: input.service || input.actualService,
+        amount: input.amount,
+        memo: input.actualMemo,
+        singleConvert: true
+      }
+    });
+    if (!result || !result.ok || !result.added) {
+      alert(result && result.skipped
+        ? '登録できませんでした。重複疑い・対象外・金額なしの可能性があります。'
+        : '売上確定に失敗しました。売上データは更新していません。');
+      return false;
+    }
+    const newRecord = (result.addedRecords && result.addedRecords[0]) || null;
+    closeWorkCompletionModal();
+    refreshAfterWorkCompletion();
+    renderDailyRevenueConfirmationQueue();
+    if (newRecord) showRevenueConfirmedNotice(newRecord);
+    return true;
+  }
+
   function submitWorkCompletion(e) {
     e.preventDefault();
     const workOrderId = document.getElementById('work-completion-wo-id').value;
@@ -8516,6 +8731,11 @@
       alert('お客様名と実際の売上金額は必須です。');
       return;
     }
+    const queueSource = document.getElementById('work-completion-queue-source')?.value || 'work-order';
+    if (queueSource === 'past-recovery') {
+      submitPastRecoveryFromModal(wo, input);
+      return;
+    }
     const estimate = wo.estimateAmount || 0;
     const diffMsg = estimate && estimate !== input.amount
       ? `\n予定金額 ${WorkOrderBrain.formatYen(estimate)} → 実績 ${WorkOrderBrain.formatYen(input.amount)}`
@@ -8530,7 +8750,8 @@
     if (intakeId) linkReceptionToRevenue(intakeId, newRecord.id, workOrderId);
     closeWorkCompletionModal();
     refreshAfterWorkCompletion();
-    alert('確定売上として登録しました。作業後フォロー番頭でお礼・口コミ対応を確認してください。');
+    renderDailyRevenueConfirmationQueue();
+    showRevenueConfirmedNotice(newRecord);
   }
 
   function submitWorkCancel(e) {

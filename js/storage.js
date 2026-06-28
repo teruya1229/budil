@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.8.20',
+  BUDIL_VERSION: 'v4.8.21',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -526,6 +526,98 @@ const Storage = {
     return record;
   },
 
+  _applyPastCandidateRevenueOverrides(payload, overrides) {
+    const o = overrides && typeof overrides === 'object' ? overrides : {};
+    const next = { ...payload };
+    if (o.workDate) next.workDate = String(o.workDate).trim();
+    if (o.customerName) next.customerName = String(o.customerName).trim();
+    if (o.service) next.service = String(o.service).trim();
+    if (o.amount != null && o.amount !== '') next.amount = Number(o.amount) || 0;
+    if (o.memo !== undefined) {
+      const memo = String(o.memo || '').trim();
+      next.memo = memo || next.memo;
+    }
+    return next;
+  },
+
+  _convertPastCandidateWorkOrderToRevenue(raw, idx, nextRevenues, nextWorkOrders, options, now, addedRecords, skipped) {
+    const wo = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.normalizeWorkOrder(raw)
+      : raw;
+    if (!wo) return;
+    const classification = CalendarCandidateBrain.classifyPastRecoveryCandidate(wo, nextRevenues, {
+      ...options,
+      today: options.today || now.slice(0, 10)
+    });
+    if (classification.status !== CalendarCandidateBrain.PAST_RECOVERY_REVENUE_CANDIDATE) {
+      skipped.push({ id: wo.id, status: classification.status, reasons: classification.reasons || [] });
+      return;
+    }
+    const overrideMap = options.overrides && typeof options.overrides === 'object' ? options.overrides : {};
+    const itemOverrides = overrideMap[wo.id] || options.override || null;
+    let payload = CalendarCandidateBrain.createRevenuePayloadFromPastCandidate({
+      ...wo,
+      calendarDedupeKey: classification.calendarDedupeKey
+    });
+    if (itemOverrides) {
+      payload = this._applyPastCandidateRevenueOverrides(payload, itemOverrides);
+      if (itemOverrides.singleConvert) {
+        const userMemo = String(itemOverrides.memo || '').trim();
+        payload.memo = [userMemo, wo.memo, 'Googleカレンダー過去分復元から売上確定'].filter(Boolean).join('\n');
+      }
+    }
+    const record = {
+      ...payload,
+      id: 'rev_' + this.generateId(),
+      createdAt: now,
+      updatedAt: now
+    };
+    nextRevenues.push(record);
+    addedRecords.push(record);
+    nextWorkOrders[idx] = {
+      ...raw,
+      status: 'completed',
+      completedAt: raw.completedAt || now,
+      actualRevenueId: record.id,
+      calendarDedupeKey: classification.calendarDedupeKey,
+      candidateMeta: {
+        ...(raw.candidateMeta || {}),
+        candidateStatus: CalendarCandidateBrain.PAST_RECOVERY_CONVERTED,
+        confirmedRevenue: true,
+        convertedRevenueId: record.id,
+        convertedAt: now,
+        pastRecoveryMode: true
+      },
+      completion: {
+        ...(raw.completion || {}),
+        status: 'completed',
+        completedAt: raw.completedAt || now,
+        revenueId: record.id,
+        actualAmount: Number(record.amount || 0),
+        actualService: record.service || raw.serviceText || '',
+        paymentStatus: record.paymentStatus || '未入金',
+        memo: itemOverrides && itemOverrides.singleConvert
+          ? 'Googleカレンダー過去分復元から売上確定'
+          : 'Googleカレンダー過去分復元モードで一括売上登録',
+        needsReview: false,
+        updatedAt: now
+      },
+      updatedAt: now
+    };
+  },
+
+  convertCalendarPastCandidateToRevenue(workOrderId, options = {}) {
+    const id = String(workOrderId || '').trim();
+    if (!id) return { ok: false, error: 'no_candidate', added: 0, skipped: 0 };
+    const overrides = options.overrides && typeof options.overrides === 'object'
+      ? { ...options.overrides }
+      : {};
+    if (options.override) {
+      overrides[id] = { ...options.override, singleConvert: true };
+    }
+    return this.bulkConvertCalendarPastCandidatesToRevenue([id], { ...options, overrides });
+  },
+
   bulkConvertCalendarPastCandidatesToRevenue(workOrderIds, options = {}) {
     const ids = new Set((workOrderIds || []).map(id => String(id || '').trim()).filter(Boolean));
     if (!ids.size || typeof CalendarCandidateBrain === 'undefined') {
@@ -544,54 +636,9 @@ const Storage = {
         ? WorkOrderBrain.normalizeWorkOrder(raw)
         : raw;
       if (!wo || !ids.has(String(wo.id || ''))) return;
-      const classification = CalendarCandidateBrain.classifyPastRecoveryCandidate(wo, nextRevenues, {
-        ...options,
-        today: options.today || now.slice(0, 10)
-      });
-      if (classification.status !== CalendarCandidateBrain.PAST_RECOVERY_REVENUE_CANDIDATE) {
-        skipped.push({ id: wo.id, status: classification.status, reasons: classification.reasons || [] });
-        return;
-      }
-      const payload = CalendarCandidateBrain.createRevenuePayloadFromPastCandidate({
-        ...wo,
-        calendarDedupeKey: classification.calendarDedupeKey
-      });
-      const record = {
-        ...payload,
-        id: 'rev_' + this.generateId(),
-        createdAt: now,
-        updatedAt: now
-      };
-      nextRevenues.push(record);
-      addedRecords.push(record);
-      nextWorkOrders[idx] = {
-        ...raw,
-        status: 'completed',
-        completedAt: raw.completedAt || now,
-        actualRevenueId: record.id,
-        calendarDedupeKey: classification.calendarDedupeKey,
-        candidateMeta: {
-          ...(raw.candidateMeta || {}),
-          candidateStatus: CalendarCandidateBrain.PAST_RECOVERY_CONVERTED,
-          confirmedRevenue: true,
-          convertedRevenueId: record.id,
-          convertedAt: now,
-          pastRecoveryMode: true
-        },
-        completion: {
-          ...(raw.completion || {}),
-          status: 'completed',
-          completedAt: raw.completedAt || now,
-          revenueId: record.id,
-          actualAmount: Number(record.amount || 0),
-          actualService: record.service || raw.serviceText || '',
-          paymentStatus: record.paymentStatus || '未入金',
-          memo: 'Googleカレンダー過去分復元モードで一括売上登録',
-          needsReview: false,
-          updatedAt: now
-        },
-        updatedAt: now
-      };
+      this._convertPastCandidateWorkOrderToRevenue(
+        raw, idx, nextRevenues, nextWorkOrders, options, now, addedRecords, skipped
+      );
     });
 
     if (!addedRecords.length) {

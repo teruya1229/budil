@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.20 marketing / site check record label verification.
+ * Budil v4.8.21 marketing / site check record label verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -25,11 +25,11 @@ const storageJs = load('js/storage.js');
 const actionBrain = load('js/action-brain.js');
 const executiveBrain = load('js/executive-brain.js');
 
-console.log('== v4.8.20 marketing/site check labels ==');
+console.log('== v4.8.21 marketing/site check labels ==');
 
-assert(indexHtml.includes('\u7d4c\u55b6\u8133\u307f\u305d v4.8.20'), 'header version should be v4.8.20');
-assert(indexHtml.includes('Budil v4.8.20'), 'sidebar version should be v4.8.20');
-assert(indexHtml.includes('js/app.js?v=4.8.20'), 'app.js cache buster should be v4.8.20');
+assert(indexHtml.includes('\u7d4c\u55b6\u8133\u307f\u305d v4.8.21'), 'header version should be v4.8.21');
+assert(indexHtml.includes('Budil v4.8.21'), 'sidebar version should be v4.8.21');
+assert(indexHtml.includes('js/app.js?v=4.8.21'), 'app.js cache buster should be v4.8.21');
 assert(indexHtml.includes('\u96c6\u5ba2\u7ba1\u7406'), 'marketing group label should exist');
 assert(indexHtml.includes('\u30b5\u30a4\u30c8\u78ba\u8a8d\u8a18\u9332'), 'site check record label should exist');
 assert(indexHtml.includes('\u5916\u90e8\u30ec\u30dd\u30fc\u30c8\u53d6\u308a\u8fbc\u307f'), 'external report import label should exist');
@@ -53,4 +53,4 @@ assert(storageJs.includes('budil_action_candidate_states'), 'action candidate st
 assert(!appJs.includes('localStorage.' + 'clear()'), 'app should not clear localStorage');
 assert(!storageJs.includes('saveRevenueRecords(' + '[])'), 'storage should not save empty revenue records directly');
 
-console.log('All v4.8.20 marketing/site check label checks passed.');
+console.log('All v4.8.21 marketing/site check label checks passed.');
