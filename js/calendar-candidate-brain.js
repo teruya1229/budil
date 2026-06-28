@@ -55,16 +55,31 @@ const CalendarCandidateBrain = {
     };
   },
 
-  isCalendarCandidateWorkOrder(workOrder) {
+  isPastRecoverySourceWorkOrder(workOrder) {
     const wo = workOrder && typeof WorkOrderBrain !== 'undefined'
       ? WorkOrderBrain.normalizeWorkOrder(workOrder)
       : workOrder;
-    return !!(wo && wo.candidateMeta && wo.candidateMeta.importSource === this.IMPORT_SOURCE);
+    if (!wo) return false;
+    const meta = wo.candidateMeta;
+    if (meta) {
+      if (meta.importSource === this.IMPORT_SOURCE) return true;
+      if (meta.sourceType === this.SOURCE_TYPE) return true;
+      if (meta.originalText && String(meta.originalText).includes(this.BLOCK_MARKER)) return true;
+    }
+    if (wo.calendarDedupeKey && String(wo.calendarDedupeKey).startsWith('calendar-past-recovery')) return true;
+    return false;
+  },
+
+  isCalendarCandidateWorkOrder(workOrder) {
+    return this.isPastRecoverySourceWorkOrder(workOrder);
   },
 
   getCandidateStatus(workOrder) {
-    if (!this.isCalendarCandidateWorkOrder(workOrder)) return '';
-    return workOrder.candidateMeta.candidateStatus || '候補';
+    const wo = workOrder && typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.normalizeWorkOrder(workOrder)
+      : workOrder;
+    if (!this.isPastRecoverySourceWorkOrder(wo)) return '';
+    return (wo.candidateMeta && wo.candidateMeta.candidateStatus) || '候補';
   },
 
   isPendingCandidate(workOrder) {
@@ -78,7 +93,12 @@ const CalendarCandidateBrain = {
 
   normalizeCandidate(candidate, originalText) {
     const c = candidate && typeof candidate === 'object' ? { ...candidate } : {};
-    const amount = this.parseAmount(c.estimateAmount);
+    const meta = c.candidateMeta && typeof c.candidateMeta === 'object' ? c.candidateMeta : {};
+    const topAmount = this.parseAmount(c.estimateAmount);
+    const amountRaw = topAmount > 0
+      ? c.estimateAmount
+      : (meta.estimatedAmount != null && meta.estimatedAmount !== '' ? meta.estimatedAmount : c.amount);
+    const amount = this.parseAmount(amountRaw);
     return {
       scheduledDate: this.normalizeDate(c.scheduledDate || c.date),
       startTime: this.normalizeTime(c.startTime),
@@ -94,8 +114,32 @@ const CalendarCandidateBrain = {
       cautionNote: String(c.cautionNote || c.caution || '').trim(),
       importSource: this.IMPORT_SOURCE,
       sourceType: this.SOURCE_TYPE,
-      originalText: String(originalText || c.originalText || '').trim()
+      originalText: String(originalText || c.originalText || meta.originalText || '').trim()
     };
+  },
+
+  resolvePastRecoveryCandidate(raw) {
+    const wo = raw && typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.normalizeWorkOrder(raw)
+      : (raw && typeof raw === 'object' ? { ...raw } : {});
+    const meta = wo.candidateMeta && typeof wo.candidateMeta === 'object' ? wo.candidateMeta : {};
+    const topAmount = Number(wo.estimateAmount || 0);
+    return this.normalizeCandidate({
+      ...wo,
+      id: wo.id,
+      estimateAmount: topAmount > 0 ? wo.estimateAmount : meta.estimatedAmount,
+      scheduledDate: wo.scheduledDate || wo.date,
+      serviceText: wo.serviceText || wo.service,
+      customerName: wo.customerName,
+      source: wo.source,
+      address: wo.address,
+      memo: wo.memo,
+      title: wo.title,
+      cautionNote: meta.cautionNote,
+      confidence: meta.confidence,
+      originalText: meta.originalText,
+      candidateMeta: meta
+    });
   },
 
   normalizeDate(value) {
@@ -336,7 +380,7 @@ const CalendarCandidateBrain = {
   },
 
   classifyPastRecoveryCandidate(candidate, revenues, options) {
-    const c = this.normalizeCandidate(candidate);
+    const c = this.resolvePastRecoveryCandidate(candidate);
     const reasons = [];
     if (!this.isInPastRecoveryRange(c, options)) {
       reasons.push('対象期間外、または過去日付ではありません');
@@ -377,19 +421,56 @@ const CalendarCandidateBrain = {
 
   buildPastRecoveryReport(workOrders, revenues, options) {
     const list = (workOrders || [])
-      .filter(w => this.isCalendarCandidateWorkOrder(w))
+      .filter(w => this.isPastRecoverySourceWorkOrder(w))
       .map(w => typeof WorkOrderBrain !== 'undefined' ? WorkOrderBrain.normalizeWorkOrder(w) : w)
       .filter(w => this.getCandidateStatus(w) !== this.PAST_RECOVERY_CONVERTED);
     const items = list.map(w => {
       const classification = this.classifyPastRecoveryCandidate(w, revenues || [], options || {});
       return { workOrder: w, classification };
     });
-    const eligible = items.filter(i => i.classification.status === this.PAST_RECOVERY_REVENUE_CANDIDATE);
-    const excluded = items.filter(i => i.classification.status === this.PAST_RECOVERY_EXCLUDED);
-    const duplicateSuspects = items.filter(i => i.classification.status === this.PAST_RECOVERY_DUPLICATE);
-    const totalAmount = eligible.reduce((sum, i) => sum + Number(i.workOrder.estimateAmount || 0), 0);
+    return this.summarizePastRecoveryItems(items);
+  },
+
+  buildPastRecoveryReportFromPreview(preview, revenues, options) {
+    const items = (preview && preview.items || []).map((item, index) => {
+      const candidate = {
+        ...(item.candidate || {}),
+        id: item.candidate && item.candidate.id ? item.candidate.id : `preview-${index}`
+      };
+      const classification = this.classifyPastRecoveryCandidate(candidate, revenues || [], options || {});
+      return {
+        workOrder: candidate,
+        classification,
+        previewIndex: index,
+        isPreview: true
+      };
+    });
+    return this.summarizePastRecoveryItems(items);
+  },
+
+  mergePastRecoveryReports(primary, secondary) {
+    const a = primary || this.summarizePastRecoveryItems([]);
+    const b = secondary || this.summarizePastRecoveryItems([]);
+    const seen = new Set();
+    const items = [];
+    [...(a.items || []), ...(b.items || [])].forEach(item => {
+      const wo = item.workOrder || {};
+      const key = String(wo.id || '') || this.buildCalendarDedupeKey(this.resolvePastRecoveryCandidate(wo));
+      if (seen.has(key)) return;
+      seen.add(key);
+      items.push(item);
+    });
+    return this.summarizePastRecoveryItems(items);
+  },
+
+  summarizePastRecoveryItems(items) {
+    const list = Array.isArray(items) ? items : [];
+    const eligible = list.filter(i => i.classification.status === this.PAST_RECOVERY_REVENUE_CANDIDATE);
+    const excluded = list.filter(i => i.classification.status === this.PAST_RECOVERY_EXCLUDED);
+    const duplicateSuspects = list.filter(i => i.classification.status === this.PAST_RECOVERY_DUPLICATE);
+    const totalAmount = eligible.reduce((sum, i) => sum + Number(this.resolvePastRecoveryCandidate(i.workOrder).estimateAmount || 0), 0);
     return {
-      items,
+      items: list,
       eligible,
       excluded,
       duplicateSuspects,

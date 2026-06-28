@@ -7646,13 +7646,26 @@
     };
   }
 
-  function getCalendarPastRecoveryReport() {
+  function getCalendarPastRecoveryReport(includePreview) {
     if (typeof CalendarCandidateBrain === 'undefined') return null;
     const options = getCalendarPastRecoveryOptions();
-    return CalendarCandidateBrain.buildPastRecoveryReport(
+    const revenues = Storage.getRevenueRecords();
+    const savedReport = CalendarCandidateBrain.buildPastRecoveryReport(
       Storage.getWorkOrders(),
-      Storage.getRevenueRecords(),
+      revenues,
       options
+    );
+    if (!includePreview || !options.enabled) return savedReport;
+    if (!lastCalendarCandidatePreview || !(lastCalendarCandidatePreview.items || []).length) {
+      return savedReport;
+    }
+    return CalendarCandidateBrain.mergePastRecoveryReports(
+      savedReport,
+      CalendarCandidateBrain.buildPastRecoveryReportFromPreview(
+        lastCalendarCandidatePreview,
+        revenues,
+        options
+      )
     );
   }
 
@@ -7852,7 +7865,7 @@
       if (btn) btn.disabled = true;
       return;
     }
-    const report = getCalendarPastRecoveryReport();
+    const report = getCalendarPastRecoveryReport(true);
     const eligible = report ? report.eligibleCount : 0;
     const amount = report ? report.totalAmount : 0;
     const excluded = report ? report.excludedCount : 0;
@@ -7870,7 +7883,7 @@
       alert('過去分復元モードをONにしてください。');
       return;
     }
-    const report = getCalendarPastRecoveryReport();
+    const report = getCalendarPastRecoveryReport(false);
     const ids = report ? report.eligible.map(item => item.workOrder.id).filter(Boolean) : [];
     if (!ids.length) {
       alert('一括売上登録できる登録対象がありません。');

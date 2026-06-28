@@ -286,7 +286,7 @@ console.log('-- D. exclusion conditions (dynamic) --');
         scheduledDate: '2026-06-01',
         estimateAmount: 0,
         status: 'tentative',
-        candidateMeta: calendarMeta
+        candidateMeta: { ...calendarMeta, estimatedAmount: '' }
       },
       {
         id: 'wo-converted',

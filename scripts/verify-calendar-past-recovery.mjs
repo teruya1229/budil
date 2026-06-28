@@ -98,7 +98,8 @@ assert(indexHtml.includes('\u65e2\u5b58\u58f2\u4e0a\u306f\u4e0a\u66f8\u304d\u305
 assert(indexHtml.includes('\u5143\u306e\u30ab\u30ec\u30f3\u30c0\u30fc\u5fa9\u5143\u30c7\u30fc\u30bf\u306f\u524a\u9664\u3057\u307e\u305b\u3093'), 'past recovery non-delete note should exist');
 assert(indexHtml.includes('\u767b\u9332\u5bfe\u8c61\u304c0\u4ef6\u306e\u3068\u304d\u306f\u4e00\u62ec\u58f2\u4e0a\u767b\u9332\u3067\u304d\u307e\u305b\u3093'), 'past recovery zero-candidate note should exist');
 assert(indexHtml.includes('\u30ad\u30e3\u30f3\u30bb\u30eb\u3001\u898b\u7a4d\u3001\u65e5\u7a0b\u8abf\u6574\u4e2d\u3001\u91d1\u984d\u306a\u3057\u3001\u91cd\u8907\u7591\u3044\u306f\u4e00\u62ec\u767b\u9332\u5bfe\u8c61\u5916\u3067\u3059'), 'past recovery exclusion note should exist');
-assert(appJs.includes('bulkConvertCalendarPastCandidatesToRevenue'), 'app should call bulk conversion');
+assert(appJs.includes('getCalendarPastRecoveryReport(true)'), 'summary should include preview candidates when enabled');
+assert(appJs.includes('getCalendarPastRecoveryReport(false)'), 'bulk convert should use saved work orders only');
 assert(calendarBrain.includes('PAST_RECOVERY_REVENUE_CANDIDATE'), 'past recovery classifier should exist');
 assert(storageJs.includes('calendar_past_candidates_bulk_converted_to_revenue'), 'bulk operation log should exist');
 
@@ -150,7 +151,10 @@ const seedWorkOrders = [
     scheduledDate: '2026-06-02',
     estimateAmount: 0,
     status: 'tentative',
-    candidateMeta: calendarMeta
+    candidateMeta: {
+      ...calendarMeta,
+      estimatedAmount: ''
+    }
   },
   {
     id: 'work-future',
@@ -223,6 +227,67 @@ const seedRevenues = [
   assert(backups.some(b => b.reason === 'before_calendar_past_bulk_revenue_convert'), 'revenue backup should exist');
   assert(backups.some(b => b.reason === 'before_calendar_past_bulk_candidate_convert'), 'work order backup should exist');
 }
+
+{
+  const metaOnlyWorkOrders = [{
+    id: 'work-meta-amount',
+    customerName: 'メタ金額様',
+    serviceText: 'エアコン',
+    source: 'LP',
+    scheduledDate: '2026-04-20',
+    estimateAmount: 0,
+    status: 'tentative',
+    candidateMeta: {
+      sourceType: 'work-order-candidate',
+      candidateStatus: '売上実績候補',
+      estimatedAmount: '32000'
+    }
+  }];
+  const { ctx } = createSandbox({
+    budil_work_orders: JSON.stringify(metaOnlyWorkOrders),
+    budil_revenue_records: JSON.stringify([])
+  });
+  runInContext(`
+    var metaReport = CalendarCandidateBrain.buildPastRecoveryReport(
+      Storage.getWorkOrders(),
+      Storage.getRevenueRecords(),
+      { startDate: '2026-04-01', endDate: '2026-06-28', today: '2026-06-28' }
+    );
+  `, ctx);
+  assert(ctx.metaReport.eligibleCount === 1, 'sourceType-only candidate with meta amount should be eligible');
+  assert(ctx.metaReport.totalAmount === 32000, 'meta estimatedAmount should count toward total');
+}
+
+{
+  const { ctx } = createSandbox({
+    budil_work_orders: JSON.stringify([]),
+    budil_revenue_records: JSON.stringify([])
+  });
+  runInContext(`
+    var preview = {
+      items: [{
+        candidate: {
+          customerName: '貼付のみ様',
+          serviceText: '浴室',
+          source: 'LP',
+          scheduledDate: '2026-04-10',
+          estimateAmount: 11000
+        }
+      }]
+    };
+    var previewReport = CalendarCandidateBrain.buildPastRecoveryReportFromPreview(
+      preview,
+      Storage.getRevenueRecords(),
+      { startDate: '2026-04-01', endDate: '2026-06-28', today: '2026-06-28' }
+    );
+  `, ctx);
+  assert(ctx.previewReport.eligibleCount === 1, 'unsaved preview candidate should count in preview report');
+  assert(ctx.previewReport.totalAmount === 11000, 'preview eligible amount should be counted');
+}
+
+assert(calendarBrain.includes('isPastRecoverySourceWorkOrder'), 'past recovery source helper should exist');
+assert(calendarBrain.includes('resolvePastRecoveryCandidate'), 'past recovery candidate resolver should exist');
+assert(calendarBrain.includes('buildPastRecoveryReportFromPreview'), 'preview past recovery report should exist');
 
 const sourceText = readSourceFiles(root).map(p => readFileSync(p, 'utf8')).join('\n');
 assert(!(new RegExp('localStorage' + '\\.clear\\s*\\(')).test(sourceText), 'direct localStorage clear must not exist');
