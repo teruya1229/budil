@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.8.17 data safety verification.
+ * Budil v4.8.18 data safety verification.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -81,7 +81,7 @@ function parse(key, localStorage) {
   return JSON.parse(localStorage.getItem(key) || '[]');
 }
 
-console.log('== v4.8.17 data safety check ==');
+console.log('== v4.8.18 data safety check ==');
 
 for (const file of ['storage.js', 'data-backup.js', 'app.js']) {
   execSync(`node --check "${join(jsDir, file)}"`, { stdio: 'inherit' });
@@ -210,11 +210,11 @@ console.log('== diagnostics and git ignore ==');
   const result = runInContext(`Storage.runDataDiagnostics()`, ctx);
   assert(result.counts.safetyBackups === 1, 'diagnostics should count safety backups');
   assert(result.counts.operationLogs === 1, 'diagnostics should count operation logs');
-  assert(result.levels.critical.some(t => t.includes('売上データが0件')), 'diagnostics should warn when revenue count is 0');
+  assert(result.levels.critical.some(t => t.includes('\u58f2\u4e0a\u30c7\u30fc\u30bf\u304c0\u4ef6')), 'diagnostics should warn when revenue count is 0');
 }
 
 const ignored = execSync('git check-ignore recovery/leveldb-revenue-salvage-report.md', { cwd: root, encoding: 'utf8' }).trim();
 assert(ignored.includes('recovery/leveldb-revenue-salvage-report.md'), 'recovery/ should be git-ignored');
 
 console.log('OK: diagnostics and recovery/ git ignore');
-console.log('All v4.8.17 data safety checks passed.');
+console.log('All v4.8.18 data safety checks passed.');

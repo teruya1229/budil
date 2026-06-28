@@ -1,5 +1,5 @@
-﻿/**
- * Budil v4.8.17 marketing / external check label verification.
+/**
+ * Budil v4.8.18 marketing / site check record label verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -25,31 +25,32 @@ const storageJs = load('js/storage.js');
 const actionBrain = load('js/action-brain.js');
 const executiveBrain = load('js/executive-brain.js');
 
-console.log('== v4.8.17 marketing/external check labels ==');
+console.log('== v4.8.18 marketing/site check labels ==');
 
-assert(indexHtml.includes('AI経営脳みそ v4.8.17'), 'header version should be v4.8.17');
-assert(indexHtml.includes('Budil v4.8.17'), 'sidebar version should be v4.8.17');
-assert(indexHtml.includes('js/app.js?v=4.8.17'), 'app.js cache buster should be v4.8.17');
-assert(indexHtml.includes('集客管理'), 'marketing group label should be 集客管理');
-assert(indexHtml.includes('外部確認'), 'external confirmation label should exist');
-assert(indexHtml.includes('外部レポート取り込み'), 'external report import label should exist');
-assert(indexHtml.includes('外部確認プロンプト'), 'external check prompt label should exist');
-assert(indexHtml.includes('広告・集客支援'), 'ad/marketing support label should exist');
-assert(indexHtml.includes('改善リスト'), 'improvement list label should exist');
-assert(executiveBrain.includes("label: '集客管理'"), 'executive quick button should use 集客管理');
-assert(executiveBrain.includes("label: '外部確認を保存'"), 'executive secondary should use 外部確認');
-assert(!executiveBrain.includes("label: '集客・需要'"), 'executive quick button should not use the old label');
-assert(!indexHtml.includes('ブラウザー番頭連携'), 'legacy browser integration label should not be visible');
-assert(!indexHtml.includes('ブラウザー番頭プロンプト'), 'legacy browser prompt label should not be visible');
-assert(!indexHtml.includes('広告番頭を売る'), 'legacy ad sales label should not be visible');
+assert(indexHtml.includes('\u7d4c\u55b6\u8133\u307f\u305d v4.8.18'), 'header version should be v4.8.18');
+assert(indexHtml.includes('Budil v4.8.18'), 'sidebar version should be v4.8.18');
+assert(indexHtml.includes('js/app.js?v=4.8.18'), 'app.js cache buster should be v4.8.18');
+assert(indexHtml.includes('\u96c6\u5ba2\u7ba1\u7406'), 'marketing group label should exist');
+assert(indexHtml.includes('\u30b5\u30a4\u30c8\u78ba\u8a8d\u8a18\u9332'), 'site check record label should exist');
+assert(indexHtml.includes('\u5916\u90e8\u30ec\u30dd\u30fc\u30c8\u53d6\u308a\u8fbc\u307f'), 'external report import label should exist');
+assert(indexHtml.includes('\u30a2\u30af\u30bb\u30b9\u78ba\u8a8d\u7528\u306e\u6587\u3092\u30b3\u30d4\u30fc'), 'access check copy label should exist');
+assert(indexHtml.includes('\u96c6\u5ba2\u65bd\u7b56\u30e1\u30e2'), 'strategy memo nav should exist');
+assert(indexHtml.includes('\u6539\u5584\u30ea\u30b9\u30c8'), 'improvement list label should exist');
+assert(executiveBrain.includes("label: '\u96c6\u5ba2\u7ba1\u7406'"), 'executive quick button should use marketing group');
+assert(executiveBrain.includes("label: '\u30b5\u30a4\u30c8\u78ba\u8a8d\u8a18\u9332\u3092\u4fdd\u5b58'"), 'executive secondary should use site check record');
+assert(!executiveBrain.includes("label: '\u96c6\u5ba2\u30fb\u9700\u8981'"), 'executive quick button should not use the old label');
+assert(!indexHtml.includes('\u30d6\u30e9\u30a6\u30b6\u30fc\u756a\u982d\u9023\u643a'), 'legacy browser integration label should not be visible');
+assert(!indexHtml.includes('\u30d6\u30e9\u30a6\u30b6\u30fc\u756a\u982d\u30d7\u30ed\u30f3\u30d7\u30c8'), 'legacy browser prompt label should not be visible');
+assert(!indexHtml.includes('\u5916\u90e8\u78ba\u8a8d\u30d7\u30ed\u30f3\u30d7\u30c8'), 'external check prompt label should not be visible');
+assert(!indexHtml.includes('nav-label">\u5916\u90e8\u78ba\u8a8d'), 'external check should not be nav label');
 
-assert(analyticsBrain.includes('外部確認/アナリティクス'), 'new analytics source label should be saved');
-assert(appJs.includes("p.source === 'ブラウザー番頭/アナリティクス'"), 'old analytics source label should remain readable');
-assert(appJs.includes("p.source === '外部確認/アナリティクス'"), 'new analytics source label should be readable');
+assert(analyticsBrain.includes('\u5916\u90e8\u78ba\u8a8d/\u30a2\u30ca\u30ea\u30c6\u30a3\u30af\u30b9'), 'analytics source label should remain in brain');
+assert(appJs.includes("p.source === '\u30d6\u30e9\u30a6\u30b6\u30fc\u756a\u982d/\u30a2\u30ca\u30ea\u30c6\u30a3\u30af\u30b9'"), 'old analytics source label should remain readable');
+assert(appJs.includes("p.source === '\u5916\u90e8\u78ba\u8a8d/\u30a2\u30ca\u30ea\u30c6\u30a3\u30af\u30b9'"), 'analytics source label should be readable');
 assert(storageJs.includes('budil_external_check_reports'), 'external check storage key should remain');
 assert(actionBrain.includes('budil_action_candidates') || storageJs.includes('budil_action_candidates'), 'action candidate storage key should remain');
 assert(storageJs.includes('budil_action_candidate_states'), 'action candidate state key should remain');
 assert(!appJs.includes('localStorage.' + 'clear()'), 'app should not clear localStorage');
 assert(!storageJs.includes('saveRevenueRecords(' + '[])'), 'storage should not save empty revenue records directly');
 
-console.log('All v4.8.17 marketing/external check label checks passed.');
+console.log('All v4.8.18 marketing/site check label checks passed.');

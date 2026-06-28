@@ -2,7 +2,7 @@
  * Budil v4.4 - 経営司令塔ホーム（毎朝5分・全番頭統合）
  */
 const ExecutiveBrain = {
-  VERSION: 'v4.8.17',
+  VERSION: 'v4.8.18',
 
   CHECK_ITEMS: [
     { id: 'workOrders', label: '作業予定を確認した' },
@@ -20,7 +20,7 @@ const ExecutiveBrain = {
     { id: 'analytics', label: '集客管理', view: 'analytics', tier: 'primary' },
     { id: 'tasks', label: '今日やること', action: 'tasks', tier: 'primary' },
     { id: 'monthly-results', label: '月次実績を入れる', view: 'monthly-results', tier: 'secondary' },
-    { id: 'external-check', label: '外部確認を保存', view: 'external-check', tier: 'secondary' },
+    { id: 'external-check', label: 'サイト確認記録を保存', view: 'external-check', tier: 'secondary' },
     { id: 'morning-report', label: '朝レポートを見る', action: 'morning-report', tier: 'secondary' }
   ],
 
@@ -266,7 +266,7 @@ const ExecutiveBrain = {
         rank: 5,
         title: hint.title || '利益改善を確認',
         reason: hint.detail || '支出・粗利の注意点を確認',
-        source: '利益サマリー',
+        source: '支出登録・計算',
         sourceKey: 'profit',
         dedupeKey: ['exec-priority', today, 'profit', hint.type].join('|')
       });
@@ -559,7 +559,7 @@ const ExecutiveBrain = {
       const calLines = CalendarCandidateBrain.buildMorningReport(
         CalendarCandidateBrain.summarizeCandidates(c.workOrders, c.today)
       );
-      if (calLines.length) sections.push({ title: '予定候補', lines: calLines.slice(1) });
+      if (calLines.length) sections.push({ title: '過去売上復元', lines: calLines.slice(1) });
     }
     if (typeof WorkCompletionBrain !== 'undefined') {
       const completionLines = WorkCompletionBrain.buildMorningReport(c.completionSummary);

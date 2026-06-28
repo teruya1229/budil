@@ -464,9 +464,26 @@
 
   // ── ナビゲーション ──
   const STRATEGY_MEMO_VIEWS = ['strategy-memo', 'radar', 'pickup', 'demand'];
+  const CALENDAR_REGISTRATION_VIEWS = ['calendar-registration', 'reception', 'work-order'];
+  const NAV_VIEW_ALIASES = {
+    reception: 'calendar-registration',
+    'work-order': 'calendar-registration',
+    radar: 'strategy-memo',
+    pickup: 'strategy-memo',
+    demand: 'strategy-memo'
+  };
+
+  function resolveNavView(viewName) {
+    if (STRATEGY_MEMO_VIEWS.includes(viewName)) return 'strategy-memo';
+    return NAV_VIEW_ALIASES[viewName] || viewName;
+  }
+
+  function resolveViewElement(view) {
+    return NAV_VIEW_ALIASES[view] || view;
+  }
 
   function setNavActive(viewName) {
-    const activeView = STRATEGY_MEMO_VIEWS.includes(viewName) ? 'strategy-memo' : viewName;
+    const activeView = resolveNavView(viewName);
     document.querySelectorAll('.nav-item-main').forEach(n => {
       n.classList.toggle('active', n.dataset.view === activeView);
     });
@@ -486,7 +503,9 @@
 
   function switchView(view) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById('view-' + view).classList.add('active');
+    const viewEl = resolveViewElement(view);
+    const target = document.getElementById('view-' + viewEl);
+    if (target) target.classList.add('active');
     if (view === 'dashboard') renderDashboard();
     if (view === 'strategy-memo') renderStrategyMemoHub();
     if (view === 'radar') renderDemandRadar();
@@ -501,8 +520,10 @@
       renderFollowupTable();
       renderFollowupOverdue();
     }
-    if (view === 'reception') renderReceptionView();
-    if (view === 'work-order') renderWorkOrderView();
+    if (CALENDAR_REGISTRATION_VIEWS.includes(view)) {
+      renderReceptionView();
+      renderWorkOrderView();
+    }
     if (view === 'calendar-candidate') renderCalendarCandidateView();
     if (view === 'external-check') renderExternalCheckView();
     if (view === 'follow-up') renderFollowUpView();
@@ -817,7 +838,7 @@
   function renderExecutiveWorkOrdersHtml(section) {
     const sec = section || { items: [] };
     if (!sec.items.length) {
-      return '<p class="placeholder-text">今日の作業予定はありません。<br>受付登録やGoogleカレンダー取り込みから作成できます。</p>';
+      return '<p class="placeholder-text">今日の作業予定はありません。<br>カレンダー登録から作成できます。</p>';
     }
     return sec.items.map(wo => `
       <div class="exec-work-item" data-work-order-id="${esc(wo.id)}">
@@ -850,7 +871,7 @@
         <p class="exec-work-meta">次の一手：${esc(intake.nextAction)}</p>
         <div class="exec-work-actions">
           <button type="button" class="btn btn-sm btn-primary" data-exec-intake-lead="${esc(intake.id)}">営業先作成</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-exec-intake-wo="${esc(intake.id)}">作業予定作成</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-exec-intake-wo="${esc(intake.id)}">この受付から作業予定を作る</button>
           <button type="button" class="btn btn-sm btn-secondary" data-exec-intake-task="${esc(intake.id)}">今日やること追加</button>
         </div>
       </div>`).join('');
@@ -897,7 +918,7 @@
       <div class="exec-work-actions">
         <button type="button" class="btn btn-sm btn-secondary exec-home-revenue-link">売上登録</button>
         <button type="button" class="btn btn-sm btn-secondary exec-home-receivables-link">入金予定</button>
-        <button type="button" class="btn btn-sm btn-secondary exec-home-profit-link">利益サマリー</button>
+        <button type="button" class="btn btn-sm btn-secondary exec-home-profit-link">支出登録・計算</button>
       </div>`;
   }
 
@@ -939,7 +960,7 @@
       <div class="exec-work-actions">
         <button type="button" class="btn btn-sm btn-secondary exec-home-analytics-link">アナリティクス</button>
         <button type="button" class="btn btn-sm btn-secondary exec-home-pickup-link">需要ピックアップ</button>
-        <button type="button" class="btn btn-sm btn-secondary" id="btn-exec-browser-prompt">外部確認プロンプトをコピー</button>
+        <button type="button" class="btn btn-sm btn-secondary" id="btn-exec-browser-prompt">アクセス確認用の文をコピー</button>
       </div>`;
   }
 
@@ -1053,12 +1074,12 @@
   }
 
   function goToReception() {
-    navigateToView('reception');
+    navigateToView('calendar-registration');
     setTimeout(() => scrollToElement('#reception-paste-area'), 120);
   }
 
   function goToWorkOrder() {
-    navigateToView('work-order');
+    navigateToView('calendar-registration');
     setTimeout(() => scrollToElement('#work-order-form'), 120);
   }
 
@@ -1293,7 +1314,7 @@
     if (browserPromptBtn) {
       browserPromptBtn.addEventListener('click', () => {
         copyText(AnalyticsBrain.buildBrowserBantouPrompt(Storage.getSettings()))
-          .then(() => alert('外部確認プロンプトをコピーしました'))
+          .then(() => alert('アクセス確認用の文をコピーしました'))
           .catch(() => alert('コピーに失敗しました'));
       });
     }
@@ -1520,7 +1541,7 @@
       );
       calendarMorningEl.innerHTML = calLines.length
         ? `<ul class="mgmt-calendar-candidate-list">${calLines.slice(1).map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
-        : '<p class="placeholder-text">予定候補はありません</p>';
+        : '<p class="placeholder-text">復元対象はまだありません。<br>Googleカレンダーなどの過去予定を貼り付けて、売上登録できる作業を確認してください。</p>';
     }
 
     const completionMorningEl = document.getElementById('mgmt-work-completion');
@@ -2286,7 +2307,7 @@
     const reason = String(task.reason || '');
     const target = String(task.targetName || '');
     const key = String(task.pickupDedupeKey || '');
-    if (/外部確認|外部チェック|external-check/i.test(reason + target + key)) return '外部確認';
+    if (/外部確認|外部チェック|external-check|サイト確認/i.test(reason + target + key)) return 'サイト確認記録';
     if (/アナリティクス|アクセス分析|外部確認\/アナリティクス|ブラウザー番頭/i.test(reason + target)) return 'アクセス分析';
     if (/経営レポート|経営メモ|経営ホーム|次の一手/i.test(reason + target)) return '経営ホーム';
     if (task.intakeId) return '受付';
@@ -2812,8 +2833,8 @@
     { title: '営業先を管理', desc: '次の一手・保留・活動履歴を整理', action: 'sales' },
     { title: '今日やることを整理', desc: '優先タスクを毎朝確認', action: 'task' },
     { title: '需要を拾う', desc: 'クロクロ調査結果を需要ピックアップに取り込み', action: 'pickup' },
-    { title: '受付・予約をつなぐ', desc: 'AI番頭の受付結果を営業・タスク・売上へ', action: 'reception' },
-    { title: '予約・作業予定を管理', desc: '作業予定から今日やること・売上登録へ', action: 'work-order' },
+    { title: 'カレンダー登録', desc: '受付内容を登録し、日程が決まったら作業予定として保存', action: 'reception' },
+    { title: '作業予定を確認', desc: '今日/今週の作業予定から今日やること・売上登録へ', action: 'work-order' },
     { title: '作業後フォローをつなぐ', desc: 'お礼・口コミ依頼・リピート提案を文面生成', action: 'follow-up' },
     { title: 'エリアで移動を判断', desc: 'エリア別サマリーとGoogleマップ導線', action: 'area' },
     { title: '投稿・広告文案を作る', desc: '需要から投稿・広告案を生成', action: 'pickup' },
@@ -2894,7 +2915,7 @@
             <li>作業予定</li>
             <li>売上登録</li>
             <li>フォロー</li>
-            <li>利益サマリー</li>
+            <li>支出登録・計算</li>
             <li>アナリティクス</li>
             <li>経営レポート</li>
             <li>データ診断</li>
@@ -3058,7 +3079,7 @@
           <li>作業予定</li>
           <li>売上登録</li>
           <li>フォロー</li>
-          <li>利益サマリー</li>
+          <li>支出登録・計算</li>
           <li>アナリティクス</li>
           <li>経営レポート</li>
           <li>データ診断</li>
@@ -4154,7 +4175,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.8.17</span>
+        <span class="business-report-version">v4.8.18</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -7060,7 +7081,8 @@
     const payload = WorkOrderBrain.createFromIntake(intake);
     const workOrder = Storage.addWorkOrder(payload);
     linkReceptionToWorkOrder(intakeId, workOrder.id);
-    navigateToView('work-order');
+    navigateToView('calendar-registration');
+    setTimeout(() => scrollToElement('#work-order-form'), 120);
     setWorkOrderFormData(workOrder);
     clearReceptionDraftInputs({ renderNext: false });
     renderReceptionView();
@@ -7073,7 +7095,8 @@
     const lead = Storage.getLeads().find(l => l.id === leadId);
     if (!lead) return;
     const payload = WorkOrderBrain.createFromLead(lead);
-    navigateToView('work-order');
+    navigateToView('calendar-registration');
+    setTimeout(() => scrollToElement('#work-order-form'), 120);
     setWorkOrderFormData(payload);
     scrollToElement('#work-order-form');
     alert('営業先の情報を作業予定フォームに反映しました。');
@@ -7253,7 +7276,7 @@
       .map(w => WorkOrderBrain.normalizeWorkOrder(w))
       .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
     if (!list.length) {
-      el.innerHTML = '<p class="placeholder-text">保存済みの予定はありません。上の貼り付け欄から取り込んでください。</p>';
+      el.innerHTML = '<p class="placeholder-text">保存済みの復元対象はありません。上の貼り付け欄から取り込んでください。</p>';
       return;
     }
     el.innerHTML = `<p class="calendar-candidate-not-sale-list">これは売上ではありません。確定売上集計には含まれません。</p>
@@ -7306,8 +7329,8 @@
     const excluded = report ? report.excludedCount : 0;
     const duplicate = report ? report.duplicateSuspectCount : 0;
     el.innerHTML = `
-      <p><strong>売上実績候補：${eligible}件 / ${esc(WorkOrderBrain.formatYen(amount))}</strong></p>
-      <p>対象外候補：${excluded}件 / 重複疑い：${duplicate}件</p>
+      <p><strong>登録対象：${eligible}件 / ${esc(WorkOrderBrain.formatYen(amount))}</strong></p>
+      <p>対象外：${excluded}件 / 重複疑い：${duplicate}件</p>
     `;
     if (btn) btn.disabled = eligible <= 0;
   }
@@ -7321,7 +7344,7 @@
     const report = getCalendarPastRecoveryReport();
     const ids = report ? report.eligible.map(item => item.workOrder.id).filter(Boolean) : [];
     if (!ids.length) {
-      alert('一括売上登録できる売上実績候補がありません。');
+      alert('一括売上登録できる登録対象がありません。');
       return;
     }
     const amountLabel = WorkOrderBrain.formatYen(report.totalAmount);
@@ -7400,7 +7423,7 @@
       el.innerHTML = '';
       return;
     }
-    el.innerHTML = `<p>予定（未反映）：${summary.pendingCount}件 / 要確認：${summary.reviewCount}件 — <button type="button" class="btn btn-sm btn-secondary" id="btn-work-order-open-calendar-candidates">予定作成を見る</button></p>`;
+    el.innerHTML = `<p>復元対象（未反映）：${summary.pendingCount}件 / 要確認：${summary.reviewCount}件 — <button type="button" class="btn btn-sm btn-secondary" id="btn-work-order-open-calendar-candidates">過去売上復元を見る</button></p>`;
     const btn = document.getElementById('btn-work-order-open-calendar-candidates');
     if (btn) btn.addEventListener('click', () => navigateToView('calendar-candidate'));
   }
@@ -7419,7 +7442,7 @@
           periodLabel,
           pastRecoveryMode: past.enabled
         });
-        copyText(prompt).then(() => alert('カレンダー確認プロンプトをコピーしました')).catch(() => alert('コピーに失敗しました'));
+        copyText(prompt).then(() => alert('カレンダー確認用の文をコピーしました')).catch(() => alert('コピーに失敗しました'));
       });
     }
     const parseBtn = document.getElementById('btn-calendar-candidate-parse');
@@ -7599,7 +7622,7 @@
         ${renderExternalCheckTodayActionsSection(report, true)}
         ${renderExternalCheckNoiseSection(report, true)}
         ${renderExternalCheckCautionsSection(report, true)}
-        <p class="external-check-not-sale">予定候補・GBP反応は売上確定ではありません。</p>
+        <p class="external-check-not-sale">復元対象・GBP反応は売上確定ではありません。</p>
       `;
     }
 
@@ -7643,8 +7666,8 @@
     if (!todo.length) {
       el.innerHTML = `
         <h2>改善リスト</h2>
-        <p class="placeholder-text">改善リストはまだありません。<br>アクセス分析・外部確認・経営ホームの提案から追加できます。</p>
-        <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-action-candidates">外部確認を見る</button>
+        <p class="placeholder-text">改善リストはまだありません。<br>アクセス分析・サイト確認記録・経営ホームの提案から追加できます。</p>
+        <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-action-candidates">サイト確認記録を見る</button>
       `;
     } else {
       el.innerHTML = `
@@ -7652,7 +7675,7 @@
           <h2>改善リスト <span class="external-check-count-badge">${todo.length}件未対応</span></h2>
           <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-action-candidates">改善リストを見る</button>
         </div>
-        <p class="action-candidates-source-note">由来：外部確認（売上確定ではありません）</p>
+        <p class="action-candidates-source-note">由来：サイト確認記録（売上確定ではありません）</p>
         <ul class="action-candidates-dash-list">
           ${top.map(c => `
             <li class="action-candidate-dash-item">
@@ -7686,7 +7709,7 @@
       .filter(c => c.source === ActionBrain.SOURCE_EXTERNAL_CHECK);
 
     if (!candidates.length) {
-      el.innerHTML = '<p class="placeholder-text">改善リストはまだありません。<br>アクセス分析・外部確認・経営ホームの提案から追加できます。</p>';
+      el.innerHTML = '<p class="placeholder-text">改善リストはまだありません。<br>アクセス分析・サイト確認記録・経営ホームの提案から追加できます。</p>';
       return;
     }
 
@@ -7889,13 +7912,13 @@
       el.innerHTML = `
         <h2>外部確認</h2>
         <p class="placeholder-text">【Budil貼り付け用】レポートはまだ保存されていません。</p>
-        <button type="button" class="btn btn-sm btn-primary" id="btn-dash-go-external-check">外部確認を見る</button>
+        <button type="button" class="btn btn-sm btn-primary" id="btn-dash-go-external-check">サイト確認記録を見る</button>
       `;
     } else {
       el.innerHTML = `
         <div class="external-check-dash-header">
           <h2>外部確認</h2>
-          <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-external-check">外部確認を見る</button>
+          <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-external-check">サイト確認記録を見る</button>
         </div>
         ${renderExternalCheckSummaryBlock(latest, true)}
       `;
@@ -7976,12 +7999,12 @@
       const msgs = parsed.warnings || [];
       warningsEl.innerHTML = msgs.length
         ? `<ul class="external-check-warning-list">${msgs.map(m => `<li>${esc(m)}</li>`).join('')}</ul>`
-        : '<p class="external-check-save-ok">保存しました（予定候補・GBP反応は売上確定ではありません）。</p>';
+        : '<p class="external-check-save-ok">保存しました（復元対象・GBP反応は売上確定ではありません）。</p>';
     }
     if (pasteEl) pasteEl.value = '';
     renderExternalCheckView();
     renderDashboard();
-    showAppToast('外部確認を保存しました');
+    showAppToast('サイト確認記録を保存しました');
   }
 
   function clearExternalCheckPaste() {
@@ -7997,7 +8020,7 @@
     Storage.deleteExternalCheckReport(id);
     renderExternalCheckView();
     renderDashboard();
-    showAppToast('外部確認を削除しました');
+    showAppToast('サイト確認記録を削除しました');
   }
 
   function renderExternalCheckView() {
@@ -8467,7 +8490,7 @@
 
   function renderWorkOrderView() {
     try {
-      safeRenderSection(null, () => renderWorkOrderCalendarBrief(), '予定候補');
+      safeRenderSection(null, () => renderWorkOrderCalendarBrief(), '過去売上復元');
       safeRenderSection('work-order-pending-completion-list', () => renderWorkOrderPendingCompletionList(), '作業後確定待ち');
       safeRenderSection('work-order-forecast', () => renderWorkOrderForecast(), '売上見込み');
       safeRenderSection('work-order-today-list', () => renderWorkOrderTodayList(), '今日の作業予定');
@@ -9951,7 +9974,7 @@
   function copyBrowserBantouPrompt() {
     const prompt = AnalyticsBrain.buildBrowserBantouPrompt(Storage.getSettings());
     copyText(prompt).then(() => {
-      alert('外部確認プロンプトをコピーしました。');
+      alert('アクセス確認用の文をコピーしました。');
     }).catch(() => alert('コピーに失敗しました。'));
   }
 
@@ -10622,7 +10645,7 @@
     const { workOrders, today } = getMapContext();
     const active = WorkOrderBrain.filterActive(workOrders);
     if (!active.length) {
-      el.innerHTML = '<p class="placeholder-text">作業予定はまだありません。<br>受付登録やGoogleカレンダー取り込みから作成できます。</p>';
+      el.innerHTML = '<p class="placeholder-text">作業予定はまだありません。<br>カレンダー登録から作成できます。</p>';
       return;
     }
     const weekEnd = WorkOrderBrain.addDays(today, 6);
@@ -10817,7 +10840,7 @@
       : `<button type="button" class="btn btn-sm btn-secondary" data-reception-create-lead="${esc(id)}">営業先を作成</button>`;
     const workAction = state.hasWorkOrder
       ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-work-order="${esc(id)}">作業予定を開く</button>`
-      : `<button type="button" class="btn btn-sm btn-secondary" data-reception-create-work-order="${esc(id)}">作業予定を作成</button>`;
+      : `<button type="button" class="btn btn-sm btn-secondary" data-reception-create-work-order="${esc(id)}">この受付から作業予定を作る</button>`;
     const revenueAction = state.hasRevenue
       ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-revenue="${esc(id)}">売上を開く</button>`
       : `<button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(id)}">売上フォームに反映</button>`;
@@ -10989,7 +11012,7 @@
         ${renderReceptionActionBlock(intake)}
         <div class="reception-saved-actions reception-legacy-actions hidden">
           <button type="button" class="btn btn-sm btn-primary" data-reception-create-lead="${esc(intake.id)}">営業先を作成</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-reception-create-work-order="${esc(intake.id)}">作業予定を作成</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-create-work-order="${esc(intake.id)}">この受付から作業予定を作る</button>
           <button type="button" class="btn btn-sm btn-secondary" data-reception-add-task="${esc(intake.id)}">今日やることに追加</button>
           <button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(intake.id)}">売上フォームに反映</button>
           <button type="button" class="btn btn-sm btn-secondary" data-reception-revenue-candidate="${esc(intake.id)}">売上候補にする</button>
@@ -11058,7 +11081,7 @@
       btn.addEventListener('click', () => {
         const intake = Storage.getReceptionIntakes().find(i => i.id === btn.dataset.receptionOpen);
         if (intake) setReceptionFormData(intake);
-        navigateToView('reception');
+        navigateToView('calendar-registration');
         setTimeout(() => scrollToElement('#reception-form'), 120);
       });
     });
@@ -11151,7 +11174,8 @@
       createWorkOrderFromIntake(intakeId);
       return;
     }
-    navigateToView('work-order');
+    navigateToView('calendar-registration');
+    setTimeout(() => scrollToElement('#work-order-form'), 120);
     setWorkOrderFormData(state.workOrder);
     setTimeout(() => scrollToElement('#work-order-form'), 120);
   }
@@ -13638,7 +13662,7 @@
     ];
     if (calSummary && calSummary.pendingCount) {
       rows.unshift({
-        label: 'カレンダー予定候補（未反映）',
+        label: '過去売上復元（未反映）',
         count: calSummary.pendingCount,
         total: calSummary.pending.reduce((sum, w) => sum + Number(w.estimateAmount || 0), 0),
         link: 'calendar-candidate'
