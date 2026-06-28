@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.8.23 data safety verification.
+ * Budil v4.8.24 data safety verification.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -81,7 +81,7 @@ function parse(key, localStorage) {
   return JSON.parse(localStorage.getItem(key) || '[]');
 }
 
-console.log('== v4.8.23 data safety check ==');
+console.log('== v4.8.24 data safety check ==');
 
 for (const file of ['storage.js', 'data-backup.js', 'app.js']) {
   execSync(`node --check "${join(jsDir, file)}"`, { stdio: 'inherit' });
@@ -217,4 +217,4 @@ const ignored = execSync('git check-ignore recovery/leveldb-revenue-salvage-repo
 assert(ignored.includes('recovery/leveldb-revenue-salvage-report.md'), 'recovery/ should be git-ignored');
 
 console.log('OK: diagnostics and recovery/ git ignore');
-console.log('All v4.8.23 data safety checks passed.');
+console.log('All v4.8.24 data safety checks passed.');

@@ -252,6 +252,44 @@ const RevenueSummaryBrain = {
       });
   },
 
+  buildYearlySummaryWithResults(records, monthlyResults) {
+    const yearKeys = new Set();
+    this.confirmedRecords(records).forEach(r => {
+      const yk = this.getYearKey(r);
+      if (yk !== this.UNKNOWN_DATE_KEY) yearKeys.add(yk);
+    });
+    (monthlyResults || []).forEach(m => {
+      const mk = typeof MonthlyResultsBrain !== 'undefined'
+        ? MonthlyResultsBrain.normalizeMonth(m.month || m.id)
+        : '';
+      if (mk) yearKeys.add(mk.slice(0, 4));
+    });
+    return [...yearKeys]
+      .sort((a, b) => {
+        if (a === this.UNKNOWN_DATE_KEY) return 1;
+        if (b === this.UNKNOWN_DATE_KEY) return -1;
+        return b.localeCompare(a);
+      })
+      .map(yearKey => {
+        const monthKeys = this.collectMonthKeysForYear(records, monthlyResults, yearKey);
+        let total = 0;
+        let detailCount = 0;
+        monthKeys.forEach(mk => {
+          const view = this.getMonthSalesView(mk, records, monthlyResults);
+          total += view.displayTotal;
+          detailCount += view.detailCount;
+        });
+        const monthCount = monthKeys.size || 1;
+        return {
+          yearKey,
+          label: this.formatYearLabel(yearKey),
+          count: detailCount,
+          total,
+          monthAvg: this.avgAmount(total, monthCount)
+        };
+      });
+  },
+
   buildSourceSummary(records, filter) {
     const list = filter ? this.filterRecords(records, filter) : this.confirmedRecords(records);
     return this.buildDimensionSummary(list, r => this.getRevenueSource(r), 'source');
@@ -353,27 +391,80 @@ const RevenueSummaryBrain = {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   },
 
-  buildCompactSummary(records, today) {
+  getMonthSalesView(monthKey, records, monthlyResults) {
+    const key = monthKey || '';
+    const detail = typeof MonthlyResultsBrain !== 'undefined'
+      ? MonthlyResultsBrain.sumDetailRevenueForMonth(records, key)
+      : { total: this.sumAmount(this.confirmedRecords(records).filter(r => this.getMonthKey(r) === key)), count: 0 };
+    const monthly = typeof MonthlyResultsBrain !== 'undefined'
+      ? MonthlyResultsBrain.findForMonth(monthlyResults, key)
+      : null;
+    const hasMonthly = !!monthly;
+    const hasDetail = detail.count > 0 || detail.total > 0;
+    const monthlySales = hasMonthly ? monthly.sales : null;
+    const status = typeof MonthlyResultsBrain !== 'undefined'
+      ? MonthlyResultsBrain.classifyReconciliationStatus(monthlySales, detail.total, hasMonthly, hasDetail)
+      : (hasDetail ? '明細のみ' : 'データなし');
+    if (hasMonthly) {
+      return {
+        monthKey: key,
+        displayTotal: monthly.sales,
+        source: 'monthly-result',
+        monthlySales: monthly.sales,
+        detailTotal: detail.total,
+        detailCount: detail.count,
+        diff: monthly.sales - detail.total,
+        status
+      };
+    }
+    return {
+      monthKey: key,
+      displayTotal: detail.total,
+      source: hasDetail ? 'detail' : 'none',
+      monthlySales: null,
+      detailTotal: detail.total,
+      detailCount: detail.count,
+      diff: 0,
+      status
+    };
+  },
+
+  collectMonthKeysForYear(records, monthlyResults, yearKey) {
+    const keys = new Set();
+    this.confirmedRecords(records).forEach(r => {
+      const mk = this.getMonthKey(r);
+      if (mk !== this.UNKNOWN_DATE_KEY && mk.startsWith(yearKey)) keys.add(mk);
+    });
+    (monthlyResults || []).forEach(m => {
+      const mk = typeof MonthlyResultsBrain !== 'undefined'
+        ? MonthlyResultsBrain.normalizeMonth(m.month || m.id)
+        : String(m.month || '').slice(0, 7);
+      if (mk && mk.startsWith(yearKey)) keys.add(mk);
+    });
+    return keys;
+  },
+
+  buildCompactSummary(records, today, monthlyResults) {
     const t = today || new Date().toISOString().slice(0, 10);
     const currentMonth = t.slice(0, 7);
     const currentYear = t.slice(0, 4);
     const prevMonth = this.shiftMonthKey(currentMonth, -1);
     const confirmed = this.confirmedRecords(records);
 
+    const thisMonthView = this.getMonthSalesView(currentMonth, records, monthlyResults);
+    const prevMonthView = prevMonth ? this.getMonthSalesView(prevMonth, records, monthlyResults) : null;
     const thisMonthRecords = confirmed.filter(r => this.getMonthKey(r) === currentMonth);
     const prevMonthRecords = prevMonth ? confirmed.filter(r => this.getMonthKey(r) === prevMonth) : [];
     const yearRecords = confirmed.filter(r => this.getYearKey(r) === currentYear);
 
-    const thisMonthTotal = this.sumAmount(thisMonthRecords);
-    const prevMonthTotal = this.sumAmount(prevMonthRecords);
-    const yearTotal = this.sumAmount(yearRecords);
-
-    const monthsWithData = new Set(
-      yearRecords.map(r => this.getMonthKey(r)).filter(mk => mk !== this.UNKNOWN_DATE_KEY)
-    );
-    const yearMonthAvg = monthsWithData.size > 0
-      ? Math.round(yearTotal / monthsWithData.size)
-      : 0;
+    const thisMonthTotal = thisMonthView.displayTotal;
+    const prevMonthTotal = prevMonthView ? prevMonthView.displayTotal : 0;
+    const yearMonths = this.collectMonthKeysForYear(records, monthlyResults, currentYear);
+    let yearTotal = 0;
+    yearMonths.forEach(mk => {
+      yearTotal += this.getMonthSalesView(mk, records, monthlyResults).displayTotal;
+    });
+    const yearMonthAvg = yearMonths.size > 0 ? Math.round(yearTotal / yearMonths.size) : 0;
 
     const topSources = this.buildSourceSummary(thisMonthRecords).slice(0, 3);
     const topServices = this.buildServiceSummary(thisMonthRecords).slice(0, 3);
@@ -391,8 +482,50 @@ const RevenueSummaryBrain = {
       topServices,
       thisMonthCount: thisMonthRecords.length,
       prevMonthCount: prevMonthRecords.length,
-      yearCount: yearRecords.length
+      yearCount: yearRecords.length,
+      thisMonthView,
+      prevMonthView,
+      usesMonthlyResultThisMonth: thisMonthView.source === 'monthly-result',
+      monthlySourceNote: thisMonthView.source === 'monthly-result' && typeof MonthlyResultsBrain !== 'undefined'
+        ? MonthlyResultsBrain.AGGREGATION_SOURCE_NOTE
+        : ''
     };
+  },
+
+  buildMonthlySummaryWithResults(records, monthlyResults) {
+    const monthKeys = new Set();
+    this.confirmedRecords(records).forEach(r => {
+      const mk = this.getMonthKey(r);
+      if (mk !== this.UNKNOWN_DATE_KEY) monthKeys.add(mk);
+    });
+    (monthlyResults || []).forEach(m => {
+      const mk = typeof MonthlyResultsBrain !== 'undefined'
+        ? MonthlyResultsBrain.normalizeMonth(m.month || m.id)
+        : '';
+      if (mk) monthKeys.add(mk);
+    });
+    return [...monthKeys]
+      .sort((a, b) => {
+        if (a === this.UNKNOWN_DATE_KEY) return 1;
+        if (b === this.UNKNOWN_DATE_KEY) return -1;
+        return b.localeCompare(a);
+      })
+      .map(mk => {
+        const view = this.getMonthSalesView(mk, records, monthlyResults);
+        const count = view.source === 'monthly-result' ? view.detailCount : view.detailCount;
+        return {
+          monthKey: mk,
+          label: this.formatMonthLabel(mk),
+          count,
+          total: view.displayTotal,
+          avg: count > 0 ? this.avgAmount(view.detailTotal, count) : view.displayTotal,
+          source: view.source,
+          monthlySales: view.monthlySales,
+          detailTotal: view.detailTotal,
+          diff: view.diff,
+          status: view.status
+        };
+      });
   },
 
   buildPeriodLabel(filter) {
@@ -540,17 +673,31 @@ const RevenueSummaryBrain = {
   },
 
   buildFullSummary(records, filter, today, extra) {
+    const monthlyResults = (extra && extra.monthlyResults) || [];
     const filtered = this.filterRecords(records, filter);
-    const compact = this.buildCompactSummary(records, today);
+    const compact = this.buildCompactSummary(records, today, monthlyResults);
     const confirmed = this.confirmedRecords(records);
     const baseRecords = filtered.length ? filtered : confirmed;
+    const filterMonthKey = filter && filter.month
+      ? (filter.month.length === 7 ? filter.month : `${filter.year || ''}-${String(filter.month).padStart(2, '0')}`)
+      : '';
+    const periodView = filterMonthKey
+      ? this.getMonthSalesView(filterMonthKey, records, monthlyResults)
+      : null;
+    const periodTotal = filterMonthKey && periodView
+      ? periodView.displayTotal
+      : this.sumAmount(filtered);
     return {
       compact,
       filteredRecords: filtered,
-      periodTotal: this.sumAmount(filtered),
+      periodTotal,
       periodCount: filtered.length,
-      monthly: this.buildMonthlySummary(baseRecords),
-      yearly: this.buildYearlySummary(baseRecords),
+      periodView,
+      monthly: this.buildMonthlySummaryWithResults(records, monthlyResults),
+      yearly: this.buildYearlySummaryWithResults(records, monthlyResults),
+      reconciliation: typeof MonthlyResultsBrain !== 'undefined'
+        ? MonthlyResultsBrain.buildReconciliationReport(monthlyResults, records)
+        : [],
       sources: this.buildSourceSummary(records, filter),
       services: this.buildServiceSummary(records, filter),
       monthlySources: this.buildMonthlySourceSummary(filtered.length ? filtered : records),

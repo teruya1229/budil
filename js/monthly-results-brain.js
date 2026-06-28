@@ -92,6 +92,65 @@ const MonthlyResultsBrain = {
       .reduce((sum, e) => sum + Number(e.amount || 0), 0);
   },
 
+  sumDetailRevenueForMonth(revenueRecords, monthKey) {
+    const key = this.normalizeMonth(monthKey);
+    if (!key || typeof RevenueSummaryBrain === 'undefined') {
+      return { total: 0, count: 0 };
+    }
+    const confirmed = RevenueSummaryBrain.confirmedRecords(revenueRecords || []);
+    const list = confirmed.filter(r => RevenueSummaryBrain.getMonthKey(r) === key);
+    return {
+      total: RevenueSummaryBrain.sumAmount(list),
+      count: list.length
+    };
+  },
+
+  classifyReconciliationStatus(monthlySales, detailTotal, hasMonthly, hasDetail) {
+    if (!hasMonthly && !hasDetail) return 'データなし';
+    if (!hasMonthly && hasDetail) return '明細のみ';
+    if (hasMonthly && !hasDetail) return '月次実績のみ';
+    if (Number(monthlySales || 0) === Number(detailTotal || 0)) return '一致';
+    return '差額あり';
+  },
+
+  buildReconciliationRow(monthKey, monthlyResults, revenueRecords) {
+    const key = this.normalizeMonth(monthKey);
+    const monthly = this.findForMonth(monthlyResults, key);
+    const detail = this.sumDetailRevenueForMonth(revenueRecords, key);
+    const hasMonthly = !!monthly;
+    const hasDetail = detail.count > 0 || detail.total > 0;
+    const monthlySales = hasMonthly ? monthly.sales : null;
+    const diff = hasMonthly ? monthly.sales - detail.total : 0;
+    return {
+      month: key,
+      monthlySales: hasMonthly ? monthly.sales : null,
+      detailTotal: detail.total,
+      detailCount: detail.count,
+      diff,
+      status: this.classifyReconciliationStatus(monthlySales, detail.total, hasMonthly, hasDetail)
+    };
+  },
+
+  buildReconciliationReport(monthlyResults, revenueRecords, options) {
+    const opts = options || {};
+    const monthKeys = new Set();
+    (monthlyResults || []).forEach(r => {
+      const key = this.normalizeMonth(r.month || r.id);
+      if (key) monthKeys.add(key);
+    });
+    if (typeof RevenueSummaryBrain !== 'undefined') {
+      RevenueSummaryBrain.confirmedRecords(revenueRecords || []).forEach(r => {
+        const key = RevenueSummaryBrain.getMonthKey(r);
+        if (key && key !== RevenueSummaryBrain.UNKNOWN_DATE_KEY) monthKeys.add(key);
+      });
+    }
+    const sorted = [...monthKeys].sort((a, b) => b.localeCompare(a));
+    const limit = opts.limit != null ? opts.limit : sorted.length;
+    return sorted.slice(0, limit).map(key =>
+      this.buildReconciliationRow(key, monthlyResults, revenueRecords)
+    );
+  },
+
   buildProfitSummaryFromMonthly(monthlyRecord, opts) {
     const n = this.normalizeRecord(monthlyRecord);
     const monthKey = n.month;

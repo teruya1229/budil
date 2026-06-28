@@ -87,10 +87,13 @@ const appJs = load('js/app.js');
 const calendarBrain = load('js/calendar-candidate-brain.js');
 const storageJs = load('js/storage.js');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.23'), 'header version should be v4.8.23');
-assert(indexHtml.includes('Budil v4.8.23'), 'sidebar version should be v4.8.23');
-assert(indexHtml.includes('js/app.js?v=4.8.23'), 'app.js cache buster should be v4.8.23');
-assert(indexHtml.includes('calendar-past-recovery-mode'), 'past recovery mode toggle should exist');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.24'), 'header version should be v4.8.24');
+assert(indexHtml.includes('Budil v4.8.24'), 'sidebar version should be v4.8.24');
+assert(indexHtml.includes('js/app.js?v=4.8.24'), 'app.js cache buster should be v4.8.24');
+assert(indexHtml.includes('calendar-past-recovery-panel hidden'), 'past recovery panel should be hidden in UI');
+assert(indexHtml.includes('\u4e88\u5b9a\u53d6\u308a\u8fbc\u307f'), 'schedule import nav should exist');
+assert(!indexHtml.includes('nav-label">\u904e\u53bb\u58f2\u4e0a\u5fa9\u5143'), 'past recovery nav label should be hidden');
+assert(indexHtml.includes('calendar-past-recovery-mode'), 'past recovery mode toggle should remain in DOM');
 assert(indexHtml.includes('btn-calendar-past-bulk-convert'), 'bulk convert button should exist');
 assert(indexHtml.includes('\u767b\u9332\u5bfe\u8c61\u3092\u58f2\u4e0a\u767b\u9332'), 'bulk convert button label should exist');
 assert(indexHtml.includes('\u4e00\u62ec\u58f2\u4e0a\u767b\u9332\u306e\u524d\u306b\u5b89\u5168\u30d0\u30c3\u30af\u30a2\u30c3\u30d7\u3092\u4f5c\u6210\u3057\u307e\u3059'), 'past recovery safety backup note should exist');

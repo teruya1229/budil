@@ -9955,3 +9955,47 @@ body.sales-page {
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+
+.reconciliation-table .reconciliation-status-ok {
+  color: #86efac;
+}
+
+.reconciliation-table .reconciliation-status-warn {
+  color: #fcd34d;
+}
+
+.reconciliation-brief {
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(14, 116, 144, 0.12);
+  border: 1px solid rgba(125, 211, 252, 0.25);
+}
+
+.reconciliation-brief-line {
+  margin: 0.2rem 0;
+}
+
+.reconciliation-brief-warn {
+  margin: 0.35rem 0 0;
+  color: #fcd34d;
+  font-size: 0.9rem;
+}
+
+.reconciliation-note,
+.monthly-results-reconciliation-note {
+  margin: 0 0 0.65rem;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.revenue-monthly-badge {
+  display: inline-block;
+  margin-left: 0.25rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(14, 116, 144, 0.25);
+  color: #bae6fd;
+  font-size: 0.75rem;
+  vertical-align: middle;
+}

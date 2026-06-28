@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.8.23 - AI受付結果パーサー簡易検証
+ * Budil v4.8.24 - AI受付結果パーサー簡易検証
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';

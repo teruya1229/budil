@@ -24,7 +24,9 @@
   let documentsFormDirty = false;
   let receivablesFilter = 'all';
 
-  const SALES_TAB_FIELDS = { email: 'msg-email', form: 'msg-form', dm: 'msg-dm', phone: 'msg-phone' };
+  const PAST_RECOVERY_UI_ENABLED = false;
+  const SCHEDULE_IMPORT_VIEW = 'calendar-candidate';
+
   const SALES_TAB_LOG = { email: 'メール送信', form: 'フォーム送信', dm: 'DM', phone: '電話' };
   const ACTIVITY_TYPE_LABELS = {
     'task-done': 'タスク完了',
@@ -884,12 +886,25 @@
     const s = section || {};
     const agg = s.revenueAggregation || {};
     const compact = agg.compact || {};
+    const thisMonthView = compact.thisMonthView || {};
     const diffClass = compact.monthDiff > 0 ? 'revenue-agg-diff-up' : (compact.monthDiff < 0 ? 'revenue-agg-diff-down' : '');
     const diffSign = compact.monthDiff > 0 ? '+' : '';
     const topSource = (compact.topSources || [])[0];
     const topService = (compact.topServices || [])[0];
     const monthlyNote = s.usesMonthlyResult && s.aggregationSourceNote
       ? `<p class="profit-monthly-source-note">${esc(s.aggregationSourceNote)}</p>`
+      : (compact.usesMonthlyResultThisMonth && compact.monthlySourceNote
+        ? `<p class="profit-monthly-source-note">${esc(compact.monthlySourceNote)}</p>`
+        : '');
+    const thisMonthLabel = compact.usesMonthlyResultThisMonth ? '今月実績（月次実績ベース）' : '今月確定売上';
+    const breakdownNote = compact.usesMonthlyResultThisMonth
+      ? `<p class="reconciliation-brief-line">明細売上合計：${esc(RevenueBrain.formatYen(thisMonthView.detailTotal || 0))} / 差額：${esc(RevenueBrain.formatYen(thisMonthView.diff || 0))}</p>`
+      : '';
+    const breakdownWarn = compact.usesMonthlyResultThisMonth && thisMonthView.status === '差額あり'
+      ? '<p class="reconciliation-brief-warn">※この月は月次実績と売上明細が一致していません。</p>'
+      : '';
+    const sourceBreakdownNote = compact.usesMonthlyResultThisMonth
+      ? '<p class="revenue-agg-scope-note">月次実績ベース分は依頼元別・サービス別の内訳には含まれません。</p>'
       : '';
     return `
       ${monthlyNote}
@@ -904,11 +919,14 @@
         <div><span>売上未登録</span><strong>${s.completedNoRevenue || 0}件</strong></div>
       </div>
       <div class="exec-home-revenue-summary">
-        <p class="exec-home-revenue-scope">売上集計（確定売上のみ）</p>
-        <p>今月確定売上：${esc(RevenueBrain.formatYen(compact.thisMonthTotal || 0))}</p>
+        <p class="exec-home-revenue-scope">売上集計${compact.usesMonthlyResultThisMonth ? '（月次実績を優先）' : '（確定売上のみ）'}</p>
+        <p>${esc(thisMonthLabel)}：${esc(RevenueBrain.formatYen(compact.thisMonthTotal || 0))}</p>
+        ${breakdownNote}
+        ${breakdownWarn}
         <p>先月比：<span class="${diffClass}">${diffSign}${esc(RevenueBrain.formatYen(compact.monthDiff || 0))}</span></p>
-        <p>今年確定売上：${esc(RevenueBrain.formatYen(compact.yearTotal || 0))}</p>
+        <p>今年売上合計：${esc(RevenueBrain.formatYen(compact.yearTotal || 0))}</p>
         <p>今月の主力：${esc(topSource ? topSource.name : '—')} / ${esc(topService ? topService.name : '—')}</p>
+        ${sourceBreakdownNote}
       </div>
       ${(s.cautions || []).map(c => `<p class="exec-work-warn">${esc(c)}</p>`).join('')}
       ${s.receivables ? `
@@ -1536,7 +1554,11 @@
     const revenueMorningEl = document.getElementById('mgmt-revenue');
     if (revenueMorningEl) {
       const rev = getRevenueContext();
-      revenueMorningEl.innerHTML = `<p>今月売上：${esc(RevenueBrain.formatYen(rev.summary.planned))} / 達成率 ${rev.summary.achievementRate}%</p>`;
+      const overlay = rev.monthlyOverlay;
+      const monthlyNote = overlay && overlay.usesMonthlyResult
+        ? ' <span class="revenue-monthly-badge">月次実績ベース</span>'
+        : '';
+      revenueMorningEl.innerHTML = `<p>今月売上：${esc(RevenueBrain.formatYen(rev.summary.planned))}${monthlyNote} / 達成率 ${rev.summary.achievementRate}%</p>`;
     }
 
     const followUpMorningEl = document.getElementById('mgmt-follow-up');
@@ -1558,13 +1580,8 @@
     }
 
     const calendarMorningEl = document.getElementById('mgmt-calendar-candidates');
-    if (calendarMorningEl && typeof CalendarCandidateBrain !== 'undefined') {
-      const calLines = CalendarCandidateBrain.buildMorningReport(
-        CalendarCandidateBrain.summarizeCandidates(Storage.getWorkOrders(), TODAY())
-      );
-      calendarMorningEl.innerHTML = calLines.length
-        ? `<ul class="mgmt-calendar-candidate-list">${calLines.slice(1).map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
-        : '<p class="placeholder-text">復元対象はまだありません。<br>Googleカレンダーなどの過去予定を貼り付けて、売上登録できる作業を確認してください。</p>';
+    if (calendarMorningEl) {
+      calendarMorningEl.innerHTML = '';
     }
 
     const completionMorningEl = document.getElementById('mgmt-work-completion');
@@ -1597,8 +1614,92 @@
   function getRevenueSummaryExtra() {
     return {
       workOrders: Storage.getWorkOrders(),
-      intakes: Storage.getReceptionIntakes()
+      intakes: Storage.getReceptionIntakes(),
+      monthlyResults: Storage.getMonthlyResults()
     };
+  }
+
+  function applyMonthlyResultToRevenueSummary(summary, monthKey, monthlyResults) {
+    const base = summary && typeof summary === 'object' ? { ...summary } : {};
+    if (typeof MonthlyResultsBrain === 'undefined') {
+      return { summary: base, monthlyOverlay: null };
+    }
+    const monthly = MonthlyResultsBrain.findForMonth(monthlyResults, monthKey);
+    if (!monthly) return { summary: base, monthlyOverlay: null };
+    const detail = MonthlyResultsBrain.sumDetailRevenueForMonth(Storage.getRevenueRecords(), monthKey);
+    const monthRevenue = monthly.sales;
+    const monthlyTarget = Number(base.monthlyTarget) || 0;
+    const achievementRate = monthlyTarget > 0
+      ? Math.round((monthRevenue / monthlyTarget) * 100)
+      : base.achievementRate;
+    const status = MonthlyResultsBrain.classifyReconciliationStatus(
+      monthly.sales,
+      detail.total,
+      true,
+      detail.count > 0 || detail.total > 0
+    );
+    return {
+      summary: {
+        ...base,
+        planned: monthRevenue,
+        confirmed: monthRevenue,
+        completed: monthRevenue,
+        achievementRate,
+        remainingToTarget: Math.max(0, monthlyTarget - monthRevenue)
+      },
+      monthlyOverlay: {
+        usesMonthlyResult: true,
+        aggregationSourceNote: MonthlyResultsBrain.AGGREGATION_SOURCE_NOTE,
+        monthlySales: monthly.sales,
+        detailTotal: detail.total,
+        detailCount: detail.count,
+        diff: monthly.sales - detail.total,
+        status
+      }
+    };
+  }
+
+  function renderMonthlyReconciliationHtml(rows, options) {
+    const list = Array.isArray(rows) ? rows : [];
+    const opts = options || {};
+    if (!list.length) {
+      return '<p class="placeholder-text">整合チェック対象の月がありません。</p>';
+    }
+    const statusClass = status => {
+      if (status === '一致') return 'reconciliation-status-ok';
+      if (status === '差額あり') return 'reconciliation-status-warn';
+      return '';
+    };
+    const note = opts.note
+      ? `<p class="reconciliation-note">${esc(opts.note)}</p>`
+      : '';
+    return `${note}
+      <table class="reconciliation-table revenue-agg-table">
+        <thead><tr>
+          <th>月</th><th class="num">月次実績</th><th class="num">明細合計</th><th class="num">差額</th><th>状態</th>
+        </tr></thead>
+        <tbody>${list.map(row => `<tr>
+          <td>${esc(row.month)}</td>
+          <td class="num">${row.monthlySales != null ? esc(MonthlyResultsBrain.formatYen(row.monthlySales)) : '—'}</td>
+          <td class="num">${esc(RevenueSummaryBrain.formatYen(row.detailTotal || 0))}</td>
+          <td class="num">${row.monthlySales != null ? esc(RevenueSummaryBrain.formatYen(row.diff || 0)) : '—'}</td>
+          <td><span class="reconciliation-status ${statusClass(row.status)}">${esc(row.status)}</span></td>
+        </tr>`).join('')}</tbody>
+      </table>`;
+  }
+
+  function renderCurrentMonthReconciliationBrief(monthKey, monthlyOverlay) {
+    if (!monthlyOverlay || !monthlyOverlay.usesMonthlyResult) return '';
+    const diffLine = monthlyOverlay.status === '差額あり'
+      ? `<p class="reconciliation-brief-warn">※この月は月次実績と売上明細が一致していません。</p>`
+      : '';
+    return `
+      <div class="reconciliation-brief">
+        <p class="reconciliation-brief-line"><strong>今月実績：${esc(RevenueBrain.formatYen(monthlyOverlay.monthlySales))}（月次実績ベース）</strong></p>
+        <p class="reconciliation-brief-line">明細売上合計：${esc(RevenueBrain.formatYen(monthlyOverlay.detailTotal))}</p>
+        <p class="reconciliation-brief-line">差額：${esc(RevenueBrain.formatYen(monthlyOverlay.diff))}</p>
+        ${diffLine}
+      </div>`;
   }
 
   function getRevenueContext() {
@@ -1607,7 +1708,9 @@
     const settings = Storage.getRevenueSettings();
     const leads = Storage.getLeads();
     const monthKey = RevenueBrain.currentMonthKey(today);
-    const summary = RevenueBrain.summarize(records, settings, monthKey);
+    const monthlyResults = Storage.getMonthlyResults();
+    const baseSummary = RevenueBrain.summarize(records, settings, monthKey);
+    const { summary, monthlyOverlay } = applyMonthlyResultToRevenueSummary(baseSummary, monthKey, monthlyResults);
     const comment = RevenueBrain.buildBantouComment(summary);
     const salesOutcome = RevenueBrain.getLinkedRevenueSummary(records, leads, monthKey);
     const nextSalesCandidates = RevenueBrain.getNextSalesCandidates(records, leads, today);
@@ -1618,7 +1721,11 @@
     const revenueSummary = typeof RevenueSummaryBrain !== 'undefined'
       ? RevenueSummaryBrain.buildFullSummary(records, getRevenueAggregationFilter(), today, getRevenueSummaryExtra())
       : null;
-    return { today, records, settings, leads, monthKey, summary, comment, salesOutcome, nextSalesCandidates, salesHoldCandidates, managementComment, revenueSummary };
+    return {
+      today, records, settings, leads, monthKey, summary, comment, salesOutcome,
+      nextSalesCandidates, salesHoldCandidates, managementComment, revenueSummary,
+      monthlyOverlay, monthlyResults
+    };
   }
 
   function getRevenueAggregationFilter() {
@@ -2590,7 +2697,7 @@
     const workOrderIds = new Set(workOrderItems.map(item => item.id));
     const pastRecoveryItems = [];
 
-    if (typeof CalendarCandidateBrain !== 'undefined') {
+    if (PAST_RECOVERY_UI_ENABLED && typeof CalendarCandidateBrain !== 'undefined') {
       const options = { today };
       (workOrders || []).forEach(raw => {
         const wo = typeof WorkOrderBrain !== 'undefined'
@@ -2725,7 +2832,6 @@
       ? `<p class="daily-revenue-queue-more">ほか${queue.hiddenCount}件あります</p>
          <div class="daily-revenue-queue-more-actions">
            <button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-calendar>カレンダー登録を見る</button>
-           <button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-past-recovery>過去売上復元を見る</button>
          </div>`
       : '';
     el.innerHTML = `<div class="daily-revenue-queue-cards">${cards}</div>${more}`;
@@ -3214,8 +3320,14 @@
 
   function renderRevenueSummaryHtml(summary, comment, options) {
     const opts = options || {};
+    const overlay = opts.monthlyOverlay;
+    const monthlyBrief = overlay && overlay.usesMonthlyResult
+      ? renderCurrentMonthReconciliationBrief(summary.monthKey, overlay)
+      : '';
+    const plannedLabel = overlay && overlay.usesMonthlyResult ? '今月実績' : '売上予定';
     const lines = [
-      `<p class="revenue-summary-line">売上予定：<strong>${esc(RevenueBrain.formatYen(summary.planned))}</strong></p>`,
+      monthlyBrief,
+      `<p class="revenue-summary-line">${plannedLabel}：<strong>${esc(RevenueBrain.formatYen(summary.planned))}</strong>${overlay && overlay.usesMonthlyResult ? ' <span class="revenue-monthly-badge">月次実績ベース</span>' : ''}</p>`,
       `<p class="revenue-summary-line">入金済み：${esc(RevenueBrain.formatYen(summary.paid))}</p>`,
       `<p class="revenue-summary-line">入金待ち：${esc(RevenueBrain.formatYen(summary.unpaid))}</p>`,
       `<p class="revenue-summary-line">月間目標：${esc(RevenueBrain.formatYen(summary.monthlyTarget))}</p>`,
@@ -3241,8 +3353,8 @@
   function renderDashRevenueSummary() {
     const el = document.getElementById('dash-revenue-summary');
     if (!el) return;
-    const { summary, comment, salesOutcome } = getRevenueContext();
-    el.innerHTML = renderRevenueSummaryHtml(summary, comment, { showLink: true });
+    const { summary, comment, salesOutcome, monthlyOverlay } = getRevenueContext();
+    el.innerHTML = renderRevenueSummaryHtml(summary, comment, { showLink: true, monthlyOverlay });
     const btn = el.querySelector('#btn-go-revenue');
     if (btn) btn.addEventListener('click', () => navigateToView('revenue'));
     const outcomeEl = document.getElementById('dash-sales-outcome');
@@ -4704,7 +4816,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.8.23</span>
+        <span class="business-report-version">v4.8.24</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -7637,7 +7749,8 @@
   }
 
   function getCalendarPastRecoveryOptions() {
-    const enabled = document.getElementById('calendar-past-recovery-mode')?.checked === true;
+    const enabled = PAST_RECOVERY_UI_ENABLED
+      && document.getElementById('calendar-past-recovery-mode')?.checked === true;
     return {
       enabled,
       startDate: document.getElementById('calendar-past-recovery-start')?.value || '',
@@ -7675,7 +7788,7 @@
     const past = getCalendarPastRecoveryOptions();
     const periodLabel = past.enabled
       ? `${past.startDate || '開始未指定'}〜${past.endDate || '終了未指定'}（過去分復元モード）`
-      : '今週と来週';
+      : '今日以降（今週と来週を中心）';
     const prompt = CalendarCandidateBrain.buildBrowserPrompt({
       periodLabel,
       pastRecoveryMode: past.enabled
@@ -7965,9 +8078,9 @@
       el.innerHTML = '';
       return;
     }
-    el.innerHTML = `<p>復元対象（未反映）：${summary.pendingCount}件 / 要確認：${summary.reviewCount}件 — <button type="button" class="btn btn-sm btn-secondary" id="btn-work-order-open-calendar-candidates">過去売上復元を見る</button></p>`;
+    el.innerHTML = `<p>取り込み済み予定（未反映）：${summary.pendingCount}件 / 要確認：${summary.reviewCount}件 — <button type="button" class="btn btn-sm btn-secondary" id="btn-work-order-open-calendar-candidates">予定取り込みを見る</button></p>`;
     const btn = document.getElementById('btn-work-order-open-calendar-candidates');
-    if (btn) btn.addEventListener('click', () => navigateToView('calendar-candidate'));
+    if (btn) btn.addEventListener('click', () => navigateToView(SCHEDULE_IMPORT_VIEW));
   }
 
   function initCalendarCandidate() {
@@ -7979,7 +8092,7 @@
         const past = getCalendarPastRecoveryOptions();
         const periodLabel = past.enabled
           ? `${past.startDate || '開始未指定'}〜${past.endDate || '終了未指定'}（過去分復元モード）`
-          : '今週と来週';
+          : '今日以降（今週と来週を中心）';
         const prompt = CalendarCandidateBrain.buildBrowserPrompt({
           periodLabel,
           pastRecoveryMode: past.enabled
@@ -9668,6 +9781,20 @@
     }
     el.innerHTML = `
       ${monthlyNote}
+      ${s.usesMonthlyResult && typeof MonthlyResultsBrain !== 'undefined'
+        ? renderCurrentMonthReconciliationBrief(s.monthKey, {
+          usesMonthlyResult: true,
+          monthlySales: s.monthRevenue,
+          detailTotal: MonthlyResultsBrain.sumDetailRevenueForMonth(Storage.getRevenueRecords(), s.monthKey).total,
+          diff: s.monthRevenue - MonthlyResultsBrain.sumDetailRevenueForMonth(Storage.getRevenueRecords(), s.monthKey).total,
+          status: MonthlyResultsBrain.classifyReconciliationStatus(
+            s.monthRevenue,
+            MonthlyResultsBrain.sumDetailRevenueForMonth(Storage.getRevenueRecords(), s.monthKey).total,
+            true,
+            MonthlyResultsBrain.sumDetailRevenueForMonth(Storage.getRevenueRecords(), s.monthKey).count > 0
+          )
+        })
+        : ''}
       <div class="profit-summary-item"><span>今月売上</span><strong>${esc(ProfitBrain.formatYen(s.monthRevenue))}</strong></div>
       <div class="profit-summary-item"><span>今月支出</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
       <div class="profit-summary-item"><span>概算粗利</span><strong>${esc(ProfitBrain.formatYen(s.monthGrossProfit))}</strong></div>
@@ -10266,6 +10393,13 @@
       const records = Storage.getMonthlyResults();
       renderMonthlyResultsSummary(records);
       renderMonthlyResultsList(records);
+      const reconciliationEl = document.getElementById('monthly-results-reconciliation');
+      if (reconciliationEl && typeof MonthlyResultsBrain !== 'undefined') {
+        const report = MonthlyResultsBrain.buildReconciliationReport(records, Storage.getRevenueRecords());
+        reconciliationEl.innerHTML = renderMonthlyReconciliationHtml(report, {
+          note: '読み取り専用。月次実績と売上明細の差額確認用です。'
+        });
+      }
     } catch (err) {
       console.error('[Budil] renderMonthlyResultsView', err);
     }
@@ -14294,13 +14428,18 @@
   function renderRevenueAggMonthlyTable(rows) {
     if (!rows.length) return '<p class="placeholder-text">データがありません</p>';
     return `<table class="revenue-agg-table"><thead><tr>
-      <th>月</th><th class="num">売上件数</th><th class="num">売上合計</th><th class="num">平均単価</th>
-    </tr></thead><tbody>${rows.map(r => `<tr>
+      <th>月</th><th class="num">売上件数</th><th class="num">売上合計</th><th class="num">平均単価</th><th>根拠</th><th>整合</th>
+    </tr></thead><tbody>${rows.map(r => {
+      const sourceLabel = r.source === 'monthly-result' ? '月次実績' : (r.source === 'detail' ? '明細' : '—');
+      return `<tr>
       <td>${esc(r.label)}</td>
       <td class="num">${r.count}件</td>
       <td class="num">${esc(RevenueSummaryBrain.formatYen(r.total))}</td>
       <td class="num">${esc(RevenueSummaryBrain.formatYen(r.avg))}</td>
-    </tr>`).join('')}</tbody></table>`;
+      <td>${esc(sourceLabel)}</td>
+      <td>${esc(r.status || '—')}</td>
+    </tr>`;
+    }).join('')}</tbody></table>`;
   }
 
   function renderRevenueAggYearlyTable(rows) {
@@ -14346,21 +14485,12 @@
 
   function renderRevenueAggSeparateHtml(separate) {
     const s = separate || {};
-    const calSummary = typeof CalendarCandidateBrain !== 'undefined' ? getCalendarCandidateSummary() : null;
     const rows = [
       { label: s.forecast && s.forecast.label, count: s.forecast && s.forecast.count, total: s.forecast && s.forecast.total },
       { label: s.receptionCandidates && s.receptionCandidates.label, count: s.receptionCandidates && s.receptionCandidates.count, total: s.receptionCandidates && s.receptionCandidates.total },
       { label: s.plannedRevenue && s.plannedRevenue.label, count: s.plannedRevenue && s.plannedRevenue.count, total: s.plannedRevenue && s.plannedRevenue.total },
       { label: s.noDateConfirmed && s.noDateConfirmed.label, count: s.noDateConfirmed && s.noDateConfirmed.count, total: s.noDateConfirmed && s.noDateConfirmed.total }
     ];
-    if (calSummary && calSummary.pendingCount) {
-      rows.unshift({
-        label: '過去売上復元（未反映）',
-        count: calSummary.pendingCount,
-        total: calSummary.pending.reduce((sum, w) => sum + Number(w.estimateAmount || 0), 0),
-        link: 'calendar-candidate'
-      });
-    }
     const filtered = rows.filter(r => r.label && ((r.count > 0) || (r.total > 0)));
     if (!filtered.length) return '';
     return `<div class="revenue-agg-separate">
@@ -14395,20 +14525,33 @@
 
     const topSourceNames = (compact.topSources || []).map(s => s.name).join(' / ') || '—';
     const topServiceNames = (compact.topServices || []).map(s => s.name).join(' / ') || '—';
+    const thisMonthView = compact.thisMonthView || {};
+    const thisMonthLabel = compact.usesMonthlyResultThisMonth ? '今月実績（月次実績ベース）' : '今月確定売上';
+    const scopeNote = compact.usesMonthlyResultThisMonth
+      ? '月次実績がある月は月次実績ベースで表示します。明細売上とは別管理です。'
+      : '確定売上のみ集計（売上登録で「確定」「完了」登録済み）。見込み・候補は含みません。';
+    const monthlyBreakdown = compact.usesMonthlyResultThisMonth
+      ? `<p class="reconciliation-brief-line">明細売上合計：${esc(RevenueSummaryBrain.formatYen(thisMonthView.detailTotal || 0))} / 差額：${esc(RevenueSummaryBrain.formatYen(thisMonthView.diff || 0))}</p>
+         ${thisMonthView.status === '差額あり' ? '<p class="reconciliation-brief-warn">※この月は月次実績と売上明細が一致していません。</p>' : ''}
+         <p class="revenue-agg-scope-note">月次実績ベース分は依頼元別・サービス別の内訳には含まれません。</p>`
+      : '';
+    const reconciliationHtml = renderMonthlyReconciliationHtml(summary.reconciliation || [], {
+      note: '読み取り専用。データの自動修正・同期は行いません。'
+    });
 
     el.innerHTML = `
-      <p class="revenue-agg-scope-note">確定売上のみ集計（売上登録で「確定」「完了」登録済み）。見込み・候補は含みません。</p>
+      <p class="revenue-agg-scope-note">${esc(scopeNote)}</p>
       <div class="revenue-agg-compact">
         <div class="revenue-agg-compact-item revenue-agg-highlight">
-          <span>今月確定売上</span>
+          <span>${esc(thisMonthLabel)}</span>
           <strong>${esc(RevenueSummaryBrain.formatYen(compact.thisMonthTotal))}</strong>
         </div>
         <div class="revenue-agg-compact-item">
-          <span>先月確定売上</span>
+          <span>先月売上</span>
           <strong>${esc(RevenueSummaryBrain.formatYen(compact.prevMonthTotal))}</strong>
         </div>
         <div class="revenue-agg-compact-item revenue-agg-highlight">
-          <span>今年確定売上</span>
+          <span>今年売上合計</span>
           <strong>${esc(RevenueSummaryBrain.formatYen(compact.yearTotal))}</strong>
         </div>
         <div class="revenue-agg-compact-item">
@@ -14416,14 +14559,20 @@
           <strong>${esc(RevenueSummaryBrain.formatYen(compact.yearMonthAvg))}</strong>
         </div>
         <div class="revenue-agg-compact-item">
-          <span>上位依頼元（今月）</span>
+          <span>上位依頼元（今月明細）</span>
           <p class="revenue-agg-top-list">${esc(topSourceNames)}</p>
         </div>
         <div class="revenue-agg-compact-item">
-          <span>上位サービス（今月）</span>
+          <span>上位サービス（今月明細）</span>
           <p class="revenue-agg-top-list">${esc(topServiceNames)}</p>
         </div>
       </div>
+      ${monthlyBreakdown}
+
+      <details class="revenue-agg-collapse" open>
+        <summary>売上明細と月次実績の整合チェック</summary>
+        <div class="revenue-agg-collapse-body">${reconciliationHtml}</div>
+      </details>
 
       ${renderRevenueAggSeparateHtml(separate)}
 
@@ -14513,17 +14662,25 @@
   }
 
   function renderRevenueSummaryPanel() {
-    const { summary, comment, settings, salesOutcome, leads } = getRevenueContext();
+    const { summary, comment, settings, salesOutcome, leads, monthlyOverlay } = getRevenueContext();
     const summaryEl = document.getElementById('revenue-summary');
     const commentEl = document.getElementById('revenue-bantou-comment');
     const targetEl = document.getElementById('revenue-monthly-target');
     const outcomeEl = document.getElementById('revenue-sales-outcome');
+    const reconciliationEl = document.getElementById('revenue-monthly-reconciliation');
 
     renderRevenueUnlinkedBanner(salesOutcome);
 
+    if (reconciliationEl) {
+      reconciliationEl.innerHTML = monthlyOverlay && monthlyOverlay.usesMonthlyResult
+        ? renderCurrentMonthReconciliationBrief(summary.monthKey, monthlyOverlay)
+        : '';
+    }
+
     if (summaryEl) {
+      const plannedLabel = monthlyOverlay && monthlyOverlay.usesMonthlyResult ? '今月実績' : '売上予定';
       const baseItems = [
-        { label: '売上予定', value: RevenueBrain.formatYen(summary.planned) },
+        { label: plannedLabel, value: RevenueBrain.formatYen(summary.planned) + (monthlyOverlay && monthlyOverlay.usesMonthlyResult ? '（月次実績）' : '') },
         { label: '確定', value: RevenueBrain.formatYen(summary.confirmed) },
         { label: '完了', value: RevenueBrain.formatYen(summary.completed) },
         { label: '入金済み', value: RevenueBrain.formatYen(summary.paid) },

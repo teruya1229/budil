@@ -555,7 +555,7 @@ const CalendarCandidateBrain = {
     const opts = options || {};
     const profile = typeof Storage !== 'undefined' ? Storage.getBusinessProfile() : {};
     const area = (profile && profile.area) || '沖縄南部';
-    const period = opts.periodLabel || '今週と来週（または指定された月）';
+    const period = opts.periodLabel || '今日以降（今週と来週を中心）';
     const pastRecoveryMode = opts.pastRecoveryMode === true;
     return [
       'Googleカレンダーを確認して、指定期間の作業予定をBudil取り込み用に整理してください。',
@@ -563,12 +563,12 @@ const CalendarCandidateBrain = {
       '目的：',
       pastRecoveryMode
         ? '過去分復元モードで、作業済みの売上実績候補としてBudilに取り込むため。'
-        : '予定を売上確定ではなく、作業予定候補としてBudilに取り込むため。',
+        : 'これからの予定を売上確定ではなく、作業予定候補としてBudilに取り込むため。',
       '',
       '重要：',
       pastRecoveryMode
         ? '過去日付・金額ありの作業済み候補を優先してください。キャンセル・見積のみ・日程調整中は注意欄に明記してください。'
-        : '売上確定ではありません。予定候補として出力してください。',
+        : '今日以降の予定を優先してください。売上確定ではありません。予定候補として出力してください。',
       '金額が不明な場合は空欄。',
       'キャンセルや仮予定は必ず分かるようにしてください。',
       '',
