@@ -61,6 +61,9 @@ const WorkOrderBrain = {
         ? CalendarCandidateBrain.normalizeCandidateMeta(item.candidateMeta)
         : { ...item.candidateMeta };
     }
+    if (item.calendarDedupeKey) {
+      normalized.calendarDedupeKey = String(item.calendarDedupeKey).trim();
+    }
     if (item.followUp != null && typeof item.followUp === 'object') {
       normalized.followUp = typeof FollowUpBrain !== 'undefined'
         ? FollowUpBrain.normalizeFollowUp(item.followUp)

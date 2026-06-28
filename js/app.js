@@ -4816,7 +4816,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.8.24</span>
+        <span class="business-report-version">v4.8.25</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -7808,6 +7808,11 @@
         Storage.getRevenueRecords(),
         past
       );
+    } else {
+      lastCalendarCandidatePreview = CalendarCandidateBrain.attachFutureImportPreview(
+        lastCalendarCandidatePreview,
+        TODAY()
+      );
     }
     renderCalendarCandidatePreview();
   }
@@ -7842,14 +7847,18 @@
             : '';
           const notice = past && past.status === CalendarCandidateBrain.PAST_RECOVERY_REVENUE_CANDIDATE
             ? '過去分復元モード：売上実績候補です（一括登録前は売上ではありません）'
-            : 'これは売上ではありません（候補）';
+            : '作業予定として保存されます（売上確定は作業後）';
+          const itemWarnings = (item.warnings || []).length
+            ? `<p class="calendar-candidate-dup">${esc(item.warnings.join(' / '))}</p>`
+            : '';
           return `<div class="calendar-candidate-preview-item${item.isDuplicate ? ' is-duplicate' : ''}">
             <p class="calendar-candidate-preview-title"><strong>${esc(c.customerName || '（名前なし）')}</strong> / ${esc(c.serviceText || '—')}</p>
             <p class="calendar-candidate-preview-meta">${esc(c.scheduledDate || '日付不明')} ${esc(c.startTime || '')}〜${esc(c.endTime || '')} / ${esc(c.source || '—')} / 見込み ${esc(WorkOrderBrain.formatYen(c.estimateAmount))}</p>
             <p class="calendar-candidate-not-sale">${esc(notice)}</p>
             ${pastStatus}
+            ${itemWarnings}
             ${dup}
-            <button type="button" class="btn btn-sm btn-primary" data-cal-save-one="${i}">候補として保存</button>
+            <button type="button" class="btn btn-sm btn-primary" data-cal-save-one="${i}">作業予定として保存</button>
           </div>`;
         }).join('')
         : '<p class="placeholder-text">解析結果がありません</p>';
@@ -7858,6 +7867,11 @@
       });
     }
     if (saveAllBtn) saveAllBtn.disabled = !(preview.items || []).length || (preview.errors || []).length > 0;
+  }
+
+  function getCalendarImportCandidateStatus(item) {
+    if (item.pastRecovery && item.pastRecovery.status) return item.pastRecovery.status;
+    return '作業予定に追加済み';
   }
 
   function saveCalendarCandidateOne(index, force) {
@@ -7869,12 +7883,12 @@
     }
     const payload = CalendarCandidateBrain.createWorkOrderPayload(item.candidate, {
       originalText: preview.rawText,
-      candidateStatus: item.pastRecovery ? item.pastRecovery.status : '候補',
+      candidateStatus: getCalendarImportCandidateStatus(item),
       calendarDedupeKey: item.pastRecovery ? item.pastRecovery.calendarDedupeKey : ''
     });
     Storage.addWorkOrder(payload);
     refreshCalendarCandidateViews();
-    alert('予定を保存しました（売上確定ではありません）。');
+    alert('作業予定として保存しました（売上確定は作業後の売上確定待ちから行います）。');
   }
 
   function saveAllCalendarCandidates(force) {
@@ -7888,7 +7902,7 @@
     preview.items.forEach(item => {
       const payload = CalendarCandidateBrain.createWorkOrderPayload(item.candidate, {
         originalText: preview.rawText,
-        candidateStatus: item.pastRecovery ? item.pastRecovery.status : '候補',
+        candidateStatus: getCalendarImportCandidateStatus(item),
         calendarDedupeKey: item.pastRecovery ? item.pastRecovery.calendarDedupeKey : ''
       });
       Storage.addWorkOrder(payload);
@@ -7900,7 +7914,7 @@
     const previewPanel = document.getElementById('calendar-candidate-preview');
     if (previewPanel) previewPanel.classList.add('hidden');
     refreshCalendarCandidateViews();
-    alert(`予定を${saved}件保存しました（売上確定ではありません）。`);
+    alert(`作業予定として${saved}件保存しました。作業日後は売上確定待ちから売上化できます。`);
   }
 
   function refreshCalendarCandidateViews() {
@@ -7931,10 +7945,10 @@
       .map(w => WorkOrderBrain.normalizeWorkOrder(w))
       .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
     if (!list.length) {
-      el.innerHTML = '<p class="placeholder-text">保存済みの復元対象はありません。上の貼り付け欄から取り込んでください。</p>';
+      el.innerHTML = '<p class="placeholder-text">取り込み済みの作業予定はありません。上の貼り付け欄から今日以降の予定を取り込んでください。</p>';
       return;
     }
-    el.innerHTML = `<p class="calendar-candidate-not-sale-list">これは売上ではありません。確定売上集計には含まれません。</p>
+    el.innerHTML = `<p class="calendar-candidate-not-sale-list">作業予定として保存済みです。確定売上集計には含まれません。作業日後は売上確定待ちから売上化できます。</p>
       ${list.map(wo => {
         const st = CalendarCandidateBrain.getCandidateStatus(wo);
         const timeLabel = wo.startTime && wo.endTime ? `${wo.startTime}〜${wo.endTime}` : (wo.startTime || '時間未設定');

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.8.24">
+  <link rel="stylesheet" href="css/style.css?v=4.8.25">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.8.24</small>
+          <small>AI経営脳みそ v4.8.25</small>
         </div>
       </div>
       <nav class="nav">
@@ -44,7 +44,7 @@
 
         <details class="nav-group" open>
           <summary class="nav-group-title"><span class="nav-group-icon">📞</span><span class="nav-group-label">受付・カレンダー</span></summary>
-          <p class="nav-group-hint">カレンダー登録、予定取り込み、エリア</p>
+          <p class="nav-group-hint">今日以降の予定取り込み、カレンダー登録、エリア</p>
           <div class="nav-group-items">
             <button class="nav-item nav-item-main" data-view="calendar-registration">
               <span class="nav-icon">📅</span><span class="nav-label">カレンダー登録</span>
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.8.24</small>
+        <small>Budil v4.8.25</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">毎朝5分で、今日の結論・売上・直近予定・集客管理を確認</p>
             </div>
-            <span class="exec-home-version">v4.8.24</span>
+            <span class="exec-home-version">v4.8.25</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <details class="exec-collapse exec-home-start-collapse" id="exec-home-start-collapse">
@@ -523,7 +523,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.8.24</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.8.25</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -1788,11 +1788,11 @@
       <section id="view-calendar-candidate" class="view">
         <header class="view-header">
           <h1>近未来の予定取り込み</h1>
-          <p class="view-subtitle">Googleカレンダーなどの今日以降の予定を貼り付け、作業予定・売上予定として管理します。</p>
+          <p class="view-subtitle">今日以降のカレンダー予定をBudilに取り込みます。取り込んだ予定は作業予定として保存され、作業後に売上確定できます。</p>
         </header>
 
         <div class="card card-wide card-calendar-candidate">
-          <p class="calendar-candidate-notice"><strong>これは売上ではありません。</strong> 取り込んだ予定は作業予定として保存し、現場後に売上登録で確定してください。</p>
+          <p class="calendar-candidate-notice"><strong>これは売上ではありません。</strong> 今日以降の予定を作業予定として保存し、作業日後は「毎日やること」の売上確定待ちから売上化してください。</p>
 
           <div class="calendar-past-recovery-panel hidden" aria-hidden="true">
             <label class="calendar-past-recovery-toggle">
@@ -1828,11 +1828,11 @@
             <button type="button" id="btn-calendar-candidate-copy-prompt" class="btn btn-sm btn-secondary">カレンダー確認用の文をコピー</button>
           </div>
 
-          <p class="pickup-paste-hint">【カレンダー予定】形式で複数件貼り付けできます。今日以降の予定を中心に、売上確定ではなく作業予定候補として扱います。</p>
+          <p class="pickup-paste-hint">【カレンダー予定】形式で複数件貼り付けできます。今日以降の予定を中心に取り込み、作業予定として保存します（売上確定は作業後）。</p>
           <textarea id="calendar-candidate-paste" class="calendar-candidate-paste" rows="10" placeholder="【カレンダー予定】&#10;日付：2026-07-03&#10;開始時間：09:00&#10;..."></textarea>
           <div class="calendar-candidate-actions">
             <button type="button" id="btn-calendar-candidate-parse" class="btn btn-sm btn-secondary">取り込み候補を確認</button>
-            <button type="button" id="btn-calendar-candidate-save-all" class="btn btn-sm btn-primary" disabled>候補をすべて保存</button>
+            <button type="button" id="btn-calendar-candidate-save-all" class="btn btn-sm btn-primary" disabled>すべて作業予定として保存</button>
           </div>
 
           <div id="calendar-candidate-preview" class="calendar-candidate-preview hidden">
@@ -1842,15 +1842,15 @@
           </div>
 
           <h2>取り込み済み予定一覧</h2>
-          <p class="calendar-candidate-list-note">取り込み済み予定は確定売上集計には含まれません。</p>
+          <p class="calendar-candidate-list-note">取り込み済みの作業予定は確定売上集計には含まれません。作業日後は売上確定待ちから売上化できます。</p>
           <div id="calendar-candidate-saved-list" class="calendar-candidate-saved-list"></div>
 
           <details class="calendar-candidate-collapse">
             <summary>注意事項</summary>
             <div class="calendar-candidate-collapse-body">
               <ul class="calendar-candidate-notes">
-                <li>カレンダー予定は予定変更・キャンセル・金額変更が起きやすいため、売上確定には使いません。</li>
-                <li>作業予定へ反映後も、売上は売上登録で確定してください。</li>
+                <li>カレンダー予定は予定変更・キャンセル・金額変更が起きやすいため、取り込み時点では売上確定しません。</li>
+                <li>取り込んだ予定は作業予定として保存されます。作業日後は「毎日やること」の売上確定待ちから売上化してください。</li>
                 <li>予定金額は見込みであり、売上集計には混ぜません。</li>
               </ul>
             </div>
@@ -3381,30 +3381,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.8.24"></script>
-  <script src="js/messages.js?v=4.8.24"></script>
-  <script src="js/demand-brain.js?v=4.8.24"></script>
-  <script src="js/demand-radar.js?v=4.8.24"></script>
-  <script src="js/sales-brain.js?v=4.8.24"></script>
-  <script src="js/management-brain.js?v=4.8.24"></script>
-  <script src="js/payment-brain.js?v=4.8.24"></script>
-  <script src="js/revenue-brain.js?v=4.8.24"></script>
-  <script src="js/revenue-summary-brain.js?v=4.8.24"></script>
-  <script src="js/reception-brain.js?v=4.8.24"></script>
-  <script src="js/map-brain.js?v=4.8.24"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.8.24"></script>
-  <script src="js/external-check-brain.js?v=4.8.24"></script>
-  <script src="js/action-brain.js?v=4.8.24"></script>
-  <script src="js/work-order-brain.js?v=4.8.24"></script>
-  <script src="js/follow-up-brain.js?v=4.8.24"></script>
-  <script src="js/work-completion-brain.js?v=4.8.24"></script>
-  <script src="js/profit-brain.js?v=4.8.24"></script>
-  <script src="js/analytics-brain.js?v=4.8.24"></script>
-  <script src="js/monthly-results-brain.js?v=4.8.24"></script>
-  <script src="js/documents-brain.js?v=4.8.24"></script>
-  <script src="js/executive-brain.js?v=4.8.24"></script>
-  <script src="js/card-ocr.js?v=4.8.24"></script>
-  <script src="js/data-backup.js?v=4.8.24"></script>
-  <script src="js/app.js?v=4.8.24"></script>
+  <script src="js/storage.js?v=4.8.25"></script>
+  <script src="js/messages.js?v=4.8.25"></script>
+  <script src="js/demand-brain.js?v=4.8.25"></script>
+  <script src="js/demand-radar.js?v=4.8.25"></script>
+  <script src="js/sales-brain.js?v=4.8.25"></script>
+  <script src="js/management-brain.js?v=4.8.25"></script>
+  <script src="js/payment-brain.js?v=4.8.25"></script>
+  <script src="js/revenue-brain.js?v=4.8.25"></script>
+  <script src="js/revenue-summary-brain.js?v=4.8.25"></script>
+  <script src="js/reception-brain.js?v=4.8.25"></script>
+  <script src="js/map-brain.js?v=4.8.25"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.8.25"></script>
+  <script src="js/external-check-brain.js?v=4.8.25"></script>
+  <script src="js/action-brain.js?v=4.8.25"></script>
+  <script src="js/work-order-brain.js?v=4.8.25"></script>
+  <script src="js/follow-up-brain.js?v=4.8.25"></script>
+  <script src="js/work-completion-brain.js?v=4.8.25"></script>
+  <script src="js/profit-brain.js?v=4.8.25"></script>
+  <script src="js/analytics-brain.js?v=4.8.25"></script>
+  <script src="js/monthly-results-brain.js?v=4.8.25"></script>
+  <script src="js/documents-brain.js?v=4.8.25"></script>
+  <script src="js/executive-brain.js?v=4.8.25"></script>
+  <script src="js/card-ocr.js?v=4.8.25"></script>
+  <script src="js/data-backup.js?v=4.8.25"></script>
+  <script src="js/app.js?v=4.8.25"></script>
 </body>
 </html>

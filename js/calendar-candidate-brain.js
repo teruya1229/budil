@@ -337,6 +337,13 @@ const CalendarCandidateBrain = {
     return c.scheduledDate < today;
   },
 
+  isOnOrAfterToday(candidate, today) {
+    const c = this.normalizeCandidate(candidate);
+    if (!c.scheduledDate) return false;
+    const t = today || new Date().toISOString().slice(0, 10);
+    return c.scheduledDate >= t;
+  },
+
   detectRevenueDuplicate(candidate, revenues) {
     const c = this.normalizeCandidate(candidate);
     const key = this.buildCalendarDedupeKey(c);
@@ -551,6 +558,29 @@ const CalendarCandidateBrain = {
     return preview;
   },
 
+  attachFutureImportPreview(preview, today) {
+    if (!preview || !Array.isArray(preview.items)) return preview;
+    const t = today || new Date().toISOString().slice(0, 10);
+    let pastCount = 0;
+    preview.items = preview.items.map(item => {
+      const c = this.normalizeCandidate(item.candidate);
+      const isPastDate = !!(c.scheduledDate && c.scheduledDate < t);
+      if (isPastDate) pastCount += 1;
+      const warnings = [...(item.warnings || [])];
+      if (isPastDate) {
+        warnings.push('過去日付の予定です。近未来取り込みでは今日以降を推奨します（保存は可能です）');
+      }
+      return { ...item, warnings, isPastDate };
+    });
+    if (pastCount) {
+      preview.warnings = [
+        ...(preview.warnings || []),
+        `過去日付の予定が${pastCount}件あります。今日以降の予定を中心に取り込んでください。`
+      ];
+    }
+    return preview;
+  },
+
   buildBrowserPrompt(options) {
     const opts = options || {};
     const profile = typeof Storage !== 'undefined' ? Storage.getBusinessProfile() : {};
@@ -563,7 +593,7 @@ const CalendarCandidateBrain = {
       '目的：',
       pastRecoveryMode
         ? '過去分復元モードで、作業済みの売上実績候補としてBudilに取り込むため。'
-        : 'これからの予定を売上確定ではなく、作業予定候補としてBudilに取り込むため。',
+        : '今日以降のカレンダー予定を作業予定としてBudilに取り込むため。作業後は売上確定待ちから売上化します。',
       '',
       '重要：',
       pastRecoveryMode
