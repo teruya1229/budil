@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.8.18">
+  <link rel="stylesheet" href="css/style.css?v=4.8.19">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.8.18</small>
+          <small>AI経営脳みそ v4.8.19</small>
         </div>
       </div>
       <nav class="nav">
@@ -33,11 +33,11 @@
         </details>
 
         <details class="nav-group" open>
-          <summary class="nav-group-title"><span class="nav-group-icon">✅</span><span class="nav-group-label">今日やること</span></summary>
-          <p class="nav-group-hint">今日の実行タスク</p>
+          <summary class="nav-group-title"><span class="nav-group-icon">✅</span><span class="nav-group-label">毎日やること</span></summary>
+          <p class="nav-group-hint">毎朝・作業前の最小行動</p>
           <div class="nav-group-items">
             <button class="nav-item nav-item-main" data-view="dashboard" data-scroll=".card-daily-action-tasks">
-              <span class="nav-icon">✅</span><span class="nav-label">今日やること</span>
+              <span class="nav-icon">✅</span><span class="nav-label">毎日やること</span>
             </button>
           </div>
         </details>
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.8.18</small>
+        <small>Budil v4.8.19</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -171,16 +171,25 @@
           <div class="exec-home-header">
             <div>
               <h2>経営ホーム</h2>
-              <p class="exec-home-subtitle">毎朝5分で、今日やること・売上・利益・需要・受付・作業予定を確認</p>
+              <p class="exec-home-subtitle">毎朝5分で、今日の結論・売上・直近予定・集客管理を確認</p>
             </div>
-            <span class="exec-home-version">v4.8.18</span>
+            <span class="exec-home-version">v4.8.19</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
-          <div id="exec-home-start-guide" class="exec-home-start-guide hidden"></div>
+          <details class="exec-collapse exec-home-start-collapse" id="exec-home-start-collapse">
+            <summary>はじめの3ステップ</summary>
+            <div id="exec-home-start-guide" class="exec-home-start-guide"></div>
+          </details>
           <div class="exec-quick-section">
             <p class="exec-quick-label">よく使うメニュー</p>
             <div id="exec-home-quick-actions-primary" class="exec-home-quick-actions exec-quick-primary"></div>
-            <div id="exec-home-quick-actions-secondary" class="exec-home-quick-actions exec-quick-secondary"></div>
+            <details class="exec-collapse exec-quick-more-collapse">
+              <summary>その他のクイックボタン</summary>
+              <div id="exec-home-quick-actions-secondary" class="exec-home-quick-actions exec-quick-secondary"></div>
+            </details>
+          </div>
+          <div class="exec-home-daily-link-row">
+            <button type="button" class="btn btn-sm btn-primary" id="btn-exec-go-daily-tasks">毎日やることを開く</button>
           </div>
           <div class="exec-tower-grid">
             <div class="exec-home-block exec-home-block-hero exec-tower-span-full">
@@ -200,8 +209,20 @@
               <div id="exec-home-reception" class="exec-home-reception"></div>
             </div>
             <div class="exec-home-block exec-tower-block-revenue">
-              <h3>売上と利益</h3>
+              <h3>売上状況</h3>
               <div id="exec-home-revenue-profit" class="exec-home-revenue-profit"></div>
+            </div>
+            <div class="exec-home-block exec-tower-block-upcoming">
+              <h3>直近予定</h3>
+              <div id="exec-home-upcoming-schedule" class="exec-home-upcoming-schedule"></div>
+            </div>
+            <div class="exec-home-block exec-tower-block-marketing">
+              <h3>集客管理</h3>
+              <div id="exec-home-marketing-links" class="exec-home-marketing-links">
+                <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="analytics">アクセス分析</button>
+                <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="external-check">サイト確認記録</button>
+                <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="strategy-memo">集客施策メモ</button>
+              </div>
             </div>
             <div class="exec-home-block exec-home-block-warnings exec-tower-span-full">
               <h3>注意が必要なこと</h3>
@@ -237,6 +258,157 @@
           </div>
         </div>
 
+        <div class="card card-wide card-daily-action-tasks">
+          <div class="daily-flow-strip">
+            <span class="daily-flow-label">毎日の流れ</span>
+            <button type="button" class="btn btn-sm btn-secondary daily-flow-btn" data-daily-flow="calendar">カレンダー登録</button>
+            <span class="daily-flow-arrow">→</span>
+            <span class="daily-flow-current">毎日やること</span>
+            <span class="daily-flow-arrow">→</span>
+            <button type="button" class="btn btn-sm btn-secondary daily-flow-btn" data-daily-flow="revenue">売上登録</button>
+            <span class="daily-flow-arrow">→</span>
+            <button type="button" class="btn btn-sm btn-secondary daily-flow-btn" data-daily-flow="revenue-list">売上一覧</button>
+          </div>
+          <h2>毎日やること</h2>
+          <p class="daily-tasks-lead">毎朝または作業前に、今日必要な最小行動だけを確認します。</p>
+
+          <div id="daily-section-priority" class="daily-section daily-section-priority">
+            <h3 class="daily-section-title">今日の最優先</h3>
+            <div id="daily-priority-list" class="daily-priority-list"></div>
+          </div>
+
+          <div id="daily-section-revenue" class="daily-section daily-section-revenue">
+            <h3 class="daily-section-title">今日の売上登録</h3>
+            <div id="daily-revenue-notice" class="daily-revenue-notice hidden"></div>
+            <form id="daily-revenue-quick-form" class="daily-revenue-quick-form">
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="daily-revenue-date">日付</label>
+                  <input type="date" id="daily-revenue-date" required>
+                </div>
+                <div class="form-group">
+                  <label for="daily-revenue-customer">お客様名</label>
+                  <input type="text" id="daily-revenue-customer" required placeholder="例：山田様">
+                </div>
+              </div>
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="daily-revenue-service">作業内容</label>
+                  <input type="text" id="daily-revenue-service" required placeholder="例：エアコン清掃">
+                </div>
+                <div class="form-group">
+                  <label for="daily-revenue-amount">金額</label>
+                  <input type="number" id="daily-revenue-amount" required min="0" placeholder="例：15000">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="daily-revenue-memo">メモ</label>
+                <input type="text" id="daily-revenue-memo" placeholder="任意">
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">売上を登録</button>
+            </form>
+          </div>
+
+          <div id="daily-section-schedule" class="daily-section daily-section-schedule">
+            <h3 class="daily-section-title">直近の予定</h3>
+            <div id="daily-upcoming-schedule" class="daily-upcoming-schedule"></div>
+          </div>
+
+          <div id="daily-section-improvement" class="daily-section daily-section-improvement">
+            <h3 class="daily-section-title">改善リスト（今日やる分）</h3>
+            <div id="daily-improvement-list" class="daily-improvement-list"></div>
+          </div>
+
+          <details class="daily-tasks-more-sections">
+            <summary>タスク追加・完了履歴</summary>
+            <form id="daily-task-add-form" class="daily-task-add-form">
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="daily-task-add-title">タスク名</label>
+                  <input type="text" id="daily-task-add-title" required placeholder="例：LINE返信する">
+                </div>
+                <div class="form-group">
+                  <label for="daily-task-add-target">対象名</label>
+                  <input type="text" id="daily-task-add-target" placeholder="例：○○様">
+                </div>
+              </div>
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="daily-task-add-lead">関連営業先</label>
+                  <select id="daily-task-add-lead">
+                    <option value="">未選択</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="daily-task-add-priority">優先度</label>
+                  <select id="daily-task-add-priority">
+                    <option value="高">高</option>
+                    <option value="中" selected>中</option>
+                    <option value="低">低</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="daily-task-add-due">期限日</label>
+                  <input type="date" id="daily-task-add-due" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="daily-task-add-memo">メモ</label>
+                <input type="text" id="daily-task-add-memo" placeholder="任意">
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">タスク追加</button>
+            </form>
+            <div id="daily-task-edit-panel" class="daily-task-edit-panel hidden">
+              <h3 class="daily-task-edit-title">タスク編集</h3>
+              <input type="hidden" id="daily-task-edit-id">
+              <input type="hidden" id="daily-task-edit-kind">
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="daily-task-edit-title">タスク名</label>
+                  <input type="text" id="daily-task-edit-title" required>
+                </div>
+                <div class="form-group">
+                  <label for="daily-task-edit-target">対象名</label>
+                  <input type="text" id="daily-task-edit-target">
+                </div>
+              </div>
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="daily-task-edit-priority">優先度</label>
+                  <select id="daily-task-edit-priority">
+                    <option value="高">高</option>
+                    <option value="中">中</option>
+                    <option value="低">低</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="daily-task-edit-due">期限日</label>
+                  <input type="date" id="daily-task-edit-due" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="daily-task-edit-memo">メモ</label>
+                <input type="text" id="daily-task-edit-memo" placeholder="任意">
+              </div>
+              <div class="form-group">
+                <label for="daily-task-edit-next-action">次回アクション</label>
+                <input type="text" id="daily-task-edit-next-action" placeholder="例：1ヶ月後に完全分解を提案">
+              </div>
+              <div class="form-group">
+                <label for="daily-task-edit-next-contact">次回連絡日</label>
+                <input type="date" id="daily-task-edit-next-contact">
+              </div>
+              <div class="daily-task-edit-actions">
+                <button type="button" id="btn-daily-task-edit-save" class="btn btn-primary btn-sm">保存</button>
+                <button type="button" id="btn-daily-task-edit-cancel" class="btn btn-secondary btn-sm">キャンセル</button>
+              </div>
+            </div>
+            <div id="dash-daily-action-tasks" class="daily-action-tasks-list"></div>
+          </details>
+        </div>
+
         <div id="dash-external-check" class="card card-wide card-external-check"></div>
 
         <div id="dash-action-candidates" class="card card-wide card-action-candidates"></div>
@@ -251,12 +423,12 @@
           <ol class="start-guide-steps">
             <li>営業先を1件登録する</li>
             <li>売上を1件登録する</li>
-            <li>今日やることを1件追加する</li>
+            <li>毎日やることを1件追加する</li>
           </ol>
           <div class="start-guide-actions">
             <button type="button" id="btn-start-add-lead" class="btn btn-primary btn-sm">営業先を登録</button>
             <button type="button" id="btn-start-add-revenue" class="btn btn-secondary btn-sm">売上を登録</button>
-            <button type="button" id="btn-start-add-task" class="btn btn-secondary btn-sm">今日やることを追加</button>
+            <button type="button" id="btn-start-add-task" class="btn btn-secondary btn-sm">毎日やることを追加</button>
           </div>
         </div>
 
@@ -268,95 +440,6 @@
         <div class="card card-wide card-management-comment">
           <h2>経営番頭コメント</h2>
           <div id="dash-management-comment" class="management-comment-body"></div>
-        </div>
-
-        <div class="card card-wide card-daily-action-tasks">
-          <h2>今日やること</h2>
-          <form id="daily-task-add-form" class="daily-task-add-form">
-            <div class="form-row form-row-2">
-              <div class="form-group">
-                <label for="daily-task-add-title">タスク名</label>
-                <input type="text" id="daily-task-add-title" required placeholder="例：LINE返信する">
-              </div>
-              <div class="form-group">
-                <label for="daily-task-add-target">対象名</label>
-                <input type="text" id="daily-task-add-target" placeholder="例：○○様">
-              </div>
-            </div>
-            <div class="form-row form-row-2">
-              <div class="form-group">
-                <label for="daily-task-add-lead">関連営業先</label>
-                <select id="daily-task-add-lead">
-                  <option value="">未選択</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="daily-task-add-priority">優先度</label>
-                <select id="daily-task-add-priority">
-                  <option value="高">高</option>
-                  <option value="中" selected>中</option>
-                  <option value="低">低</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-row form-row-2">
-              <div class="form-group">
-                <label for="daily-task-add-due">期限日</label>
-                <input type="date" id="daily-task-add-due" required>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="daily-task-add-memo">メモ</label>
-              <input type="text" id="daily-task-add-memo" placeholder="任意">
-            </div>
-            <button type="submit" class="btn btn-primary btn-sm">タスク追加</button>
-          </form>
-          <div id="daily-task-edit-panel" class="daily-task-edit-panel hidden">
-            <h3 class="daily-task-edit-title">タスク編集</h3>
-            <input type="hidden" id="daily-task-edit-id">
-            <input type="hidden" id="daily-task-edit-kind">
-            <div class="form-row form-row-2">
-              <div class="form-group">
-                <label for="daily-task-edit-title">タスク名</label>
-                <input type="text" id="daily-task-edit-title" required>
-              </div>
-              <div class="form-group">
-                <label for="daily-task-edit-target">対象名</label>
-                <input type="text" id="daily-task-edit-target">
-              </div>
-            </div>
-            <div class="form-row form-row-2">
-              <div class="form-group">
-                <label for="daily-task-edit-priority">優先度</label>
-                <select id="daily-task-edit-priority">
-                  <option value="高">高</option>
-                  <option value="中">中</option>
-                  <option value="低">低</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="daily-task-edit-due">期限日</label>
-                <input type="date" id="daily-task-edit-due" required>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="daily-task-edit-memo">メモ</label>
-              <input type="text" id="daily-task-edit-memo" placeholder="任意">
-            </div>
-            <div class="form-group">
-              <label for="daily-task-edit-next-action">次回アクション</label>
-              <input type="text" id="daily-task-edit-next-action" placeholder="例：1ヶ月後に完全分解を提案">
-            </div>
-            <div class="form-group">
-              <label for="daily-task-edit-next-contact">次回連絡日</label>
-              <input type="date" id="daily-task-edit-next-contact">
-            </div>
-            <div class="daily-task-edit-actions">
-              <button type="button" id="btn-daily-task-edit-save" class="btn btn-primary btn-sm">保存</button>
-              <button type="button" id="btn-daily-task-edit-cancel" class="btn btn-secondary btn-sm">キャンセル</button>
-            </div>
-          </div>
-          <div id="dash-daily-action-tasks" class="daily-action-tasks-list"></div>
         </div>
 
         <div class="card card-wide card-today-execution">
@@ -395,7 +478,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.8.18</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.8.19</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -542,27 +625,31 @@
           <p class="view-subtitle">検索需要、投稿ネタ、広告メモ、集客の打ち手をまとめて確認します。</p>
         </header>
         <div class="card card-wide strategy-memo-hub">
-          <p class="strategy-memo-intro">集客のネタや施策メモはここから開けます。各機能はそのまま使えます。</p>
+          <div id="strategy-memo-overview" class="strategy-memo-overview"></div>
           <div class="strategy-memo-grid">
             <button type="button" class="strategy-memo-card" data-strategy-open="radar">
               <span class="strategy-memo-card-icon">📡</span>
               <strong>検索需要</strong>
-              <span class="strategy-memo-card-desc">今週の狙い・注目キーワード・市場メモ</span>
+              <span class="strategy-memo-card-desc">今週の狙い・注目キーワード</span>
+              <span class="strategy-memo-card-summary" data-strategy-summary="radar"></span>
             </button>
             <button type="button" class="strategy-memo-card" data-strategy-open="pickup">
               <span class="strategy-memo-card-icon">📥</span>
               <strong>投稿・集客ネタ</strong>
-              <span class="strategy-memo-card-desc">調査結果を今日の行動に変換</span>
+              <span class="strategy-memo-card-desc">調査結果を毎日やることに変換</span>
+              <span class="strategy-memo-card-summary" data-strategy-summary="pickup"></span>
             </button>
             <button type="button" class="strategy-memo-card" data-strategy-open="demand">
               <span class="strategy-memo-card-icon">🔎</span>
               <strong>調査メモ</strong>
-              <span class="strategy-memo-card-desc">朝の需要チェック → 分析 → 朝レポート</span>
+              <span class="strategy-memo-card-desc">朝の需要チェック</span>
+              <span class="strategy-memo-card-summary" data-strategy-summary="demand"></span>
             </button>
             <button type="button" class="strategy-memo-card" data-strategy-open="pickup" data-strategy-scroll="#pickup-ad-action">
               <span class="strategy-memo-card-icon">📣</span>
               <strong>広告メモ</strong>
-              <span class="strategy-memo-card-desc">広告・集客の提案と文案生成</span>
+              <span class="strategy-memo-card-desc">広告・集客の提案と文案</span>
+              <span class="strategy-memo-card-summary" data-strategy-summary="ad"></span>
             </button>
           </div>
         </div>
@@ -1733,32 +1820,33 @@
           <p class="view-subtitle">LP・Googleビジネス・検索状況など、外部で確認した内容を記録します。</p>
         </header>
 
-        <div class="card card-wide card-external-check-form">
-          <p class="external-check-notice"><strong>これは売上確定ではありません。</strong> 外部から確認した内容を記録する場所です。予定・GBP反応は参考情報として扱います。</p>
+        <div class="card card-wide card-external-check-unified">
+          <details class="external-check-help-collapse">
+            <summary>サイト確認記録の説明</summary>
+            <p class="external-check-notice"><strong>これは売上確定ではありません。</strong> 外部から確認した内容を記録する場所です。予定・GBP反応は参考情報として扱います。</p>
+          </details>
 
-          <h2>確認結果の貼り付け</h2>
-          <textarea id="external-check-paste" class="external-check-paste" rows="14" placeholder="【Budil貼り付け用】&#10;種別：外部チェックレポート&#10;確認日：2026-06-19&#10;..."></textarea>
+          <h2>確認結果の保存</h2>
+          <textarea id="external-check-paste" class="external-check-paste" rows="10" placeholder="【Budil貼り付け用】&#10;種別：外部チェックレポート&#10;確認日：2026-06-19&#10;..."></textarea>
           <div class="external-check-actions">
             <button type="button" id="btn-external-check-save" class="btn btn-sm btn-primary">保存</button>
             <button type="button" id="btn-external-check-clear" class="btn btn-sm btn-secondary">クリア</button>
           </div>
           <div id="external-check-parse-warnings" class="external-check-parse-warnings"></div>
-        </div>
 
-        <div class="card card-wide card-external-check-latest">
-          <h2>最新レポート</h2>
-          <div id="external-check-latest" class="external-check-latest-body"></div>
-        </div>
-
-        <div class="card card-wide card-external-check-actions">
-          <h2>改善リスト</h2>
-          <p class="external-check-actions-note">サイト確認記録由来の改善アクションです。売上確定ではありません。</p>
+          <h2 class="external-check-section-heading">改善リスト</h2>
+          <p class="external-check-actions-note">サイト確認記録から追加した改善項目です。売上確定ではありません。</p>
           <div id="external-check-action-candidates" class="external-check-action-candidates-list"></div>
-        </div>
 
-        <div class="card card-wide card-external-check-history">
-          <h2>確認履歴</h2>
-          <div id="external-check-history" class="external-check-history-list"></div>
+          <details class="external-check-history-collapse">
+            <summary>確認履歴</summary>
+            <div id="external-check-history" class="external-check-history-list"></div>
+          </details>
+
+          <details class="external-check-latest-collapse">
+            <summary>最新レポートの詳細</summary>
+            <div id="external-check-latest" class="external-check-latest-body"></div>
+          </details>
         </div>
       </section>
 
@@ -3240,30 +3328,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.8.18"></script>
-  <script src="js/messages.js?v=4.8.18"></script>
-  <script src="js/demand-brain.js?v=4.8.18"></script>
-  <script src="js/demand-radar.js?v=4.8.18"></script>
-  <script src="js/sales-brain.js?v=4.8.18"></script>
-  <script src="js/management-brain.js?v=4.8.18"></script>
-  <script src="js/payment-brain.js?v=4.8.18"></script>
-  <script src="js/revenue-brain.js?v=4.8.18"></script>
-  <script src="js/revenue-summary-brain.js?v=4.8.18"></script>
-  <script src="js/reception-brain.js?v=4.8.18"></script>
-  <script src="js/map-brain.js?v=4.8.18"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.8.18"></script>
-  <script src="js/external-check-brain.js?v=4.8.18"></script>
-  <script src="js/action-brain.js?v=4.8.18"></script>
-  <script src="js/work-order-brain.js?v=4.8.18"></script>
-  <script src="js/follow-up-brain.js?v=4.8.18"></script>
-  <script src="js/work-completion-brain.js?v=4.8.18"></script>
-  <script src="js/profit-brain.js?v=4.8.18"></script>
-  <script src="js/analytics-brain.js?v=4.8.18"></script>
-  <script src="js/monthly-results-brain.js?v=4.8.18"></script>
-  <script src="js/documents-brain.js?v=4.8.18"></script>
-  <script src="js/executive-brain.js?v=4.8.18"></script>
-  <script src="js/card-ocr.js?v=4.8.18"></script>
-  <script src="js/data-backup.js?v=4.8.18"></script>
-  <script src="js/app.js?v=4.8.18"></script>
+  <script src="js/storage.js?v=4.8.19"></script>
+  <script src="js/messages.js?v=4.8.19"></script>
+  <script src="js/demand-brain.js?v=4.8.19"></script>
+  <script src="js/demand-radar.js?v=4.8.19"></script>
+  <script src="js/sales-brain.js?v=4.8.19"></script>
+  <script src="js/management-brain.js?v=4.8.19"></script>
+  <script src="js/payment-brain.js?v=4.8.19"></script>
+  <script src="js/revenue-brain.js?v=4.8.19"></script>
+  <script src="js/revenue-summary-brain.js?v=4.8.19"></script>
+  <script src="js/reception-brain.js?v=4.8.19"></script>
+  <script src="js/map-brain.js?v=4.8.19"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.8.19"></script>
+  <script src="js/external-check-brain.js?v=4.8.19"></script>
+  <script src="js/action-brain.js?v=4.8.19"></script>
+  <script src="js/work-order-brain.js?v=4.8.19"></script>
+  <script src="js/follow-up-brain.js?v=4.8.19"></script>
+  <script src="js/work-completion-brain.js?v=4.8.19"></script>
+  <script src="js/profit-brain.js?v=4.8.19"></script>
+  <script src="js/analytics-brain.js?v=4.8.19"></script>
+  <script src="js/monthly-results-brain.js?v=4.8.19"></script>
+  <script src="js/documents-brain.js?v=4.8.19"></script>
+  <script src="js/executive-brain.js?v=4.8.19"></script>
+  <script src="js/card-ocr.js?v=4.8.19"></script>
+  <script src="js/data-backup.js?v=4.8.19"></script>
+  <script src="js/app.js?v=4.8.19"></script>
 </body>
 </html>

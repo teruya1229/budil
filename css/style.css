@@ -7276,7 +7276,125 @@ body {
   font-size: 0.88rem;
 }
 
-/* 今日やること v4.0.1 */
+/* 毎日やること v4.8.19 */
+.daily-flow-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  background: rgba(15, 23, 42, 0.45);
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+
+.daily-flow-label {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.daily-flow-current {
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.daily-flow-arrow {
+  color: #64748b;
+}
+
+.daily-tasks-lead {
+  margin: 0 0 1rem;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.daily-section {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.daily-section-title {
+  font-size: 0.95rem;
+  margin: 0 0 0.5rem;
+  color: #e2e8f0;
+}
+
+.daily-priority-items,
+.daily-upcoming-list,
+.daily-improvement-items {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+}
+
+.daily-priority-item,
+.daily-upcoming-item,
+.daily-improvement-item {
+  margin-bottom: 0.45rem;
+}
+
+.daily-priority-reason,
+.daily-upcoming-more,
+.daily-improvement-more {
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+
+.daily-revenue-quick-form {
+  max-width: 100%;
+}
+
+.daily-revenue-notice {
+  margin-bottom: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  background: rgba(34, 197, 94, 0.12);
+  border-radius: 8px;
+}
+
+.daily-revenue-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.daily-improvement-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.exec-home-daily-link-row {
+  margin: 0.5rem 0 0.75rem;
+}
+
+.exec-home-marketing-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.strategy-memo-card-summary {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.strategy-memo-intro {
+  margin: 0 0 0.75rem;
+  color: #94a3b8;
+  font-size: 0.88rem;
+}
+
+.external-check-section-heading {
+  margin-top: 1rem;
+}
+
+/* 毎日やること v4.0.1 */
 .daily-task-v2 .daily-task-title {
   font-size: 1rem;
   font-weight: 600;

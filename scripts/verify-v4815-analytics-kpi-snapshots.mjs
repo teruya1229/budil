@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.8.18 analytics KPI snapshot verification.
+ * Budil v4.8.19 analytics KPI snapshot verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -24,11 +24,11 @@ const analyticsBrainJs = load('js/analytics-brain.js');
 const dataBackupJs = load('js/data-backup.js');
 const css = load('css/style.css');
 
-console.log('== v4.8.18 analytics KPI snapshots ==');
+console.log('== v4.8.19 analytics KPI snapshots ==');
 
-assert(indexHtml.includes('AI経営脳みそ v4.8.18'), 'header version should be v4.8.18');
-assert(indexHtml.includes('Budil v4.8.18'), 'sidebar version should be v4.8.18');
-assert(indexHtml.includes('js/app.js?v=4.8.18'), 'app.js cache buster should be v4.8.18');
+assert(indexHtml.includes('AI経営脳みそ v4.8.19'), 'header version should be v4.8.19');
+assert(indexHtml.includes('Budil v4.8.19'), 'sidebar version should be v4.8.19');
+assert(indexHtml.includes('js/app.js?v=4.8.19'), 'app.js cache buster should be v4.8.19');
 assert(indexHtml.includes('id="browser-bantou-preview-kpi"'), 'KPI import preview container should exist');
 assert(indexHtml.includes('id="analytics-kpi-snapshot"'), 'KPI snapshot card container should exist');
 assert(storageJs.includes("ANALYTICS_SNAPSHOTS: 'budil_analytics_snapshots'"), 'analytics snapshot key should exist');
@@ -94,4 +94,4 @@ assert(preview.snapshot.rawTextHash, 'rawTextHash should be generated');
 assert(preview.snapshot.insights.length > 0, 'insights should be generated');
 assert(preview.snapshot.actionCandidates.length > 0, 'action candidates should be generated');
 
-console.log('All v4.8.18 analytics KPI snapshot checks passed.');
+console.log('All v4.8.19 analytics KPI snapshot checks passed.');

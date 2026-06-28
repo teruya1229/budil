@@ -464,6 +464,9 @@
 
   // ── ナビゲーション ──
   const STRATEGY_MEMO_VIEWS = ['strategy-memo', 'radar', 'pickup', 'demand'];
+  const DAILY_TASKS_UI_LABEL = '毎日やること';
+  const EMPTY_DAILY_TASKS_COPY = '毎日やることはまだありません。カレンダー登録・改善リスト・経営ホームから追加できます。';
+  const EMPTY_SCHEDULE_COPY = '直近予定はありません。カレンダー登録から予定を追加できます。';
   const CALENDAR_REGISTRATION_VIEWS = ['calendar-registration', 'reception', 'work-order'];
   const NAV_VIEW_ALIASES = {
     reception: 'calendar-registration',
@@ -610,7 +613,7 @@
     safeRenderSection('dash-stop-improve', () => renderDashStopImprove(), '改善・停止候補');
     safeRenderSection('dash-weekly-strategy', () => renderWeeklyStrategyBoard(), '週間作戦ボード');
     safeRenderSection('dash-action-calendar', () => renderActionCalendar(), '投稿・広告カレンダー');
-    safeRenderSection('dash-daily-action-tasks', () => renderDailyActionTasks(), '今日やること');
+    safeRenderSection('dash-daily-action-tasks', () => renderDailyActionTasks(), DAILY_TASKS_UI_LABEL);
     safeRenderSection(null, () => renderMorningDailyTasksBrief(), '朝レポートタスク');
     safeRenderSection('business-report-dash', () => renderBusinessReport('compact'), '経営メモ');
     safeRenderSection('onboarding-guide-dash', () => renderOnboardingGuide('compact'), 'はじめてガイド');
@@ -818,7 +821,7 @@
     const p = item || {};
     const taskBtn = p.taskId
       ? `<button type="button" class="btn btn-sm btn-primary" data-exec-priority-done="${esc(p.taskId)}">完了</button>`
-      : `<button type="button" class="btn btn-sm btn-primary" data-exec-priority-add-task="${esc(p.id)}">今日やることに追加</button>`;
+      : `<button type="button" class="btn btn-sm btn-primary" data-exec-priority-add-task="${esc(p.id)}">毎日やることに追加</button>`;
     return `
       <div class="exec-priority-item" data-priority-id="${esc(p.id)}">
         <div class="exec-priority-header">
@@ -838,7 +841,7 @@
   function renderExecutiveWorkOrdersHtml(section) {
     const sec = section || { items: [] };
     if (!sec.items.length) {
-      return '<p class="placeholder-text">今日の作業予定はありません。<br>カレンダー登録から作成できます。</p>';
+      return '<p class="placeholder-text">今日の予定はありません。<br>カレンダー登録から追加できます。</p>';
     }
     return sec.items.map(wo => `
       <div class="exec-work-item" data-work-order-id="${esc(wo.id)}">
@@ -872,7 +875,7 @@
         <div class="exec-work-actions">
           <button type="button" class="btn btn-sm btn-primary" data-exec-intake-lead="${esc(intake.id)}">営業先作成</button>
           <button type="button" class="btn btn-sm btn-secondary" data-exec-intake-wo="${esc(intake.id)}">この受付から作業予定を作る</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-exec-intake-task="${esc(intake.id)}">今日やること追加</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-exec-intake-task="${esc(intake.id)}">毎日やること追加</button>
         </div>
       </div>`).join('');
   }
@@ -939,7 +942,7 @@
         <div class="exec-work-actions">
           ${t.needsThanks ? `<button type="button" class="btn btn-sm btn-secondary" data-exec-follow-thanks="${esc(t.id)}">お礼文コピー</button>` : ''}
           ${t.needsReview ? `<button type="button" class="btn btn-sm btn-secondary" data-exec-follow-review="${esc(t.id)}">口コミ依頼文コピー</button>` : ''}
-          <button type="button" class="btn btn-sm btn-secondary" data-exec-follow-task="${esc(t.id)}">今日やること追加</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-exec-follow-task="${esc(t.id)}">毎日やること追加</button>
         </div>
       </div>`).join('');
     return `
@@ -958,8 +961,8 @@
       ${lines.length ? `<div class="exec-analytics-lines">${lines.map(l => `<p>${esc(l)}</p>`).join('')}</div>` : ''}
       ${(s.demandLines || []).length ? `<ul class="exec-demand-lines">${s.demandLines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
       <div class="exec-work-actions">
-        <button type="button" class="btn btn-sm btn-secondary exec-home-analytics-link">アナリティクス</button>
-        <button type="button" class="btn btn-sm btn-secondary exec-home-pickup-link">需要ピックアップ</button>
+        <button type="button" class="btn btn-sm btn-secondary exec-home-analytics-link">アクセス分析</button>
+        <button type="button" class="btn btn-sm btn-secondary exec-home-pickup-link">集客施策メモ</button>
         <button type="button" class="btn btn-sm btn-secondary" id="btn-exec-browser-prompt">アクセス確認用の文をコピー</button>
       </div>`;
   }
@@ -1056,6 +1059,7 @@
       'morning-report': () => scrollToElement('#morning-report'),
       'monthly-results': () => navigateToView('monthly-results'),
       'external-check': () => navigateToView('external-check'),
+      'strategy-memo': () => navigateToView('strategy-memo'),
       diagnostic: () => { navigateToView('data'); setTimeout(() => scrollToElement('#btn-run-diagnostics'), 120); },
       backup: goToDataBackup,
       kurokuro: goToKurokuroPrompt
@@ -1070,7 +1074,7 @@
   }
 
   function goToDemandPickup() {
-    navigateToView('pickup');
+    navigateToView('strategy-memo');
   }
 
   function goToReception() {
@@ -1112,7 +1116,7 @@
     const title = candidate ? candidate.action : (lead.nextAction || '営業アクションを実行');
     const key = ['exec-sales', today, leadId, title].join('|');
     if (Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === key)) {
-      alert('すでに今日やることに追加済みです');
+      alert('すでに毎日やることに追加済みです');
       return;
     }
     Storage.addManualDailyTask({
@@ -1131,7 +1135,7 @@
     renderExecutiveHome();
     renderDailyActionTasks();
     renderMorningDailyTasksBrief();
-    alert('今日やることに追加しました。');
+    alert('毎日やることに追加しました。');
   }
 
   let lastExecutiveContext = null;
@@ -1156,7 +1160,7 @@
     const today = TODAY();
     const key = item.taskDedupeKey || item.dedupeKey;
     if (Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === key)) {
-      alert('すでに今日やることに追加済みです');
+      alert('すでに毎日やることに追加済みです');
       return;
     }
     Storage.addManualDailyTask({
@@ -1175,7 +1179,7 @@
     });
     renderExecutiveHome();
     renderDailyActionTasks();
-    alert('今日やることに追加しました。');
+    alert('毎日やることに追加しました。');
   }
 
   function navigateExecutivePriority(sourceKey) {
@@ -1343,24 +1347,24 @@
 
   function renderExecutiveHomeStartGuide(isEmpty) {
     const el = document.getElementById('exec-home-start-guide');
+    const collapse = document.getElementById('exec-home-start-collapse');
     if (!el) return;
     const status = Storage.getOnboardingStatus();
     const doneCount = ONBOARDING_STEPS.filter(s => status[s.key]).length;
     const showGuide = isEmpty || doneCount < 3;
     if (!showGuide) {
-      el.classList.add('hidden');
       el.innerHTML = '';
+      if (collapse) collapse.classList.add('hidden');
       return;
     }
-    el.classList.remove('hidden');
+    if (collapse) collapse.classList.remove('hidden');
     const quickSteps = [
       { n: 1, text: 'デモデータを作成して全体の流れを確認', action: 'demo', btn: 'デモ作成' },
       { n: 2, text: '経営ホームで今日の結論と最優先3つを見る', action: 'home', btn: 'この画面を見る' },
-      { n: 3, text: '受付を1件入れて、作業予定・売上登録まで試す', action: 'reception', btn: '受付へ' }
+      { n: 3, text: 'カレンダー登録から受付・日程・売上登録まで試す', action: 'reception', btn: 'カレンダー登録へ' }
     ];
     el.innerHTML = `
       <div class="exec-start-guide-inner">
-        <h3 class="exec-start-guide-title">はじめの3ステップ</h3>
         <ol class="exec-start-guide-steps">
           ${quickSteps.map(s => `<li><span class="exec-start-num">${s.n}</span><span>${esc(s.text)}</span>
             <button type="button" class="btn btn-sm btn-secondary" data-exec-start="${esc(s.action)}">${esc(s.btn)}</button></li>`).join('')}
@@ -1368,9 +1372,9 @@
         <details class="exec-start-guide-more">
           <summary>詳しい使い方を見る</summary>
           <ol class="exec-start-guide-full" start="4">
-            <li>作業予定を作る → 作業完了後に売上登録</li>
+            <li>日程を入れてカレンダー登録 → 作業後に売上登録</li>
             <li>フォロー・口コミ依頼を確認</li>
-            <li>利益・アクセス分析で改善点を見る</li>
+            <li>アクセス分析で改善点を見る</li>
           </ol>
         </details>
       </div>`;
@@ -1432,8 +1436,11 @@
       const priorities = ctx.topPriorities || [];
       prioritiesEl.innerHTML = priorities.length
         ? priorities.map((p, i) => renderExecutiveTopPriorityCard(p, i)).join('')
-        : '<p class="placeholder-text">今日の最優先はまだありません。作業予定・受付・フォローを登録すると表示されます。</p>';
+        : '<p class="placeholder-text">今日の最優先はまだありません。カレンダー登録・改善リスト・経営ホームから追加できます。</p>';
     }
+
+    const upcomingEl = document.getElementById('exec-home-upcoming-schedule');
+    if (upcomingEl) upcomingEl.innerHTML = renderDailyUpcomingScheduleHtml({ compact: true, limit: 3 });
 
     const workEl = document.getElementById('exec-home-work-orders');
     if (workEl) workEl.innerHTML = renderExecutiveWorkOrdersHtml(ctx.workSection);
@@ -1455,6 +1462,22 @@
 
     renderExecutiveHomeCheck();
     bindExecutiveHomeEvents();
+    bindExecutiveMarketingLinks();
+    const dailyBtn = document.getElementById('btn-exec-go-daily-tasks');
+    if (dailyBtn && !dailyBtn.dataset.bound) {
+      dailyBtn.dataset.bound = '1';
+      dailyBtn.addEventListener('click', () => scrollToElement('.card-daily-action-tasks'));
+    }
+  }
+
+  function bindExecutiveMarketingLinks() {
+    const root = document.getElementById('exec-home-marketing-links');
+    if (!root) return;
+    root.querySelectorAll('[data-exec-quick]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => handleExecutiveHomeQuickAction(btn.dataset.execQuick));
+    });
   }
 
   function renderMorningExecutiveSections() {
@@ -1748,7 +1771,7 @@
     if (!listEl) return;
     const logs = Storage.getLeadActivityLogs(leadId).slice(0, 5);
     if (!logs.length) {
-      listEl.innerHTML = '<p class="placeholder-text">活動履歴はまだありません。活動を追加するか、今日やることのタスクを完了するとここに残ります。</p>';
+      listEl.innerHTML = '<p class="placeholder-text">活動履歴はまだありません。活動を追加するか、毎日やることのタスクを完了するとここに残ります。</p>';
       return;
     }
     listEl.innerHTML = logs.map((log, index) => {
@@ -1900,7 +1923,7 @@
     }
     el.classList.remove('hidden');
     el.innerHTML = `
-      <p class="lead-daily-tasks-title">今日やることあり</p>
+      <p class="lead-daily-tasks-title">毎日やることあり</p>
       <ul class="lead-daily-tasks-list">
         ${active.map(t => `<li>${esc(t.title || t.action || 'タスク')}</li>`).join('')}
       </ul>`;
@@ -1944,7 +1967,7 @@
         <span class="label-muted">状態</span>
         <span class="next-contact-due-badge ${due.className}">${esc(due.label)}</span>
       </p>
-      ${isUrgent ? '<p class="sales-next-action-alert">次回連絡日が今日以前です。今日やることに反映されます。</p>' : ''}`;
+      ${isUrgent ? '<p class="sales-next-action-alert">次回連絡日が今日以前です。毎日やることに反映されます。</p>' : ''}`;
   }
 
   function fillDailyTaskLeadSelect() {
@@ -2311,7 +2334,7 @@
     if (/アナリティクス|アクセス分析|外部確認\/アナリティクス|ブラウザー番頭/i.test(reason + target)) return 'アクセス分析';
     if (/経営レポート|経営メモ|経営ホーム|次の一手/i.test(reason + target)) return '経営ホーム';
     if (task.intakeId) return '受付';
-    if (task.workOrderId || key.startsWith('work-order|')) return '作業予定';
+    if (task.workOrderId || key.startsWith('work-order|')) return 'カレンダー登録';
     if (task.leadId) return '営業先';
     if (task.pickupDedupeKey) return '施策メモ';
     if (task.type === 'manual') return '手動';
@@ -2429,37 +2452,253 @@
     });
   }
 
+  function formatUpcomingDayLabel(scheduledDate, today) {
+    if (!scheduledDate) return '—';
+    if (scheduledDate === today) return '今日';
+    if (scheduledDate === addDaysToDate(today, 1)) return '明日';
+    const d = new Date(scheduledDate + 'T12:00:00');
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  }
+
+  function renderDailyUpcomingScheduleHtml(options) {
+    const opts = options || {};
+    const today = TODAY();
+    const workOrders = WorkOrderBrain.getWeekWorkOrders(Storage.getWorkOrders(), today);
+    const limit = opts.limit || 3;
+    const visible = workOrders.slice(0, limit);
+    const hiddenCount = Math.max(0, workOrders.length - limit);
+    if (!visible.length) {
+      return `<p class="placeholder-text daily-schedule-empty">${esc(EMPTY_SCHEDULE_COPY)}</p>`;
+    }
+    const lines = visible.map(wo => {
+      const day = formatUpcomingDayLabel(wo.scheduledDate, today);
+      const time = wo.startTime || '—';
+      const name = wo.customerName || 'お客様';
+      const svc = (wo.serviceText || wo.service || '').slice(0, 20);
+      return `<li class="daily-upcoming-item">${esc(day)} ${esc(time)} ${esc(name)} ${esc(svc)}</li>`;
+    }).join('');
+    const more = hiddenCount ? `<p class="daily-upcoming-more">ほか${hiddenCount}件</p>` : '';
+    const btn = opts.compact
+      ? `<button type="button" class="btn btn-sm btn-secondary daily-go-calendar">カレンダー登録を見る</button>`
+      : '';
+    return `<ul class="daily-upcoming-list">${lines}</ul>${more}${btn}`;
+  }
+
+  function collectDailyPriorityItems() {
+    const today = TODAY();
+    const items = [];
+    const seen = new Set();
+    const push = (title, reason, kind, meta) => {
+      const key = [kind, title, reason].join('|');
+      if (!title || seen.has(key)) return;
+      seen.add(key);
+      items.push({ title, reason, kind, ...(meta || {}) });
+    };
+
+    const ctx = buildExecutiveContext();
+    (ctx.topPriorities || []).slice(0, 3).forEach(p => {
+      push(p.title, p.reason, 'priority', { priorityId: p.id, taskId: p.taskId });
+    });
+
+    const pendingRevenue = WorkOrderBrain.filterActive(Storage.getWorkOrders())
+      .filter(w => w.status === 'completed' && !w.actualRevenueId);
+    pendingRevenue.slice(0, 2).forEach(wo => {
+      push(
+        `売上登録：${wo.customerName || 'お客様'}`,
+        wo.serviceText || '作業後に売上登録',
+        'revenue',
+        { workOrderId: wo.id }
+      );
+    });
+
+    if (typeof ActionBrain !== 'undefined') {
+      Storage.getActionCandidates()
+        .map(c => ActionBrain.normalizeCandidate(c))
+        .filter(c => c.status === ActionBrain.STATUS_TODO)
+        .slice(0, 2)
+        .forEach(c => push(c.title, '改善リスト', 'improvement', { candidateId: c.id }));
+    }
+
+    const urgentTasks = sortDailyTasksForDisplay(
+      getDailyActionTasksWithState().filter(t =>
+        t.status !== 'done' && !isDailyTaskSnoozedAway(t, today) && t.priority === '高'
+      )
+    ).slice(0, 2);
+    urgentTasks.forEach(t => push(t.title, t.reason || t.targetName || '緊急確認', 'task', { taskId: t.id }));
+
+    return items;
+  }
+
+  function renderDailyPrioritySection() {
+    const el = document.getElementById('daily-priority-list');
+    if (!el) return;
+    const items = collectDailyPriorityItems();
+    if (!items.length) {
+      el.innerHTML = '<p class="placeholder-text">今日の最優先はまだありません。</p>';
+      return;
+    }
+    const visible = items.slice(0, 3);
+    const hidden = items.slice(3);
+    el.innerHTML = `
+      <ul class="daily-priority-items">
+        ${visible.map(it => `<li class="daily-priority-item daily-priority-${esc(it.kind)}">
+          <strong>${esc(it.title)}</strong>
+          <span class="daily-priority-reason">${esc(it.reason)}</span>
+        </li>`).join('')}
+      </ul>
+      ${hidden.length ? `<details class="daily-priority-more"><summary>ほか${hidden.length}件</summary><ul class="daily-priority-items">${hidden.map(it => `<li class="daily-priority-item"><strong>${esc(it.title)}</strong> — ${esc(it.reason)}</li>`).join('')}</ul></details>` : ''}`;
+  }
+
+  function renderDailyImprovementSection() {
+    const el = document.getElementById('daily-improvement-list');
+    if (!el || typeof ActionBrain === 'undefined') return;
+    const candidates = Storage.getActionCandidates()
+      .map(c => ActionBrain.normalizeCandidate(c))
+      .filter(c => c.status === ActionBrain.STATUS_TODO);
+    if (!candidates.length) {
+      el.innerHTML = '<p class="placeholder-text">改善リストはまだありません。<br>アクセス分析・サイト確認記録・経営ホームから追加できます。</p>';
+      return;
+    }
+    const visible = candidates.slice(0, 3);
+    const hiddenCount = Math.max(0, candidates.length - 3);
+    el.innerHTML = `
+      <ul class="daily-improvement-items">
+        ${visible.map(c => {
+          const dailyKey = ActionBrain.makeDailyTaskDedupeKey(c.sourceReportId, c.title);
+          const inDaily = Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === dailyKey);
+          return `<li class="daily-improvement-item">
+            <p class="daily-improvement-title">${esc(c.title)}</p>
+            <div class="daily-improvement-actions">
+              <button type="button" class="btn btn-sm btn-secondary" data-act-done="${esc(c.id)}">対応済み</button>
+              <button type="button" class="btn btn-sm btn-not-needed" data-act-not-needed="${esc(c.id)}">必要無し</button>
+              <button type="button" class="btn btn-sm btn-secondary" data-act-snooze="${esc(c.id)}">後で見る</button>
+              ${inDaily ? '' : `<button type="button" class="btn btn-sm btn-primary" data-act-daily="${esc(c.sourceReportId)}" data-act-title="${esc(c.title)}">${esc(DAILY_TASKS_UI_LABEL)}へ</button>`}
+            </div>
+          </li>`;
+        }).join('')}
+      </ul>
+      ${hiddenCount ? `<p class="daily-improvement-more">ほか${hiddenCount}件</p>` : ''}
+      <button type="button" class="btn btn-sm btn-secondary daily-go-improvement-list">改善リストを見る</button>`;
+    bindActionCandidateButtons(el);
+    el.querySelectorAll('[data-act-snooze]').forEach(btn => {
+      btn.addEventListener('click', () => showAppToast('改善リストに残しました'));
+    });
+    const listBtn = el.querySelector('.daily-go-improvement-list');
+    if (listBtn) {
+      listBtn.addEventListener('click', () => navigateToView('external-check', '.card-external-check-unified'));
+    }
+  }
+
+  function showDailyRevenueSavedNotice() {
+    const el = document.getElementById('daily-revenue-notice');
+    if (!el) return;
+    el.classList.remove('hidden');
+    el.innerHTML = `
+      <p class="daily-revenue-notice-text">売上を登録しました。売上一覧で確認できます。</p>
+      <div class="daily-revenue-notice-actions">
+        <button type="button" class="btn btn-sm btn-primary" data-daily-revenue-go-list>売上一覧を見る</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-stay>この画面に残る</button>
+      </div>`;
+    el.querySelector('[data-daily-revenue-go-list]').addEventListener('click', () => {
+      navigateToView('revenue', '#revenue-aggregation-card');
+    });
+    el.querySelector('[data-daily-revenue-stay]').addEventListener('click', () => {
+      el.classList.add('hidden');
+    });
+  }
+
+  function handleDailyRevenueQuickSubmit(e) {
+    e.preventDefault();
+    const workDate = document.getElementById('daily-revenue-date').value;
+    const customerName = document.getElementById('daily-revenue-customer').value.trim();
+    const serviceText = document.getElementById('daily-revenue-service').value.trim();
+    const amount = Number(document.getElementById('daily-revenue-amount').value) || 0;
+    const memo = document.getElementById('daily-revenue-memo').value.trim();
+    if (!customerName || !serviceText || !amount) {
+      alert('お客様名・作業内容・金額は必須です');
+      return;
+    }
+    Storage.addRevenueRecord({
+      workDate: workDate || TODAY(),
+      customerName,
+      service: serviceText,
+      source: RevenueBrain.SOURCES[0],
+      amount,
+      grossMarginRate: '',
+      status: '確定',
+      paymentMethod: 'cash',
+      paymentStatus: 'paid',
+      paymentDate: workDate || TODAY(),
+      paymentConcern: false,
+      memo
+    });
+    document.getElementById('daily-revenue-quick-form').reset();
+    document.getElementById('daily-revenue-date').value = TODAY();
+    showDailyRevenueSavedNotice();
+    renderExecutiveHome();
+    renderRevenueView();
+  }
+
+  function initDailyFlowStrip() {
+    document.querySelectorAll('[data-daily-flow]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => {
+        const flow = btn.dataset.dailyFlow;
+        if (flow === 'calendar') goToReception();
+        else if (flow === 'revenue') goToAddRevenue();
+        else if (flow === 'revenue-list') navigateToView('revenue', '#revenue-aggregation-card');
+      });
+    });
+    document.querySelectorAll('.daily-go-calendar').forEach(btn => {
+      btn.addEventListener('click', () => goToReception());
+    });
+  }
+
   function renderDailyActionTasks() {
+    renderDailyPrioritySection();
+    const scheduleEl = document.getElementById('daily-upcoming-schedule');
+    if (scheduleEl) {
+      scheduleEl.innerHTML = renderDailyUpcomingScheduleHtml({ compact: false, limit: 3 });
+      initDailyFlowStrip();
+    }
+    renderDailyImprovementSection();
+    const dateEl = document.getElementById('daily-revenue-date');
+    if (dateEl && !dateEl.value) dateEl.value = TODAY();
+
     const el = document.getElementById('dash-daily-action-tasks');
     if (!el) return;
     const today = TODAY();
     const allTasks = getDailyActionTasksWithState();
     const sorted = sortDailyTasksForDisplay(allTasks);
-    const active = sorted.filter(t => t.status !== 'done' && !isDailyTaskSnoozedAway(t, today));
+    const priorityKeys = new Set(collectDailyPriorityItems().map(it => it.title));
+    const active = sorted.filter(t =>
+      t.status !== 'done' && !isDailyTaskSnoozedAway(t, today) && !priorityKeys.has(t.title)
+    );
     const snoozedAway = sorted.filter(t => isDailyTaskSnoozedAway(t, today));
     const snoozedToday = sorted.filter(t => t.status === 'snoozed' && !isDailyTaskSnoozedAway(t, today));
     const done = sorted.filter(t => t.status === 'done');
     const parts = [];
 
     if (!allTasks.length) {
-      parts.push('<p class="placeholder-text">今日やることはまだありません。<br>改善リストや経営ホームの提案から追加できます。</p>');
+      parts.push(`<p class="placeholder-text">${esc(EMPTY_DAILY_TASKS_COPY)}</p>`);
     } else {
       if (active.length) {
         const visible = active.slice(0, 5);
         const hidden = active.slice(5);
-        visible.forEach(t => parts.push(renderDailyActionTaskCard(t, { showActions: true })));
+        visible.forEach(t => parts.push(renderDailyActionTaskCard(t, { showActions: true, compact: true })));
         if (hidden.length) {
           parts.push(`<details class="daily-tasks-more"><summary>すべて見る（あと${hidden.length}件）</summary>`);
-          hidden.forEach(t => parts.push(renderDailyActionTaskCard(t, { showActions: true })));
+          hidden.forEach(t => parts.push(renderDailyActionTaskCard(t, { showActions: true, compact: true })));
           parts.push('</details>');
         }
       } else if (!snoozedToday.length && !snoozedAway.length && !done.length) {
-        parts.push('<p class="placeholder-text">今日対応のタスクはありません。期限が来たタスクや手動追加がここに表示されます。</p>');
+        parts.push('<p class="placeholder-text">追加タスクはありません。</p>');
       }
       if (snoozedToday.length || snoozedAway.length) {
         parts.push('<details class="daily-tasks-snoozed-collapse"><summary>後回し / 明日に回し済み</summary>');
         parts.push('<div class="daily-task-snoozed-section">');
-        snoozedToday.forEach(t => parts.push(renderDailyActionTaskCard(t, { showActions: true })));
+        snoozedToday.forEach(t => parts.push(renderDailyActionTaskCard(t, { showActions: true, compact: true })));
         snoozedAway.forEach(t => parts.push(renderDailyActionTaskCard(t, { showActions: false, compact: true })));
         parts.push('</div></details>');
       }
@@ -2476,6 +2715,7 @@
     }
     el.innerHTML = parts.join('');
     bindDailyActionTaskEvents(el);
+    initDailyFlowStrip();
   }
 
   function renderMorningDailyTasksBrief() {
@@ -2492,7 +2732,7 @@
       return;
     }
     el.innerHTML = `
-      <p class="daily-tasks-brief-title">今日やること：</p>
+      <p class="daily-tasks-brief-title">${esc(DAILY_TASKS_UI_LABEL)}：</p>
       <ol class="daily-tasks-brief-list">
         ${tasks.map(t => `<li>${esc(t.title)}：${esc(t.targetName)}</li>`).join('')}
       </ol>`;
@@ -2504,10 +2744,16 @@
       addForm.addEventListener('submit', handleDailyTaskAddSubmit);
       resetDailyTaskAddForm();
     }
+    const revenueForm = document.getElementById('daily-revenue-quick-form');
+    if (revenueForm && !revenueForm.dataset.bound) {
+      revenueForm.dataset.bound = '1';
+      revenueForm.addEventListener('submit', handleDailyRevenueQuickSubmit);
+    }
     const saveBtn = document.getElementById('btn-daily-task-edit-save');
     if (saveBtn) saveBtn.addEventListener('click', handleDailyTaskEditSave);
     const cancelBtn = document.getElementById('btn-daily-task-edit-cancel');
     if (cancelBtn) cancelBtn.addEventListener('click', closeDailyTaskEditPanel);
+    initDailyFlowStrip();
   }
 
   function renderManagementComments() {
@@ -2824,17 +3070,17 @@
     { key: 'revenue', label: '売上を1件登録', btn: '登録する', action: 'revenue' },
     { key: 'pickups', label: 'クロクロ需要を3件取り込み', btn: '開く', action: 'pickup' },
     { key: 'reception', label: 'AI番頭受付を1件取り込む', btn: '開く', action: 'reception' },
-    { key: 'taskCompleted', label: '今日やることを1件完了', btn: '開く', action: 'task' },
+    { key: 'taskCompleted', label: '毎日やることを1件完了', btn: '開く', action: 'task' },
     { key: 'reportGenerated', label: '経営レポートをコピー', btn: 'コピーする', action: 'report' }
   ];
 
   const PRODUCT_OVERVIEW_ITEMS = [
     { title: '売上を見える化', desc: '月間目標・達成率・未紐付け売上を確認', action: 'revenue' },
     { title: '営業先を管理', desc: '次の一手・保留・活動履歴を整理', action: 'sales' },
-    { title: '今日やることを整理', desc: '優先タスクを毎朝確認', action: 'task' },
-    { title: '需要を拾う', desc: 'クロクロ調査結果を需要ピックアップに取り込み', action: 'pickup' },
-    { title: 'カレンダー登録', desc: '受付内容を登録し、日程が決まったら作業予定として保存', action: 'reception' },
-    { title: '作業予定を確認', desc: '今日/今週の作業予定から今日やること・売上登録へ', action: 'work-order' },
+    { title: '毎日やることを整理', desc: '優先タスクを毎朝確認', action: 'task' },
+    { title: '集客施策メモ', desc: 'クロクロ調査結果を集客施策メモに取り込み', action: 'pickup' },
+    { title: 'カレンダー登録', desc: '受付内容を登録し、日程が決まったらカレンダー登録として保存', action: 'reception' },
+    { title: '直近予定を確認', desc: '今日/今週の予定から毎日やること・売上登録へ', action: 'work-order' },
     { title: '作業後フォローをつなぐ', desc: 'お礼・口コミ依頼・リピート提案を文面生成', action: 'follow-up' },
     { title: 'エリアで移動を判断', desc: 'エリア別サマリーとGoogleマップ導線', action: 'area' },
     { title: '投稿・広告文案を作る', desc: '需要から投稿・広告案を生成', action: 'pickup' },
@@ -2911,8 +3157,7 @@
           <summary>おすすめ確認順を見る</summary>
           <ol class="onboarding-demo-order">
             <li>経営ホーム</li>
-            <li>受付・予約</li>
-            <li>作業予定</li>
+            <li>カレンダー登録</li>
             <li>売上登録</li>
             <li>フォロー</li>
             <li>支出登録・計算</li>
@@ -2954,11 +3199,11 @@
         </li>`;
       }).join('')}</ol>`}
       <div class="onboarding-workflow-hint">
-        <h3 class="onboarding-subtitle">受付〜売上の流れ</h3>
+        <h3 class="onboarding-subtitle">カレンダー〜売上の流れ</h3>
         <ul class="onboarding-workflow-list">
-          <li>受付・予約でAI番頭の結果を取り込み、「作業予定を作成」で予約化</li>
+          <li>カレンダー登録でAI番頭の結果を取り込み、日程を入れてカレンダー登録</li>
           <li>作業完了後はフォローでお礼LINE・口コミ依頼・リピート提案</li>
-          <li>作業予定から売上フォームへ反映して売上登録</li>
+          <li>作業後に売上登録</li>
         </ul>
       </div>
       ${mode === 'detail' ? `
@@ -3063,9 +3308,9 @@
       <h2>デモデータ</h2>
       <p class="data-mgmt-desc">販売・デモ用のサンプルデータです。すべて <code>isDemo</code> フラグ付きで、削除時も本番データは触りません。</p>
       <ul class="demo-data-scope-list">
-        <li>営業先 3件 / 売上 2件 / 需要ピックアップ 3件 / 受付 2件 / 作業予定 2件</li>
+        <li>営業先 3件 / 売上 2件 / 集客施策メモ 3件 / 受付 2件 / 予定 2件</li>
         <li>投稿・広告予定 2件 / 施策成果 1件</li>
-        <li>今日やること 3件 / 確認完了 1件</li>
+        <li>毎日やること 3件 / 確認完了 1件</li>
       </ul>
       <div class="data-mgmt-actions">
         <button type="button" id="btn-create-demo-data" class="btn btn-primary" ${hasDemo ? 'disabled' : ''}>デモデータを作成</button>
@@ -3075,8 +3320,8 @@
         <p class="demo-data-guide-text">デモデータを作成しました。<br>初めて見る方は、まず<strong>経営ホーム</strong>で全体像を確認してください。おすすめの確認順は下のとおりです。</p>
         <ol class="demo-data-guide-order">
           <li>経営ホーム</li>
-          <li>受付・予約</li>
-          <li>作業予定</li>
+          <li>カレンダー登録</li>
+          <li>売上登録</li>
           <li>売上登録</li>
           <li>フォロー</li>
           <li>支出登録・計算</li>
@@ -3086,7 +3331,7 @@
         </ol>
         <div class="demo-data-guide-actions">
           <button type="button" class="btn btn-sm btn-primary" data-demo-nav="home">経営ホームを見る</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-demo-nav="pickup">需要ピックアップを見る</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-demo-nav="pickup">集客施策メモを見る</button>
           <button type="button" class="btn btn-sm btn-secondary" data-demo-nav="report">経営レポートを見る</button>
           <button type="button" class="btn btn-sm btn-secondary" data-demo-nav="diagnostics">データ診断を実行</button>
         </div>
@@ -3192,8 +3437,8 @@
           <h3>毎朝5分</h3>
           <ol>
             <li>経営ホームを見る</li>
-            <li>クロクロ調査結果を需要ピックアップに入れる</li>
-            <li>今日やることを確認</li>
+            <li>クロクロ調査結果を集客施策メモに入れる</li>
+            <li>毎日やることを確認</li>
             <li>今日の確認完了を押す</li>
           </ol>
         </div>
@@ -3327,7 +3572,7 @@
     });
 
     refreshAllViews();
-    alert('テストデータを作成しました（テスト工務店・売上1件・活動履歴・今日やること）');
+    alert('テストデータを作成しました（テスト工務店・売上1件・活動履歴・毎日やること）');
   }
 
   function deleteBudilTestData() {
@@ -3404,7 +3649,7 @@
       ['入金待ち', counts.receivablesPending],
       ['linked済み', counts.linkedCount],
       ['linked切れ', counts.linkedBroken],
-      ['今日やること', counts.dailyTasks],
+      ['毎日やること', counts.dailyTasks],
       ['需要ピックアップ', counts.pickups],
       ['受付データ', counts.receptionIntakes],
       ['作業予定', counts.workOrders],
@@ -3773,7 +4018,7 @@
       push(e.nextStep, e.reason, { source: 'grow' });
     });
     if (!actions.length && context.execSummary && context.execSummary.lines && context.execSummary.lines[0]) {
-      push('今日やることを1件完了する', context.execSummary.lines[0], { source: 'exec' });
+      push('毎日やることを1件完了する', context.execSummary.lines[0], { source: 'exec' });
     }
     return actions.slice(0, 5);
   }
@@ -3798,7 +4043,7 @@
         '',
         '1. 売上を1件登録',
         '2. クロクロ需要を3件取り込み',
-        '3. 今日やることを1件完了',
+        '3. 毎日やることを1件完了',
         '4. 投稿・広告の成果メモを1件入力'
       ].join('\n');
     }
@@ -3911,7 +4156,7 @@
           browserPickups.slice(0, 5).forEach(p => lines.push(`・${p.topic}`));
         }
         if (browserTasks.length) {
-          lines.push('今日やること化した候補（外部確認）：');
+          lines.push('毎日やること化した候補（外部確認）：');
           browserTasks.slice(0, 5).forEach(t => lines.push(`・${t.title}`));
         }
         lines.push('');
@@ -3950,7 +4195,7 @@
     lines.push(`停止候補：${stopText}`);
     lines.push('');
 
-    lines.push('■ 6. 今日やること・完了状況');
+    lines.push('■ 6. 毎日やること・完了状況');
     lines.push(`未完了：${c.tasks.open.map(t => t.title).join('、') || '—'}`);
     lines.push(`完了：${c.tasks.done.map(t => t.title).join('、') || '—'}`);
     lines.push(`明日に回したもの：${c.tasks.snoozed.map(t => t.title).join('、') || '—'}`);
@@ -4026,7 +4271,7 @@
     const date = TODAY();
     const key = buildReportTaskDedupeKey(date, ctx.range.period, action.title);
     if (isReportActionTaskDuplicate(date, ctx.range.period, action.title)) {
-      showBusinessReportToast('すでに今日やることに追加済みです');
+      showBusinessReportToast('すでに毎日やることに追加済みです');
       return;
     }
     Storage.addManualDailyTask({
@@ -4046,7 +4291,7 @@
     renderExecutiveHome();
     renderMorningDailyTasksBrief();
     renderBusinessReport(document.getElementById('business-report-data') ? 'detail' : 'compact');
-    showBusinessReportToast('今日やることに追加しました');
+    showBusinessReportToast('毎日やることに追加しました');
   }
 
   function addAllReportActionTasks() {
@@ -4175,7 +4420,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.8.18</span>
+        <span class="business-report-version">v4.8.19</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -5129,7 +5374,7 @@
     const added = results.filter(r => r === 'added').length;
     const duplicate = results.filter(r => r === 'duplicate').length;
     if (!added && duplicate) {
-      alert('すでに今日やることに追加済みです');
+      alert('すでに毎日やることに追加済みです');
       return;
     }
     if (!added) {
@@ -5139,7 +5384,7 @@
     renderDailyActionTasks();
     renderMorningDailyTasksBrief();
     renderMorningReport();
-    let msg = '今日やることに' + added + '件追加しました。';
+    let msg = '毎日やることに' + added + '件追加しました。';
     if (duplicate) msg += '（' + duplicate + '件は追加済みのためスキップ）';
     alert(msg);
   }
@@ -5155,7 +5400,7 @@
     if (!pickup) return;
     const result = addPickupTaskSingle(pickup, actionType, TODAY());
     if (result === 'duplicate') {
-      alert('すでに今日やることに追加済みです');
+      alert('すでに毎日やることに追加済みです');
       return;
     }
     if (result === 'empty') {
@@ -5165,7 +5410,7 @@
     renderDailyActionTasks();
     renderMorningDailyTasksBrief();
     renderMorningReport();
-    alert('今日やることに追加しました。');
+    alert('毎日やることに追加しました。');
   }
 
   function addAllPickupTasksById(id) {
@@ -5393,7 +5638,7 @@
     const date = TODAY();
     const key = DemandBrain.buildContentTaskDedupeKey(date, task.topic, contentType);
     if (isPickupContentTaskDuplicate(date, task.topic, contentType)) {
-      alert('すでに今日やることに追加済みです');
+      alert('すでに毎日やることに追加済みです');
       return;
     }
     Storage.addManualDailyTask({
@@ -5412,7 +5657,7 @@
     renderDailyActionTasks();
     renderMorningDailyTasksBrief();
     renderMorningReport();
-    alert('今日やることに追加しました。');
+    alert('毎日やることに追加しました。');
   }
 
   function copyPickupContentText(text, label) {
@@ -5482,7 +5727,7 @@
             <h3>${esc(b.title)}</h3>
             <div class="pickup-content-block-actions">
               <button type="button" class="btn btn-sm btn-secondary" data-copy-content="${b.key}">${esc(b.copyLabel)}</button>
-              <button type="button" class="btn btn-sm btn-primary" data-add-content-task="${b.taskType}">今日やることへ追加</button>
+              <button type="button" class="btn btn-sm btn-primary" data-add-content-task="${b.taskType}">毎日やることへ追加</button>
             </div>
           </div>
           <textarea class="pickup-content-text" readonly rows="8">${esc(out[b.key])}</textarea>
@@ -5517,7 +5762,7 @@
     const date = TODAY();
     const key = DemandBrain.buildExecutionTaskDedupeKey(date, task.topic, type, task.title);
     if (isExecutionTaskDuplicate(date, task.topic, type, task.title)) {
-      alert('すでに今日やることに追加済みです');
+      alert('すでに毎日やることに追加済みです');
       return;
     }
     Storage.addManualDailyTask({
@@ -5538,7 +5783,7 @@
     renderMorningReport();
     renderDashTodayExecutionPlan();
     renderActionCalendar();
-    alert('今日やることに追加しました。');
+    alert('毎日やることに追加しました。');
   }
 
   function getPerformanceContext() {
@@ -5693,7 +5938,7 @@
     const date = TODAY();
     const key = DemandBrain.buildImprovementTaskDedupeKey(date, task.topic, type, task.taskKind, task.title);
     if (isImprovementTaskDuplicate(date, task.topic, type, task.taskKind, task.title)) {
-      alert('すでに今日やることに追加済みです');
+      alert('すでに毎日やることに追加済みです');
       return;
     }
     Storage.addManualDailyTask({
@@ -5715,7 +5960,7 @@
     renderDashImprovementHints();
     renderPickupInsightsSections();
     renderPickupSavedList();
-    alert('今日やることに追加しました。');
+    alert('毎日やることに追加しました。');
   }
 
   function isPerformanceTaskDuplicate(date, topic, type, taskKind, title) {
@@ -5731,7 +5976,7 @@
     const date = TODAY();
     const key = DemandBrain.buildPerformanceTaskDedupeKey(date, task.topic, type, task.taskKind, task.title);
     if (isPerformanceTaskDuplicate(date, task.topic, type, task.taskKind, task.title)) {
-      alert('すでに今日やることに追加済みです');
+      alert('すでに毎日やることに追加済みです');
       return;
     }
     Storage.addManualDailyTask({
@@ -5753,7 +5998,7 @@
     renderDashWeeklyPerformance();
     renderPickupPerformanceSections();
     renderPickupSavedList();
-    alert('今日やることに追加しました。');
+    alert('毎日やることに追加しました。');
   }
 
   function bindPickupPerformanceEvents(container) {
@@ -5903,7 +6148,7 @@
     const date = TODAY();
     const key = DemandBrain.buildDecisionTaskDedupeKey(date, task.topic, type, task.decisionLabel, task.title);
     if (isDecisionTaskDuplicate(date, task.topic, type, task.decisionLabel, task.title)) {
-      alert('すでに今日やることに追加済みです');
+      alert('すでに毎日やることに追加済みです');
       return;
     }
     Storage.addManualDailyTask({
@@ -5926,7 +6171,7 @@
     renderDashStopImprove();
     renderPickupDecisionSections();
     renderPickupSavedList();
-    alert('今日やることに追加しました。');
+    alert('毎日やることに追加しました。');
   }
 
   function bindPickupDecisionEvents(container) {
@@ -5960,7 +6205,7 @@
         <p class="pickup-decision-next"><span class="reflection-label">次の一手</span>${esc(item.nextStep)}</p>
         ${['grow', 'improve', 'stop', 'continue'].includes(item.decision) ? `
         <div class="pickup-decision-actions">
-          <button type="button" class="btn btn-sm btn-primary" data-decision-task="${esc(item.pickupId)}" data-decision-type="${esc(item.type)}">今日やることに追加</button>
+          <button type="button" class="btn btn-sm btn-primary" data-decision-task="${esc(item.pickupId)}" data-decision-type="${esc(item.type)}">毎日やることに追加</button>
         </div>` : ''}
       </div>`).join('');
     bindPickupDecisionEvents(el);
@@ -6030,7 +6275,7 @@
         <p class="dash-focus-meta">判断：<span class="pickup-decision-label ${decisionJudgmentClassName(c.decision)}">${esc(c.decisionLabel)}</span></p>
         <p class="dash-focus-meta">理由：${esc(c.reason)}</p>
         <p class="dash-focus-next">次：${esc(c.nextStep)}</p>
-        <button type="button" class="btn btn-sm btn-secondary" data-decision-task="${esc(c.pickupId)}" data-decision-type="${esc(c.type)}">今日やることに追加</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-decision-task="${esc(c.pickupId)}" data-decision-type="${esc(c.type)}">毎日やることに追加</button>
       </div>`).join('');
     bindPickupDecisionEvents(el);
   }
@@ -6223,9 +6468,9 @@
       renderMorningDailyTasksBrief();
       renderWeeklyStrategyBoard();
       renderActionCalendar();
-      alert('今日やることに追加しました。');
+      alert('毎日やることに追加しました。');
     } else {
-      alert('すでに今日やることに追加済みです');
+      alert('すでに毎日やることに追加済みです');
     }
   }
 
@@ -6343,7 +6588,7 @@
           <ul class="weekly-strategy-tasks">${tasks.map((t, i) => `
             <li class="weekly-strategy-task-item">
               <span>${esc(t.title)}</span>
-              <button type="button" class="btn btn-sm btn-secondary" data-weekly-task-add="${i}">今日やることに追加</button>
+              <button type="button" class="btn btn-sm btn-secondary" data-weekly-task-add="${i}">毎日やることに追加</button>
             </li>`).join('')}</ul>
           <button type="button" id="btn-weekly-task-add-all" class="btn btn-sm btn-primary">今週候補を全部追加</button>
         </div>`
@@ -6466,7 +6711,7 @@
         <div class="pickup-exec-row-actions">
           <span class="pickup-exec-status-label">${esc(statusLabel)}</span>
           ${execItem.executedAt ? `<span class="pickup-exec-done-date">実行日：${esc(execItem.executedAt)}</span>` : ''}
-          <button type="button" class="btn btn-sm btn-primary" data-exec-add-task="${type}">今日やることに追加</button>
+          <button type="button" class="btn btn-sm btn-primary" data-exec-add-task="${type}">毎日やることに追加</button>
         </div>
       </div>`;
   }
@@ -6640,9 +6885,9 @@
       renderActionCalendar();
       renderDashTodayExecutionPlan();
       renderMorningReport();
-      alert('今日やることに追加しました。');
+      alert('毎日やることに追加しました。');
     } else {
-      alert('すでに今日やることに追加済みです');
+      alert('すでに毎日やることに追加済みです');
     }
   }
 
@@ -6736,7 +6981,7 @@
             </div>
             ${item.overdue && item.scheduledDate ? `<p class="calendar-item-meta">予定日：${esc(item.scheduledDate)}（期限超過）</p>` : ''}
             <div class="calendar-item-actions">
-              ${!item.completed ? `<button type="button" class="btn btn-sm btn-primary" data-cal-add-daily="${esc(item.id)}">今日やることに追加</button>` : ''}
+              ${!item.completed ? `<button type="button" class="btn btn-sm btn-primary" data-cal-add-daily="${esc(item.id)}">毎日やることに追加</button>` : ''}
               ${item.kind === 'execution' && !item.completed ? `
                 <button type="button" class="btn btn-sm btn-secondary" data-cal-schedule="today" data-cal-pickup="${esc(item.pickupId)}" data-cal-type="${esc(item.execType)}" data-cal-kind="execution">今日に入れる</button>
                 <button type="button" class="btn btn-sm btn-secondary" data-cal-schedule="tomorrow" data-cal-pickup="${esc(item.pickupId)}" data-cal-type="${esc(item.execType)}" data-cal-kind="execution">明日に入れる</button>
@@ -6956,7 +7201,7 @@
         <p class="pickup-meta pickup-meta-sub">情報元：${esc(p.source)} / 関連：${esc(p.relatedServices.join('、') || '—')}</p>
         <div class="pickup-card-actions">
           ${p.status === 'open' ? `
-            <button type="button" class="btn btn-sm btn-primary" data-pickup-add-all="${esc(p.id)}">今日やることに追加</button>
+            <button type="button" class="btn btn-sm btn-primary" data-pickup-add-all="${esc(p.id)}">毎日やることに追加</button>
             <button type="button" class="btn btn-sm btn-secondary" data-pickup-used="${esc(p.id)}">採用済み</button>
             <button type="button" class="btn btn-sm btn-secondary" data-pickup-ignore="${esc(p.id)}">無視</button>
             <button type="button" class="btn btn-sm btn-secondary" data-pickup-archive="${esc(p.id)}">保管</button>
@@ -7293,7 +7538,7 @@
           ${wo.candidateMeta && wo.candidateMeta.cautionNote ? `<p class="calendar-candidate-saved-warn">注意：${esc(wo.candidateMeta.cautionNote)}</p>` : ''}
           <div class="calendar-candidate-saved-actions">
             ${st === '候補' || st === '要確認' ? `<button type="button" class="btn btn-sm btn-primary" data-cal-promote="${esc(wo.id)}">作業予定に追加</button>` : ''}
-            <button type="button" class="btn btn-sm btn-secondary" data-cal-task="${esc(wo.id)}">今日やることに追加</button>
+            <button type="button" class="btn btn-sm btn-secondary" data-cal-task="${esc(wo.id)}">毎日やることに追加</button>
             ${st !== 'スキップ' ? `<button type="button" class="btn btn-sm btn-secondary" data-cal-review="${esc(wo.id)}">要確認にする</button>` : ''}
             ${st !== 'スキップ' ? `<button type="button" class="btn btn-sm btn-secondary" data-cal-skip="${esc(wo.id)}">スキップ</button>` : ''}
           </div>
@@ -7399,13 +7644,13 @@
     const payload = CalendarCandidateBrain.createTaskPayload(wo, 'review', today);
     const store = Storage.getDailyActionTasksData();
     if (store.manualTasks.some(t => t.pickupDedupeKey === payload.pickupDedupeKey)) {
-      alert('同じ今日やることはすでに追加済みです。');
+      alert('同じ毎日やることはすでに追加済みです。');
       return;
     }
     Storage.addManualDailyTask(payload);
     renderDailyActionTasks();
     renderExecutiveHome();
-    alert('今日やることに追加しました。');
+    alert('毎日やることに追加しました。');
   }
 
   function renderCalendarCandidateView() {
@@ -7534,13 +7779,13 @@
         <span class="action-candidate-badge action-candidate-badge-added">追加済み</span>
         <button type="button" class="btn btn-sm btn-secondary" data-act-done="${esc(found.id)}">対応済みにする</button>
         <button type="button" class="btn btn-sm btn-not-needed" data-act-not-needed="${esc(found.id)}">必要無し</button>
-        ${inDaily ? '<span class="action-candidate-badge action-candidate-badge-daily">今日やることに追加済み</span>' : `<button type="button" class="btn btn-sm btn-secondary" data-act-daily="${esc(reportId)}" data-act-title="${esc(title)}">今日やることへ追加</button>`}
+        ${inDaily ? '<span class="action-candidate-badge action-candidate-badge-daily">毎日やることに追加済み</span>' : `<button type="button" class="btn btn-sm btn-secondary" data-act-daily="${esc(reportId)}" data-act-title="${esc(title)}">毎日やることへ追加</button>`}
       `;
     }
     return `
       <button type="button" class="btn btn-sm btn-primary" data-act-add="${esc(reportId)}" data-act-title="${esc(title)}">改善リストに追加</button>
       <button type="button" class="btn btn-sm btn-not-needed" data-act-not-needed-report="${esc(reportId)}" data-act-title="${esc(title)}">必要無し</button>
-      ${inDaily ? '<span class="action-candidate-badge action-candidate-badge-daily">今日やることに追加済み</span>' : `<button type="button" class="btn btn-sm btn-secondary" data-act-daily="${esc(reportId)}" data-act-title="${esc(title)}">今日やることへ追加</button>`}
+      ${inDaily ? '<span class="action-candidate-badge action-candidate-badge-daily">毎日やることに追加済み</span>' : `<button type="button" class="btn btn-sm btn-secondary" data-act-daily="${esc(reportId)}" data-act-title="${esc(title)}">毎日やることへ追加</button>`}
     `;
   }
 
@@ -7695,7 +7940,7 @@
     if (btn) {
       btn.addEventListener('click', () => {
         navigateToView('external-check');
-        scrollToElement('.card-external-check-actions');
+        scrollToElement('.card-external-check-unified');
       });
     }
     bindActionCandidateButtons(el);
@@ -7732,8 +7977,8 @@
             : c.status === ActionBrain.STATUS_NOT_NEEDED
               ? '<span class="action-candidate-badge action-candidate-badge-not-needed">必要無し</span>'
             : `${inDaily
-              ? '<span class="action-candidate-badge action-candidate-badge-daily">今日やることに追加済み</span>'
-              : `<button type="button" class="btn btn-sm btn-secondary" data-act-daily="${esc(c.sourceReportId)}" data-act-title="${esc(c.title)}">今日やることへ追加</button>`}
+              ? '<span class="action-candidate-badge action-candidate-badge-daily">毎日やることに追加済み</span>'
+              : `<button type="button" class="btn btn-sm btn-secondary" data-act-daily="${esc(c.sourceReportId)}" data-act-title="${esc(c.title)}">毎日やることへ追加</button>`}
                <button type="button" class="btn btn-sm btn-secondary" data-act-done="${esc(c.id)}">対応済み</button>
                <button type="button" class="btn btn-sm btn-not-needed" data-act-not-needed="${esc(c.id)}">必要無し</button>`}
         </div>
@@ -7768,9 +8013,9 @@
     el.classList.remove('hidden');
     el.innerHTML = `
       <p class="improvement-list-save-message"><strong>改善リストに追加しました。</strong><br>
-      次は「今日やること」に入れるか、「改善リスト」で確認できます。</p>
+      次は「毎日やること」に入れるか、「改善リスト」で確認できます。</p>
       <div class="improvement-list-save-actions">
-        <button type="button" class="btn btn-sm btn-primary" data-improvement-go-daily>今日やることへ</button>
+        <button type="button" class="btn btn-sm btn-primary" data-improvement-go-daily>毎日やることへ</button>
         <button type="button" class="btn btn-sm btn-secondary" data-improvement-go-list>改善リストを見る</button>
         <button type="button" class="btn btn-sm btn-secondary" data-improvement-stay>この画面に残る</button>
       </div>`;
@@ -7778,7 +8023,7 @@
       navigateToView('dashboard', '.card-daily-action-tasks');
     });
     el.querySelector('[data-improvement-go-list]').addEventListener('click', () => {
-      navigateToView('external-check', '.card-external-check-actions');
+      navigateToView('external-check', '.card-external-check-unified');
     });
     el.querySelector('[data-improvement-stay]').addEventListener('click', () => {
       el.classList.add('hidden');
@@ -7787,6 +8032,28 @@
   }
 
   function renderStrategyMemoHub() {
+    const overviewEl = document.getElementById('strategy-memo-overview');
+    if (overviewEl) {
+      const pickups = (Storage.getDemandPickups && Storage.getDemandPickups()) || [];
+      const radar = Storage.getDemandRadar ? Storage.getDemandRadar() : {};
+      const keywords = (radar.keywords || []).length;
+      overviewEl.innerHTML = '<p class="strategy-memo-intro">集客のネタや施策メモの概要です。詳細は各カードから開けます。</p>';
+    }
+    document.querySelectorAll('[data-strategy-summary]').forEach(el => {
+      const kind = el.dataset.strategySummary;
+      if (kind === 'radar') {
+        const radar = Storage.getDemandRadar ? Storage.getDemandRadar() : {};
+        const n = (radar.keywords || []).length;
+        el.textContent = n ? `キーワード ${n}件` : '未登録';
+      } else if (kind === 'pickup') {
+        const n = ((Storage.getDemandPickups && Storage.getDemandPickups()) || []).length;
+        el.textContent = n ? `ネタ ${n}件` : '未登録';
+      } else if (kind === 'demand') {
+        el.textContent = '調査メモ';
+      } else if (kind === 'ad') {
+        el.textContent = '広告文案';
+      }
+    });
     document.querySelectorAll('[data-strategy-open]').forEach(btn => {
       if (btn.dataset.strategyBound) return;
       btn.dataset.strategyBound = '1';
@@ -7817,7 +8084,7 @@
     if (!reportId || !title) return;
     const key = ActionBrain.makeDailyTaskDedupeKey(reportId, title);
     if (Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === key)) {
-      showAppToast('既に今日やることに追加済みです');
+      showAppToast('既に毎日やることに追加済みです');
       return;
     }
     Storage.addManualDailyTask({
@@ -7832,7 +8099,7 @@
       status: 'open'
     });
     refreshActionCandidateViews();
-    showAppToast('今日やることに追加しました');
+    showAppToast('毎日やることに追加しました');
   }
 
   function syncDailyTaskFromActionCandidate(candidate) {
@@ -8241,13 +8508,13 @@
     const taskPayload = WorkCompletionBrain.createTaskPayload(wo, type || 'confirm', TODAY());
     const store = Storage.getDailyActionTasksData();
     if (store.manualTasks.some(t => t.pickupDedupeKey === taskPayload.pickupDedupeKey)) {
-      alert('同じ今日やることはすでに追加済みです。');
+      alert('同じ毎日やることはすでに追加済みです。');
       return;
     }
     Storage.addManualDailyTask(taskPayload);
     renderDailyActionTasks();
     renderExecutiveHome();
-    alert('今日やることに追加しました。');
+    alert('毎日やることに追加しました。');
   }
 
   function refreshAfterWorkCompletion() {
@@ -8288,7 +8555,7 @@
     return `
       ${mapUrl ? `<a href="${esc(mapUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary">Googleマップで開く</a>` : ''}
       ${cal.ready ? `<a href="${esc(cal.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary" data-wo-calendar="${esc(wo.id)}">Googleカレンダーに追加</a>` : ''}
-      <button type="button" class="btn btn-sm btn-secondary" data-wo-add-task="${esc(wo.id)}">今日やることに追加</button>
+      <button type="button" class="btn btn-sm btn-secondary" data-wo-add-task="${esc(wo.id)}">毎日やることに追加</button>
       ${canConfirm ? `<button type="button" class="btn btn-sm btn-primary" data-wo-completion="${esc(wo.id)}">作業後確定</button>` : ''}
       ${canConfirm ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-completion-open="${esc(wo.id)}">売上確定へ</button>` : ''}
       ${canConfirm ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-needs-review="${esc(wo.id)}">要確認</button>` : ''}
@@ -8374,7 +8641,7 @@
     const taskPayload = WorkOrderBrain.createTaskPayload(wo, today);
     const store = Storage.getDailyActionTasksData();
     if (store.manualTasks.some(t => t.pickupDedupeKey === taskPayload.pickupDedupeKey)) {
-      alert('同じ今日やることはすでに追加済みです。');
+      alert('同じ毎日やることはすでに追加済みです。');
       return;
     }
     Storage.addManualDailyTask(taskPayload);
@@ -8382,7 +8649,7 @@
     renderDailyActionTasks();
     renderExecutiveHome();
     renderMorningDailyTasksBrief();
-    alert('今日やることに追加しました。');
+    alert('毎日やることに追加しました。');
   }
 
   function completeWorkOrder(workOrderId) {
@@ -8680,7 +8947,7 @@
         <div class="follow-up-actions">
           <button type="button" class="btn btn-sm btn-secondary" data-follow-copy="thanks">お礼文コピー</button>
           <button type="button" class="btn btn-sm btn-primary" data-follow-mark="thanks">お礼済みにする</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-follow-task="thanks">今日やることに追加</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-follow-task="thanks">毎日やることに追加</button>
         </div>
       </div>
       <div class="follow-up-detail-block">
@@ -8689,7 +8956,7 @@
         <div class="follow-up-actions">
           <button type="button" class="btn btn-sm btn-secondary" data-follow-copy="review">口コミ依頼文コピー</button>
           <button type="button" class="btn btn-sm btn-primary" data-follow-mark="review">口コミ依頼済みにする</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-follow-task="review">今日やることに追加</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-follow-task="review">毎日やることに追加</button>
         </div>
       </div>
       <div class="follow-up-detail-block">
@@ -8703,7 +8970,7 @@
         <div class="follow-up-actions">
           <button type="button" class="btn btn-sm btn-secondary" data-follow-copy="repeat">提案文コピー</button>
           <button type="button" class="btn btn-sm btn-primary" data-follow-mark="repeat">リピート予定にする</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-follow-task="repeat">今日やることに追加</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-follow-task="repeat">毎日やることに追加</button>
           <button type="button" class="btn btn-sm btn-secondary" data-follow-save-memo>メモ保存</button>
         </div>
       </div>`;
@@ -8787,14 +9054,14 @@
     const payload = FollowUpBrain.createFollowUpTaskPayload(target, type, today);
     const store = Storage.getDailyActionTasksData();
     if (store.manualTasks.some(t => t.pickupDedupeKey === payload.pickupDedupeKey)) {
-      alert('同じ今日やることはすでに追加済みです。');
+      alert('同じ毎日やることはすでに追加済みです。');
       return;
     }
     Storage.addManualDailyTask(payload);
     renderDailyActionTasks();
     renderExecutiveHome();
     renderMorningDailyTasksBrief();
-    alert('今日やることに追加しました。');
+    alert('毎日やることに追加しました。');
   }
 
   function renderFollowUpTargetsList() {
@@ -9135,7 +9402,7 @@
       <div class="profit-hint-card">
         <p><strong>${esc(h.title)}</strong></p>
         ${h.detail ? `<p class="profit-meta">${esc(h.detail)}</p>` : ''}
-        <button type="button" class="btn btn-sm btn-secondary" data-profit-add-task="${i}">今日やることに追加</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-profit-add-task="${i}">毎日やることに追加</button>
       </div>`).join('');
     el.querySelectorAll('[data-profit-add-task]').forEach(btn => {
       btn.addEventListener('click', () => addProfitHintTask(Number(btn.dataset.profitAddTask)));
@@ -9151,7 +9418,7 @@
       t => t.pickupDedupeKey === payload.pickupDedupeKey
     );
     if (exists) {
-      alert('同じタスクは既に今日やることにあります。');
+      alert('同じタスクは既に毎日やることにあります。');
       return;
     }
     Storage.addManualDailyTask({
@@ -9159,7 +9426,7 @@
       ...payload
     });
     renderDashboard();
-    alert('今日やることに追加しました。');
+    alert('毎日やることに追加しました。');
   }
 
   function populateProfitExpenseSelects() {
@@ -10092,7 +10359,7 @@
         <h4>改善リストへ追加</h4>
         <ul class="browser-bantou-candidate-list">${tasks.map((t, i) => `
           <li><span>${esc(t)}</span>
-            <button type="button" class="btn btn-sm btn-secondary" data-browser-task="${i}">今日やることに追加</button>
+            <button type="button" class="btn btn-sm btn-secondary" data-browser-task="${i}">毎日やることに追加</button>
           </li>`).join('')}</ul>
         <button type="button" class="btn btn-sm btn-secondary" id="btn-browser-bantou-add-all-tasks">候補をすべて追加</button>`
         : '';
@@ -10175,12 +10442,12 @@
       t => t.pickupDedupeKey === payload.pickupDedupeKey
     );
     if (exists) {
-      alert('同じタスクは既に今日やることにあります。');
+      alert('同じタスクは既に毎日やることにあります。');
       return;
     }
     Storage.addManualDailyTask({ id: 'manual_' + Storage.generateId(), ...payload });
     renderDashboard();
-    alert('今日やることに追加しました。');
+    alert('毎日やることに追加しました。');
   }
 
   function addAllBrowserBantouTasks() {
@@ -10198,7 +10465,7 @@
       }
     });
     renderDashboard();
-    alert(added ? `${added}件を今日やることに追加しました。` : '追加できる新しい候補はありませんでした。');
+    alert(added ? `${added}件を毎日やることに追加しました。` : '追加できる新しい候補はありませんでした。');
   }
 
   function sendBrowserBantouDemand(index) {
@@ -10301,7 +10568,7 @@
         <h3>次の打ち手</h3>
         <p>${esc(record.actionSummary || '')}</p>
         <ul class="analytics-action-btns">${(record.recommendedActions || []).map((a, i) =>
-          `<li><button type="button" class="btn btn-sm btn-secondary" data-analytics-task="${esc(record.id)}" data-analytics-action="${i}">${esc(a.text)}を今日やることに</button></li>`
+          `<li><button type="button" class="btn btn-sm btn-secondary" data-analytics-task="${esc(record.id)}" data-analytics-action="${i}">${esc(a.text)}を毎日やることに</button></li>`
         ).join('')}</ul>
       </div>
       <div class="analytics-detail-actions">
@@ -10342,12 +10609,12 @@
       t => t.pickupDedupeKey === payload.pickupDedupeKey
     );
     if (exists) {
-      alert('同じタスクは既に今日やることにあります。');
+      alert('同じタスクは既に毎日やることにあります。');
       return;
     }
     Storage.addManualDailyTask({ id: 'manual_' + Storage.generateId(), ...payload });
     renderDashboard();
-    alert('今日やることに追加しました。');
+    alert('毎日やることに追加しました。');
   }
 
   function sendAnalyticsToPickup(recordId) {
@@ -10850,7 +11117,7 @@
         <div class="reception-detail-action-buttons">
           ${leadAction}
           ${workAction}
-          <button type="button" class="btn btn-sm btn-secondary" data-reception-add-task="${esc(id)}">今日やることに追加</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-add-task="${esc(id)}">毎日やることに追加</button>
           ${revenueAction}
           <button type="button" class="btn btn-sm btn-secondary" data-reception-done="${esc(id)}">対応済みにする</button>
           <button type="button" class="btn btn-sm btn-secondary" data-reception-archive="${esc(id)}">保管</button>
@@ -11013,7 +11280,7 @@
         <div class="reception-saved-actions reception-legacy-actions hidden">
           <button type="button" class="btn btn-sm btn-primary" data-reception-create-lead="${esc(intake.id)}">営業先を作成</button>
           <button type="button" class="btn btn-sm btn-secondary" data-reception-create-work-order="${esc(intake.id)}">この受付から作業予定を作る</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-reception-add-task="${esc(intake.id)}">今日やることに追加</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-add-task="${esc(intake.id)}">毎日やることに追加</button>
           <button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(intake.id)}">売上フォームに反映</button>
           <button type="button" class="btn btn-sm btn-secondary" data-reception-revenue-candidate="${esc(intake.id)}">売上候補にする</button>
           <button type="button" class="btn btn-sm btn-secondary" data-reception-done="${esc(intake.id)}">対応済みにする</button>
@@ -11241,7 +11508,7 @@
     if (!taskPayload) return;
     const store = Storage.getDailyActionTasksData();
     if (store.manualTasks.some(t => t.pickupDedupeKey === taskPayload.pickupDedupeKey)) {
-      alert('同じ今日やることはすでに追加済みです。');
+      alert('同じ毎日やることはすでに追加済みです。');
       return;
     }
     const task = Storage.addManualDailyTask(taskPayload);
@@ -11263,7 +11530,7 @@
     renderDailyActionTasks();
     renderExecutiveHome();
     renderMorningDailyTasksBrief();
-    alert('今日やることに追加しました。');
+    alert('毎日やることに追加しました。');
   }
 
   function fillRevenueFromReceptionIntake(intakeId) {

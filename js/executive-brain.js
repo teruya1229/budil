@@ -2,26 +2,26 @@
  * Budil v4.4 - 経営司令塔ホーム（毎朝5分・全番頭統合）
  */
 const ExecutiveBrain = {
-  VERSION: 'v4.8.18',
+  VERSION: 'v4.8.19',
 
   CHECK_ITEMS: [
-    { id: 'workOrders', label: '作業予定を確認した' },
+    { id: 'workOrders', label: 'カレンダー登録と直近予定を確認した' },
     { id: 'reception', label: '新規受付を確認した' },
     { id: 'revenueProfit', label: '売上/利益を確認した' },
     { id: 'followUp', label: 'フォロー/口コミを確認した' },
     { id: 'analyticsDemand', label: 'アナリティクス/需要を確認した' },
-    { id: 'dailyTasks', label: '今日やることを確認した' },
+    { id: 'dailyTasks', label: '毎日やることを確認した' },
     { id: 'backupDiagnostic', label: 'バックアップ/データ診断を確認した' }
   ],
 
   QUICK_LINKS: [
-    { id: 'reception', label: '受付・予定', view: 'reception', tier: 'primary' },
-    { id: 'revenue', label: '売上・利益', view: 'revenue', tier: 'primary' },
+    { id: 'tasks', label: '毎日やること', action: 'tasks', tier: 'primary' },
+    { id: 'reception', label: 'カレンダー登録', view: 'reception', tier: 'primary' },
+    { id: 'revenue', label: '売上登録', view: 'revenue', tier: 'primary' },
     { id: 'analytics', label: '集客管理', view: 'analytics', tier: 'primary' },
-    { id: 'tasks', label: '今日やること', action: 'tasks', tier: 'primary' },
-    { id: 'monthly-results', label: '月次実績を入れる', view: 'monthly-results', tier: 'secondary' },
-    { id: 'external-check', label: 'サイト確認記録を保存', view: 'external-check', tier: 'secondary' },
-    { id: 'morning-report', label: '朝レポートを見る', action: 'morning-report', tier: 'secondary' }
+    { id: 'monthly-results', label: '月次実績入力', view: 'monthly-results', tier: 'secondary' },
+    { id: 'external-check', label: 'サイト確認記録', view: 'external-check', tier: 'secondary' },
+    { id: 'morning-report', label: '朝レポート', action: 'morning-report', tier: 'secondary' }
   ],
 
   hasHomeData(ctx) {
@@ -100,7 +100,7 @@ const ExecutiveBrain = {
     const push = line => { if (line && !lines.includes(line)) lines.push(line); };
 
     if (c.forecast && c.forecast.todayCount) {
-      push(`今日は作業予定${c.forecast.todayCount}件、見込み売上${WorkOrderBrain.formatYen(c.forecast.todayAmount)}です。`);
+      push(`今日の予定が${c.forecast.todayCount}件、見込み売上${WorkOrderBrain.formatYen(c.forecast.todayAmount)}です。`);
     }
 
     const bb = c.analyticsCtx && c.analyticsCtx.browserBantou;
@@ -192,11 +192,11 @@ const ExecutiveBrain = {
       add({
         id: 'wo-' + wo.id,
         rank: 1,
-        title: `作業予定：${wo.customerName || 'お客様'} ${wo.serviceText || ''}`.trim(),
+        title: `${wo.customerName || 'お客様'} ${wo.serviceText || ''}`.trim(),
         reason: wo.startTime
           ? `今日${wo.startTime}〜の確定作業。作業後に売上登録まで行う`
           : '今日の確定作業。作業後に売上登録まで行う',
-        source: '作業予定',
+        source: 'カレンダー登録',
         sourceKey: 'work-order',
         workOrderId: wo.id,
         dedupeKey: ['exec-priority', today, 'work-order', wo.id].join('|'),
@@ -218,7 +218,7 @@ const ExecutiveBrain = {
         reason: needsSchedule
           ? `新規受付。${intake.serviceText || '作業内容'}の日程調整が必要`
           : `新規受付。${intake.source || '依頼元'}からの問い合わせ`,
-        source: '受付・予約',
+        source: 'カレンダー登録',
         sourceKey: 'reception',
         intakeId: intake.id,
         dedupeKey: ['exec-priority', today, 'intake', intake.id].join('|'),
@@ -280,8 +280,8 @@ const ExecutiveBrain = {
         id: 'demand-' + (rec.pickupId || rec.topic),
         rank: 6,
         title: `需要：${rec.topic}`,
-        reason: rec.nextStep || rec.reason || '需要ピックアップの高優先アクション',
-        source: '需要ピックアップ',
+        reason: rec.nextStep || rec.reason || '集客施策メモの高優先アクション',
+        source: '集客施策メモ',
         sourceKey: 'pickup',
         pickupId: rec.pickupId,
         dedupeKey: ['exec-priority', today, 'demand', rec.topic].join('|')
@@ -293,8 +293,8 @@ const ExecutiveBrain = {
         id: 'task-' + task.id,
         rank: 7,
         title: task.title,
-        reason: task.reason || task.action || '今日やること',
-        source: '今日やること',
+        reason: task.reason || task.action || '毎日やること',
+        source: '毎日やること',
         sourceKey: 'task',
         taskId: task.id,
         dedupeKey: ['exec-priority', today, 'task', task.id].join('|')
@@ -334,7 +334,7 @@ const ExecutiveBrain = {
       const area = typeof MapBrain !== 'undefined' ? MapBrain.getIntakeArea(intake) : (intake.area || '不明');
       let nextAction = '内容を確認';
       if (!intake.relatedLeadId) nextAction = '営業先を作成';
-      else if (!intake.relatedWorkOrderId) nextAction = '作業予定を作成';
+      else if (!intake.relatedWorkOrderId) nextAction = '日程を入れてカレンダー登録';
       else if (intake.status === 'revenue_candidate') nextAction = '売上候補を反映';
       else if (/日程|希望日/.test([intake.preferredDatesText, intake.handlingStatus].join(''))) {
         nextAction = '日程調整';
@@ -550,7 +550,7 @@ const ExecutiveBrain = {
     const workLines = (c.workSection.items || []).map(wo =>
       `・${wo.startTime || '—'} ${wo.customerName} ${wo.serviceText}（${wo.area}）`
     );
-    sections.push({ title: '作業予定', lines: workLines.length ? workLines : ['なし'] });
+    sections.push({ title: '直近予定', lines: workLines.length ? workLines : ['なし'] });
     const recLines = (c.receptionSection.items || []).map(i =>
       `・${i.customerName}：${i.serviceText || '—'}（${i.nextAction}）`
     );

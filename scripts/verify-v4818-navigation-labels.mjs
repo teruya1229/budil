@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.18 concrete navigation label verification.
+ * Budil v4.8.19 concrete navigation label verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -20,11 +20,11 @@ const indexHtml = load('index.html');
 const appJs = load('js/app.js');
 const executiveBrain = load('js/executive-brain.js');
 
-console.log('== v4.8.18 navigation labels ==');
+console.log('== v4.8.19 navigation labels ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.18'), 'header version should be v4.8.18');
-assert(indexHtml.includes('Budil v4.8.18'), 'sidebar version should be v4.8.18');
-assert(indexHtml.includes('js/app.js?v=4.8.18'), 'app.js cache buster should be v4.8.18');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.19'), 'header version should be v4.8.19');
+assert(indexHtml.includes('Budil v4.8.19'), 'sidebar version should be v4.8.19');
+assert(indexHtml.includes('js/app.js?v=4.8.19'), 'app.js cache buster should be v4.8.19');
 
 assert(indexHtml.includes('\u30ab\u30ec\u30f3\u30c0\u30fc\u767b\u9332'), 'calendar registration nav should exist');
 assert(indexHtml.includes('\u904e\u53bb\u58f2\u4e0a\u5fa9\u5143'), 'past sales recovery nav should exist');
@@ -55,9 +55,10 @@ assert(indexHtml.includes('\u4f5c\u696d\u4e88\u5b9a\u767b\u9332'), 'work order r
 assert(appJs.includes('calendar-registration'), 'app should support calendar-registration view');
 assert(appJs.includes('showImprovementListAddedNotice'), 'improvement list save notice should exist');
 assert(appJs.includes('\u6539\u5584\u30ea\u30b9\u30c8\u306b\u8ffd\u52a0\u3057\u307e\u3057\u305f'), 'save notice text should mention improvement list');
-assert(appJs.includes('\u4eca\u65e5\u3084\u308b\u3053\u3068\u3078'), 'save notice should link to daily tasks');
+assert(appJs.includes('\u6bce\u65e5\u3084\u308b\u3053\u3068\u3078'), 'save notice should link to daily tasks');
 assert(appJs.includes('\u6539\u5584\u30ea\u30b9\u30c8\u306f\u307e\u3060\u3042\u308a\u307e\u305b\u3093'), 'empty improvement list copy should exist');
-assert(appJs.includes('\u4eca\u65e5\u3084\u308b\u3053\u3068\u306f\u307e\u3060\u3042\u308a\u307e\u305b\u3093'), 'empty daily tasks copy should exist');
+assert(appJs.includes('EMPTY_DAILY_TASKS_COPY'), 'empty daily tasks copy constant should exist');
+assert(appJs.includes('\u6bce\u65e5\u3084\u308b\u3053\u3068\u306f\u307e\u3060\u3042\u308a\u307e\u305b\u3093'), 'empty daily tasks copy should exist');
 assert(appJs.includes('\u4f5c\u696d\u4e88\u5b9a\u306f\u307e\u3060\u3042\u308a\u307e\u305b\u3093'), 'empty work order copy should exist');
 assert(appJs.includes('\u5fa9\u5143\u5bfe\u8c61\u306f\u307e\u3060\u3042\u308a\u307e\u305b\u3093'), 'empty past recovery copy should exist');
 assert(appJs.includes('STRATEGY_MEMO_VIEWS'), 'strategy memo nav mapping should exist');
@@ -65,10 +66,10 @@ assert(appJs.includes('\u6539\u5584\u30ea\u30b9\u30c8\u306b\u8ffd\u52a0'), 'add 
 assert(appJs.includes('\u30b5\u30a4\u30c8\u78ba\u8a8d\u8a18\u9332'), 'app should use site check record label');
 
 assert(executiveBrain.includes("label: '\u96c6\u5ba2\u7ba1\u7406'"), 'executive quick button should use marketing group');
-assert(executiveBrain.includes("label: '\u30b5\u30a4\u30c8\u78ba\u8a8d\u8a18\u9332\u3092\u4fdd\u5b58'"), 'executive secondary should use site check record');
+assert(executiveBrain.includes("label: '\u30b5\u30a4\u30c8\u78ba\u8a8d\u8a18\u9332'"), 'executive secondary should use site check record');
 
 assert(!appJs.match(/\u884c\u52d5\u5019\u88dc\u306b\u8ffd\u52a0/), 'UI should not use action candidate add');
 assert(!appJs.match(/\u4eca\u65e5\u3084\u308b\u3053\u3068\u5019\u88dc/), 'UI should not use daily task candidate in app.js');
 assert(!appJs.includes('\u5916\u90e8\u78ba\u8a8d\u30d7\u30ed\u30f3\u30d7\u30c8'), 'app should not show external check prompt label');
 
-console.log('All v4.8.18 navigation label checks passed.');
+console.log('All v4.8.19 navigation label checks passed.');

@@ -87,9 +87,9 @@ const appJs = load('js/app.js');
 const calendarBrain = load('js/calendar-candidate-brain.js');
 const storageJs = load('js/storage.js');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.18'), 'header version should be v4.8.18');
-assert(indexHtml.includes('Budil v4.8.18'), 'sidebar version should be v4.8.18');
-assert(indexHtml.includes('js/app.js?v=4.8.18'), 'app.js cache buster should be v4.8.18');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.19'), 'header version should be v4.8.19');
+assert(indexHtml.includes('Budil v4.8.19'), 'sidebar version should be v4.8.19');
+assert(indexHtml.includes('js/app.js?v=4.8.19'), 'app.js cache buster should be v4.8.19');
 assert(indexHtml.includes('calendar-past-recovery-mode'), 'past recovery mode toggle should exist');
 assert(indexHtml.includes('btn-calendar-past-bulk-convert'), 'bulk convert button should exist');
 assert(indexHtml.includes('\u767b\u9332\u5bfe\u8c61\u3092\u58f2\u4e0a\u767b\u9332'), 'bulk convert button label should exist');
