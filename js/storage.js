@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.8.22',
+  BUDIL_VERSION: 'v4.8.23',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -54,6 +54,7 @@ const Storage = {
   OPERATION_LOG_LIMIT: 80,
   PROTECTED_DELETE_KEYS: [
     'budil_revenue_records',
+    'budil_expense_records',
     'budil_documents',
     'budil_payment_records',
     'budil_reception_intakes',

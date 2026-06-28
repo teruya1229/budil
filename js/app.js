@@ -2522,6 +2522,7 @@
     const ctx = buildExecutiveContext();
     (ctx.topPriorities || []).slice(0, 3).forEach(p => {
       if (p.workOrderId && revenueConfirmWoIds.has(p.workOrderId)) return;
+      if (p.sourceKey === 'profit') return;
       push(p.title, p.reason, 'priority', { priorityId: p.id, taskId: p.taskId });
     });
 
@@ -2791,6 +2792,77 @@
     }
   }
 
+  function showDailyExpenseSavedNotice() {
+    const el = document.getElementById('daily-expense-notice');
+    if (!el) return;
+    el.classList.remove('hidden');
+    el.innerHTML = `
+      <p class="daily-expense-notice-text">経費を登録しました。支出登録・計算で確認できます。</p>
+      <div class="daily-expense-notice-actions">
+        <button type="button" class="btn btn-sm btn-primary" data-daily-expense-go-profit>支出登録・計算を見る</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-daily-expense-stay>この画面に残る</button>
+      </div>`;
+    el.querySelector('[data-daily-expense-go-profit]').addEventListener('click', () => {
+      navigateToView('profit', '#profit-expense-form');
+    });
+    el.querySelector('[data-daily-expense-stay]').addEventListener('click', () => {
+      el.classList.add('hidden');
+    });
+  }
+
+  function buildDailyExpenseMemo(content, memo) {
+    const c = (content || '').trim();
+    const m = (memo || '').trim();
+    if (c && m) return `内容：${c}\nメモ：${m}`;
+    if (c) return c;
+    return m;
+  }
+
+  function populateDailyExpenseCategorySelect() {
+    const catEl = document.getElementById('daily-expense-category');
+    if (!catEl || catEl.options.length) return;
+    const categories = typeof ProfitBrain !== 'undefined' && ProfitBrain.DAILY_EXPENSE_CATEGORIES
+      ? ProfitBrain.DAILY_EXPENSE_CATEGORIES
+      : ['人件費', '薬剤・材料', '交通・燃料', '外注費', '広告費', '消耗品', 'その他'];
+    catEl.innerHTML = categories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  }
+
+  function clearDailyExpenseForm() {
+    const form = document.getElementById('daily-expense-quick-form');
+    if (form) form.reset();
+    const dateEl = document.getElementById('daily-expense-date');
+    if (dateEl) dateEl.value = TODAY();
+    populateDailyExpenseCategorySelect();
+  }
+
+  function handleDailyExpenseQuickSubmit(e) {
+    e.preventDefault();
+    const date = document.getElementById('daily-expense-date').value || TODAY();
+    const category = document.getElementById('daily-expense-category').value || 'その他';
+    const content = document.getElementById('daily-expense-content').value.trim();
+    const amount = Number(document.getElementById('daily-expense-amount').value) || 0;
+    const memoExtra = document.getElementById('daily-expense-memo').value.trim();
+    if (!amount || amount <= 0) {
+      alert('金額を入力してください（0円以下は登録できません）。');
+      return;
+    }
+    const memo = buildDailyExpenseMemo(content, memoExtra);
+    Storage.addExpenseRecord({
+      date,
+      category,
+      amount,
+      paymentMethod: '現金',
+      memo,
+      taxIncluded: true,
+      isRecurring: false,
+      source: 'daily-action-expense'
+    });
+    clearDailyExpenseForm();
+    showDailyExpenseSavedNotice();
+    renderExecutiveHome();
+    renderProfitView();
+  }
+
   function showDailyRevenueSavedNotice() {
     const el = document.getElementById('daily-revenue-notice');
     if (!el) return;
@@ -2860,6 +2932,7 @@
   function renderDailyActionTasks() {
     renderDailyPrioritySection();
     renderDailyRevenueConfirmationQueue();
+    populateDailyExpenseCategorySelect();
     const scheduleEl = document.getElementById('daily-upcoming-schedule');
     if (scheduleEl) {
       scheduleEl.innerHTML = renderDailyUpcomingScheduleHtml({ compact: false, limit: 3 });
@@ -2868,6 +2941,8 @@
     renderDailyImprovementSection();
     const dateEl = document.getElementById('daily-revenue-date');
     if (dateEl && !dateEl.value) dateEl.value = TODAY();
+    const expenseDateEl = document.getElementById('daily-expense-date');
+    if (expenseDateEl && !expenseDateEl.value) expenseDateEl.value = TODAY();
 
     const el = document.getElementById('dash-daily-action-tasks');
     if (!el) return;
@@ -2952,6 +3027,12 @@
       revenueForm.dataset.bound = '1';
       revenueForm.addEventListener('submit', handleDailyRevenueQuickSubmit);
     }
+    const expenseForm = document.getElementById('daily-expense-quick-form');
+    if (expenseForm && !expenseForm.dataset.bound) {
+      expenseForm.dataset.bound = '1';
+      expenseForm.addEventListener('submit', handleDailyExpenseQuickSubmit);
+    }
+    populateDailyExpenseCategorySelect();
     const saveBtn = document.getElementById('btn-daily-task-edit-save');
     if (saveBtn) saveBtn.addEventListener('click', handleDailyTaskEditSave);
     const cancelBtn = document.getElementById('btn-daily-task-edit-cancel');
@@ -4623,7 +4704,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.8.22</span>
+        <span class="business-report-version">v4.8.23</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'

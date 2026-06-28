@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.22 navigation and action flow label verification (v4817 successor).
+ * Budil v4.8.23 navigation and action flow label verification (v4817 successor).
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -20,11 +20,11 @@ const indexHtml = load('index.html');
 const appJs = load('js/app.js');
 const executiveBrain = load('js/executive-brain.js');
 
-console.log('== v4.8.22 navigation labels (v4817 verify) ==');
+console.log('== v4.8.23 navigation labels (v4817 verify) ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.22'), 'header version should be v4.8.22');
-assert(indexHtml.includes('Budil v4.8.22'), 'sidebar version should be v4.8.22');
-assert(indexHtml.includes('js/app.js?v=4.8.22'), 'app.js cache buster should be v4.8.22');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.23'), 'header version should be v4.8.23');
+assert(indexHtml.includes('Budil v4.8.23'), 'sidebar version should be v4.8.23');
+assert(indexHtml.includes('js/app.js?v=4.8.23'), 'app.js cache buster should be v4.8.23');
 
 assert(indexHtml.includes('\u96c6\u5ba2\u7ba1\u7406'), 'marketing group should exist');
 assert(indexHtml.includes('\u30b5\u30a4\u30c8\u78ba\u8a8d\u8a18\u9332'), 'site check record UI should exist');
@@ -61,4 +61,4 @@ assert(!appJs.match(/\u884c\u52d5\u5019\u88dc\u306b\u8ffd\u52a0/), 'UI should no
 assert(!appJs.match(/\u4eca\u65e5\u3084\u308b\u3053\u3068\u5019\u88dc/), 'UI should not use daily task candidate in app.js');
 assert(!indexHtml.match(/nav-label">[^<]*\u5019\u88dc/), 'nav should not expose candidate labels');
 
-console.log('All v4.8.22 navigation label checks passed.');
+console.log('All v4.8.23 navigation label checks passed.');

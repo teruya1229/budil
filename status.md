@@ -1,5 +1,17 @@
 # Budil status
 
+## v4.8.23 実装内容（毎日やることに今日の経費入力）
+
+- 表示バージョンを v4.8.23 に更新（CSS/JSキャッシュバスターも揃え）
+- 毎日やることに「今日の経費入力」を追加（売上確定待ちの下、手入力売上の上）
+- 日次カテゴリ7種（人件費・薬剤・材料・交通・燃料・外注費・広告費・消耗品・その他）で最小入力
+- `Storage.addExpenseRecord()` / `budil_expense_records` に保存（`source: daily-action-expense`）
+- 月次実績への自動反映なし。利益サマリー優先ロジックは維持
+- 今日の最優先から支出登録系 profit 候補を除外（経費入力欄を主導線に）
+- `budil_expense_records` を PROTECTED_DELETE_KEYS に追加
+- 検証 `scripts/verify-v4823-daily-expense-input.mjs` を追加
+- v4.8.22 売上確定フロー / v4.8.21 売上確定待ち / v4.8.20 外部確認サマリー / v4.8.16 GA4/SC/GBP解析 / v4.8.8安全ガード / v4.8.12過去売上復元は維持
+
 ## v4.8.22 実装内容（売上確定フロー軽微修正）
 
 - 表示バージョンを v4.8.22 に更新（CSS/JSキャッシュバスターも揃え）

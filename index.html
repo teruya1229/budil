@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.8.22">
+  <link rel="stylesheet" href="css/style.css?v=4.8.23">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.8.22</small>
+          <small>AI経営脳みそ v4.8.23</small>
         </div>
       </div>
       <nav class="nav">
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.8.22</small>
+        <small>Budil v4.8.23</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">毎朝5分で、今日の結論・売上・直近予定・集客管理を確認</p>
             </div>
-            <span class="exec-home-version">v4.8.22</span>
+            <span class="exec-home-version">v4.8.23</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <details class="exec-collapse exec-home-start-collapse" id="exec-home-start-collapse">
@@ -282,6 +282,41 @@
             <p class="daily-section-lead">予定や過去予定から、売上にできる作業だけを確認します。金額・日付・内容を直して確定してください。</p>
             <div id="daily-revenue-queue-list" class="daily-revenue-queue-list"></div>
             <div id="daily-revenue-confirmed-notice" class="daily-revenue-confirmed-notice hidden"></div>
+          </div>
+
+          <div id="daily-section-expense" class="daily-section daily-section-expense">
+            <h3 class="daily-section-title">今日の経費入力</h3>
+            <p class="daily-section-lead">人件費・材料費・駐車場・高速代など、今日使ったお金を記録します。</p>
+            <p class="daily-expense-monthly-note">月次実績入力済みの月は、利益サマリーは月次実績を優先します。今日の経費は支出一覧に保存されます。</p>
+            <div id="daily-expense-notice" class="daily-expense-notice hidden"></div>
+            <form id="daily-expense-quick-form" class="daily-expense-quick-form">
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="daily-expense-date">日付</label>
+                  <input type="date" id="daily-expense-date" required>
+                </div>
+                <div class="form-group">
+                  <label for="daily-expense-category">カテゴリ</label>
+                  <select id="daily-expense-category" required></select>
+                </div>
+              </div>
+              <p class="daily-expense-category-hint">駐車場・高速・燃料は「交通・燃料」に入れます。</p>
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="daily-expense-content">内容</label>
+                  <input type="text" id="daily-expense-content" placeholder="例：駐車場代">
+                </div>
+                <div class="form-group">
+                  <label for="daily-expense-amount">金額</label>
+                  <input type="number" id="daily-expense-amount" required min="1" placeholder="例：500">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="daily-expense-memo">メモ</label>
+                <input type="text" id="daily-expense-memo" placeholder="任意">
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">経費を登録</button>
+            </form>
           </div>
 
           <details class="daily-section daily-section-revenue-assist" id="daily-section-revenue-assist">
@@ -488,7 +523,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.8.22</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.8.23</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -3339,30 +3374,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.8.22"></script>
-  <script src="js/messages.js?v=4.8.22"></script>
-  <script src="js/demand-brain.js?v=4.8.22"></script>
-  <script src="js/demand-radar.js?v=4.8.22"></script>
-  <script src="js/sales-brain.js?v=4.8.22"></script>
-  <script src="js/management-brain.js?v=4.8.22"></script>
-  <script src="js/payment-brain.js?v=4.8.22"></script>
-  <script src="js/revenue-brain.js?v=4.8.22"></script>
-  <script src="js/revenue-summary-brain.js?v=4.8.22"></script>
-  <script src="js/reception-brain.js?v=4.8.22"></script>
-  <script src="js/map-brain.js?v=4.8.22"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.8.22"></script>
-  <script src="js/external-check-brain.js?v=4.8.22"></script>
-  <script src="js/action-brain.js?v=4.8.22"></script>
-  <script src="js/work-order-brain.js?v=4.8.22"></script>
-  <script src="js/follow-up-brain.js?v=4.8.22"></script>
-  <script src="js/work-completion-brain.js?v=4.8.22"></script>
-  <script src="js/profit-brain.js?v=4.8.22"></script>
-  <script src="js/analytics-brain.js?v=4.8.22"></script>
-  <script src="js/monthly-results-brain.js?v=4.8.22"></script>
-  <script src="js/documents-brain.js?v=4.8.22"></script>
-  <script src="js/executive-brain.js?v=4.8.22"></script>
-  <script src="js/card-ocr.js?v=4.8.22"></script>
-  <script src="js/data-backup.js?v=4.8.22"></script>
-  <script src="js/app.js?v=4.8.22"></script>
+  <script src="js/storage.js?v=4.8.23"></script>
+  <script src="js/messages.js?v=4.8.23"></script>
+  <script src="js/demand-brain.js?v=4.8.23"></script>
+  <script src="js/demand-radar.js?v=4.8.23"></script>
+  <script src="js/sales-brain.js?v=4.8.23"></script>
+  <script src="js/management-brain.js?v=4.8.23"></script>
+  <script src="js/payment-brain.js?v=4.8.23"></script>
+  <script src="js/revenue-brain.js?v=4.8.23"></script>
+  <script src="js/revenue-summary-brain.js?v=4.8.23"></script>
+  <script src="js/reception-brain.js?v=4.8.23"></script>
+  <script src="js/map-brain.js?v=4.8.23"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.8.23"></script>
+  <script src="js/external-check-brain.js?v=4.8.23"></script>
+  <script src="js/action-brain.js?v=4.8.23"></script>
+  <script src="js/work-order-brain.js?v=4.8.23"></script>
+  <script src="js/follow-up-brain.js?v=4.8.23"></script>
+  <script src="js/work-completion-brain.js?v=4.8.23"></script>
+  <script src="js/profit-brain.js?v=4.8.23"></script>
+  <script src="js/analytics-brain.js?v=4.8.23"></script>
+  <script src="js/monthly-results-brain.js?v=4.8.23"></script>
+  <script src="js/documents-brain.js?v=4.8.23"></script>
+  <script src="js/executive-brain.js?v=4.8.23"></script>
+  <script src="js/card-ocr.js?v=4.8.23"></script>
+  <script src="js/data-backup.js?v=4.8.23"></script>
+  <script src="js/app.js?v=4.8.23"></script>
 </body>
 </html>
