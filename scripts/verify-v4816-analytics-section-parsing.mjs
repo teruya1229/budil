@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.8.16 analytics section KPI parsing verification.
+ * Budil v4.8.17 analytics section KPI parsing verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -21,10 +21,10 @@ const indexHtml = load('index.html');
 const appJs = load('js/app.js');
 const analyticsBrainJs = load('js/analytics-brain.js');
 
-console.log('== v4.8.16 analytics section parsing ==');
+console.log('== v4.8.17 analytics section parsing ==');
 
-assert(indexHtml.includes('v4.8.16'), 'header version should be v4.8.16');
-assert(indexHtml.includes('js/app.js?v=4.8.16'), 'app.js cache buster should be v4.8.16');
+assert(indexHtml.includes('v4.8.17'), 'header version should be v4.8.17');
+assert(indexHtml.includes('js/app.js?v=4.8.17'), 'app.js cache buster should be v4.8.17');
 assert(analyticsBrainJs.includes('applySectionMetrics'), 'section metric parser should exist');
 assert(analyticsBrainJs.includes('parseLpTopAccessSection'), 'LP top parser should exist');
 
@@ -120,4 +120,4 @@ const blankM = blankPreview.snapshot.metrics;
 assert(blankM.searchImpressions === null, 'blank SC impressions should stay null');
 assert(blankM.gbpViews === null, 'blank GBP views should stay null');
 
-console.log('All v4.8.16 analytics section parsing checks passed.');
+console.log('All v4.8.17 analytics section parsing checks passed.');

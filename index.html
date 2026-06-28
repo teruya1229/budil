@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.8.16">
+  <link rel="stylesheet" href="css/style.css?v=4.8.17">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.8.16</small>
+          <small>AI経営脳みそ v4.8.17</small>
         </div>
       </div>
       <nav class="nav">
@@ -44,7 +44,7 @@
 
         <details class="nav-group" open>
           <summary class="nav-group-title"><span class="nav-group-icon">📞</span><span class="nav-group-label">受付・予定</span></summary>
-          <p class="nav-group-hint">受付、予定、候補、エリア</p>
+          <p class="nav-group-hint">受付、予定、作成、エリア</p>
           <div class="nav-group-items">
             <button class="nav-item nav-item-main" data-view="reception">
               <span class="nav-icon">📞</span><span class="nav-label">受付・予約</span>
@@ -53,7 +53,7 @@
               <span class="nav-icon">📅</span><span class="nav-label">作業予定</span>
             </button>
             <button class="nav-item nav-item-main" data-view="calendar-candidate">
-              <span class="nav-icon">📋</span><span class="nav-label">予定候補</span>
+              <span class="nav-icon">📋</span><span class="nav-label">予定作成</span>
             </button>
             <button class="nav-item nav-item-main" data-view="area">
               <span class="nav-icon">🗺️</span><span class="nav-label">エリア</span>
@@ -90,50 +90,48 @@
         </details>
 
         <details class="nav-group" open>
-          <summary class="nav-group-title"><span class="nav-group-icon">📈</span><span class="nav-group-label">集客・外部チェック</span></summary>
-          <p class="nav-group-hint">外部チェック、アクセス分析、広告・集客メモ</p>
+          <summary class="nav-group-title"><span class="nav-group-icon">📈</span><span class="nav-group-label">集客管理</span></summary>
+          <p class="nav-group-hint">アクセス分析、外部確認、施策メモ</p>
           <div class="nav-group-items">
             <button class="nav-item nav-item-main" data-view="analytics">
               <span class="nav-icon">📈</span><span class="nav-label">アクセス分析</span>
             </button>
             <button class="nav-item nav-item-main" data-view="external-check">
-              <span class="nav-icon">🔍</span><span class="nav-label">外部チェック</span>
+              <span class="nav-icon">🔍</span><span class="nav-label">外部確認</span>
             </button>
-            <button class="nav-item nav-item-main" data-view="radar">
-              <span class="nav-icon">📡</span><span class="nav-label">需要レーダー</span>
-            </button>
-            <button class="nav-item nav-item-main" data-view="pickup">
-              <span class="nav-icon">📥</span><span class="nav-label">需要ピックアップ</span>
-            </button>
-            <button class="nav-item nav-item-main" data-view="demand">
-              <span class="nav-icon">🔎</span><span class="nav-label">需要リサーチ</span>
-            </button>
-            <button class="nav-item nav-item-sub" data-view="pickup" data-scroll="#pickup-ad-action">
-              <span class="nav-icon">📣</span><span class="nav-label">広告・集客支援</span>
+            <button class="nav-item nav-item-main" data-view="strategy-memo">
+              <span class="nav-icon">📝</span><span class="nav-label">施策メモ</span>
             </button>
           </div>
         </details>
 
         <details class="nav-group" open>
-          <summary class="nav-group-title"><span class="nav-group-icon">📝</span><span class="nav-group-label">レポート・記録</span></summary>
-          <p class="nav-group-hint">朝レポート、経営レポート、営業記録</p>
+          <summary class="nav-group-title"><span class="nav-group-icon">📝</span><span class="nav-group-label">記録</span></summary>
+          <p class="nav-group-hint">朝レポート、経営メモ、確認履歴</p>
           <div class="nav-group-items">
             <button class="nav-item nav-item-main" data-view="dashboard" data-scroll="#morning-report">
               <span class="nav-icon">🌅</span><span class="nav-label">朝レポート</span>
             </button>
             <button class="nav-item nav-item-main" data-view="dashboard" data-scroll="#business-report-dash">
-              <span class="nav-icon">📋</span><span class="nav-label">経営レポート</span>
+              <span class="nav-icon">📋</span><span class="nav-label">経営メモ</span>
             </button>
-            <button class="nav-item nav-item-sub" data-view="external-check" data-scroll=".card-external-check-history">
-              <span class="nav-icon">🗂</span><span class="nav-label">外部チェック履歴</span>
+            <button class="nav-item nav-item-main" data-view="external-check" data-scroll=".card-external-check-history">
+              <span class="nav-icon">🗂</span><span class="nav-label">確認履歴</span>
             </button>
+          </div>
+        </details>
+
+        <details class="nav-group" open>
+          <summary class="nav-group-title"><span class="nav-group-icon">🤝</span><span class="nav-group-label">営業管理</span></summary>
+          <p class="nav-group-hint">営業先、追客</p>
+          <div class="nav-group-items">
             <button class="nav-item nav-item-main" data-view="sales">
               <span class="nav-icon">🤝</span><span class="nav-label">営業先</span>
             </button>
             <button class="nav-item nav-item-main" data-view="followup">
-              <span class="nav-icon">📨</span><span class="nav-label">追客管理</span>
+              <span class="nav-icon">📨</span><span class="nav-label">追客</span>
             </button>
-            <button class="nav-item nav-item-main" data-view="card">
+            <button class="nav-item nav-item-sub" data-view="card">
               <span class="nav-icon">🪪</span><span class="nav-label">名刺解析</span>
             </button>
           </div>
@@ -162,7 +160,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.8.16</small>
+        <small>Budil v4.8.17</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -184,7 +182,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">毎朝5分で、今日やること・売上・利益・需要・受付・作業予定を確認</p>
             </div>
-            <span class="exec-home-version">v4.8.16</span>
+            <span class="exec-home-version">v4.8.17</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <div id="exec-home-start-guide" class="exec-home-start-guide hidden"></div>
@@ -406,7 +404,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.8.16</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.8.17</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -544,6 +542,39 @@
           <div id="recommended-ops-dash" class="card card-wide card-recommended-ops"></div>
         </div>
         </details>
+      </section>
+
+      <!-- 施策メモ -->
+      <section id="view-strategy-memo" class="view">
+        <header class="view-header">
+          <h1>施策メモ</h1>
+          <p class="view-subtitle">需要レーダー、需要ピックアップ、需要リサーチ、広告・集客支援をまとめて確認する</p>
+        </header>
+        <div class="card card-wide strategy-memo-hub">
+          <p class="strategy-memo-intro">集客のネタや施策メモはここから開けます。各機能はそのまま使えます。</p>
+          <div class="strategy-memo-grid">
+            <button type="button" class="strategy-memo-card" data-strategy-open="radar">
+              <span class="strategy-memo-card-icon">📡</span>
+              <strong>需要レーダー</strong>
+              <span class="strategy-memo-card-desc">今週の狙い・注目キーワード・市場メモ</span>
+            </button>
+            <button type="button" class="strategy-memo-card" data-strategy-open="pickup">
+              <span class="strategy-memo-card-icon">📥</span>
+              <strong>需要ピックアップ</strong>
+              <span class="strategy-memo-card-desc">調査結果を今日の行動に変換</span>
+            </button>
+            <button type="button" class="strategy-memo-card" data-strategy-open="demand">
+              <span class="strategy-memo-card-icon">🔎</span>
+              <strong>需要リサーチ</strong>
+              <span class="strategy-memo-card-desc">朝の需要チェック → 分析 → 朝レポート</span>
+            </button>
+            <button type="button" class="strategy-memo-card" data-strategy-open="pickup" data-strategy-scroll="#pickup-ad-action">
+              <span class="strategy-memo-card-icon">📣</span>
+              <strong>広告・集客支援</strong>
+              <span class="strategy-memo-card-desc">広告・集客の提案と文案生成</span>
+            </button>
+          </div>
+        </div>
       </section>
 
       <!-- 需要レーダー -->
@@ -1506,7 +1537,7 @@
         </header>
 
         <div class="card card-wide card-work-order-calendar-link">
-          <p class="work-order-calendar-link-text">Googleカレンダーの予定は <button type="button" class="btn btn-sm btn-secondary" id="btn-go-calendar-candidate">予定候補</button> から候補として取り込めます（売上確定ではありません）。</p>
+          <p class="work-order-calendar-link-text">Googleカレンダーの予定は <button type="button" class="btn btn-sm btn-secondary" id="btn-go-calendar-candidate">予定作成</button> から取り込めます（売上確定ではありません）。</p>
           <div id="work-order-calendar-candidates-brief" class="work-order-calendar-candidates-brief"></div>
         </div>
 
@@ -1634,11 +1665,11 @@
         </div>
       </section>
 
-      <!-- 予定候補 -->
+      <!-- 予定作成 -->
       <section id="view-calendar-candidate" class="view">
         <header class="view-header">
-          <h1>予定候補</h1>
-          <p class="view-subtitle">Googleカレンダー/外部確認レポートの予定を貼り付けて作業予定候補にする（売上確定ではありません）</p>
+          <h1>予定作成</h1>
+          <p class="view-subtitle">Googleカレンダー/外部確認レポートの予定を貼り付けて作業予定にする（売上確定ではありません）</p>
         </header>
 
         <div class="card card-wide card-calendar-candidate">
@@ -1709,17 +1740,17 @@
         </div>
       </section>
 
-      <!-- 外部チェック -->
+      <!-- 外部確認 -->
       <section id="view-external-check" class="view">
         <header class="view-header">
-          <h1>集客・外部チェック</h1>
-          <p class="view-subtitle">外部チェック、アクセス分析、広告・集客メモをまとめて確認し、今日やること候補へ変換します。売上確定ではありません。</p>
+          <h1>外部確認</h1>
+          <p class="view-subtitle">外部から確認した結果を貼り付けて保存し、改善リストや今日やることにつなげます。売上確定ではありません。</p>
         </header>
 
         <div class="card card-wide card-external-check-form">
-          <p class="external-check-notice"><strong>これは売上確定ではありません。</strong> 外部確認レポートを記録する受け皿です。予定候補・GBP反応は候補/集客情報として扱います。</p>
+          <p class="external-check-notice"><strong>これは売上確定ではありません。</strong> 外部確認レポートを記録する受け皿です。予定・GBP反応は参考情報として扱います。</p>
 
-          <h2>外部チェック結果</h2>
+          <h2>外部確認結果</h2>
           <textarea id="external-check-paste" class="external-check-paste" rows="14" placeholder="【Budil貼り付け用】&#10;種別：外部チェックレポート&#10;確認日：2026-06-19&#10;..."></textarea>
           <div class="external-check-actions">
             <button type="button" id="btn-external-check-save" class="btn btn-sm btn-primary">保存</button>
@@ -1734,13 +1765,13 @@
         </div>
 
         <div class="card card-wide card-external-check-actions">
-          <h2>改善アクション候補</h2>
-          <p class="external-check-actions-note">外部チェック由来の候補です。売上確定ではありません。</p>
+          <h2>改善リスト</h2>
+          <p class="external-check-actions-note">外部確認由来の改善アクションです。売上確定ではありません。</p>
           <div id="external-check-action-candidates" class="external-check-action-candidates-list"></div>
         </div>
 
         <div class="card card-wide card-external-check-history">
-          <h2>保存履歴</h2>
+          <h2>確認履歴</h2>
           <div id="external-check-history" class="external-check-history-list"></div>
         </div>
       </section>
@@ -3223,30 +3254,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.8.16"></script>
-  <script src="js/messages.js?v=4.8.16"></script>
-  <script src="js/demand-brain.js?v=4.8.16"></script>
-  <script src="js/demand-radar.js?v=4.8.16"></script>
-  <script src="js/sales-brain.js?v=4.8.16"></script>
-  <script src="js/management-brain.js?v=4.8.16"></script>
-  <script src="js/payment-brain.js?v=4.8.16"></script>
-  <script src="js/revenue-brain.js?v=4.8.16"></script>
-  <script src="js/revenue-summary-brain.js?v=4.8.16"></script>
-  <script src="js/reception-brain.js?v=4.8.16"></script>
-  <script src="js/map-brain.js?v=4.8.16"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.8.16"></script>
-  <script src="js/external-check-brain.js?v=4.8.16"></script>
-  <script src="js/action-brain.js?v=4.8.16"></script>
-  <script src="js/work-order-brain.js?v=4.8.16"></script>
-  <script src="js/follow-up-brain.js?v=4.8.16"></script>
-  <script src="js/work-completion-brain.js?v=4.8.16"></script>
-  <script src="js/profit-brain.js?v=4.8.16"></script>
-  <script src="js/analytics-brain.js?v=4.8.16"></script>
-  <script src="js/monthly-results-brain.js?v=4.8.16"></script>
-  <script src="js/documents-brain.js?v=4.8.16"></script>
-  <script src="js/executive-brain.js?v=4.8.16"></script>
-  <script src="js/card-ocr.js?v=4.8.16"></script>
-  <script src="js/data-backup.js?v=4.8.16"></script>
-  <script src="js/app.js?v=4.8.16"></script>
+  <script src="js/storage.js?v=4.8.17"></script>
+  <script src="js/messages.js?v=4.8.17"></script>
+  <script src="js/demand-brain.js?v=4.8.17"></script>
+  <script src="js/demand-radar.js?v=4.8.17"></script>
+  <script src="js/sales-brain.js?v=4.8.17"></script>
+  <script src="js/management-brain.js?v=4.8.17"></script>
+  <script src="js/payment-brain.js?v=4.8.17"></script>
+  <script src="js/revenue-brain.js?v=4.8.17"></script>
+  <script src="js/revenue-summary-brain.js?v=4.8.17"></script>
+  <script src="js/reception-brain.js?v=4.8.17"></script>
+  <script src="js/map-brain.js?v=4.8.17"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.8.17"></script>
+  <script src="js/external-check-brain.js?v=4.8.17"></script>
+  <script src="js/action-brain.js?v=4.8.17"></script>
+  <script src="js/work-order-brain.js?v=4.8.17"></script>
+  <script src="js/follow-up-brain.js?v=4.8.17"></script>
+  <script src="js/work-completion-brain.js?v=4.8.17"></script>
+  <script src="js/profit-brain.js?v=4.8.17"></script>
+  <script src="js/analytics-brain.js?v=4.8.17"></script>
+  <script src="js/monthly-results-brain.js?v=4.8.17"></script>
+  <script src="js/documents-brain.js?v=4.8.17"></script>
+  <script src="js/executive-brain.js?v=4.8.17"></script>
+  <script src="js/card-ocr.js?v=4.8.17"></script>
+  <script src="js/data-backup.js?v=4.8.17"></script>
+  <script src="js/app.js?v=4.8.17"></script>
 </body>
 </html>

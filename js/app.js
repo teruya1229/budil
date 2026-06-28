@@ -463,9 +463,12 @@
   const ACTIVE_LEAD_STATUSES = ['未接触', 'アプローチ中', '商談中'];
 
   // ── ナビゲーション ──
+  const STRATEGY_MEMO_VIEWS = ['strategy-memo', 'radar', 'pickup', 'demand'];
+
   function setNavActive(viewName) {
+    const activeView = STRATEGY_MEMO_VIEWS.includes(viewName) ? 'strategy-memo' : viewName;
     document.querySelectorAll('.nav-item-main').forEach(n => {
-      n.classList.toggle('active', n.dataset.view === viewName);
+      n.classList.toggle('active', n.dataset.view === activeView);
     });
   }
 
@@ -485,8 +488,19 @@
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-' + view).classList.add('active');
     if (view === 'dashboard') renderDashboard();
+    if (view === 'strategy-memo') renderStrategyMemoHub();
     if (view === 'radar') renderDemandRadar();
     if (view === 'pickup') renderDemandPickup();
+    if (view === 'demand') {
+      const saved = Storage.getGeneratedPosts();
+      if (saved) renderDemandOutput(saved);
+      renderDemandLogHistory();
+    }
+    if (view === 'sales') renderLeadsTable();
+    if (view === 'followup') {
+      renderFollowupTable();
+      renderFollowupOverdue();
+    }
     if (view === 'reception') renderReceptionView();
     if (view === 'work-order') renderWorkOrderView();
     if (view === 'calendar-candidate') renderCalendarCandidateView();
@@ -558,8 +572,8 @@
   function renderDashboard() {
     renderStartGuide();
     safeRenderSection('executive-home', () => renderExecutiveHome(), '経営司令塔ホーム');
-    safeRenderSection('dash-external-check', () => renderDashExternalCheck(), '外部チェック');
-    safeRenderSection('dash-action-candidates', () => renderDashActionCandidates(), '今日の行動候補');
+    safeRenderSection('dash-external-check', () => renderDashExternalCheck(), '外部確認');
+    safeRenderSection('dash-action-candidates', () => renderDashActionCandidates(), '改善リスト');
     safeRenderSection(null, () => renderBackupStatus(), 'バックアップ状況');
     safeRenderSection('morning-report', () => renderMorningReport(), '朝レポート');
     safeRenderSection(null, () => renderDemandInsights(), '需要インサイト');
@@ -577,7 +591,7 @@
     safeRenderSection('dash-action-calendar', () => renderActionCalendar(), '投稿・広告カレンダー');
     safeRenderSection('dash-daily-action-tasks', () => renderDailyActionTasks(), '今日やること');
     safeRenderSection(null, () => renderMorningDailyTasksBrief(), '朝レポートタスク');
-    safeRenderSection('business-report-dash', () => renderBusinessReport('compact'), '経営レポート');
+    safeRenderSection('business-report-dash', () => renderBusinessReport('compact'), '経営メモ');
     safeRenderSection('onboarding-guide-dash', () => renderOnboardingGuide('compact'), 'はじめてガイド');
     safeRenderSection('product-overview-dash', () => renderProductOverview('compact'), 'Budilでできること');
     safeRenderSection('recommended-ops-dash', () => renderRecommendedOperations('compact'), 'おすすめ運用');
@@ -803,7 +817,7 @@
   function renderExecutiveWorkOrdersHtml(section) {
     const sec = section || { items: [] };
     if (!sec.items.length) {
-      return '<p class="placeholder-text">今日の作業予定はありません。</p>';
+      return '<p class="placeholder-text">今日の作業予定はありません。<br>受付登録やGoogleカレンダー取り込みから作成できます。</p>';
     }
     return sec.items.map(wo => `
       <div class="exec-work-item" data-work-order-id="${esc(wo.id)}">
@@ -2267,14 +2281,24 @@
     return '';
   }
 
-  function getDailyTaskSourceLabel(task) {
-    if (!task) return 'タスク';
+  function getDailyTaskOriginLabel(task) {
+    if (!task) return '手動';
+    const reason = String(task.reason || '');
+    const target = String(task.targetName || '');
+    const key = String(task.pickupDedupeKey || '');
+    if (/外部確認|外部チェック|external-check/i.test(reason + target + key)) return '外部確認';
+    if (/アナリティクス|アクセス分析|外部確認\/アナリティクス|ブラウザー番頭/i.test(reason + target)) return 'アクセス分析';
+    if (/経営レポート|経営メモ|経営ホーム|次の一手/i.test(reason + target)) return '経営ホーム';
     if (task.intakeId) return '受付';
-    if (task.workOrderId) return '作業予定';
-    if (task.leadId) return '営業';
-    if (task.pickupDedupeKey) return '需要';
+    if (task.workOrderId || key.startsWith('work-order|')) return '作業予定';
+    if (task.leadId) return '営業先';
+    if (task.pickupDedupeKey) return '施策メモ';
     if (task.type === 'manual') return '手動';
     return '売上';
+  }
+
+  function getDailyTaskSourceLabel(task) {
+    return getDailyTaskOriginLabel(task);
   }
 
   function renderDailyActionTaskCard(task, options) {
@@ -2286,7 +2310,7 @@
     const priorityClass = task.priority === '高' ? 'high' : task.priority === '中' ? 'mid' : 'low';
     const statusLabel = getDailyTaskStatusLabel(task, today);
     const showActions = !isDone && !isSnoozedAway && opts.showActions !== false;
-    const sourceLabel = getDailyTaskSourceLabel(task);
+    const originLabel = getDailyTaskOriginLabel(task);
     const reasonLine = (task.reason || task.action || '').slice(0, 80);
     const openBtn = task.type !== 'manual' && task.openTarget
       ? `<button type="button" class="btn btn-sm btn-secondary" data-daily-task-open="${esc(task.id)}">開く</button>` : '';
@@ -2308,7 +2332,7 @@
       <div class="daily-task-card daily-task-v2 daily-task-${priorityClass}${isDone ? ' daily-task-done' : ''}${isSnoozed || isSnoozedAway ? ' daily-task-snoozed' : ''}" data-task-id="${esc(task.id)}">
         <div class="daily-task-header">
           <strong class="daily-task-title">${esc(task.title)}</strong>
-          <span class="exec-source-badge daily-task-source-badge">${esc(sourceLabel)}</span>
+          <span class="exec-source-badge daily-task-source-badge">出どころ：${esc(originLabel)}</span>
           ${statusLabel ? `<span class="daily-task-status">${esc(statusLabel)}</span>` : ''}
         </div>
         ${reasonLine ? `<p class="daily-task-reason">${esc(reasonLine)}</p>` : ''}
@@ -2397,7 +2421,7 @@
     const parts = [];
 
     if (!allTasks.length) {
-      parts.push('<p class="placeholder-text">今日のタスクはまだありません。上のフォームから1件追加するか、売上・営業先を登録すると自動で出ます。</p>');
+      parts.push('<p class="placeholder-text">今日やることはまだありません。<br>改善リストや経営ホームの提案から追加できます。</p>');
     } else {
       if (active.length) {
         const visible = active.slice(0, 5);
@@ -2721,7 +2745,7 @@
     if (summary.monthlyResults) items.push('月次実績 ' + summary.monthlyResults + '件');
     if (summary.documents) items.push('請求書・見積書 ' + summary.documents + '件');
     if (summary.externalCheck) items.push('外部チェック ' + summary.externalCheck + '件');
-    if (summary.actionCandidates) items.push('今日やること候補 ' + summary.actionCandidates + '件');
+    if (summary.actionCandidates) items.push('改善リスト ' + summary.actionCandidates + '件');
     if (summary.actionCandidateStates) items.push('候補状態 ' + summary.actionCandidateStates + '件');
     if (summary.safetyBackups) items.push('安全バックアップ ' + summary.safetyBackups + '件');
     if (summary.operationLogs) items.push('操作ログ ' + summary.operationLogs + '件');
@@ -4129,8 +4153,8 @@
 
     el.innerHTML = `
       <div class="business-report-header">
-        <h2>経営レポート</h2>
-        <span class="business-report-version">v4.8.16</span>
+        <h2>経営メモ</h2>
+        <span class="business-report-version">v4.8.17</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -7172,7 +7196,7 @@
     });
     Storage.addWorkOrder(payload);
     refreshCalendarCandidateViews();
-    alert('予定候補を保存しました（売上確定ではありません）。');
+    alert('予定を保存しました（売上確定ではありません）。');
   }
 
   function saveAllCalendarCandidates(force) {
@@ -7198,7 +7222,7 @@
     const previewPanel = document.getElementById('calendar-candidate-preview');
     if (previewPanel) previewPanel.classList.add('hidden');
     refreshCalendarCandidateViews();
-    alert(`予定候補を${saved}件保存しました（売上確定ではありません）。`);
+    alert(`予定を${saved}件保存しました（売上確定ではありません）。`);
   }
 
   function refreshCalendarCandidateViews() {
@@ -7229,7 +7253,7 @@
       .map(w => WorkOrderBrain.normalizeWorkOrder(w))
       .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
     if (!list.length) {
-      el.innerHTML = '<p class="placeholder-text">保存済みの予定候補はありません。上の貼り付け欄から取り込んでください。</p>';
+      el.innerHTML = '<p class="placeholder-text">保存済みの予定はありません。上の貼り付け欄から取り込んでください。</p>';
       return;
     }
     el.innerHTML = `<p class="calendar-candidate-not-sale-list">これは売上ではありません。確定売上集計には含まれません。</p>
@@ -7376,7 +7400,7 @@
       el.innerHTML = '';
       return;
     }
-    el.innerHTML = `<p>予定候補（未反映）：${summary.pendingCount}件 / 要確認：${summary.reviewCount}件 — <button type="button" class="btn btn-sm btn-secondary" id="btn-work-order-open-calendar-candidates">予定候補を見る</button></p>`;
+    el.innerHTML = `<p>予定（未反映）：${summary.pendingCount}件 / 要確認：${summary.reviewCount}件 — <button type="button" class="btn btn-sm btn-secondary" id="btn-work-order-open-calendar-candidates">予定作成を見る</button></p>`;
     const btn = document.getElementById('btn-work-order-open-calendar-candidates');
     if (btn) btn.addEventListener('click', () => navigateToView('calendar-candidate'));
   }
@@ -7487,13 +7511,13 @@
         <span class="action-candidate-badge action-candidate-badge-added">追加済み</span>
         <button type="button" class="btn btn-sm btn-secondary" data-act-done="${esc(found.id)}">対応済みにする</button>
         <button type="button" class="btn btn-sm btn-not-needed" data-act-not-needed="${esc(found.id)}">必要無し</button>
-        ${inDaily ? '<span class="action-candidate-badge action-candidate-badge-daily">今日やること追加済み</span>' : `<button type="button" class="btn btn-sm btn-secondary" data-act-daily="${esc(reportId)}" data-act-title="${esc(title)}">今日やることに追加</button>`}
+        ${inDaily ? '<span class="action-candidate-badge action-candidate-badge-daily">今日やることに追加済み</span>' : `<button type="button" class="btn btn-sm btn-secondary" data-act-daily="${esc(reportId)}" data-act-title="${esc(title)}">今日やることへ追加</button>`}
       `;
     }
     return `
-      <button type="button" class="btn btn-sm btn-primary" data-act-add="${esc(reportId)}" data-act-title="${esc(title)}">行動候補に追加</button>
+      <button type="button" class="btn btn-sm btn-primary" data-act-add="${esc(reportId)}" data-act-title="${esc(title)}">改善リストに追加</button>
       <button type="button" class="btn btn-sm btn-not-needed" data-act-not-needed-report="${esc(reportId)}" data-act-title="${esc(title)}">必要無し</button>
-      ${inDaily ? '<span class="action-candidate-badge action-candidate-badge-daily">今日やること追加済み</span>' : `<button type="button" class="btn btn-sm btn-secondary" data-act-daily="${esc(reportId)}" data-act-title="${esc(title)}">今日やることに追加</button>`}
+      ${inDaily ? '<span class="action-candidate-badge action-candidate-badge-daily">今日やることに追加済み</span>' : `<button type="button" class="btn btn-sm btn-secondary" data-act-daily="${esc(reportId)}" data-act-title="${esc(title)}">今日やることへ追加</button>`}
     `;
   }
 
@@ -7510,7 +7534,7 @@
       return `
         <div class="external-check-today-actions-card">
           <div class="external-check-today-actions-header">
-            <h3>今日やること候補</h3>
+            <h3>改善リストへ追加</h3>
             <span class="external-check-count-badge">0件</span>
           </div>
           <p class="external-check-unconfirmed">${esc(ExternalCheckBrain.UNCONFIRMED)}</p>
@@ -7532,12 +7556,12 @@
     return `
       <div class="external-check-today-actions-card">
         <div class="external-check-today-actions-header">
-          <h3>今日やること候補</h3>
+          <h3>改善リストへ追加</h3>
           <span class="external-check-count-badge">${count}件</span>
         </div>
         <ul class="external-check-today-action-list">${itemsHtml}</ul>
-        ${compact && count > 3 ? `<p class="external-check-more-note">他 ${count - 3} 件 — 外部チェック画面で全件確認</p>` : ''}
-        <p class="external-check-not-sale">外部チェック由来の候補です。売上確定ではありません。</p>
+        ${compact && count > 3 ? `<p class="external-check-more-note">他 ${count - 3} 件 — 外部確認画面で全件確認</p>` : ''}
+        <p class="external-check-not-sale">外部確認由来の改善アクションです。売上確定ではありません。</p>
       </div>
     `;
   }
@@ -7561,7 +7585,7 @@
   }
 
   function renderExternalCheckSummaryBlock(report, compact) {
-    if (!report) return '<p class="placeholder-text">まだ外部チェックは保存されていません。</p>';
+    if (!report) return '<p class="placeholder-text">まだ外部確認は保存されていません。</p>';
     const s = report.summary || {};
 
     if (compact) {
@@ -7590,13 +7614,13 @@
         <p><strong>確認対象：</strong>${esc(s.targets || ExternalCheckBrain.UNCONFIRMED)}</p>
         <p><strong>ソース：</strong>${esc(report.source || 'browser-bantou')}</p>
         ${renderExternalCheckSaveId(report)}
-        ${linked.length ? `<p><strong>行動候補：</strong>${linked.filter(c => c.status === ActionBrain.STATUS_TODO).length}件未対応 / ${linked.filter(c => c.status === ActionBrain.STATUS_DONE).length}件対応済み / ${linked.filter(c => c.status === ActionBrain.STATUS_NOT_NEEDED).length}件必要無し</p>` : ''}
+        ${linked.length ? `<p><strong>改善リスト：</strong>${linked.filter(c => c.status === ActionBrain.STATUS_TODO).length}件未対応 / ${linked.filter(c => c.status === ActionBrain.STATUS_DONE).length}件対応済み / ${linked.filter(c => c.status === ActionBrain.STATUS_NOT_NEEDED).length}件必要無し</p>` : ''}
       </div>
       ${renderExternalCheckTodayActionsSection(report, false)}
       ${renderExternalCheckNoiseSection(report, false)}
       ${renderExternalCheckCautionsSection(report, false)}
       <div class="external-check-section-grid">
-        <div class="external-check-section"><h3>予定候補</h3>${renderExternalCheckListItems(s.scheduleCandidates)}<p class="external-check-not-sale">作業予定候補であり売上確定ではありません。</p></div>
+        <div class="external-check-section"><h3>予定</h3>${renderExternalCheckListItems(s.scheduleCandidates)}<p class="external-check-not-sale">作業予定の参考情報であり売上確定ではありません。</p></div>
         <div class="external-check-section"><h3>需要候補</h3>${renderExternalCheckListItems(s.demandCandidates)}</div>
         <div class="external-check-section"><h3>アナリティクス候補</h3>${renderExternalCheckListItems(s.analyticsCandidates)}</div>
         <div class="external-check-section"><h3>GBP反応</h3>${renderExternalCheckListItems(s.gbpSignals)}<p class="external-check-not-sale">集客情報であり売上確定ではありません。</p></div>
@@ -7618,17 +7642,17 @@
 
     if (!todo.length) {
       el.innerHTML = `
-        <h2>今日の行動候補</h2>
-        <p class="placeholder-text">外部チェック由来の未対応行動候補はありません。</p>
-        <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-action-candidates">外部チェックを見る</button>
+        <h2>改善リスト</h2>
+        <p class="placeholder-text">改善リストはまだありません。<br>アクセス分析・外部確認・経営ホームの提案から追加できます。</p>
+        <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-action-candidates">外部確認を見る</button>
       `;
     } else {
       el.innerHTML = `
         <div class="action-candidates-dash-header">
-          <h2>今日の行動候補 <span class="external-check-count-badge">${todo.length}件未対応</span></h2>
-          <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-action-candidates">行動候補を見る</button>
+          <h2>改善リスト <span class="external-check-count-badge">${todo.length}件未対応</span></h2>
+          <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-action-candidates">改善リストを見る</button>
         </div>
-        <p class="action-candidates-source-note">由来：外部チェック（売上確定ではありません）</p>
+        <p class="action-candidates-source-note">由来：外部確認（売上確定ではありません）</p>
         <ul class="action-candidates-dash-list">
           ${top.map(c => `
             <li class="action-candidate-dash-item">
@@ -7662,7 +7686,7 @@
       .filter(c => c.source === ActionBrain.SOURCE_EXTERNAL_CHECK);
 
     if (!candidates.length) {
-      el.innerHTML = '<p class="placeholder-text">まだ行動候補はありません。最新レポートの「今日やること候補」から追加してください。</p>';
+      el.innerHTML = '<p class="placeholder-text">改善リストはまだありません。<br>アクセス分析・外部確認・経営ホームの提案から追加できます。</p>';
       return;
     }
 
@@ -7673,6 +7697,8 @@
     const reports = Storage.getExternalCheckReports();
     const renderItem = c => {
       const orphaned = ActionBrain.isOrphanedSource(c.sourceReportId, reports);
+      const dailyKey = ActionBrain.makeDailyTaskDedupeKey(c.sourceReportId, c.title);
+      const inDaily = Storage.getDailyActionTasksData().manualTasks.some(t => t.pickupDedupeKey === dailyKey);
       return `
       <div class="action-candidate-list-item${c.status === ActionBrain.STATUS_DONE ? ' is-done' : ''}${c.status === ActionBrain.STATUS_NOT_NEEDED ? ' is-not-needed' : ''}${orphaned ? ' is-orphaned' : ''}">
         <p class="action-candidate-list-title">${esc(c.title)}${orphaned ? ' <span class="action-candidate-badge action-candidate-badge-orphan">元レポート削除済み</span>' : ''}</p>
@@ -7682,8 +7708,10 @@
             ? '<span class="action-candidate-badge action-candidate-badge-done">対応済み</span>'
             : c.status === ActionBrain.STATUS_NOT_NEEDED
               ? '<span class="action-candidate-badge action-candidate-badge-not-needed">必要無し</span>'
-            : `<span class="action-candidate-badge action-candidate-badge-added">未対応</span>
-               <button type="button" class="btn btn-sm btn-secondary" data-act-done="${esc(c.id)}">対応済みにする</button>
+            : `${inDaily
+              ? '<span class="action-candidate-badge action-candidate-badge-daily">今日やることに追加済み</span>'
+              : `<button type="button" class="btn btn-sm btn-secondary" data-act-daily="${esc(c.sourceReportId)}" data-act-title="${esc(c.title)}">今日やることへ追加</button>`}
+               <button type="button" class="btn btn-sm btn-secondary" data-act-done="${esc(c.id)}">対応済み</button>
                <button type="button" class="btn btn-sm btn-not-needed" data-act-not-needed="${esc(c.id)}">必要無し</button>`}
         </div>
       </div>
@@ -7694,7 +7722,7 @@
       <p class="action-candidates-summary">未対応 ${todo.length}件 / 対応済み ${done.length}件 / 必要無し ${notNeeded.length}件</p>
       <div class="action-candidate-list-group">
         <h3>未対応</h3>
-        ${todo.length ? todo.map(renderItem).join('') : '<p class="placeholder-text">未対応の行動候補はありません。</p>'}
+        ${todo.length ? todo.map(renderItem).join('') : '<p class="placeholder-text">未対応の改善項目はありません。</p>'}
       </div>
       ${done.length ? `<div class="action-candidate-list-group"><h3>対応済み</h3>${done.map(renderItem).join('')}</div>` : ''}
       ${notNeeded.length ? `<div class="action-candidate-list-group"><h3>必要無し</h3>${notNeeded.map(renderItem).join('')}</div>` : ''}
@@ -7702,15 +7730,64 @@
     bindActionCandidateButtons(el);
   }
 
+  function showImprovementListAddedNotice(mountEl) {
+    const host = mountEl || document.querySelector('.card-analytics-kpi-snapshot')
+      || document.querySelector('.card-external-check-latest')
+      || document.body;
+    let el = document.getElementById('improvement-list-save-notice');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'improvement-list-save-notice';
+      el.className = 'improvement-list-save-notice card card-wide';
+      if (host && host.parentNode) host.parentNode.insertBefore(el, host.nextSibling);
+      else document.querySelector('.main')?.prepend(el);
+    }
+    el.classList.remove('hidden');
+    el.innerHTML = `
+      <p class="improvement-list-save-message"><strong>改善リストに追加しました。</strong><br>
+      次は「今日やること」に入れるか、「改善リスト」で確認できます。</p>
+      <div class="improvement-list-save-actions">
+        <button type="button" class="btn btn-sm btn-primary" data-improvement-go-daily>今日やることへ</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-improvement-go-list>改善リストを見る</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-improvement-stay>この画面に残る</button>
+      </div>`;
+    el.querySelector('[data-improvement-go-daily]').addEventListener('click', () => {
+      navigateToView('dashboard', '.card-daily-action-tasks');
+    });
+    el.querySelector('[data-improvement-go-list]').addEventListener('click', () => {
+      navigateToView('external-check', '.card-external-check-actions');
+    });
+    el.querySelector('[data-improvement-stay]').addEventListener('click', () => {
+      el.classList.add('hidden');
+    });
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function renderStrategyMemoHub() {
+    document.querySelectorAll('[data-strategy-open]').forEach(btn => {
+      if (btn.dataset.strategyBound) return;
+      btn.dataset.strategyBound = '1';
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.strategyOpen;
+        navigateToView(view, btn.dataset.strategyScroll || '');
+      });
+    });
+  }
+
+  function initStrategyMemoHub() {
+    renderStrategyMemoHub();
+  }
+
   function addExternalCheckActionCandidate(reportId, title) {
     if (!reportId || !title) return;
     const result = Storage.addActionCandidate(ActionBrain.createFromExternalCheck(reportId, title));
     if (result.duplicate) {
-      showAppToast('この候補は既に行動候補に追加済みです');
+      showAppToast('この項目は既に改善リストに追加済みです');
       return;
     }
     refreshActionCandidateViews();
-    showAppToast('行動候補に追加しました');
+    showImprovementListAddedNotice(document.getElementById('analytics-kpi-snapshot')
+      || document.querySelector('.card-external-check-latest'));
   }
 
   function addExternalCheckToDailyTask(reportId, title) {
@@ -7722,13 +7799,13 @@
     }
     Storage.addManualDailyTask({
       title,
-      targetName: '外部チェック',
+      targetName: '外部確認',
       priority: '中',
       action: title,
       dueDate: TODAY(),
-      memo: `外部チェックレポート(${reportId})より。売上確定ではありません。`,
+      memo: `外部確認レポート(${reportId})より。売上確定ではありません。`,
       pickupDedupeKey: key,
-      reason: '外部チェック由来',
+      reason: '外部確認',
       status: 'open'
     });
     refreshActionCandidateViews();
@@ -7751,7 +7828,7 @@
     if (!id) return;
     const updated = Storage.markActionCandidateDone(id);
     if (!updated) {
-      showAppToast('行動候補が見つかりません');
+      showAppToast('改善リストの項目が見つかりません');
       return;
     }
     syncDailyTaskFromActionCandidate(updated);
@@ -7762,7 +7839,7 @@
   function markActionCandidateNotNeeded(id, reportId, title) {
     const updated = Storage.markActionCandidateNotNeeded(id, { sourceReportId: reportId, title });
     if (!updated) {
-      showAppToast('行動候補が見つかりません');
+      showAppToast('改善リストの項目が見つかりません');
       return;
     }
     refreshActionCandidateViews();
@@ -7810,15 +7887,15 @@
     const latest = Storage.getLatestExternalCheckReport();
     if (!latest) {
       el.innerHTML = `
-        <h2>外部チェック</h2>
+        <h2>外部確認</h2>
         <p class="placeholder-text">【Budil貼り付け用】レポートはまだ保存されていません。</p>
-        <button type="button" class="btn btn-sm btn-primary" id="btn-dash-go-external-check">外部チェックを見る</button>
+        <button type="button" class="btn btn-sm btn-primary" id="btn-dash-go-external-check">外部確認を見る</button>
       `;
     } else {
       el.innerHTML = `
         <div class="external-check-dash-header">
-          <h2>外部チェック</h2>
-          <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-external-check">外部チェックを見る</button>
+          <h2>外部確認</h2>
+          <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-external-check">外部確認を見る</button>
         </div>
         ${renderExternalCheckSummaryBlock(latest, true)}
       `;
@@ -7853,7 +7930,7 @@
             <div>
               <p><strong>保存日時：</strong>${esc(ExternalCheckBrain.formatCreatedAt(r.createdAt))}</p>
               <p><strong>確認日：</strong>${esc(s.date || ExternalCheckBrain.UNCONFIRMED)} / <strong>確認対象：</strong>${esc(s.targets || ExternalCheckBrain.UNCONFIRMED)}</p>
-              <p><strong>今日やること候補：</strong>${actionCount}件</p>
+              <p><strong>改善リスト：</strong>${actionCount}件</p>
               ${renderExternalCheckSaveId(r)}
             </div>
             <div class="external-check-history-actions">
@@ -7904,7 +7981,7 @@
     if (pasteEl) pasteEl.value = '';
     renderExternalCheckView();
     renderDashboard();
-    showAppToast('外部チェックを保存しました');
+    showAppToast('外部確認を保存しました');
   }
 
   function clearExternalCheckPaste() {
@@ -7916,11 +7993,11 @@
 
   function deleteExternalCheckReport(id) {
     if (!id) return;
-    if (!confirm('この外部チェックレポートを削除しますか？')) return;
+    if (!confirm('この外部確認レポートを削除しますか？')) return;
     Storage.deleteExternalCheckReport(id);
     renderExternalCheckView();
     renderDashboard();
-    showAppToast('外部チェックを削除しました');
+    showAppToast('外部確認を削除しました');
   }
 
   function renderExternalCheckView() {
@@ -9777,7 +9854,7 @@
   function renderKpiActionCandidates(snapshot) {
     const actions = (snapshot && snapshot.actionCandidates) || [];
     if (!snapshot || !snapshot.id || !actions.length) {
-      return '<p class="placeholder-text">行動候補化できる分析はまだありません。</p>';
+      return '<p class="placeholder-text">改善リストへ追加できる分析はまだありません。</p>';
     }
     return `<ul class="analytics-kpi-action-list">${actions.map(title => `
       <li>
@@ -9831,7 +9908,7 @@
         ${buildRevenueGoalKpiHtml()}
       </div>
       <div class="analytics-kpi-block">
-        <h3>行動候補化</h3>
+        <h3>改善リストへ追加</h3>
         ${renderKpiActionCandidates(snapshot)}
       </div>
       <p class="analytics-kpi-note">未確認の項目は0ではありません。貼り付け内容から抽出できた範囲のみ表示しています。</p>
@@ -9989,7 +10066,7 @@
     if (tasksEl) {
       const tasks = preview.todayTasks || [];
       tasksEl.innerHTML = tasks.length ? `
-        <h4>今日やること候補</h4>
+        <h4>改善リストへ追加</h4>
         <ul class="browser-bantou-candidate-list">${tasks.map((t, i) => `
           <li><span>${esc(t)}</span>
             <button type="button" class="btn btn-sm btn-secondary" data-browser-task="${i}">今日やることに追加</button>
@@ -10545,7 +10622,7 @@
     const { workOrders, today } = getMapContext();
     const active = WorkOrderBrain.filterActive(workOrders);
     if (!active.length) {
-      el.innerHTML = '<p class="placeholder-text">作業予定はまだありません。</p>';
+      el.innerHTML = '<p class="placeholder-text">作業予定はまだありません。<br>受付登録やGoogleカレンダー取り込みから作成できます。</p>';
       return;
     }
     const weekEnd = WorkOrderBrain.addDays(today, 6);
@@ -14599,6 +14676,7 @@
     migrateV17Leads();
     syncTodayDemandFromLog();
     initNavigation();
+    initStrategyMemoHub();
     initDashboard();
     initDailyActionTasks();
     initDemandRadar();

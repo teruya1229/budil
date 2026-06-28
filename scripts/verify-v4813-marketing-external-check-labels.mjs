@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.8.16 marketing / external check label verification.
+ * Budil v4.8.17 marketing / external check label verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -25,17 +25,19 @@ const storageJs = load('js/storage.js');
 const actionBrain = load('js/action-brain.js');
 const executiveBrain = load('js/executive-brain.js');
 
-console.log('== v4.8.16 marketing/external check labels ==');
+console.log('== v4.8.17 marketing/external check labels ==');
 
-assert(indexHtml.includes('AI経営脳みそ v4.8.16'), 'header version should be v4.8.16');
-assert(indexHtml.includes('Budil v4.8.16'), 'sidebar version should be v4.8.16');
-assert(indexHtml.includes('js/app.js?v=4.8.16'), 'app.js cache buster should be v4.8.16');
-assert(indexHtml.includes('集客・外部チェック'), 'marketing group label should exist');
+assert(indexHtml.includes('AI経営脳みそ v4.8.17'), 'header version should be v4.8.17');
+assert(indexHtml.includes('Budil v4.8.17'), 'sidebar version should be v4.8.17');
+assert(indexHtml.includes('js/app.js?v=4.8.17'), 'app.js cache buster should be v4.8.17');
+assert(indexHtml.includes('集客管理'), 'marketing group label should be 集客管理');
+assert(indexHtml.includes('外部確認'), 'external confirmation label should exist');
 assert(indexHtml.includes('外部レポート取り込み'), 'external report import label should exist');
 assert(indexHtml.includes('外部確認プロンプト'), 'external check prompt label should exist');
 assert(indexHtml.includes('広告・集客支援'), 'ad/marketing support label should exist');
-assert(indexHtml.includes('改善アクション候補'), 'improvement action candidates label should exist');
-assert(executiveBrain.includes("label: '集客・外部チェック'"), 'executive quick button should use the unified label');
+assert(indexHtml.includes('改善リスト'), 'improvement list label should exist');
+assert(executiveBrain.includes("label: '集客管理'"), 'executive quick button should use 集客管理');
+assert(executiveBrain.includes("label: '外部確認を保存'"), 'executive secondary should use 外部確認');
 assert(!executiveBrain.includes("label: '集客・需要'"), 'executive quick button should not use the old label');
 assert(!indexHtml.includes('ブラウザー番頭連携'), 'legacy browser integration label should not be visible');
 assert(!indexHtml.includes('ブラウザー番頭プロンプト'), 'legacy browser prompt label should not be visible');
@@ -50,4 +52,4 @@ assert(storageJs.includes('budil_action_candidate_states'), 'action candidate st
 assert(!appJs.includes('localStorage.' + 'clear()'), 'app should not clear localStorage');
 assert(!storageJs.includes('saveRevenueRecords(' + '[])'), 'storage should not save empty revenue records directly');
 
-console.log('All v4.8.16 marketing/external check label checks passed.');
+console.log('All v4.8.17 marketing/external check label checks passed.');

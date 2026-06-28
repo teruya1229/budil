@@ -3,7 +3,7 @@
  */
 const DataBackup = {
   VERSION: '4.0',
-  APP_VERSION: 'v4.8.16',
+  APP_VERSION: 'v4.8.17',
 
   PAYMENT_FIELDS: [
     'paymentMethod',
@@ -199,7 +199,7 @@ const DataBackup = {
       '請求書/見積書 ' + (s.documentCount || 0) + '件（請求' + (s.invoiceCount || 0) + ' / 見積' + (s.estimateCount || 0) + '）',
       '月次実績 ' + (s.monthlyResults || 0) + '件',
       '外部チェック ' + (s.externalCheck || 0) + '件',
-      '今日やること候補 ' + (s.actionCandidates || 0) + '件',
+      '改善リスト ' + (s.actionCandidates || 0) + '件',
       '候補状態 ' + (s.actionCandidateStates || 0) + '件',
       '安全バックアップ ' + (s.safetyBackups || 0) + '件',
       '操作ログ ' + (s.operationLogs || 0) + '件',

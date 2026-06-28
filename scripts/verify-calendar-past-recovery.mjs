@@ -87,9 +87,9 @@ const appJs = load('js/app.js');
 const calendarBrain = load('js/calendar-candidate-brain.js');
 const storageJs = load('js/storage.js');
 
-assert(indexHtml.includes('AI経営脳みそ v4.8.16'), 'header version should be v4.8.16');
-assert(indexHtml.includes('Budil v4.8.16'), 'sidebar version should be v4.8.16');
-assert(indexHtml.includes('js/app.js?v=4.8.16'), 'app.js cache buster should be v4.8.16');
+assert(indexHtml.includes('AI経営脳みそ v4.8.17'), 'header version should be v4.8.17');
+assert(indexHtml.includes('Budil v4.8.17'), 'sidebar version should be v4.8.17');
+assert(indexHtml.includes('js/app.js?v=4.8.17'), 'app.js cache buster should be v4.8.17');
 assert(indexHtml.includes('calendar-past-recovery-mode'), 'past recovery mode toggle should exist');
 assert(indexHtml.includes('btn-calendar-past-bulk-convert'), 'bulk convert button should exist');
 assert(indexHtml.includes('一括売上登録の前に安全バックアップを作成します'), 'past recovery safety backup note should exist');

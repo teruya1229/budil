@@ -2,7 +2,7 @@
  * Budil v4.4 - 経営司令塔ホーム（毎朝5分・全番頭統合）
  */
 const ExecutiveBrain = {
-  VERSION: 'v4.8.15',
+  VERSION: 'v4.8.17',
 
   CHECK_ITEMS: [
     { id: 'workOrders', label: '作業予定を確認した' },
@@ -17,10 +17,10 @@ const ExecutiveBrain = {
   QUICK_LINKS: [
     { id: 'reception', label: '受付・予定', view: 'reception', tier: 'primary' },
     { id: 'revenue', label: '売上・利益', view: 'revenue', tier: 'primary' },
-    { id: 'analytics', label: '集客・外部チェック', view: 'analytics', tier: 'primary' },
+    { id: 'analytics', label: '集客管理', view: 'analytics', tier: 'primary' },
     { id: 'tasks', label: '今日やること', action: 'tasks', tier: 'primary' },
     { id: 'monthly-results', label: '月次実績を入れる', view: 'monthly-results', tier: 'secondary' },
-    { id: 'external-check', label: '外部チェックを保存', view: 'external-check', tier: 'secondary' },
+    { id: 'external-check', label: '外部確認を保存', view: 'external-check', tier: 'secondary' },
     { id: 'morning-report', label: '朝レポートを見る', action: 'morning-report', tier: 'secondary' }
   ],
 
