@@ -4420,7 +4420,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.8.19</span>
+        <span class="business-report-version">v4.8.20</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -8171,24 +8171,99 @@
     });
   }
 
+  function countDashExternalCheckUnconfirmed(report) {
+    if (!report) return 0;
+    const s = report.summary || {};
+    return (s.cautions || []).filter(i => i && i !== ExternalCheckBrain.UNCONFIRMED).length;
+  }
+
+  function countDashExternalCheckImprovementItems(report) {
+    if (!report || typeof ActionBrain === 'undefined') return 0;
+    const s = report.summary || {};
+    const savedCandidates = Storage.getActionCandidates();
+    return getExternalCheckActionItems(s)
+      .filter(title => ActionBrain.isVisibleCandidateState(savedCandidates, report.id, title)).length;
+  }
+
+  function renderDashExternalCheckSavedReportsList(reports) {
+    if (!reports.length) return '<p class="placeholder-text">なし</p>';
+    return reports.map(r => {
+      const s = r.summary || {};
+      return `<div class="external-check-dash-saved-item">
+        <p><strong>保存日時：</strong>${esc(ExternalCheckBrain.formatCreatedAt(r.createdAt))}</p>
+        <p><strong>確認日：</strong>${esc(s.date || ExternalCheckBrain.UNCONFIRMED)} / <strong>確認対象：</strong>${esc(s.targets || ExternalCheckBrain.UNCONFIRMED)}</p>
+        ${renderExternalCheckSaveId(r)}
+      </div>`;
+    }).join('');
+  }
+
+  function renderDashExternalCheckLatestDetail(report) {
+    if (!report) return '';
+    const s = report.summary || {};
+    return `
+      <div class="external-check-dash-meta">
+        <p><strong>保存日時：</strong>${esc(ExternalCheckBrain.formatCreatedAt(report.createdAt))}</p>
+        <p><strong>確認日：</strong>${esc(s.date || ExternalCheckBrain.UNCONFIRMED)}</p>
+        <p><strong>確認対象：</strong>${esc(s.targets || ExternalCheckBrain.UNCONFIRMED)}</p>
+        ${renderExternalCheckSaveId(report)}
+      </div>
+      ${renderExternalCheckNoiseSection(report, false)}
+      <p class="external-check-not-sale">復元対象・GBP反応は売上確定ではありません。</p>
+    `;
+  }
+
+  function renderDashExternalCheckDetailsBody(latest, reports) {
+    return `
+      <div class="external-check-dash-section">
+        <h3>保存済みレポート</h3>
+        ${renderDashExternalCheckSavedReportsList(reports)}
+      </div>
+      ${renderExternalCheckCautionsSection(latest, false)}
+      ${renderExternalCheckTodayActionsSection(latest, false)}
+      <div class="external-check-dash-section">
+        <h3>最新レポート詳細</h3>
+        ${renderDashExternalCheckLatestDetail(latest)}
+      </div>
+    `;
+  }
+
   function renderDashExternalCheck() {
     const el = document.getElementById('dash-external-check');
     if (!el || typeof ExternalCheckBrain === 'undefined') return;
+    const reports = Storage.getExternalCheckReports();
     const latest = Storage.getLatestExternalCheckReport();
+    const savedCount = reports.length;
     if (!latest) {
       el.innerHTML = `
         <h2>外部確認</h2>
+        <div class="external-check-dash-brief">
+          <p class="external-check-dash-summary-line">保存済み：0件</p>
+        </div>
         <p class="placeholder-text">【Budil貼り付け用】レポートはまだ保存されていません。</p>
         <button type="button" class="btn btn-sm btn-primary" id="btn-dash-go-external-check">サイト確認記録を見る</button>
       `;
     } else {
+      const unconfirmedCount = countDashExternalCheckUnconfirmed(latest);
+      const improvementCount = countDashExternalCheckImprovementItems(latest);
       el.innerHTML = `
         <div class="external-check-dash-header">
           <h2>外部確認</h2>
-          <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-external-check">サイト確認記録を見る</button>
         </div>
-        ${renderExternalCheckSummaryBlock(latest, true)}
+        <div class="external-check-dash-brief">
+          <p class="external-check-dash-summary-line">保存済み：${savedCount}件</p>
+          <p class="external-check-dash-summary-line">未確認：${unconfirmedCount}件</p>
+          <p class="external-check-dash-summary-line">改善リスト：${improvementCount}件</p>
+        </div>
+        <button type="button" class="btn btn-sm btn-primary" id="btn-dash-go-external-check">サイト確認記録を見る</button>
+        <details class="external-check-dash-details">
+          <summary>外部確認の詳細を開く</summary>
+          <div class="external-check-dash-details-body">
+            ${renderDashExternalCheckDetailsBody(latest, reports)}
+          </div>
+        </details>
       `;
+      const detailsBody = el.querySelector('.external-check-dash-details-body');
+      if (detailsBody) bindActionCandidateButtons(detailsBody);
     }
     const btn = document.getElementById('btn-dash-go-external-check');
     if (btn) btn.addEventListener('click', () => navigateToView('external-check'));
