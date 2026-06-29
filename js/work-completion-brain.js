@@ -173,6 +173,12 @@ const WorkCompletionBrain = {
         originalImportSource: String(wo.candidateMeta.importSource || '')
       };
     }
+    if (wo.calendarDedupeKey) {
+      payload.calendarDedupeKey = String(wo.calendarDedupeKey).trim();
+    }
+    if (wo.id && (wo.calendarDedupeKey || (wo.candidateMeta && wo.candidateMeta.importSource))) {
+      payload.sourceCandidateId = wo.id;
+    }
     if (typeof FollowUpBrain !== 'undefined') {
       payload.followUp = FollowUpBrain.normalizeFollowUp({
         thanksStatus: 'pending',

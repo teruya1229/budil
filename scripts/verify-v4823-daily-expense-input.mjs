@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.26 daily expense input verification.
+ * Budil v4.8.27 daily expense input verification.
  */
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -74,12 +74,12 @@ const profitJs = load('js/profit-brain.js');
 const backupJs = load('js/data-backup.js');
 const css = load('css/style.css');
 
-console.log('== v4.8.26 daily expense input ==');
+console.log('== v4.8.27 daily expense input ==');
 
 // A. UI
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.26'), 'header version should be v4.8.26');
-assert(indexHtml.includes('Budil v4.8.26'), 'sidebar version should be v4.8.26');
-assert(indexHtml.includes('js/app.js?v=4.8.26'), 'app.js cache buster should be v4.8.26');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.27'), 'header version should be v4.8.27');
+assert(indexHtml.includes('Budil v4.8.27'), 'sidebar version should be v4.8.27');
+assert(indexHtml.includes('js/app.js?v=4.8.27'), 'app.js cache buster should be v4.8.27');
 
 assert(indexHtml.includes('daily-section-expense'), 'daily expense section should exist');
 assert(indexHtml.includes('\u4eca\u65e5\u306e\u7d4c\u8cbb\u5165\u529b'), 'daily expense title should exist');
@@ -92,8 +92,8 @@ const expensePos = indexHtml.indexOf('daily-section-expense');
 const assistPos = indexHtml.indexOf('daily-section-revenue-assist');
 const schedulePos = indexHtml.indexOf('daily-section-schedule');
 assert(queuePos > -1 && expensePos > queuePos, 'expense section should be below revenue queue');
-assert(expensePos < assistPos, 'expense section should be above manual revenue assist');
-assert(assistPos < schedulePos, 'manual revenue assist should be above schedule');
+assert(expensePos < schedulePos, 'expense section should be above schedule');
+assert(schedulePos < assistPos, 'schedule section should be above manual revenue assist');
 
 const expenseBlock = indexHtml.slice(expensePos, assistPos);
 assert(indexHtml.includes('<div id="daily-section-expense"'), 'daily expense should be a div section, not details');
@@ -188,7 +188,7 @@ assert(appJs.includes('BUDIL DELETE'), 'BUDIL DELETE guard should remain');
 
 // F. Existing maintenance
 assert(appJs.includes('renderDailyRevenueConfirmationQueue'), 'v4.8.21 revenue queue should remain');
-assert(appJs.includes('getRevenueConfirmationWorkOrderIds'), 'v4.8.26 revenue hardening should remain');
+assert(appJs.includes('getRevenueConfirmationWorkOrderIds'), 'v4.8.27 revenue hardening should remain');
 assert(appJs.includes('external-check-dash-brief'), 'v4.8.20 external check summary should remain');
 assert(appJs.includes('AnalyticsBrain'), 'v4.8.16 analytics should remain');
 assert(indexHtml.includes('calendar-candidate-notice'), 'v4.8.12 past recovery notice should remain');
@@ -196,4 +196,4 @@ assert(appJs.includes("if (p.sourceKey === 'profit') return"), 'daily priority s
 assert(css.includes('overflow-x: hidden') || css.includes('overflow-x:hidden') || css.includes('min-width: 0'),
   'layout should avoid horizontal scroll patterns');
 
-console.log('All v4.8.26 daily expense input checks passed.');
+console.log('All v4.8.27 daily expense input checks passed.');

@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.26 revenue confirmation flow hardening verification.
+ * Budil v4.8.27 revenue confirmation flow hardening verification.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -85,11 +85,11 @@ const indexHtml = load('index.html');
 const appJs = load('js/app.js');
 const storageJs = load('js/storage.js');
 
-console.log('== v4.8.26 revenue confirmation hardening ==');
+console.log('== v4.8.27 revenue confirmation hardening ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.26'), 'header version should be v4.8.26');
-assert(indexHtml.includes('Budil v4.8.26'), 'sidebar version should be v4.8.26');
-assert(indexHtml.includes('js/app.js?v=4.8.26'), 'app.js cache buster should be v4.8.26');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.27'), 'header version should be v4.8.27');
+assert(indexHtml.includes('Budil v4.8.27'), 'sidebar version should be v4.8.27');
+assert(indexHtml.includes('js/app.js?v=4.8.27'), 'app.js cache buster should be v4.8.27');
 
 assert(appJs.includes('getRevenueConfirmationWorkOrderIds'), 'revenue queue work-order id helper should exist');
 assert(appJs.includes('isDailyTaskLinkedToRevenueQueueWorkOrder'), 'daily task revenue queue link helper should exist');
@@ -351,4 +351,4 @@ assert(indexHtml.includes('\u4e00\u62ec\u58f2\u4e0a\u767b\u9332\u306e\u524d\u306
   'bulk past recovery safety note should remain');
 assert(appJs.includes('external-check-dash-brief'), 'v4.8.20 external check summary should remain');
 
-console.log('All v4.8.26 revenue confirmation hardening checks passed.');
+console.log('All v4.8.27 revenue confirmation hardening checks passed.');

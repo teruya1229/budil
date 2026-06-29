@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.26 upcoming revenue schedule summary verification.
+ * Budil v4.8.27 upcoming revenue schedule summary verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -62,14 +62,14 @@ const appJs = load('js/app.js');
 const summaryBrain = load('js/revenue-summary-brain.js');
 const css = load('css/style.css');
 
-console.log('== v4.8.26 upcoming revenue schedule ==');
+console.log('== v4.8.27 upcoming revenue schedule ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.26'), 'header version should be v4.8.26');
-assert(indexHtml.includes('Budil v4.8.26'), 'sidebar version should be v4.8.26');
-assert(indexHtml.includes('js/app.js?v=4.8.26'), 'app.js cache buster should be v4.8.26');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.27'), 'header version should be v4.8.27');
+assert(indexHtml.includes('Budil v4.8.27'), 'sidebar version should be v4.8.27');
+assert(indexHtml.includes('js/app.js?v=4.8.27'), 'app.js cache buster should be v4.8.27');
 assert(indexHtml.includes('dash-upcoming-revenue-schedule'), 'dashboard upcoming schedule block should exist');
 assert(indexHtml.includes('revenue-upcoming-schedule'), 'revenue view upcoming schedule block should exist');
-assert(indexHtml.includes('\u4eca\u6708\u306e\u58f2\u4e0a\u4e88\u5b9a'), 'daily schedule title should mention monthly upcoming revenue');
+assert(indexHtml.includes('\u58f2\u4e0a\u4e88\u5b9a\uff08\u672a\u78ba\u5b9a\uff09'), 'daily schedule title should show unconfirmed upcoming revenue');
 
 assert(appJs.includes('buildUpcomingRevenueScheduleSummary'), 'app should use upcoming schedule summary');
 assert(appJs.includes('renderUpcomingRevenueScheduleHtml'), 'upcoming schedule renderer should exist');
@@ -192,4 +192,4 @@ const workOrders = [
   assert(!ctx.monthly || ctx.monthly === '[]', 'monthly results must remain unchanged');
 }
 
-console.log('All v4.8.26 upcoming revenue schedule checks passed.');
+console.log('All v4.8.27 upcoming revenue schedule checks passed.');

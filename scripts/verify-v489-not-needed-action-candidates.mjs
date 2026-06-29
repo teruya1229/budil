@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.8.26 not-needed action candidate verification.
+ * Budil v4.8.27 not-needed action candidate verification.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -83,7 +83,7 @@ function readSourceFiles(dir, out = []) {
   return out;
 }
 
-console.log('== v4.8.26 not-needed action candidate check ==');
+console.log('== v4.8.27 not-needed action candidate check ==');
 
 for (const file of ['action-brain.js', 'storage.js', 'app.js', 'data-backup.js']) {
   execSync(`node --check "${join(jsDir, file)}"`, { stdio: 'inherit' });
@@ -95,9 +95,9 @@ const actionBrainJs = load('js/action-brain.js');
 const storageJs = load('js/storage.js');
 const dataBackupJs = load('js/data-backup.js');
 
-assert(indexHtml.includes('AI経営脳みそ v4.8.26'), 'header version should be v4.8.26');
-assert(indexHtml.includes('Budil v4.8.26'), 'sidebar version should be v4.8.26');
-assert(indexHtml.includes('js/app.js?v=4.8.26'), 'app.js cache buster should be v4.8.26');
+assert(indexHtml.includes('AI経営脳みそ v4.8.27'), 'header version should be v4.8.27');
+assert(indexHtml.includes('Budil v4.8.27'), 'sidebar version should be v4.8.27');
+assert(indexHtml.includes('js/app.js?v=4.8.27'), 'app.js cache buster should be v4.8.27');
 assert(appJs.includes('data-exec-priority-not-needed'), 'top priority needs not-needed button');
 assert(appJs.includes('data-act-not-needed'), 'action candidate list needs not-needed button');
 assert(appJs.includes('data-act-not-needed-report'), 'today action candidate needs not-needed button before add');
@@ -161,4 +161,4 @@ assert(!(new RegExp('localStorage' + '\\.clear\\s*\\(')).test(sourceText), 'dire
 assert(!(new RegExp('saveRevenueRecords' + '\\s*\\(\\s*\\[\\s*\\]\\s*\\)')).test(sourceText), 'empty revenue save must not exist');
 assert(!sourceText.includes('git add recovery'), 'recovery must not be added by scripts/docs');
 
-console.log('All v4.8.26 not-needed action candidate checks passed.');
+console.log('All v4.8.27 not-needed action candidate checks passed.');

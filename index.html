@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.8.26">
+  <link rel="stylesheet" href="css/style.css?v=4.8.27">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.8.26</small>
+          <small>AI経営脳みそ v4.8.27</small>
         </div>
       </div>
       <nav class="nav">
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.8.26</small>
+        <small>Budil v4.8.27</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">毎朝5分で、今日の結論・売上・直近予定・集客管理を確認</p>
             </div>
-            <span class="exec-home-version">v4.8.26</span>
+            <span class="exec-home-version">v4.8.27</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <details class="exec-collapse exec-home-start-collapse" id="exec-home-start-collapse">
@@ -270,7 +270,7 @@
             <button type="button" class="btn btn-sm btn-secondary daily-flow-btn" data-daily-flow="revenue-list">売上一覧</button>
           </div>
           <h2>毎日やること</h2>
-          <p class="daily-tasks-lead">作業後や帰宅後に、売上確定・経費入力・明日の予定確認を5分で済ませます。</p>
+          <p class="daily-tasks-lead">予定取り込み → 売上予定（未確定）→ 作業後に売上確定待ち → 確定売上、の順で進めます。</p>
 
           <div id="daily-section-priority" class="daily-section daily-section-priority">
             <h3 class="daily-section-title">今日の最優先</h3>
@@ -279,7 +279,7 @@
 
           <div id="daily-section-revenue-queue" class="daily-section daily-section-revenue-queue">
             <h3 class="daily-section-title">売上確定待ち</h3>
-            <p class="daily-section-lead">作業予定から、売上にできる作業だけを確認します。金額・日付・内容を直して確定してください。</p>
+            <p class="daily-section-lead">作業日を過ぎた予定がここに表示されます。金額・日付・内容を確認して確定売上にしてください（売上予定とは別です）。</p>
             <div id="daily-revenue-queue-list" class="daily-revenue-queue-list"></div>
             <div id="daily-revenue-confirmed-notice" class="daily-revenue-confirmed-notice hidden"></div>
           </div>
@@ -319,9 +319,15 @@
             </form>
           </div>
 
+          <div id="daily-section-schedule" class="daily-section daily-section-schedule">
+            <h3 class="daily-section-title">売上予定（未確定）</h3>
+            <p class="daily-section-lead">今日より後の作業予定の見込みです。確定売上・月次実績とは合算しません。</p>
+            <div id="daily-upcoming-schedule" class="daily-upcoming-schedule"></div>
+          </div>
+
           <details class="daily-section daily-section-revenue-assist" id="daily-section-revenue-assist">
             <summary class="daily-section-title">手入力で売上を追加</summary>
-            <p class="daily-section-lead">予定にない売上だけ、ここから手入力します。</p>
+            <p class="daily-section-lead">予定にない売上だけ、ここから手入力します（売上予定・売上確定待ちとは別です）。</p>
             <div id="daily-revenue-notice" class="daily-revenue-notice hidden"></div>
             <form id="daily-revenue-quick-form" class="daily-revenue-quick-form">
               <div class="form-row form-row-2">
@@ -351,11 +357,6 @@
               <button type="submit" class="btn btn-primary btn-sm">売上を登録</button>
             </form>
           </details>
-
-          <div id="daily-section-schedule" class="daily-section daily-section-schedule">
-            <h3 class="daily-section-title">今月の売上予定</h3>
-            <div id="daily-upcoming-schedule" class="daily-upcoming-schedule"></div>
-          </div>
 
           <div id="daily-section-improvement" class="daily-section daily-section-improvement">
             <p class="daily-improvement-sublead">時間がある時の次の一手</p>
@@ -523,7 +524,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.8.26</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.8.27</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -3383,30 +3384,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.8.26"></script>
-  <script src="js/messages.js?v=4.8.26"></script>
-  <script src="js/demand-brain.js?v=4.8.26"></script>
-  <script src="js/demand-radar.js?v=4.8.26"></script>
-  <script src="js/sales-brain.js?v=4.8.26"></script>
-  <script src="js/management-brain.js?v=4.8.26"></script>
-  <script src="js/payment-brain.js?v=4.8.26"></script>
-  <script src="js/revenue-brain.js?v=4.8.26"></script>
-  <script src="js/revenue-summary-brain.js?v=4.8.26"></script>
-  <script src="js/reception-brain.js?v=4.8.26"></script>
-  <script src="js/map-brain.js?v=4.8.26"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.8.26"></script>
-  <script src="js/external-check-brain.js?v=4.8.26"></script>
-  <script src="js/action-brain.js?v=4.8.26"></script>
-  <script src="js/work-order-brain.js?v=4.8.26"></script>
-  <script src="js/follow-up-brain.js?v=4.8.26"></script>
-  <script src="js/work-completion-brain.js?v=4.8.26"></script>
-  <script src="js/profit-brain.js?v=4.8.26"></script>
-  <script src="js/analytics-brain.js?v=4.8.26"></script>
-  <script src="js/monthly-results-brain.js?v=4.8.26"></script>
-  <script src="js/documents-brain.js?v=4.8.26"></script>
-  <script src="js/executive-brain.js?v=4.8.26"></script>
-  <script src="js/card-ocr.js?v=4.8.26"></script>
-  <script src="js/data-backup.js?v=4.8.26"></script>
-  <script src="js/app.js?v=4.8.26"></script>
+  <script src="js/storage.js?v=4.8.27"></script>
+  <script src="js/messages.js?v=4.8.27"></script>
+  <script src="js/demand-brain.js?v=4.8.27"></script>
+  <script src="js/demand-radar.js?v=4.8.27"></script>
+  <script src="js/sales-brain.js?v=4.8.27"></script>
+  <script src="js/management-brain.js?v=4.8.27"></script>
+  <script src="js/payment-brain.js?v=4.8.27"></script>
+  <script src="js/revenue-brain.js?v=4.8.27"></script>
+  <script src="js/revenue-summary-brain.js?v=4.8.27"></script>
+  <script src="js/reception-brain.js?v=4.8.27"></script>
+  <script src="js/map-brain.js?v=4.8.27"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.8.27"></script>
+  <script src="js/external-check-brain.js?v=4.8.27"></script>
+  <script src="js/action-brain.js?v=4.8.27"></script>
+  <script src="js/work-order-brain.js?v=4.8.27"></script>
+  <script src="js/follow-up-brain.js?v=4.8.27"></script>
+  <script src="js/work-completion-brain.js?v=4.8.27"></script>
+  <script src="js/profit-brain.js?v=4.8.27"></script>
+  <script src="js/analytics-brain.js?v=4.8.27"></script>
+  <script src="js/monthly-results-brain.js?v=4.8.27"></script>
+  <script src="js/documents-brain.js?v=4.8.27"></script>
+  <script src="js/executive-brain.js?v=4.8.27"></script>
+  <script src="js/card-ocr.js?v=4.8.27"></script>
+  <script src="js/data-backup.js?v=4.8.27"></script>
+  <script src="js/app.js?v=4.8.27"></script>
 </body>
 </html>

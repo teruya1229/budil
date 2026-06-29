@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.8.26 input clear, margin default, and reception UI verification.
+ * Budil v4.8.27 input clear, margin default, and reception UI verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -18,7 +18,7 @@ function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-console.log('== v4.8.26 input clear and margin check ==');
+console.log('== v4.8.27 input clear and margin check ==');
 for (const file of ['revenue-brain.js', 'reception-brain.js', 'work-order-brain.js', 'work-completion-brain.js', 'app.js']) {
   execSync(`node --check "${join(jsDir, file)}"`, { stdio: 'inherit' });
 }
@@ -59,4 +59,4 @@ assert(appJs.includes("document.getElementById('reception-paste-area')"), 'recep
 assert(appJs.includes("if (nextEl) nextEl.innerHTML = '';"), 'hidden next-action section should not render normal content');
 assert(appJs.includes('grossMarginRate: grossMarginRateInput'), 'revenue form data should persist gross margin rate');
 
-console.log('OK: v4.8.26 input clear, margin defaults, and next-action hiding');
+console.log('OK: v4.8.27 input clear, margin defaults, and next-action hiding');

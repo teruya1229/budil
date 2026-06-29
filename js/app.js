@@ -2591,8 +2591,14 @@
     }
     const head = `<p class="upcoming-revenue-schedule-head">今月の売上予定：<strong>${summary.monthCount || 0}件 / ${esc(monthAmount)}</strong></p>`;
     const note = `<p class="upcoming-revenue-schedule-note">${esc(summary.label || '売上予定（未確定）')}：${esc(monthAmount)}</p>`;
+    const scope = summary.scopeNote
+      ? `<p class="upcoming-revenue-schedule-scope">${esc(summary.scopeNote)}</p>`
+      : '';
     const hint = summary.hint
       ? `<p class="upcoming-revenue-schedule-hint">${esc(summary.hint)}</p>`
+      : '';
+    const flow = opts.showFlowNote && summary.flowNote
+      ? `<p class="upcoming-revenue-schedule-flow">${esc(summary.flowNote)}</p>`
       : '';
     const list = upcoming.length
       ? `<ul class="upcoming-revenue-schedule-list">${upcoming.map(item => `
@@ -2615,13 +2621,14 @@
       : (opts.compact
         ? `<button type="button" class="btn btn-sm btn-secondary daily-go-calendar">カレンダー登録を見る</button>`
         : '');
-    return `${head}${note}${hint}${nearest}${list}${more}${actions}`;
+    return `${head}${note}${scope}${hint}${flow}${nearest}${list}${more}${actions}`;
   }
 
   function renderDailyUpcomingScheduleHtml(options) {
     return renderUpcomingRevenueScheduleHtml({
       ...(options || {}),
-      showScheduleImportBtn: !(options && options.compact)
+      showScheduleImportBtn: !(options && options.compact),
+      showFlowNote: !(options && options.compact)
     });
   }
 
@@ -2857,7 +2864,7 @@
     if (!el) return;
     const queue = collectRevenueConfirmationQueue();
     if (!queue.totalCount) {
-      el.innerHTML = '<p class="placeholder-text">売上確定待ちはありません。作業後または予定日が来た作業がここに表示されます。</p>';
+      el.innerHTML = '<p class="placeholder-text">売上確定待ちはありません。作業日を過ぎた予定がここに表示されます（未来の売上予定は下の「売上予定（未確定）」を確認）。</p>';
       bindDailyRevenueQueueEvents(el);
       return;
     }
@@ -4859,7 +4866,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.8.26</span>
+        <span class="business-report-version">v4.8.27</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'

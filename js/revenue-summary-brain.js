@@ -639,6 +639,7 @@ const RevenueSummaryBrain = {
     if (!wo || !wo.scheduledDate) return false;
     const t = today || new Date().toISOString().slice(0, 10);
     if (wo.scheduledDate < t) return false;
+    if (this.isRevenueConfirmationQueueCandidate(wo, t)) return false;
     if (wo.actualRevenueId) return false;
     if (wo.status === 'cancelled' || wo.status === 'archived' || wo.status === 'completed') return false;
     const meta = wo.candidateMeta;
@@ -647,6 +648,19 @@ const RevenueSummaryBrain = {
     if (!Number.isFinite(amt) || amt <= 0) return false;
     if (this.hasUpcomingScheduleExcludedWord(wo)) return false;
     return true;
+  },
+
+  isRevenueConfirmationQueueCandidate(workOrder, today) {
+    const wo = this.normalizeScheduleWorkOrder(workOrder);
+    const t = today || new Date().toISOString().slice(0, 10);
+    if (typeof WorkCompletionBrain === 'undefined') return false;
+    if (!WorkCompletionBrain.isOperationalWorkOrder(wo)) return false;
+    if (wo.status === 'cancelled' || wo.status === 'archived') return false;
+    if (wo.actualRevenueId) return false;
+    if (wo.scheduledDate && wo.scheduledDate > t) return false;
+    if (wo.status === 'completed') return true;
+    if (wo.completion && wo.completion.needsReview) return true;
+    return WorkCompletionBrain.isPastScheduledActive(wo, t);
   },
 
   getUpcomingScheduleStatusLabel(workOrder, today) {
@@ -700,7 +714,8 @@ const RevenueSummaryBrain = {
       upcomingCount: eligible.length,
       label: '売上予定（未確定）',
       scopeNote: '作業予定の見込みです。確定売上・月次実績とは合算しません。',
-      hint: '※作業後に売上確定すると、確定売上に反映されます。'
+      hint: '※作業後に売上確定すると、確定売上に反映されます。',
+      flowNote: '作業日後は「売上確定待ち」から確定してください。'
     };
   },
 
