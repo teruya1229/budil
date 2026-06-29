@@ -532,7 +532,7 @@ const ProfitBrain = {
     const type = (hint && hint.type) || 'general';
     return {
       title,
-      targetName: '利益番頭',
+      targetName: '利益管理',
       priority: type === 'deficit' || type === 'far' ? '高' : '中',
       action: title,
       memo: (hint && hint.detail) || '',
@@ -665,6 +665,110 @@ const ProfitBrain = {
       total: list.length,
       noId, noDate, badAmount, noCategory,
       badRevRef, badWoRef, badLeadRef, unlinked
+    };
+  },
+
+  buildProfitOperationsDiagnostics(profitCtx, options) {
+    const opts = options || {};
+    const today = (profitCtx && profitCtx.today) || opts.today || new Date().toISOString().slice(0, 10);
+    const summary = (profitCtx && profitCtx.summary) || {};
+    const monthKey = summary.monthKey || this.currentMonthKey(today);
+    const expenses = (profitCtx && profitCtx.expenses) || opts.expenses || [];
+    const monthExpenses = this.filterMonthExpenses(expenses, monthKey);
+    const expenseInputCount = monthExpenses.length;
+    const aggregationLabel = summary.usesMonthlyResult ? '月次実績ベース' : '明細ベース';
+    const profit = Number(summary.monthGrossProfit) || 0;
+    const profitRate = Number(summary.monthGrossRate) || 0;
+    const revenue = Number(summary.monthRevenue) || 0;
+
+    let reconciliationLabel = '—';
+    let hasReconciliationGap = false;
+    if (typeof MonthlyResultsBrain !== 'undefined') {
+      const monthlyResults = opts.monthlyResults || [];
+      const revenues = opts.revenues || (profitCtx && profitCtx.revenues) || [];
+      const rows = MonthlyResultsBrain.buildReconciliationReport(monthlyResults, revenues, {});
+      const currentRow = rows.find(r => r.month === monthKey);
+      if (currentRow) reconciliationLabel = currentRow.status;
+      hasReconciliationGap = !!(currentRow && currentRow.status === '差額あり');
+    }
+
+    const lowExpenseThreshold = 3;
+    const needsExpensePrompt = !summary.usesMonthlyResult
+      && expenseInputCount < lowExpenseThreshold
+      && (expenseInputCount === 0 || revenue > 0);
+    const isDeficit = profit < 0;
+    const isLowMargin = !isDeficit && revenue > 0 && profitRate < 40;
+
+    let statusKey = 'ok';
+    let statusMessage = '利益は黒字です。';
+    let nextAction = '次の売上予定を確認してください。';
+    let primaryAction = {
+      id: 'upcoming',
+      label: '売上予定を見る',
+      view: 'dashboard',
+      scrollSelector: '#daily-section-schedule'
+    };
+
+    if (needsExpensePrompt) {
+      statusKey = expenseInputCount === 0 ? 'no_expense' : 'low_expense';
+      statusMessage = expenseInputCount === 0
+        ? '今月の経費入力がまだありません。'
+        : `今月の経費入力が${expenseInputCount}件です。`;
+      nextAction = '使ったお金を経費入力に記録してください。';
+      primaryAction = {
+        id: 'daily_expense',
+        label: '経費入力を見る',
+        view: 'dashboard',
+        scrollSelector: '#daily-section-expense'
+      };
+    } else if (isDeficit) {
+      statusKey = 'deficit';
+      statusMessage = `今月利益は${this.formatYen(profit)}です。赤字に注意してください。`;
+      nextAction = '経費内訳を確認してください。';
+      primaryAction = {
+        id: 'expense_breakdown',
+        label: '経費内訳を見る',
+        view: 'profit',
+        scrollSelector: '#profit-expense-list'
+      };
+    } else if (isLowMargin) {
+      statusKey = 'low_margin';
+      statusMessage = `利益率は${this.formatRate(profitRate)}です。原価・単価を確認してください。`;
+      nextAction = '高単価メニュー・外注費・材料費を確認してください。';
+      primaryAction = {
+        id: 'profit_detail',
+        label: '利益管理を見る',
+        view: 'profit',
+        scrollSelector: '#profit-service-rows'
+      };
+    } else if (hasReconciliationGap) {
+      statusKey = 'reconciliation_gap';
+      statusMessage = '月次実績と売上明細に差額があります。';
+      nextAction = '整合チェックを確認してください。';
+      primaryAction = {
+        id: 'reconciliation',
+        label: '整合チェックを見る',
+        view: 'revenue',
+        scrollSelector: '#revenue-reconciliation-check'
+      };
+    }
+
+    return {
+      monthKey,
+      monthRevenue: revenue,
+      monthExpense: Number(summary.monthExpense) || 0,
+      monthProfit: profit,
+      monthProfitRate: profitRate,
+      expenseInputCount,
+      aggregationLabel,
+      usesMonthlyResult: !!summary.usesMonthlyResult,
+      reconciliationLabel,
+      hasReconciliationGap,
+      statusKey,
+      statusMessage,
+      nextAction,
+      primaryAction,
+      flowNote: '売上確定→経費入力→利益集計。月次実績がある月は月次実績ベースを優先表示します。'
     };
   }
 };

@@ -10270,3 +10270,19 @@ body.sales-page {
   font-size: 0.75rem;
   vertical-align: middle;
 }
+
+.profit-operations-diagnostics-block {
+  margin: 0 0 1rem;
+}
+
+.profit-flow-note,
+.profit-aggregation-label {
+  margin: 0 0 0.65rem;
+  font-size: 0.88rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+.profit-summary-highlight strong {
+  color: #86efac;
+}

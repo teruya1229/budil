@@ -913,8 +913,8 @@
         <div><span>月間目標</span><strong>${esc(RevenueBrain.formatYen(s.monthlyTarget))}</strong></div>
         <div><span>達成率</span><strong>${s.achievementRate}%</strong></div>
         <div><span>今月支出</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
-        <div><span>概算粗利</span><strong>${esc(ProfitBrain.formatYen(s.grossProfit))}</strong></div>
-        <div><span>粗利率</span><strong>${esc(ProfitBrain.formatRate(s.grossRate))}</strong></div>
+        <div><span>今月利益</span><strong>${esc(ProfitBrain.formatYen(s.grossProfit))}</strong></div>
+        <div><span>利益率</span><strong>${esc(ProfitBrain.formatRate(s.grossRate))}</strong></div>
         <div><span>今週見込み</span><strong>${esc(WorkOrderBrain.formatYen(s.weekForecast))}</strong></div>
         <div><span>売上未登録</span><strong>${s.completedNoRevenue || 0}件</strong></div>
       </div>
@@ -937,9 +937,9 @@
         <div class="${s.receivables.overdueCount ? 'exec-home-receivables-warn' : ''}"><span>入金遅れ</span><strong>${s.receivables.overdueCount || 0}件</strong></div>
       </div>` : ''}
       <div class="exec-work-actions">
-        <button type="button" class="btn btn-sm btn-secondary exec-home-revenue-link">売上登録</button>
+        <button type="button" class="btn btn-sm btn-secondary exec-home-revenue-link">売上管理</button>
         <button type="button" class="btn btn-sm btn-secondary exec-home-receivables-link">入金予定</button>
-        <button type="button" class="btn btn-sm btn-secondary exec-home-profit-link">支出登録・計算</button>
+        <button type="button" class="btn btn-sm btn-secondary exec-home-profit-link">利益管理</button>
       </div>`;
   }
 
@@ -2944,9 +2944,9 @@
     if (!el) return;
     el.classList.remove('hidden');
     el.innerHTML = `
-      <p class="daily-expense-notice-text">経費を登録しました。支出登録・計算で確認できます。</p>
+      <p class="daily-expense-notice-text">経費を登録しました。利益管理で確認できます。</p>
       <div class="daily-expense-notice-actions">
-        <button type="button" class="btn btn-sm btn-primary" data-daily-expense-go-profit>支出登録・計算を見る</button>
+        <button type="button" class="btn btn-sm btn-primary" data-daily-expense-go-profit>利益管理を見る</button>
         <button type="button" class="btn btn-sm btn-secondary" data-daily-expense-stay>この画面に残る</button>
       </div>`;
     el.querySelector('[data-daily-expense-go-profit]').addEventListener('click', () => {
@@ -4866,7 +4866,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.8.31</span>
+        <span class="business-report-version">v4.9.0</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -9839,7 +9839,7 @@
     /* イベントは renderFollowUpView 内で都度バインド */
   }
 
-  // ── 利益番頭 ──
+  // ── 利益管理 ──
   function getProfitContext(opts) {
     const today = TODAY();
     const revenues = Storage.getRevenueRecords();
@@ -9874,9 +9874,12 @@
     const el = document.getElementById('profit-summary');
     if (!el) return;
     const s = ctx.summary;
+    const expenseCount = ProfitBrain.filterMonthExpenses(ctx.expenses || [], s.monthKey).length;
     const monthlyNote = s.usesMonthlyResult && s.aggregationSourceNote
       ? `<p class="profit-monthly-source-note">${esc(s.aggregationSourceNote)}</p>`
       : '';
+    const flowNote = `<p class="profit-flow-note">利益は「売上 − 経費」で確認します。月次実績がある月は月次実績ベースの経営数字を優先表示します。日々の経費入力は支出明細として保存されます。</p>`;
+    const aggBadge = `<p class="profit-aggregation-label">集計：<strong>${esc(s.usesMonthlyResult ? '月次実績ベース' : '明細ベース')}</strong></p>`;
     let monthlyBrief = '';
     if (!s.usesMonthlyResult && typeof RevenueSummaryBrain !== 'undefined') {
       const monthly = RevenueSummaryBrain.buildMonthlySummary(
@@ -9889,6 +9892,8 @@
       }
     }
     el.innerHTML = `
+      ${flowNote}
+      ${aggBadge}
       ${monthlyNote}
       ${s.usesMonthlyResult && typeof MonthlyResultsBrain !== 'undefined'
         ? renderCurrentMonthReconciliationBrief(s.monthKey, {
@@ -9904,10 +9909,11 @@
           )
         })
         : ''}
+      <div class="profit-summary-item profit-summary-highlight"><span>今月利益</span><strong>${esc(ProfitBrain.formatYen(s.monthGrossProfit))}</strong></div>
+      <div class="profit-summary-item"><span>利益率</span><strong>${esc(ProfitBrain.formatRate(s.monthGrossRate))}</strong></div>
       <div class="profit-summary-item"><span>今月売上</span><strong>${esc(ProfitBrain.formatYen(s.monthRevenue))}</strong></div>
-      <div class="profit-summary-item"><span>今月支出</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
-      <div class="profit-summary-item"><span>概算粗利</span><strong>${esc(ProfitBrain.formatYen(s.monthGrossProfit))}</strong></div>
-      <div class="profit-summary-item"><span>粗利率</span><strong>${esc(ProfitBrain.formatRate(s.monthGrossRate))}</strong></div>
+      <div class="profit-summary-item"><span>今月経費</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
+      <div class="profit-summary-item"><span>経費入力</span><strong>今月${expenseCount}件</strong></div>
       <div class="profit-summary-item"><span>作業予定見込み売上</span><strong>${esc(ProfitBrain.formatYen(s.workOrderEstimate))}</strong></div>
       <div class="profit-summary-item"><span>見込み利益</span><strong>${esc(ProfitBrain.formatYen(s.forecastProfit))}</strong></div>
       <div class="profit-summary-item"><span>広告費</span><strong>${esc(ProfitBrain.formatYen(s.adExpense))}</strong></div>
@@ -9915,6 +9921,58 @@
       <div class="profit-summary-item"><span>外注費</span><strong>${esc(ProfitBrain.formatYen(s.outsourceExpense))}</strong></div>
       <div class="profit-summary-item"><span>未紐付け支出</span><strong>${s.usesMonthlyResult ? '—' : `${s.unlinkedCount}件（${esc(ProfitBrain.formatYen(s.unlinkedTotal))}）`}</strong></div>
       ${monthlyBrief}`;
+  }
+
+  function handleProfitDiagnosticAction(action) {
+    if (!action || !action.view) return;
+    navigateToView(action.view, action.scrollSelector || null);
+  }
+
+  function renderProfitOperationsDiagnostics(ctx) {
+    const el = document.getElementById('profit-operations-diagnostics');
+    if (!el || typeof ProfitBrain === 'undefined') return;
+    const diagnostics = ProfitBrain.buildProfitOperationsDiagnostics(ctx, {
+      today: TODAY(),
+      monthlyResults: Storage.getMonthlyResults(),
+      revenues: Storage.getRevenueRecords()
+    });
+    const monthExpenses = ProfitBrain.filterMonthExpenses(ctx.expenses || [], diagnostics.monthKey);
+    const expenseCount = monthExpenses.length;
+    const statusClass = diagnostics.statusKey === 'ok'
+      ? 'is-ok'
+      : (diagnostics.statusKey === 'deficit' || diagnostics.statusKey === 'reconciliation_gap' ? 'is-warn' : 'is-info');
+    const action = diagnostics.primaryAction;
+    const actionBtn = action
+      ? `<div class="revenue-flow-diagnostics-action-wrap"><button type="button" class="btn btn-sm btn-primary profit-operations-diagnostics-action">${esc(action.label)}</button></div>`
+      : '';
+    el.innerHTML = `
+      <div class="revenue-flow-diagnostics profit-operations-diagnostics">
+        <h3 class="revenue-flow-diagnostics-title">利益状態</h3>
+        <p class="revenue-flow-diagnostics-note">読み取り専用です。データの修正・削除・自動同期は行いません。</p>
+        <ul class="revenue-flow-diagnostics-stats">
+          <li><span>今月利益：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthProfit))}</strong></li>
+          <li><span>利益率：</span><strong>${esc(ProfitBrain.formatRate(diagnostics.monthProfitRate))}</strong></li>
+          <li><span>今月売上：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthRevenue))}</strong></li>
+          <li><span>今月経費：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthExpense))}</strong></li>
+          <li><span>経費入力：</span><strong>今月${expenseCount}件</strong></li>
+          <li><span>集計：</span><strong>${esc(diagnostics.aggregationLabel)}</strong></li>
+          <li><span>整合チェック：</span><strong>${esc(diagnostics.reconciliationLabel)}</strong></li>
+        </ul>
+        <dl class="revenue-flow-diagnostics-defs">
+          <div><dt>売上</dt><dd>確定売上明細、または月次実績の売上です。</dd></div>
+          <div><dt>経費</dt><dd>経費入力・支出登録で保存した支出明細です。</dd></div>
+          <div><dt>利益</dt><dd>売上 − 経費で確認します。</dd></div>
+          <div><dt>月次実績</dt><dd>ある月は月次実績ベースを優先表示します（売上明細とは別管理）。</dd></div>
+        </dl>
+        <p class="revenue-flow-diagnostics-status ${statusClass}">状態：${esc(diagnostics.statusMessage)}</p>
+        <p class="revenue-flow-diagnostics-next">次にやること：${esc(diagnostics.nextAction)}</p>
+        ${actionBtn}
+        <p class="revenue-flow-diagnostics-flow">${esc(diagnostics.flowNote)}</p>
+      </div>`;
+    const btn = el.querySelector('.profit-operations-diagnostics-action');
+    if (btn && action) {
+      btn.addEventListener('click', () => handleProfitDiagnosticAction(action));
+    }
   }
 
   function renderProfitExpenseList(ctx) {
@@ -10208,6 +10266,7 @@
       const dateEl = document.getElementById('profit-expense-date');
       if (dateEl && !dateEl.value) dateEl.value = TODAY();
       const ctx = getProfitContext();
+      renderProfitOperationsDiagnostics(ctx);
       renderProfitSummary(ctx);
       renderProfitExpenseList(ctx);
       renderProfitRevenueRows(ctx);

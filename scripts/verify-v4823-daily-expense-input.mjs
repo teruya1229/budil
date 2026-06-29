@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.31 daily expense input verification.
+ * Budil v4.9.0 daily expense input verification.
  */
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -74,15 +74,15 @@ const profitJs = load('js/profit-brain.js');
 const backupJs = load('js/data-backup.js');
 const css = load('css/style.css');
 
-console.log('== v4.8.31 daily expense input ==');
+console.log('== v4.9.0 daily expense input ==');
 
 // A. UI
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.31'), 'header version should be v4.8.31');
-assert(indexHtml.includes('Budil v4.8.31'), 'sidebar version should be v4.8.31');
-assert(indexHtml.includes('js/app.js?v=4.8.31'), 'app.js cache buster should be v4.8.31');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.0'), 'header version should be v4.9.0');
+assert(indexHtml.includes('Budil v4.9.0'), 'sidebar version should be v4.9.0');
+assert(indexHtml.includes('js/app.js?v=4.9.0'), 'app.js cache buster should be v4.9.0');
 
 assert(indexHtml.includes('daily-section-expense'), 'daily expense section should exist');
-assert(indexHtml.includes('\u4eca\u65e5\u306e\u7d4c\u8cbb\u5165\u529b'), 'daily expense title should exist');
+assert(indexHtml.includes('daily-section-title">\u7d4c\u8cbb\u5165\u529b'), 'daily expense title should use \u7d4c\u8cbb\u5165\u529b');
 assert(indexHtml.includes('daily-expense-quick-form'), 'daily expense form should exist');
 assert(indexHtml.includes('daily-expense-monthly-note'), 'monthly result note should exist');
 assert(indexHtml.includes('\u6708\u6b21\u5b9f\u7e3e\u5165\u529b\u6e08\u307f\u306e\u6708\u306f\u3001\u5229\u76ca\u30b5\u30de\u30ea\u30fc\u306f\u6708\u6b21\u5b9f\u7e3e\u3092\u512a\u5148\u3057\u307e\u3059'), 'monthly note text should exist');
@@ -107,7 +107,7 @@ assert(appJs.includes("paymentMethod: '\u73fe\u91d1'"), 'paymentMethod should de
 assert(appJs.includes('buildDailyExpenseMemo'), 'memo builder should exist');
 assert(appJs.includes('clearDailyExpenseForm'), 'form clear after save should exist');
 assert(appJs.includes('showDailyExpenseSavedNotice'), 'post-save notice should exist');
-assert(appJs.includes('\u652f\u51fa\u767b\u9332\u30fb\u8a08\u7b97\u3092\u898b\u308b'), 'profit view link should exist');
+assert(appJs.includes('\u5229\u76ca\u7ba1\u7406\u3092\u898b\u308b'), 'profit view link should exist');
 assert(!appJs.match(/function renderDailyActionTasks[\s\S]{0,1200}addExpenseRecord/),
   'renderDailyActionTasks should not auto-save expenses');
 
@@ -188,7 +188,7 @@ assert(appJs.includes('BUDIL DELETE'), 'BUDIL DELETE guard should remain');
 
 // F. Existing maintenance
 assert(appJs.includes('renderDailyRevenueConfirmationQueue'), 'v4.8.21 revenue queue should remain');
-assert(appJs.includes('getRevenueConfirmationWorkOrderIds'), 'v4.8.31 revenue hardening should remain');
+assert(appJs.includes('getRevenueConfirmationWorkOrderIds'), 'v4.9.0 revenue hardening should remain');
 assert(appJs.includes('external-check-dash-brief'), 'v4.8.20 external check summary should remain');
 assert(appJs.includes('AnalyticsBrain'), 'v4.8.16 analytics should remain');
 assert(indexHtml.includes('calendar-candidate-notice'), 'v4.8.12 past recovery notice should remain');
@@ -196,4 +196,4 @@ assert(appJs.includes("if (p.sourceKey === 'profit') return"), 'daily priority s
 assert(css.includes('overflow-x: hidden') || css.includes('overflow-x:hidden') || css.includes('min-width: 0'),
   'layout should avoid horizontal scroll patterns');
 
-console.log('All v4.8.31 daily expense input checks passed.');
+console.log('All v4.9.0 daily expense input checks passed.');
