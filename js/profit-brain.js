@@ -11,6 +11,10 @@ const ProfitBrain = {
     '人件費', '薬剤・材料', '交通・燃料', '外注費', '広告費', '消耗品', 'その他'
   ],
 
+  EXPENSE_BREAKDOWN_CATEGORIES: [
+    '人件費', '薬剤・材料', '交通・燃料', '外注費', '広告費', '消耗品', 'その他'
+  ],
+
   PAYMENT_METHODS: ['現金', 'カード', '振込', 'その他'],
 
   SOURCE_GROUPS: [
@@ -74,6 +78,40 @@ const ProfitBrain = {
 
   filterMonthExpenses(expenses, monthKey) {
     return this.normalizeExpenses(expenses).filter(e => e.date && e.date.startsWith(monthKey));
+  },
+
+  mapExpenseBreakdownCategory(category) {
+    const cat = (category || '').trim() || 'その他';
+    return this.EXPENSE_BREAKDOWN_CATEGORIES.includes(cat) ? cat : 'その他';
+  },
+
+  buildMonthExpenseBreakdown(expenses, monthKey) {
+    const monthExpenses = this.filterMonthExpenses(expenses, monthKey);
+    const totals = Object.fromEntries(this.EXPENSE_BREAKDOWN_CATEGORIES.map(c => [c, 0]));
+    monthExpenses.forEach(e => {
+      const mapped = this.mapExpenseBreakdownCategory(e.category);
+      totals[mapped] += Number(e.amount) || 0;
+    });
+    const rows = this.EXPENSE_BREAKDOWN_CATEGORIES
+      .map(category => ({ category, amount: totals[category] || 0 }))
+      .filter(row => row.amount > 0)
+      .sort((a, b) => b.amount - a.amount);
+    const total = rows.reduce((sum, row) => sum + row.amount, 0);
+    return {
+      monthKey,
+      count: monthExpenses.length,
+      rows,
+      total,
+      topCategory: rows[0] || null,
+      isEmpty: monthExpenses.length === 0
+    };
+  },
+
+  hasDominantExpenseCategory(breakdown) {
+    if (!breakdown || breakdown.isEmpty || !breakdown.topCategory) return false;
+    if (breakdown.total <= 0) return false;
+    const share = breakdown.topCategory.amount / breakdown.total;
+    return share >= 0.35 && breakdown.topCategory.amount >= 5000;
   },
 
   isUnlinkedExpense(expense) {
@@ -676,6 +714,7 @@ const ProfitBrain = {
     const expenses = (profitCtx && profitCtx.expenses) || opts.expenses || [];
     const monthExpenses = this.filterMonthExpenses(expenses, monthKey);
     const expenseInputCount = monthExpenses.length;
+    const expenseBreakdown = this.buildMonthExpenseBreakdown(expenses, monthKey);
     const aggregationLabel = summary.usesMonthlyResult ? '月次実績ベース' : '明細ベース';
     const profit = Number(summary.monthGrossProfit) || 0;
     const profitRate = Number(summary.monthGrossRate) || 0;
@@ -724,22 +763,33 @@ const ProfitBrain = {
     } else if (isDeficit) {
       statusKey = 'deficit';
       statusMessage = `今月利益は${this.formatYen(profit)}です。赤字に注意してください。`;
-      nextAction = '経費内訳を確認してください。';
+      nextAction = '外注費・材料費・交通費を確認してください。';
       primaryAction = {
         id: 'expense_breakdown',
         label: '経費内訳を見る',
         view: 'profit',
-        scrollSelector: '#profit-expense-list'
+        scrollSelector: '#profit-expense-breakdown'
       };
     } else if (isLowMargin) {
       statusKey = 'low_margin';
       statusMessage = `利益率は${this.formatRate(profitRate)}です。原価・単価を確認してください。`;
-      nextAction = '高単価メニュー・外注費・材料費を確認してください。';
+      nextAction = '単価・外注費・材料費を見直してください。';
       primaryAction = {
-        id: 'profit_detail',
-        label: '利益管理を見る',
+        id: 'expense_breakdown',
+        label: '経費内訳を見る',
         view: 'profit',
-        scrollSelector: '#profit-service-rows'
+        scrollSelector: '#profit-expense-breakdown'
+      };
+    } else if (this.hasDominantExpenseCategory(expenseBreakdown)) {
+      const top = expenseBreakdown.topCategory;
+      statusKey = 'high_category';
+      statusMessage = `${top.category}が今月いちばん大きい経費です（${this.formatYen(top.amount)}）。`;
+      nextAction = '一番大きい経費カテゴリを確認してください。';
+      primaryAction = {
+        id: 'expense_breakdown',
+        label: '経費内訳を見る',
+        view: 'profit',
+        scrollSelector: '#profit-expense-breakdown'
       };
     } else if (hasReconciliationGap) {
       statusKey = 'reconciliation_gap';
@@ -760,6 +810,7 @@ const ProfitBrain = {
       monthProfit: profit,
       monthProfitRate: profitRate,
       expenseInputCount,
+      expenseBreakdown,
       aggregationLabel,
       usesMonthlyResult: !!summary.usesMonthlyResult,
       reconciliationLabel,
@@ -768,7 +819,7 @@ const ProfitBrain = {
       statusMessage,
       nextAction,
       primaryAction,
-      flowNote: '売上確定→経費入力→利益集計。月次実績がある月は月次実績ベースを優先表示します。'
+      flowNote: '売上確定→経費入力→利益集計→経費内訳。月次実績がある月は月次実績ベースを優先表示します。'
     };
   }
 };

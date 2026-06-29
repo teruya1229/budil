@@ -1,5 +1,5 @@
 /**
- * Budil v4.9.1 profit operations MVP verification.
+ * Budil v4.9.2 profit operations MVP verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -65,18 +65,18 @@ const appJs = load('js/app.js');
 const profitBrain = load('js/profit-brain.js');
 const css = load('css/style.css');
 
-console.log('== v4.9.1 profit operations MVP ==');
+console.log('== v4.9.2 profit operations MVP ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.1'), 'header version should be v4.9.1');
-assert(indexHtml.includes('Budil v4.9.1'), 'sidebar version should be v4.9.1');
-assert(indexHtml.includes('js/app.js?v=4.9.1'), 'app.js cache buster should be v4.9.1');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.9.1'"), 'storage version should be v4.9.1');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.2'), 'header version should be v4.9.2');
+assert(indexHtml.includes('Budil v4.9.2'), 'sidebar version should be v4.9.2');
+assert(indexHtml.includes('js/app.js?v=4.9.2'), 'app.js cache buster should be v4.9.2');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.9.2'"), 'storage version should be v4.9.2');
 
 assert(indexHtml.includes('nav-label">\u58f2\u4e0a\u7ba1\u7406'), 'nav should use \u58f2\u4e0a\u7ba1\u7406');
 assert(indexHtml.includes('nav-label">\u5229\u76ca\u7ba1\u7406'), 'nav should use \u5229\u76ca\u7ba1\u7406');
 assert(indexHtml.includes('daily-section-title">\u7d4c\u8cbb\u5165\u529b'), 'daily section should use \u7d4c\u8cbb\u5165\u529b');
 assert(indexHtml.includes('id="profit-operations-diagnostics"'), 'profit diagnostics block should exist');
-assert(indexHtml.includes('\u5229\u76ca\u96c6\u8a08\u306e\u6d41\u308c\u3067'), 'profit view subtitle should describe flow');
+assert(indexHtml.includes('\u7d4c\u8cbb\u5185\u8a33\u306e\u6d41\u308c\u3067'), 'profit view subtitle should describe breakdown flow');
 
 assert(profitBrain.includes('buildProfitOperationsDiagnostics'), 'brain should define profit diagnostics');
 assert(appJs.includes('renderProfitOperationsDiagnostics'), 'app should render profit diagnostics');
@@ -204,4 +204,4 @@ const expenses = [{
   assert(ctx.d.primaryAction && ctx.d.primaryAction.id === 'expense_breakdown', 'deficit should suggest expense breakdown');
 }
 
-console.log('All v4.9.1 profit operations MVP checks passed.');
+console.log('All v4.9.2 profit operations MVP checks passed.');

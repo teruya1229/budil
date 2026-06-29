@@ -4866,7 +4866,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.9.1</span>
+        <span class="business-report-version">v4.9.2</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -9923,6 +9923,31 @@
       ${monthlyBrief}`;
   }
 
+  function renderProfitExpenseBreakdown(ctx) {
+    const el = document.getElementById('profit-expense-breakdown');
+    if (!el || typeof ProfitBrain === 'undefined') return;
+    const monthKey = (ctx.summary && ctx.summary.monthKey) || ProfitBrain.currentMonthKey(TODAY());
+    const breakdown = ProfitBrain.buildMonthExpenseBreakdown(ctx.expenses || [], monthKey);
+    if (breakdown.isEmpty) {
+      el.innerHTML = `
+        <div class="profit-expense-breakdown">
+          <h3 class="profit-expense-breakdown-title">今月の経費内訳</h3>
+          <p class="profit-expense-breakdown-empty">今月の経費入力はまだありません。</p>
+          <p class="profit-expense-breakdown-hint">使ったお金があれば、経費入力に記録してください。</p>
+        </div>`;
+      return;
+    }
+    const rows = breakdown.rows.map(row =>
+      `<li><span>${esc(row.category)}</span><strong>${esc(ProfitBrain.formatYen(row.amount))}</strong></li>`
+    ).join('');
+    el.innerHTML = `
+      <div class="profit-expense-breakdown">
+        <h3 class="profit-expense-breakdown-title">今月の経費内訳</h3>
+        <ul class="profit-expense-breakdown-list">${rows}</ul>
+        <p class="profit-expense-breakdown-total">合計：<strong>${esc(ProfitBrain.formatYen(breakdown.total))}</strong></p>
+      </div>`;
+  }
+
   function handleProfitDiagnosticAction(action) {
     if (!action || !action.view) return;
     navigateToView(action.view, action.scrollSelector || null);
@@ -10267,6 +10292,7 @@
       if (dateEl && !dateEl.value) dateEl.value = TODAY();
       const ctx = getProfitContext();
       renderProfitOperationsDiagnostics(ctx);
+      renderProfitExpenseBreakdown(ctx);
       renderProfitSummary(ctx);
       renderProfitExpenseList(ctx);
       renderProfitRevenueRows(ctx);
