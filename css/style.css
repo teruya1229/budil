@@ -8621,6 +8621,80 @@ body.sales-page {
   border-color: #f59e0b;
 }
 
+.calendar-candidate-preview-item.is-excluded {
+  border-color: rgba(148, 163, 184, 0.45);
+  opacity: 0.85;
+}
+
+.calendar-candidate-import-result {
+  margin: 0.75rem 0 1rem;
+}
+
+.calendar-import-result {
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
+.calendar-import-result-zero {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.calendar-import-result h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.calendar-import-result-stats {
+  margin: 0 0 0.5rem;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+}
+
+.calendar-import-result-stats li {
+  margin: 0.15rem 0;
+}
+
+.calendar-import-stat-label {
+  color: #cbd5e1;
+}
+
+.calendar-import-result-revenue-note,
+.calendar-import-result-separation,
+.calendar-import-result-next,
+.calendar-import-result-hint,
+.calendar-import-result-warn,
+.calendar-import-result-lead {
+  margin: 0.35rem 0;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+.calendar-import-result-separation {
+  color: #fde68a;
+}
+
+.calendar-import-result-checks-title {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 0.85rem;
+}
+
+.calendar-import-result-checks {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+.calendar-import-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
 .calendar-candidate-not-sale,
 .calendar-candidate-not-sale-list {
   color: #fbbf24;

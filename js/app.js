@@ -4866,7 +4866,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.8.27</span>
+        <span class="business-report-version">v4.8.28</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -7849,6 +7849,7 @@
   function parseCalendarCandidatePaste() {
     const text = document.getElementById('calendar-candidate-paste')?.value || '';
     if (typeof CalendarCandidateBrain === 'undefined') return;
+    lastCalendarCandidateImportResult = null;
     const parsed = CalendarCandidateBrain.parseCalendarText(text);
     lastCalendarCandidatePreview = CalendarCandidateBrain.buildImportPreview(parsed, Storage.getWorkOrders());
     const past = getCalendarPastRecoveryOptions();
@@ -7858,11 +7859,14 @@
         Storage.getRevenueRecords(),
         past
       );
+      renderCalendarCandidateImportResult(null);
     } else {
       lastCalendarCandidatePreview = CalendarCandidateBrain.attachFutureImportPreview(
         lastCalendarCandidatePreview,
         TODAY()
       );
+      const summary = getCalendarFutureImportSummary(lastCalendarCandidatePreview);
+      renderCalendarCandidateImportResult(summary, { phase: 'preview' });
     }
     renderCalendarCandidatePreview();
   }
@@ -7875,6 +7879,7 @@
     const preview = lastCalendarCandidatePreview;
     if (!previewPanel || !preview) return;
     previewPanel.classList.remove('hidden');
+    const past = getCalendarPastRecoveryOptions();
     const msgs = [...(preview.warnings || []), ...(preview.errors || [])];
     if (errorsEl) {
       errorsEl.innerHTML = msgs.length
@@ -7887,8 +7892,12 @@
       listEl.innerHTML = (preview.items || []).length
         ? preview.items.map((item, i) => {
           const c = item.candidate;
+          const isExcluded = item.futureImport && item.futureImport.status === 'excluded';
           const dup = item.isDuplicate
             ? `<p class="calendar-candidate-dup">${esc((item.duplicates[0] && item.duplicates[0].reason) || '重複の可能性')}</p>`
+            : '';
+          const excluded = isExcluded
+            ? `<p class="calendar-candidate-dup">${esc((item.futureImport.reasons || []).join(' / '))}（保存対象外）</p>`
             : '';
           const past = item.pastRecovery;
           const pastStatus = past
@@ -7901,14 +7910,16 @@
           const itemWarnings = (item.warnings || []).length
             ? `<p class="calendar-candidate-dup">${esc(item.warnings.join(' / '))}</p>`
             : '';
-          return `<div class="calendar-candidate-preview-item${item.isDuplicate ? ' is-duplicate' : ''}">
+          const saveDisabled = item.isDuplicate || isExcluded;
+          return `<div class="calendar-candidate-preview-item${item.isDuplicate ? ' is-duplicate' : ''}${isExcluded ? ' is-excluded' : ''}">
             <p class="calendar-candidate-preview-title"><strong>${esc(c.customerName || '（名前なし）')}</strong> / ${esc(c.serviceText || '—')}</p>
             <p class="calendar-candidate-preview-meta">${esc(c.scheduledDate || '日付不明')} ${esc(c.startTime || '')}〜${esc(c.endTime || '')} / ${esc(c.source || '—')} / 見込み ${esc(WorkOrderBrain.formatYen(c.estimateAmount))}</p>
             <p class="calendar-candidate-not-sale">${esc(notice)}</p>
             ${pastStatus}
             ${itemWarnings}
+            ${excluded}
             ${dup}
-            <button type="button" class="btn btn-sm btn-primary" data-cal-save-one="${i}">作業予定として保存</button>
+            <button type="button" class="btn btn-sm btn-primary" data-cal-save-one="${i}"${saveDisabled ? ' disabled' : ''}>作業予定として保存</button>
           </div>`;
         }).join('')
         : '<p class="placeholder-text">解析結果がありません</p>';
@@ -7916,7 +7927,13 @@
         btn.addEventListener('click', () => saveCalendarCandidateOne(Number(btn.dataset.calSaveOne)));
       });
     }
-    if (saveAllBtn) saveAllBtn.disabled = !(preview.items || []).length || (preview.errors || []).length > 0;
+    if (saveAllBtn) {
+      const summary = getCalendarFutureImportSummary(preview);
+      const hasSavable = past.enabled
+        ? (preview.items || []).length > 0
+        : summary.savableCount > 0;
+      saveAllBtn.disabled = !hasSavable || (preview.errors || []).length > 0;
+    }
   }
 
   function getCalendarImportCandidateStatus(item) {
@@ -7928,6 +7945,11 @@
     const preview = lastCalendarCandidatePreview;
     const item = preview && preview.items ? preview.items[index] : null;
     if (!item) return;
+    const past = getCalendarPastRecoveryOptions();
+    if (!past.enabled && item.futureImport && item.futureImport.status === 'excluded') {
+      alert(`対象外のため保存しません（${(item.futureImport.reasons || []).join(' / ')}）`);
+      return;
+    }
     if (item.isDuplicate && !force) {
       if (!confirm('重複の可能性があります。それでも候補として保存しますか？')) return;
     }
@@ -7937,19 +7959,32 @@
       calendarDedupeKey: item.pastRecovery ? item.pastRecovery.calendarDedupeKey : ''
     });
     Storage.addWorkOrder(payload);
+    const summary = getCalendarFutureImportSummary(preview);
+    summary.savedCount = 1;
+    lastCalendarCandidateImportResult = summary;
+    lastCalendarCandidatePreview = null;
+    const pasteEl = document.getElementById('calendar-candidate-paste');
+    if (pasteEl) pasteEl.value = '';
+    const previewPanel = document.getElementById('calendar-candidate-preview');
+    if (previewPanel) previewPanel.classList.add('hidden');
+    renderCalendarCandidateImportResult(summary, { phase: 'result' });
     refreshCalendarCandidateViews();
-    alert('作業予定として保存しました（売上確定は作業後の売上確定待ちから行います）。');
   }
 
   function saveAllCalendarCandidates(force) {
     const preview = lastCalendarCandidatePreview;
     if (!preview || !(preview.items || []).length) return;
-    const dupItems = preview.items.filter(i => i.isDuplicate);
-    if (dupItems.length && !force) {
-      if (!confirm(`重複の可能性がある候補が${dupItems.length}件あります。すべて保存しますか？`)) return;
-    }
+    const past = getCalendarPastRecoveryOptions();
+    const summary = past.enabled
+      ? { readCount: preview.items.length, savedCount: 0, duplicateCount: 0, excludedCount: 0, savableCount: preview.items.length, revenueRegistered: false }
+      : getCalendarFutureImportSummary(preview);
+    const savableItems = past.enabled
+      ? preview.items
+      : preview.items.filter(item => CalendarCandidateBrain.isFutureImportSavable(item, force));
     let saved = 0;
-    preview.items.forEach(item => {
+    savableItems.forEach(item => {
+      if (!past.enabled && !CalendarCandidateBrain.isFutureImportSavable(item, force)) return;
+      if (item.isDuplicate && !force) return;
       const payload = CalendarCandidateBrain.createWorkOrderPayload(item.candidate, {
         originalText: preview.rawText,
         candidateStatus: getCalendarImportCandidateStatus(item),
@@ -7958,13 +7993,16 @@
       Storage.addWorkOrder(payload);
       saved += 1;
     });
+    summary.savedCount = saved;
+    summary.revenueRegistered = false;
+    lastCalendarCandidateImportResult = summary;
     lastCalendarCandidatePreview = null;
     const pasteEl = document.getElementById('calendar-candidate-paste');
     if (pasteEl) pasteEl.value = '';
     const previewPanel = document.getElementById('calendar-candidate-preview');
     if (previewPanel) previewPanel.classList.add('hidden');
+    renderCalendarCandidateImportResult(summary, { phase: 'result' });
     refreshCalendarCandidateViews();
-    alert(`作業予定として${saved}件保存しました。作業日後は売上確定待ちから売上化できます。`);
   }
 
   function refreshCalendarCandidateViews() {
@@ -8131,6 +8169,13 @@
     renderCalendarCandidatePrompt();
     renderCalendarPastRecoverySummary();
     renderCalendarCandidateSavedList();
+    if (lastCalendarCandidateImportResult) {
+      renderCalendarCandidateImportResult(lastCalendarCandidateImportResult, { phase: 'result' });
+    } else if (lastCalendarCandidatePreview && !getCalendarPastRecoveryOptions().enabled) {
+      renderCalendarCandidateImportResult(getCalendarFutureImportSummary(lastCalendarCandidatePreview), { phase: 'preview' });
+    } else {
+      renderCalendarCandidateImportResult(null);
+    }
     renderCalendarCandidatePreview();
   }
 
@@ -10538,6 +10583,96 @@
   let selectedAnalyticsId = null;
   let lastBrowserBantouPreview = null;
   let lastCalendarCandidatePreview = null;
+  let lastCalendarCandidateImportResult = null;
+
+  function getCalendarFutureImportSummary(preview) {
+    if (!preview || typeof CalendarCandidateBrain === 'undefined') {
+      return { readCount: 0, savedCount: 0, duplicateCount: 0, excludedCount: 0, savableCount: 0, revenueRegistered: false };
+    }
+    return preview.futureImportSummary
+      ? { ...preview.futureImportSummary }
+      : CalendarCandidateBrain.summarizeFutureImportPreview(preview);
+  }
+
+  function renderCalendarCandidateImportSummaryHtml(summary, options) {
+    const opts = options || {};
+    const phase = opts.phase || 'result';
+    if (!summary || summary.readCount === 0) {
+      return `
+        <div class="calendar-import-result calendar-import-result-zero">
+          <h3>予定取り込み結果</h3>
+          <p class="calendar-import-result-lead">取り込み対象が見つかりませんでした。</p>
+          <p class="calendar-import-result-checks-title">確認してください：</p>
+          <ul class="calendar-import-result-checks">
+            <li>カレンダー予定のテキストを貼り付けていますか？</li>
+            <li>今日以降の予定が含まれていますか？</li>
+            <li>金額が入っていますか？</li>
+            <li>キャンセル・見積・日程調整中だけになっていませんか？</li>
+          </ul>
+        </div>`;
+    }
+    const saveLabel = phase === 'result'
+      ? `<li><span class="calendar-import-stat-label">作業予定に保存：</span><strong>${summary.savedCount}件</strong></li>`
+      : `<li><span class="calendar-import-stat-label">保存予定：</span><strong>${summary.savableCount}件</strong></li>`;
+    const revenueNote = phase === 'result'
+      ? '<p class="calendar-import-result-revenue-note"><span class="calendar-import-stat-label">売上明細への登録：</span><strong>なし</strong></p>'
+      : '';
+    const nextBlock = phase === 'result'
+      ? `<p class="calendar-import-result-next">次の確認先：<strong>売上予定（未確定）</strong></p>
+         <div class="calendar-import-result-actions">
+           <button type="button" class="btn btn-sm btn-primary calendar-import-go-revenue">売上予定を見る</button>
+           <button type="button" class="btn btn-sm btn-secondary calendar-import-go-daily">毎日やることを見る</button>
+         </div>`
+      : `<p class="calendar-import-result-hint">※予定取り込みだけでは売上明細には登録されません。作業後に「売上確定待ち」から確定してください。</p>`;
+    const zeroSavableHint = phase === 'preview' && summary.savableCount === 0
+      ? '<p class="calendar-import-result-warn">保存できる候補がありません。重複・対象外・金額なしを確認してください。</p>'
+      : '';
+    return `
+      <div class="calendar-import-result">
+        <h3>予定取り込み結果</h3>
+        <ul class="calendar-import-result-stats">
+          <li><span class="calendar-import-stat-label">読み取り：</span><strong>${summary.readCount}件</strong></li>
+          ${saveLabel}
+          <li><span class="calendar-import-stat-label">重複：</span><strong>${summary.duplicateCount}件</strong></li>
+          <li><span class="calendar-import-stat-label">対象外：</span><strong>${summary.excludedCount}件</strong></li>
+        </ul>
+        ${revenueNote}
+        <p class="calendar-import-result-separation">予定取り込みは作業予定への保存です。確定売上にはまだ反映されません。</p>
+        ${zeroSavableHint}
+        ${nextBlock}
+      </div>`;
+  }
+
+  function bindCalendarImportResultActions(root) {
+    if (!root) return;
+    const revenueBtn = root.querySelector('.calendar-import-go-revenue');
+    if (revenueBtn && !revenueBtn.dataset.bound) {
+      revenueBtn.dataset.bound = '1';
+      revenueBtn.addEventListener('click', () => {
+        navigateToView('revenue', '#revenue-upcoming-schedule');
+      });
+    }
+    const dailyBtn = root.querySelector('.calendar-import-go-daily');
+    if (dailyBtn && !dailyBtn.dataset.bound) {
+      dailyBtn.dataset.bound = '1';
+      dailyBtn.addEventListener('click', () => {
+        navigateToView('dashboard', '.card-daily-action-tasks');
+      });
+    }
+  }
+
+  function renderCalendarCandidateImportResult(summary, options) {
+    const el = document.getElementById('calendar-candidate-import-result');
+    if (!el) return;
+    if (!summary) {
+      el.innerHTML = '';
+      el.classList.add('hidden');
+      return;
+    }
+    el.innerHTML = renderCalendarCandidateImportSummaryHtml(summary, options);
+    el.classList.remove('hidden');
+    bindCalendarImportResultActions(el);
+  }
 
   function getAnalyticsContext(opts) {
     const today = TODAY();

@@ -3,7 +3,7 @@
  */
 const DataBackup = {
   VERSION: '4.0',
-  APP_VERSION: 'v4.8.27',
+  APP_VERSION: 'v4.8.28',
 
   PAYMENT_FIELDS: [
     'paymentMethod',

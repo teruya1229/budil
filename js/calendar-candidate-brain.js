@@ -558,6 +558,60 @@ const CalendarCandidateBrain = {
     return preview;
   },
 
+  classifyFutureImportCandidate(candidate) {
+    const c = this.normalizeCandidate(candidate);
+    const reasons = [];
+    if (!Number(c.estimateAmount || 0)) reasons.push('金額なし');
+    if (this.hasPastRecoveryExcludedWord(c)) reasons.push('対象外ワードあり');
+    if (reasons.length) {
+      return {
+        status: 'excluded',
+        label: '対象外',
+        reasons,
+        savable: false
+      };
+    }
+    return {
+      status: 'eligible',
+      label: '取り込み対象',
+      reasons: [],
+      savable: true
+    };
+  },
+
+  isFutureImportSavable(item, force) {
+    if (!item) return false;
+    if (item.futureImport && item.futureImport.savable === false) return false;
+    if (item.isDuplicate && !force) return false;
+    return true;
+  },
+
+  summarizeFutureImportPreview(preview) {
+    const items = (preview && preview.items) || [];
+    let duplicateCount = 0;
+    let excludedCount = 0;
+    let savableCount = 0;
+    items.forEach(item => {
+      if (item.isDuplicate) {
+        duplicateCount += 1;
+        return;
+      }
+      if (item.futureImport && item.futureImport.status === 'excluded') {
+        excludedCount += 1;
+        return;
+      }
+      savableCount += 1;
+    });
+    return {
+      readCount: items.length,
+      savedCount: 0,
+      duplicateCount,
+      excludedCount,
+      savableCount,
+      revenueRegistered: false
+    };
+  },
+
   attachFutureImportPreview(preview, today) {
     if (!preview || !Array.isArray(preview.items)) return preview;
     const t = today || new Date().toISOString().slice(0, 10);
@@ -570,7 +624,11 @@ const CalendarCandidateBrain = {
       if (isPastDate) {
         warnings.push('過去日付の予定です。近未来取り込みでは今日以降を推奨します（保存は可能です）');
       }
-      return { ...item, warnings, isPastDate };
+      const futureImport = this.classifyFutureImportCandidate(c);
+      if (futureImport.status === 'excluded') {
+        warnings.push(`対象外：${futureImport.reasons.join(' / ')}（売上予定には含まれません）`);
+      }
+      return { ...item, warnings, isPastDate, futureImport };
     });
     if (pastCount) {
       preview.warnings = [
@@ -578,6 +636,7 @@ const CalendarCandidateBrain = {
         `過去日付の予定が${pastCount}件あります。今日以降の予定を中心に取り込んでください。`
       ];
     }
+    preview.futureImportSummary = this.summarizeFutureImportPreview(preview);
     return preview;
   },
 
