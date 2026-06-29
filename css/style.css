@@ -10160,6 +10160,97 @@ body.sales-page {
   font-size: 0.9rem;
 }
 
+.revenue-flow-diagnostics-block {
+  margin: 0 0 1rem;
+}
+
+.revenue-flow-diagnostics {
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  background: rgba(14, 116, 144, 0.1);
+  border: 1px solid rgba(125, 211, 252, 0.28);
+}
+
+.revenue-flow-diagnostics-title {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+.revenue-flow-diagnostics-note {
+  margin: 0 0 0.65rem;
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.revenue-flow-diagnostics-stats {
+  margin: 0 0 0.65rem;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+}
+
+.revenue-flow-diagnostics-stats li {
+  margin: 0.15rem 0;
+}
+
+.revenue-flow-diagnostics-stats span {
+  color: #cbd5e1;
+}
+
+.revenue-flow-diagnostics-defs {
+  margin: 0 0 0.65rem;
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.revenue-flow-diagnostics-defs div {
+  margin: 0.2rem 0;
+}
+
+.revenue-flow-diagnostics-defs dt {
+  display: inline;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.revenue-flow-diagnostics-defs dt::after {
+  content: '：';
+}
+
+.revenue-flow-diagnostics-defs dd {
+  display: inline;
+  margin: 0;
+}
+
+.revenue-flow-diagnostics-status {
+  margin: 0.35rem 0;
+  font-size: 0.9rem;
+}
+
+.revenue-flow-diagnostics-status.is-ok {
+  color: #86efac;
+}
+
+.revenue-flow-diagnostics-status.is-warn {
+  color: #fcd34d;
+}
+
+.revenue-flow-diagnostics-status.is-info {
+  color: #bae6fd;
+}
+
+.revenue-flow-diagnostics-next {
+  margin: 0.35rem 0;
+  font-size: 0.9rem;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.revenue-flow-diagnostics-flow {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
 .revenue-monthly-badge {
   display: inline-block;
   margin-left: 0.25rem;

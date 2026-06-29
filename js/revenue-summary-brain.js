@@ -817,5 +817,91 @@ const RevenueSummaryBrain = {
     const sources = [...new Set(confirmed.map(r => this.getRevenueSource(r)))].sort();
     const services = [...new Set(confirmed.map(r => this.getRevenueService(r)))].sort();
     return { years, months, sources, services };
+  },
+
+  countActiveWorkOrders(workOrders) {
+    const list = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.forOperationalList(workOrders || []).map(w => WorkOrderBrain.normalizeWorkOrder(w))
+      : (workOrders || []);
+    return list.filter(w => {
+      if (typeof WorkOrderBrain !== 'undefined') {
+        return WorkOrderBrain.ACTIVE_STATUSES.includes(w.status);
+      }
+      return w.status !== 'cancelled' && w.status !== 'archived';
+    }).length;
+  },
+
+  countRevenueConfirmationQueue(workOrders, today) {
+    const t = today || new Date().toISOString().slice(0, 10);
+    if (typeof WorkCompletionBrain === 'undefined') return 0;
+    let count = 0;
+    (workOrders || []).forEach(raw => {
+      const wo = typeof WorkOrderBrain !== 'undefined'
+        ? WorkOrderBrain.normalizeWorkOrder(raw)
+        : raw;
+      if (WorkCompletionBrain.needsCompletionConfirm(wo, t)) count += 1;
+    });
+    return count;
+  },
+
+  buildSalesFlowDiagnostics(workOrders, revenueRecords, monthlyResults, today) {
+    const t = today || new Date().toISOString().slice(0, 10);
+    const monthly = monthlyResults || [];
+    const monthlyMonthCount = monthly.length;
+    const confirmed = this.confirmedRecords(revenueRecords || []);
+    const confirmedRevenueCount = confirmed.length;
+    const workOrderCount = this.countActiveWorkOrders(workOrders);
+    const upcoming = this.buildUpcomingRevenueScheduleSummary(workOrders, t);
+    const upcomingScheduleCount = upcoming.upcomingCount || 0;
+    const revenueConfirmationQueueCount = this.countRevenueConfirmationQueue(workOrders, t);
+    const reconciliationRows = typeof MonthlyResultsBrain !== 'undefined'
+      ? MonthlyResultsBrain.buildReconciliationReport(monthly, revenueRecords, {})
+      : [];
+    const reconciliationGapRows = reconciliationRows.filter(row => row.status === '差額あり');
+    const hasReconciliationGap = reconciliationGapRows.length > 0;
+    const reconciliationLabel = hasReconciliationGap
+      ? '差額あり'
+      : (reconciliationRows.some(row => row.status === '一致') ? '一致' : '—');
+
+    let statusKey = 'ok';
+    let statusMessage = '正常';
+    let nextAction = '予定取り込み→作業→売上確定の流れで運用できます。';
+
+    if (revenueConfirmationQueueCount > 0) {
+      statusKey = 'revenue_queue';
+      statusMessage = `売上確定待ちが${revenueConfirmationQueueCount}件あります。作業後の売上確定を確認してください。`;
+      nextAction = '売上確定待ちを確認してください。';
+    } else if (hasReconciliationGap) {
+      statusKey = 'reconciliation_gap';
+      statusMessage = '月次実績と売上明細に差額があります。';
+      nextAction = '月次実績と売上明細の整合チェックを確認してください。';
+    } else if (upcomingScheduleCount > 0) {
+      statusKey = 'upcoming';
+      statusMessage = `売上予定（未確定）が${upcomingScheduleCount}件あります。`;
+      nextAction = '作業後に売上確定してください。';
+    } else if (workOrderCount === 0) {
+      statusKey = 'no_work_orders';
+      statusMessage = '作業予定がありません。';
+      nextAction = '予定取り込みで今後の予定を取り込んでください。';
+    } else if (confirmedRevenueCount === 0) {
+      statusKey = 'no_confirmed';
+      statusMessage = '確定売上明細がありません。';
+      nextAction = '作業完了後に売上確定待ちから売上を確定してください。';
+    }
+
+    return {
+      monthlyMonthCount,
+      confirmedRevenueCount,
+      workOrderCount,
+      upcomingScheduleCount,
+      revenueConfirmationQueueCount,
+      reconciliationLabel,
+      hasReconciliationGap,
+      reconciliationGapMonthCount: reconciliationGapRows.length,
+      statusKey,
+      statusMessage,
+      nextAction,
+      flowNote: '過去売上復元ではなく、予定取り込み→売上確定の流れで運用します。'
+    };
   }
 };

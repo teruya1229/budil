@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.28 daily expense input verification.
+ * Budil v4.8.29 daily expense input verification.
  */
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -74,12 +74,12 @@ const profitJs = load('js/profit-brain.js');
 const backupJs = load('js/data-backup.js');
 const css = load('css/style.css');
 
-console.log('== v4.8.28 daily expense input ==');
+console.log('== v4.8.29 daily expense input ==');
 
 // A. UI
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.28'), 'header version should be v4.8.28');
-assert(indexHtml.includes('Budil v4.8.28'), 'sidebar version should be v4.8.28');
-assert(indexHtml.includes('js/app.js?v=4.8.28'), 'app.js cache buster should be v4.8.28');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.29'), 'header version should be v4.8.29');
+assert(indexHtml.includes('Budil v4.8.29'), 'sidebar version should be v4.8.29');
+assert(indexHtml.includes('js/app.js?v=4.8.29'), 'app.js cache buster should be v4.8.29');
 
 assert(indexHtml.includes('daily-section-expense'), 'daily expense section should exist');
 assert(indexHtml.includes('\u4eca\u65e5\u306e\u7d4c\u8cbb\u5165\u529b'), 'daily expense title should exist');
@@ -188,7 +188,7 @@ assert(appJs.includes('BUDIL DELETE'), 'BUDIL DELETE guard should remain');
 
 // F. Existing maintenance
 assert(appJs.includes('renderDailyRevenueConfirmationQueue'), 'v4.8.21 revenue queue should remain');
-assert(appJs.includes('getRevenueConfirmationWorkOrderIds'), 'v4.8.28 revenue hardening should remain');
+assert(appJs.includes('getRevenueConfirmationWorkOrderIds'), 'v4.8.29 revenue hardening should remain');
 assert(appJs.includes('external-check-dash-brief'), 'v4.8.20 external check summary should remain');
 assert(appJs.includes('AnalyticsBrain'), 'v4.8.16 analytics should remain');
 assert(indexHtml.includes('calendar-candidate-notice'), 'v4.8.12 past recovery notice should remain');
@@ -196,4 +196,4 @@ assert(appJs.includes("if (p.sourceKey === 'profit') return"), 'daily priority s
 assert(css.includes('overflow-x: hidden') || css.includes('overflow-x:hidden') || css.includes('min-width: 0'),
   'layout should avoid horizontal scroll patterns');
 
-console.log('All v4.8.28 daily expense input checks passed.');
+console.log('All v4.8.29 daily expense input checks passed.');

@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.28 sales summary monthly reconciliation verification.
+ * Budil v4.8.29 sales summary monthly reconciliation verification.
  */
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -57,14 +57,14 @@ function bootBrains(ctx) {
   });
 }
 
-console.log('== v4.8.28 sales monthly reconciliation ==');
+console.log('== v4.8.29 sales monthly reconciliation ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.28'), 'header version should be v4.8.28');
-assert(indexHtml.includes('Budil v4.8.28'), 'sidebar version should be v4.8.28');
-assert(indexHtml.includes('js/app.js?v=4.8.28'), 'app.js cache buster should be v4.8.28');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.29'), 'header version should be v4.8.29');
+assert(indexHtml.includes('Budil v4.8.29'), 'sidebar version should be v4.8.29');
+assert(indexHtml.includes('js/app.js?v=4.8.29'), 'app.js cache buster should be v4.8.29');
 assert(indexHtml.includes('\u4e88\u5b9a\u53d6\u308a\u8fbc\u307f'), 'schedule import nav should exist');
 assert(!indexHtml.includes('nav-label">\u904e\u53bb\u58f2\u4e0a\u5fa9\u5143'), 'past recovery nav label should be hidden');
 assert(indexHtml.includes('calendar-past-recovery-panel hidden'), 'past recovery panel should be hidden');
@@ -194,4 +194,4 @@ for (const file of ['monthly-results-brain.js', 'revenue-summary-brain.js', 'app
   assert(ctx.row.status === '\u4e00\u81f4', 'matching month should be match');
 }
 
-console.log('All v4.8.28 sales monthly reconciliation checks passed.');
+console.log('All v4.8.29 sales monthly reconciliation checks passed.');
