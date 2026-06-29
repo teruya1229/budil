@@ -9960,7 +9960,7 @@
         </ul>
         <dl class="revenue-flow-diagnostics-defs">
           <div><dt>売上</dt><dd>確定売上明細、または月次実績の売上です。</dd></div>
-          <div><dt>経費</dt><dd>経費入力・支出登録で保存した支出明細です。</dd></div>
+          <div><dt>経費</dt><dd>経費入力で保存した支出明細です。</dd></div>
           <div><dt>利益</dt><dd>売上 − 経費で確認します。</dd></div>
           <div><dt>月次実績</dt><dd>ある月は月次実績ベースを優先表示します（売上明細とは別管理）。</dd></div>
         </dl>
