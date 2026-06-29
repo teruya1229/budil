@@ -866,27 +866,58 @@ const RevenueSummaryBrain = {
     let statusKey = 'ok';
     let statusMessage = '正常';
     let nextAction = '予定取り込み→作業→売上確定の流れで運用できます。';
+    let primaryAction = null;
 
     if (revenueConfirmationQueueCount > 0) {
       statusKey = 'revenue_queue';
       statusMessage = `売上確定待ちが${revenueConfirmationQueueCount}件あります。作業後の売上確定を確認してください。`;
       nextAction = '売上確定待ちを確認してください。';
+      primaryAction = {
+        id: 'revenue_queue',
+        label: '売上確定待ちを見る',
+        view: 'dashboard',
+        scrollSelector: '#daily-section-revenue-queue'
+      };
     } else if (hasReconciliationGap) {
       statusKey = 'reconciliation_gap';
       statusMessage = '月次実績と売上明細に差額があります。';
       nextAction = '月次実績と売上明細の整合チェックを確認してください。';
+      primaryAction = {
+        id: 'reconciliation',
+        label: '整合チェックを見る',
+        view: 'revenue',
+        scrollSelector: '#revenue-reconciliation-check'
+      };
     } else if (upcomingScheduleCount > 0) {
       statusKey = 'upcoming';
       statusMessage = `売上予定（未確定）が${upcomingScheduleCount}件あります。`;
       nextAction = '作業後に売上確定してください。';
+      primaryAction = {
+        id: 'upcoming',
+        label: '売上予定を見る',
+        view: 'revenue',
+        scrollSelector: '#revenue-upcoming-schedule'
+      };
     } else if (workOrderCount === 0) {
       statusKey = 'no_work_orders';
       statusMessage = '作業予定がありません。';
       nextAction = '予定取り込みで今後の予定を取り込んでください。';
+      primaryAction = {
+        id: 'schedule_import',
+        label: '予定取り込みへ',
+        view: 'calendar-candidate',
+        scrollSelector: ''
+      };
     } else if (confirmedRevenueCount === 0) {
       statusKey = 'no_confirmed';
       statusMessage = '確定売上明細がありません。';
-      nextAction = '作業完了後に売上確定待ちから売上を確定してください。';
+      nextAction = '作業後の売上確定を確認してください。';
+      primaryAction = {
+        id: 'daily_tasks',
+        label: '毎日やることを見る',
+        view: 'dashboard',
+        scrollSelector: '.card-daily-action-tasks'
+      };
     }
 
     return {
@@ -901,6 +932,7 @@ const RevenueSummaryBrain = {
       statusKey,
       statusMessage,
       nextAction,
+      primaryAction,
       flowNote: '過去売上復元ではなく、予定取り込み→売上確定の流れで運用します。'
     };
   }

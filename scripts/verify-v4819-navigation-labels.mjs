@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.29 daily flow and navigation verification.
+ * Budil v4.8.30 daily flow and navigation verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -21,11 +21,11 @@ const appJs = load('js/app.js');
 const executiveBrain = load('js/executive-brain.js');
 const css = load('css/style.css');
 
-console.log('== v4.8.29 daily flow and navigation ==');
+console.log('== v4.8.30 daily flow and navigation ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.29'), 'header version should be v4.8.29');
-assert(indexHtml.includes('Budil v4.8.29'), 'sidebar version should be v4.8.29');
-assert(indexHtml.includes('js/app.js?v=4.8.29'), 'app.js cache buster should be v4.8.29');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.30'), 'header version should be v4.8.30');
+assert(indexHtml.includes('Budil v4.8.30'), 'sidebar version should be v4.8.30');
+assert(indexHtml.includes('js/app.js?v=4.8.30'), 'app.js cache buster should be v4.8.30');
 
 assert(indexHtml.includes('\u6bce\u65e5\u3084\u308b\u3053\u3068'), 'nav should use daily tasks label');
 assert(!indexHtml.includes('nav-label">\u4eca\u65e5\u3084\u308b\u3053\u3068'), 'nav should not use old daily tasks label');
@@ -54,4 +54,4 @@ assert(!executiveBrain.includes("label: '\u53d7\u4ed8\u30fb\u4e88\u5b9a'"), 'exe
 
 assert(css.includes('daily-flow-strip'), 'daily flow strip styles should exist');
 
-console.log('All v4.8.29 daily flow and navigation checks passed.');
+console.log('All v4.8.30 daily flow and navigation checks passed.');

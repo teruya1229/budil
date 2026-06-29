@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.29 near-future schedule import verification.
+ * Budil v4.8.30 near-future schedule import verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -67,11 +67,11 @@ const indexHtml = load('index.html');
 const appJs = load('js/app.js');
 const calendarBrain = load('js/calendar-candidate-brain.js');
 
-console.log('== v4.8.29 future schedule import ==');
+console.log('== v4.8.30 future schedule import ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.29'), 'header version should be v4.8.29');
-assert(indexHtml.includes('Budil v4.8.29'), 'sidebar version should be v4.8.29');
-assert(indexHtml.includes('js/app.js?v=4.8.29'), 'app.js cache buster should be v4.8.29');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.30'), 'header version should be v4.8.30');
+assert(indexHtml.includes('Budil v4.8.30'), 'sidebar version should be v4.8.30');
+assert(indexHtml.includes('js/app.js?v=4.8.30'), 'app.js cache buster should be v4.8.30');
 
 assert(indexHtml.includes('\u4eca\u65e5\u4ee5\u964d\u306e\u30ab\u30ec\u30f3\u30c0\u30fc\u4e88\u5b9a\u3092Budil\u306b\u53d6\u308a\u8fbc\u307f\u307e\u3059'), 'future import subtitle should exist');
 assert(indexHtml.includes('\u4f5c\u696d\u4e88\u5b9a\u3068\u3057\u3066\u4fdd\u5b58\u3055\u308c\u3001\u4f5c\u696d\u5f8c\u306b\u58f2\u4e0a\u78ba\u5b9a\u3067\u304d\u307e\u3059'), 'future import flow note should exist');
@@ -217,4 +217,4 @@ const completedPaste = [
   assert(ctx.inQueue === true, 'past-scheduled imported work order should be revenue-queue eligible');
 }
 
-console.log('All v4.8.29 future schedule import checks passed.');
+console.log('All v4.8.30 future schedule import checks passed.');

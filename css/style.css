@@ -10251,6 +10251,15 @@ body.sales-page {
   color: #94a3b8;
 }
 
+.revenue-flow-diagnostics-action-wrap {
+  margin: 0.5rem 0;
+}
+
+.revenue-flow-diagnostics-action-wrap .btn {
+  width: 100%;
+  max-width: 100%;
+}
+
 .revenue-monthly-badge {
   display: inline-block;
   margin-left: 0.25rem;

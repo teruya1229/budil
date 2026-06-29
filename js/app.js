@@ -4866,7 +4866,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.8.29</span>
+        <span class="business-report-version">v4.8.30</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -14700,6 +14700,11 @@
     </div>`;
   }
 
+  function handleSalesFlowDiagnosticAction(action) {
+    if (!action || !action.view) return;
+    navigateToView(action.view, action.scrollSelector || null);
+  }
+
   function renderRevenueFlowDiagnostics() {
     const el = document.getElementById('revenue-flow-diagnostics');
     if (!el || typeof RevenueSummaryBrain === 'undefined') return;
@@ -14716,6 +14721,10 @@
     const statusClass = diagnostics.statusKey === 'ok'
       ? 'is-ok'
       : (diagnostics.statusKey === 'reconciliation_gap' ? 'is-warn' : 'is-info');
+    const action = diagnostics.primaryAction;
+    const actionBtn = action
+      ? `<div class="revenue-flow-diagnostics-action-wrap"><button type="button" class="btn btn-sm btn-primary revenue-flow-diagnostics-action">${esc(action.label)}</button></div>`
+      : '';
     el.innerHTML = `
       <div class="revenue-flow-diagnostics">
         <h3 class="revenue-flow-diagnostics-title">売上フロー診断</h3>
@@ -14737,8 +14746,13 @@
         </dl>
         <p class="revenue-flow-diagnostics-status ${statusClass}">状態：${esc(diagnostics.statusMessage)}</p>
         <p class="revenue-flow-diagnostics-next">次にやること：${esc(diagnostics.nextAction)}</p>
+        ${actionBtn}
         <p class="revenue-flow-diagnostics-flow">${esc(diagnostics.flowNote)}</p>
       </div>`;
+    const btn = el.querySelector('.revenue-flow-diagnostics-action');
+    if (btn && action) {
+      btn.addEventListener('click', () => handleSalesFlowDiagnosticAction(action));
+    }
   }
 
   function renderRevenueAggregationPanel() {
@@ -14809,7 +14823,7 @@
       </div>
       ${monthlyBreakdown}
 
-      <details class="revenue-agg-collapse" open>
+      <details class="revenue-agg-collapse" id="revenue-reconciliation-check" open>
         <summary>売上明細と月次実績の整合チェック</summary>
         <div class="revenue-agg-collapse-body">${reconciliationHtml}</div>
       </details>
