@@ -1324,6 +1324,12 @@
     if (profitLink) profitLink.addEventListener('click', goToProfit);
     const followLink = root.querySelector('.exec-home-follow-link');
     if (followLink) followLink.addEventListener('click', goToFollowUp);
+    root.querySelectorAll('.daily-go-calendar').forEach(btn => {
+      btn.addEventListener('click', () => goToReception());
+    });
+    root.querySelectorAll('.upcoming-go-schedule-import').forEach(btn => {
+      btn.addEventListener('click', () => navigateToView('calendar-candidate'));
+    });
     const analyticsLink = root.querySelector('.exec-home-analytics-link');
     if (analyticsLink) analyticsLink.addEventListener('click', goToAnalytics);
     const pickupLink = root.querySelector('.exec-home-pickup-link');
@@ -1458,7 +1464,7 @@
     }
 
     const upcomingEl = document.getElementById('exec-home-upcoming-schedule');
-    if (upcomingEl) upcomingEl.innerHTML = renderDailyUpcomingScheduleHtml({ compact: true, limit: 3 });
+    if (upcomingEl) upcomingEl.innerHTML = renderUpcomingRevenueScheduleHtml({ compact: true, limit: 3 });
 
     const workEl = document.getElementById('exec-home-work-orders');
     if (workEl) workEl.innerHTML = renderExecutiveWorkOrdersHtml(ctx.workSection);
@@ -2567,28 +2573,56 @@
     return `${d.getMonth() + 1}/${d.getDate()}`;
   }
 
-  function renderDailyUpcomingScheduleHtml(options) {
-    const opts = options || {};
-    const today = TODAY();
-    const workOrders = WorkOrderBrain.getWeekWorkOrders(Storage.getWorkOrders(), today);
-    const limit = opts.limit || 3;
-    const visible = workOrders.slice(0, limit);
-    const hiddenCount = Math.max(0, workOrders.length - limit);
-    if (!visible.length) {
-      return `<p class="placeholder-text daily-schedule-empty">${esc(EMPTY_SCHEDULE_COPY)}</p>`;
+  function getUpcomingRevenueScheduleSummary() {
+    if (typeof RevenueSummaryBrain === 'undefined') {
+      return { monthCount: 0, monthTotal: 0, upcoming: [], upcomingCount: 0, label: '売上予定（未確定）', scopeNote: '', hint: '' };
     }
-    const lines = visible.map(wo => {
-      const day = formatUpcomingDayLabel(wo.scheduledDate, today);
-      const time = wo.startTime || '—';
-      const name = wo.customerName || 'お客様';
-      const svc = (wo.serviceText || wo.service || '').slice(0, 20);
-      return `<li class="daily-upcoming-item">${esc(day)} ${esc(time)} ${esc(name)} ${esc(svc)}</li>`;
-    }).join('');
-    const more = hiddenCount ? `<p class="daily-upcoming-more">ほか${hiddenCount}件</p>` : '';
-    const btn = opts.compact
-      ? `<button type="button" class="btn btn-sm btn-secondary daily-go-calendar">カレンダー登録を見る</button>`
+    return RevenueSummaryBrain.buildUpcomingRevenueScheduleSummary(Storage.getWorkOrders(), TODAY());
+  }
+
+  function renderUpcomingRevenueScheduleHtml(options) {
+    const opts = options || {};
+    const summary = opts.summary || getUpcomingRevenueScheduleSummary();
+    const limit = opts.limit || 3;
+    const upcoming = (summary.upcoming || []).slice(0, limit);
+    const monthAmount = RevenueBrain.formatYen(summary.monthTotal || 0);
+    if (!summary.monthCount && !upcoming.length) {
+      return `<p class="placeholder-text upcoming-revenue-schedule-empty">${esc(opts.emptyText || '今日以降の売上予定はありません。予定取り込みまたはカレンダー登録から追加できます。')}</p>`;
+    }
+    const head = `<p class="upcoming-revenue-schedule-head">今月の売上予定：<strong>${summary.monthCount || 0}件 / ${esc(monthAmount)}</strong></p>`;
+    const note = `<p class="upcoming-revenue-schedule-note">${esc(summary.label || '売上予定（未確定）')}：${esc(monthAmount)}</p>`;
+    const hint = summary.hint
+      ? `<p class="upcoming-revenue-schedule-hint">${esc(summary.hint)}</p>`
       : '';
-    return `<ul class="daily-upcoming-list">${lines}</ul>${more}${btn}`;
+    const list = upcoming.length
+      ? `<ul class="upcoming-revenue-schedule-list">${upcoming.map(item => `
+          <li class="upcoming-revenue-schedule-item">
+            <span class="upcoming-revenue-schedule-date">${esc(item.dateLabel || '—')}</span>
+            <span class="upcoming-revenue-schedule-name">${esc(item.customerName || '—')}</span>
+            <span class="upcoming-revenue-schedule-service">${esc((item.serviceText || '').slice(0, 24))}</span>
+            <span class="upcoming-revenue-schedule-amount">${esc(WorkOrderBrain.formatYen(item.amount))}</span>
+            <span class="upcoming-revenue-schedule-status">${esc(item.statusLabel || '予定')}</span>
+          </li>`).join('')}</ul>`
+      : '';
+    const nearest = upcoming[0]
+      ? `<p class="upcoming-revenue-schedule-nearest">直近予定：${esc(upcoming[0].dateLabel)} ${esc((upcoming[0].serviceText || '').slice(0, 20))} ${esc(WorkOrderBrain.formatYen(upcoming[0].amount))}</p>`
+      : '';
+    const more = summary.upcomingCount > limit
+      ? `<p class="upcoming-revenue-schedule-more">ほか${summary.upcomingCount - limit}件</p>`
+      : '';
+    const actions = opts.showScheduleImportBtn
+      ? `<button type="button" class="btn btn-sm btn-secondary upcoming-go-schedule-import">予定取り込みを見る</button>`
+      : (opts.compact
+        ? `<button type="button" class="btn btn-sm btn-secondary daily-go-calendar">カレンダー登録を見る</button>`
+        : '');
+    return `${head}${note}${hint}${nearest}${list}${more}${actions}`;
+  }
+
+  function renderDailyUpcomingScheduleHtml(options) {
+    return renderUpcomingRevenueScheduleHtml({
+      ...(options || {}),
+      showScheduleImportBtn: !(options && options.compact)
+    });
   }
 
   function getRevenueConfirmationWorkOrderIds(today) {
@@ -3033,6 +3067,9 @@
     document.querySelectorAll('.daily-go-calendar').forEach(btn => {
       btn.addEventListener('click', () => goToReception());
     });
+    document.querySelectorAll('.upcoming-go-schedule-import').forEach(btn => {
+      btn.addEventListener('click', () => navigateToView('calendar-candidate'));
+    });
   }
 
   function renderDailyActionTasks() {
@@ -3357,6 +3394,12 @@
     el.innerHTML = renderRevenueSummaryHtml(summary, comment, { showLink: true, monthlyOverlay });
     const btn = el.querySelector('#btn-go-revenue');
     if (btn) btn.addEventListener('click', () => navigateToView('revenue'));
+    const scheduleEl = document.getElementById('dash-upcoming-revenue-schedule');
+    if (scheduleEl) {
+      scheduleEl.innerHTML = renderUpcomingRevenueScheduleHtml({ limit: 3, showScheduleImportBtn: true });
+      const importBtn = scheduleEl.querySelector('.upcoming-go-schedule-import');
+      if (importBtn) importBtn.addEventListener('click', () => navigateToView('calendar-candidate'));
+    }
     const outcomeEl = document.getElementById('dash-sales-outcome');
     if (outcomeEl) {
       outcomeEl.innerHTML = renderSalesOutcomeHtml(salesOutcome, { brief: true });
@@ -4816,7 +4859,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.8.25</span>
+        <span class="business-report-version">v4.8.26</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -14716,6 +14759,12 @@
           <span>${esc(item.label)}</span>
           <strong>${esc(item.value)}</strong>
         </div>`).join('');
+    }
+    const upcomingScheduleEl = document.getElementById('revenue-upcoming-schedule');
+    if (upcomingScheduleEl) {
+      upcomingScheduleEl.innerHTML = renderUpcomingRevenueScheduleHtml({ limit: 3, showScheduleImportBtn: true });
+      const importBtn = upcomingScheduleEl.querySelector('.upcoming-go-schedule-import');
+      if (importBtn) importBtn.addEventListener('click', () => navigateToView('calendar-candidate'));
     }
     if (commentEl) commentEl.textContent = comment;
     if (targetEl) targetEl.value = settings.monthlyTarget || '';

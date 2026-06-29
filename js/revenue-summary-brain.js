@@ -619,6 +619,91 @@ const RevenueSummaryBrain = {
     };
   },
 
+  normalizeScheduleWorkOrder(workOrder) {
+    return typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.normalizeWorkOrder(workOrder)
+      : (workOrder || {});
+  },
+
+  hasUpcomingScheduleExcludedWord(workOrder) {
+    const wo = this.normalizeScheduleWorkOrder(workOrder);
+    if (typeof CalendarCandidateBrain !== 'undefined') {
+      return CalendarCandidateBrain.hasPastRecoveryExcludedWord(wo);
+    }
+    const text = [wo.customerName, wo.serviceText, wo.source, wo.memo].join(' ');
+    return /キャンセル|取消|取り消し|中止|見積|見積もり|見積り|見積のみ|日程調整|調整中|仮予定|仮押さえ|未確定/.test(text);
+  },
+
+  isUpcomingRevenueScheduleWorkOrder(workOrder, today) {
+    const wo = this.normalizeScheduleWorkOrder(workOrder);
+    if (!wo || !wo.scheduledDate) return false;
+    const t = today || new Date().toISOString().slice(0, 10);
+    if (wo.scheduledDate < t) return false;
+    if (wo.actualRevenueId) return false;
+    if (wo.status === 'cancelled' || wo.status === 'archived' || wo.status === 'completed') return false;
+    const meta = wo.candidateMeta;
+    if (meta && meta.candidateStatus === 'スキップ') return false;
+    const amt = Number(wo.estimateAmount || 0);
+    if (!Number.isFinite(amt) || amt <= 0) return false;
+    if (this.hasUpcomingScheduleExcludedWord(wo)) return false;
+    return true;
+  },
+
+  getUpcomingScheduleStatusLabel(workOrder, today) {
+    const wo = this.normalizeScheduleWorkOrder(workOrder);
+    const t = today || new Date().toISOString().slice(0, 10);
+    if (!wo.scheduledDate) return '予定';
+    if (wo.scheduledDate === t) return '作業後に売上確定';
+    const soonEnd = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.addDays(t, 3)
+      : t;
+    if (wo.scheduledDate <= soonEnd) return '近日';
+    return '予定';
+  },
+
+  formatUpcomingScheduleDate(scheduledDate, today) {
+    const date = String(scheduledDate || '').slice(0, 10);
+    const t = today || new Date().toISOString().slice(0, 10);
+    if (!date) return '—';
+    if (date === t) return '今日';
+    if (typeof WorkOrderBrain !== 'undefined' && date === WorkOrderBrain.addDays(t, 1)) return '明日';
+    const parts = date.split('-');
+    if (parts.length === 3) return `${Number(parts[1])}/${Number(parts[2])}`;
+    return date;
+  },
+
+  buildUpcomingRevenueScheduleSummary(workOrders, today) {
+    const t = today || new Date().toISOString().slice(0, 10);
+    const monthKey = t.slice(0, 7);
+    const eligible = (workOrders || [])
+      .map(w => this.normalizeScheduleWorkOrder(w))
+      .filter(w => this.isUpcomingRevenueScheduleWorkOrder(w, t))
+      .sort((a, b) => {
+        const d = (a.scheduledDate || '').localeCompare(b.scheduledDate || '');
+        if (d !== 0) return d;
+        return (a.startTime || '').localeCompare(b.startTime || '');
+      });
+    const thisMonth = eligible.filter(w => w.scheduledDate && w.scheduledDate.startsWith(monthKey));
+    const monthTotal = thisMonth.reduce((sum, w) => sum + Number(w.estimateAmount || 0), 0);
+    return {
+      monthCount: thisMonth.length,
+      monthTotal,
+      upcoming: eligible.slice(0, 3).map(wo => ({
+        id: wo.id || '',
+        scheduledDate: wo.scheduledDate || '',
+        dateLabel: this.formatUpcomingScheduleDate(wo.scheduledDate, t),
+        customerName: wo.customerName || '（名前なし）',
+        serviceText: wo.serviceText || '—',
+        amount: Number(wo.estimateAmount || 0),
+        statusLabel: this.getUpcomingScheduleStatusLabel(wo, t)
+      })),
+      upcomingCount: eligible.length,
+      label: '売上予定（未確定）',
+      scopeNote: '作業予定の見込みです。確定売上・月次実績とは合算しません。',
+      hint: '※作業後に売上確定すると、確定売上に反映されます。'
+    };
+  },
+
   buildWorkOrderForecastSummary(workOrders, today) {
     const t = today || new Date().toISOString().slice(0, 10);
     const monthKey = t.slice(0, 7);

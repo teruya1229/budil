@@ -2,7 +2,7 @@
  * Budil v4.4 - 経営司令塔ホーム（毎朝5分・全番頭統合）
  */
 const ExecutiveBrain = {
-  VERSION: 'v4.8.25',
+  VERSION: 'v4.8.26',
 
   CHECK_ITEMS: [
     { id: 'workOrders', label: 'カレンダー登録と直近予定を確認した' },

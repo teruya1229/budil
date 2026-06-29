@@ -7342,6 +7342,96 @@ body {
   font-size: 0.82rem;
 }
 
+.upcoming-revenue-schedule-block {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.upcoming-revenue-schedule-head {
+  margin: 0 0 0.35rem;
+  font-size: 0.92rem;
+}
+
+.upcoming-revenue-schedule-note {
+  margin: 0 0 0.25rem;
+  color: #cbd5e1;
+  font-size: 0.86rem;
+}
+
+.upcoming-revenue-schedule-hint,
+.upcoming-revenue-schedule-nearest,
+.upcoming-revenue-schedule-more {
+  margin: 0 0 0.35rem;
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+.upcoming-revenue-schedule-list {
+  list-style: none;
+  margin: 0.35rem 0 0.5rem;
+  padding: 0;
+}
+
+.upcoming-revenue-schedule-item {
+  display: grid;
+  grid-template-columns: minmax(2.5rem, auto) minmax(0, 1fr) minmax(0, 1.2fr) auto auto;
+  gap: 0.35rem 0.5rem;
+  align-items: baseline;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  font-size: 0.82rem;
+  min-width: 0;
+}
+
+.upcoming-revenue-schedule-date {
+  color: #e2e8f0;
+  white-space: nowrap;
+}
+
+.upcoming-revenue-schedule-name,
+.upcoming-revenue-schedule-service {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upcoming-revenue-schedule-amount {
+  color: #f8fafc;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.upcoming-revenue-schedule-status {
+  color: #94a3b8;
+  font-size: 0.74rem;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.upcoming-revenue-schedule-empty {
+  font-size: 0.84rem;
+}
+
+@media (max-width: 390px) {
+  .upcoming-revenue-schedule-item {
+    grid-template-columns: minmax(2.2rem, auto) minmax(0, 1fr);
+    grid-template-areas:
+      "date name"
+      "service service"
+      "amount status";
+  }
+
+  .upcoming-revenue-schedule-date { grid-area: date; }
+  .upcoming-revenue-schedule-name { grid-area: name; }
+  .upcoming-revenue-schedule-service { grid-area: service; }
+  .upcoming-revenue-schedule-amount { grid-area: amount; text-align: left; }
+  .upcoming-revenue-schedule-status { grid-area: status; text-align: left; }
+}
+
 .daily-revenue-quick-form {
   max-width: 100%;
 }
