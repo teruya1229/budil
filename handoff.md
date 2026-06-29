@@ -17,7 +17,7 @@
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
 | 最新バージョン | v4.8.28 |
-| 最新commit | （commit後に更新） |
+| 最新commit | 54bf3bb |
 | ブランチ | `main` push 済み |
 
 ## v4.8.28で入ったもの
