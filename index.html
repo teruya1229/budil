@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.8.30">
+  <link rel="stylesheet" href="css/style.css?v=4.8.31">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.8.30</small>
+          <small>AI経営脳みそ v4.8.31</small>
         </div>
       </div>
       <nav class="nav">
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.8.30</small>
+        <small>Budil v4.8.31</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">毎朝5分で、今日の結論・売上・直近予定・集客管理を確認</p>
             </div>
-            <span class="exec-home-version">v4.8.30</span>
+            <span class="exec-home-version">v4.8.31</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <details class="exec-collapse exec-home-start-collapse" id="exec-home-start-collapse">
@@ -270,7 +270,7 @@
             <button type="button" class="btn btn-sm btn-secondary daily-flow-btn" data-daily-flow="revenue-list">売上一覧</button>
           </div>
           <h2>毎日やること</h2>
-          <p class="daily-tasks-lead">予定取り込み → 売上予定（未確定）→ 作業後に売上確定待ち → 確定売上、の順で進めます。</p>
+          <p class="daily-tasks-lead">予定取り込み → 売上予定（未確定）→ 作業日後に売上確定待ち → 売上確定 → 確定売上明細 → 月次実績・整合チェック、の順で進めます。</p>
 
           <div id="daily-section-priority" class="daily-section daily-section-priority">
             <h3 class="daily-section-title">今日の最優先</h3>
@@ -279,7 +279,7 @@
 
           <div id="daily-section-revenue-queue" class="daily-section daily-section-revenue-queue">
             <h3 class="daily-section-title">売上確定待ち</h3>
-            <p class="daily-section-lead">作業日を過ぎた予定がここに表示されます。金額・日付・内容を確認して確定売上にしてください（売上予定とは別です）。</p>
+            <p class="daily-section-lead">作業日当日以降で、まだ売上確定していない予定です。</p>
             <div id="daily-revenue-queue-list" class="daily-revenue-queue-list"></div>
             <div id="daily-revenue-confirmed-notice" class="daily-revenue-confirmed-notice hidden"></div>
           </div>
@@ -321,7 +321,7 @@
 
           <div id="daily-section-schedule" class="daily-section daily-section-schedule">
             <h3 class="daily-section-title">売上予定（未確定）</h3>
-            <p class="daily-section-lead">今日より後の作業予定の見込みです。確定売上・月次実績とは合算しません。</p>
+            <p class="daily-section-lead">これからの予定売上です。確定売上・月次実績とは合算しません。作業後に売上確定すると確定売上に反映されます。</p>
             <div id="daily-upcoming-schedule" class="daily-upcoming-schedule"></div>
           </div>
 
@@ -524,7 +524,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.8.30</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.8.31</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -1790,11 +1790,11 @@
       <section id="view-calendar-candidate" class="view">
         <header class="view-header">
           <h1>近未来の予定取り込み</h1>
-          <p class="view-subtitle">今日以降のカレンダー予定をBudilに取り込みます。取り込んだ予定は作業予定として保存され、作業後に売上確定できます。</p>
+          <p class="view-subtitle">今日以降のカレンダー予定を作業予定として保存します。予定取り込みだけでは確定売上には入りません。作業後に売上確定待ちから確定してください。</p>
         </header>
 
         <div class="card card-wide card-calendar-candidate">
-          <p class="calendar-candidate-notice"><strong>これは売上ではありません。</strong> 今日以降の予定を作業予定として保存し、作業日後は「毎日やること」の売上確定待ちから売上化してください。</p>
+          <p class="calendar-candidate-notice"><strong>これは売上登録ではありません。</strong> 今日以降の予定を作業予定として保存します。作業日後は「毎日やること」の売上確定待ちから確定してください。</p>
 
           <div class="calendar-past-recovery-panel hidden" aria-hidden="true">
             <label class="calendar-past-recovery-toggle">
@@ -1830,7 +1830,7 @@
             <button type="button" id="btn-calendar-candidate-copy-prompt" class="btn btn-sm btn-secondary">カレンダー確認用の文をコピー</button>
           </div>
 
-          <p class="pickup-paste-hint">【カレンダー予定】形式で複数件貼り付けできます。今日以降の予定を中心に取り込み、作業予定として保存します（売上確定は作業後）。</p>
+          <p class="pickup-paste-hint">【カレンダー予定】形式で複数件貼り付けできます。今日以降の予定を作業予定として保存します（確定売上にはまだ入りません）。</p>
           <textarea id="calendar-candidate-paste" class="calendar-candidate-paste" rows="10" placeholder="【カレンダー予定】&#10;日付：2026-07-03&#10;開始時間：09:00&#10;..."></textarea>
           <div class="calendar-candidate-actions">
             <button type="button" id="btn-calendar-candidate-parse" class="btn btn-sm btn-secondary">取り込み候補を確認</button>
@@ -1846,7 +1846,7 @@
           </div>
 
           <h2>取り込み済み予定一覧</h2>
-          <p class="calendar-candidate-list-note">取り込み済みの作業予定は確定売上集計には含まれません。作業日後は売上確定待ちから売上化できます。</p>
+          <p class="calendar-candidate-list-note">取り込み済みの作業予定は確定売上集計には含まれません。作業日後は売上確定待ちから売上確定してください。</p>
           <div id="calendar-candidate-saved-list" class="calendar-candidate-saved-list"></div>
 
           <details class="calendar-candidate-collapse">
@@ -2551,7 +2551,7 @@
       <section id="view-monthly-results" class="view">
         <header class="view-header">
           <h1>月次実績入力</h1>
-          <p class="view-subtitle">過去月の売上・費用・利益をまとめて登録し、経営判断の実績補正に使う（売上詳細レコードとは別管理）</p>
+          <p class="view-subtitle">月単位の確定経営数字を入力します。売上明細とは別管理です。</p>
         </header>
 
         <div class="card card-wide card-monthly-results-summary">
@@ -2633,7 +2633,7 @@
 
         <div class="card card-wide card-monthly-results-reconciliation">
           <h2>売上明細との整合チェック</h2>
-          <p class="monthly-results-reconciliation-note">読み取り専用。月次実績と売上明細の差額を確認できます。</p>
+          <p class="monthly-results-reconciliation-note">月次実績と売上明細の差額を確認します。自動同期はしません（読み取り専用）。</p>
           <div id="monthly-results-reconciliation" class="monthly-results-reconciliation-wrap"></div>
         </div>
 
@@ -3387,30 +3387,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.8.30"></script>
-  <script src="js/messages.js?v=4.8.30"></script>
-  <script src="js/demand-brain.js?v=4.8.30"></script>
-  <script src="js/demand-radar.js?v=4.8.30"></script>
-  <script src="js/sales-brain.js?v=4.8.30"></script>
-  <script src="js/management-brain.js?v=4.8.30"></script>
-  <script src="js/payment-brain.js?v=4.8.30"></script>
-  <script src="js/revenue-brain.js?v=4.8.30"></script>
-  <script src="js/revenue-summary-brain.js?v=4.8.30"></script>
-  <script src="js/reception-brain.js?v=4.8.30"></script>
-  <script src="js/map-brain.js?v=4.8.30"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.8.30"></script>
-  <script src="js/external-check-brain.js?v=4.8.30"></script>
-  <script src="js/action-brain.js?v=4.8.30"></script>
-  <script src="js/work-order-brain.js?v=4.8.30"></script>
-  <script src="js/follow-up-brain.js?v=4.8.30"></script>
-  <script src="js/work-completion-brain.js?v=4.8.30"></script>
-  <script src="js/profit-brain.js?v=4.8.30"></script>
-  <script src="js/analytics-brain.js?v=4.8.30"></script>
-  <script src="js/monthly-results-brain.js?v=4.8.30"></script>
-  <script src="js/documents-brain.js?v=4.8.30"></script>
-  <script src="js/executive-brain.js?v=4.8.30"></script>
-  <script src="js/card-ocr.js?v=4.8.30"></script>
-  <script src="js/data-backup.js?v=4.8.30"></script>
-  <script src="js/app.js?v=4.8.30"></script>
+  <script src="js/storage.js?v=4.8.31"></script>
+  <script src="js/messages.js?v=4.8.31"></script>
+  <script src="js/demand-brain.js?v=4.8.31"></script>
+  <script src="js/demand-radar.js?v=4.8.31"></script>
+  <script src="js/sales-brain.js?v=4.8.31"></script>
+  <script src="js/management-brain.js?v=4.8.31"></script>
+  <script src="js/payment-brain.js?v=4.8.31"></script>
+  <script src="js/revenue-brain.js?v=4.8.31"></script>
+  <script src="js/revenue-summary-brain.js?v=4.8.31"></script>
+  <script src="js/reception-brain.js?v=4.8.31"></script>
+  <script src="js/map-brain.js?v=4.8.31"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.8.31"></script>
+  <script src="js/external-check-brain.js?v=4.8.31"></script>
+  <script src="js/action-brain.js?v=4.8.31"></script>
+  <script src="js/work-order-brain.js?v=4.8.31"></script>
+  <script src="js/follow-up-brain.js?v=4.8.31"></script>
+  <script src="js/work-completion-brain.js?v=4.8.31"></script>
+  <script src="js/profit-brain.js?v=4.8.31"></script>
+  <script src="js/analytics-brain.js?v=4.8.31"></script>
+  <script src="js/monthly-results-brain.js?v=4.8.31"></script>
+  <script src="js/documents-brain.js?v=4.8.31"></script>
+  <script src="js/executive-brain.js?v=4.8.31"></script>
+  <script src="js/card-ocr.js?v=4.8.31"></script>
+  <script src="js/data-backup.js?v=4.8.31"></script>
+  <script src="js/app.js?v=4.8.31"></script>
 </body>
 </html>

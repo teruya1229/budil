@@ -713,8 +713,8 @@ const RevenueSummaryBrain = {
       })),
       upcomingCount: eligible.length,
       label: '売上予定（未確定）',
-      scopeNote: '作業予定の見込みです。確定売上・月次実績とは合算しません。',
-      hint: '※作業後に売上確定すると、確定売上に反映されます。',
+      scopeNote: 'これからの予定売上です。確定売上・月次実績とは合算しません。',
+      hint: '作業後に売上確定すると確定売上に反映されます。',
       flowNote: '作業日後は「売上確定待ち」から確定してください。'
     };
   },
@@ -933,7 +933,7 @@ const RevenueSummaryBrain = {
       statusMessage,
       nextAction,
       primaryAction,
-      flowNote: '過去売上復元ではなく、予定取り込み→売上確定の流れで運用します。'
+      flowNote: '予定取り込み→売上予定→売上確定待ち→確定売上→月次実績・整合チェックの流れで運用します。'
     };
   }
 };

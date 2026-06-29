@@ -2864,7 +2864,7 @@
     if (!el) return;
     const queue = collectRevenueConfirmationQueue();
     if (!queue.totalCount) {
-      el.innerHTML = '<p class="placeholder-text">売上確定待ちはありません。作業日を過ぎた予定がここに表示されます（未来の売上予定は下の「売上予定（未確定）」を確認）。</p>';
+      el.innerHTML = '<p class="placeholder-text">売上確定待ちはありません。作業日当日以降で、まだ売上確定していない予定がここに表示されます（未来の売上予定は下の「売上予定（未確定）」を確認）。</p>';
       bindDailyRevenueQueueEvents(el);
       return;
     }
@@ -4866,7 +4866,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.8.30</span>
+        <span class="business-report-version">v4.8.31</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -10506,7 +10506,7 @@
       if (reconciliationEl && typeof MonthlyResultsBrain !== 'undefined') {
         const report = MonthlyResultsBrain.buildReconciliationReport(records, Storage.getRevenueRecords());
         reconciliationEl.innerHTML = renderMonthlyReconciliationHtml(report, {
-          note: '読み取り専用。月次実績と売上明細の差額確認用です。'
+          note: '月次実績と売上明細の差額を確認します。自動同期はしません（読み取り専用）。'
         });
       }
     } catch (err) {
@@ -14731,18 +14731,19 @@
         <p class="revenue-flow-diagnostics-note">読み取り専用です。データの修正・削除・自動同期は行いません。</p>
         <ul class="revenue-flow-diagnostics-stats">
           <li><span>月次実績：</span><strong>${esc(monthlyLabel)}</strong></li>
-          <li><span>確定売上明細：</span><strong>${diagnostics.confirmedRevenueCount}件</strong></li>
+          <li><span>売上明細：</span><strong>${diagnostics.confirmedRevenueCount}件</strong></li>
           <li><span>作業予定：</span><strong>${diagnostics.workOrderCount}件</strong></li>
           <li><span>売上予定（未確定）：</span><strong>${diagnostics.upcomingScheduleCount}件</strong></li>
           <li><span>売上確定待ち：</span><strong>${diagnostics.revenueConfirmationQueueCount}件</strong></li>
           <li><span>整合チェック：</span><strong>${esc(diagnostics.reconciliationLabel)}</strong></li>
         </ul>
         <dl class="revenue-flow-diagnostics-defs">
-          <div><dt>月次実績</dt><dd>月単位の実績入力です。</dd></div>
-          <div><dt>確定売上明細</dt><dd>作業後に売上確定した明細です。</dd></div>
+          <div><dt>月次実績</dt><dd>月単位の確定経営数字です。売上明細とは別管理です。</dd></div>
+          <div><dt>売上明細</dt><dd>作業後に売上確定した明細です。</dd></div>
           <div><dt>作業予定</dt><dd>予定取り込みなどで保存された予定です。</dd></div>
-          <div><dt>売上予定</dt><dd>未来の未確定予定です。</dd></div>
+          <div><dt>売上予定</dt><dd>未来の未確定予定です。確定売上・月次実績とは合算しません。</dd></div>
           <div><dt>売上確定待ち</dt><dd>作業日当日以降で、まだ売上確定していない予定です。</dd></div>
+          <div><dt>整合チェック</dt><dd>月次実績と売上明細の差額を確認します。自動同期はしません。</dd></div>
         </dl>
         <p class="revenue-flow-diagnostics-status ${statusClass}">状態：${esc(diagnostics.statusMessage)}</p>
         <p class="revenue-flow-diagnostics-next">次にやること：${esc(diagnostics.nextAction)}</p>
@@ -14790,7 +14791,7 @@
          <p class="revenue-agg-scope-note">月次実績ベース分は依頼元別・サービス別の内訳には含まれません。</p>`
       : '';
     const reconciliationHtml = renderMonthlyReconciliationHtml(summary.reconciliation || [], {
-      note: '読み取り専用。データの自動修正・同期は行いません。'
+      note: '月次実績と売上明細の差額を確認します。自動同期はしません（読み取り専用）。'
     });
 
     el.innerHTML = `

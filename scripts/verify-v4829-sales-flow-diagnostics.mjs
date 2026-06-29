@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.30 sales flow diagnostics verification.
+ * Budil v4.8.31 sales flow diagnostics verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -64,11 +64,11 @@ const appJs = load('js/app.js');
 const summaryBrain = load('js/revenue-summary-brain.js');
 const css = load('css/style.css');
 
-console.log('== v4.8.30 sales flow diagnostics ==');
+console.log('== v4.8.31 sales flow diagnostics ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.30'), 'header version should be v4.8.30');
-assert(indexHtml.includes('Budil v4.8.30'), 'sidebar version should be v4.8.30');
-assert(indexHtml.includes('js/app.js?v=4.8.30'), 'app.js cache buster should be v4.8.30');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.31'), 'header version should be v4.8.31');
+assert(indexHtml.includes('Budil v4.8.31'), 'sidebar version should be v4.8.31');
+assert(indexHtml.includes('js/app.js?v=4.8.31'), 'app.js cache buster should be v4.8.31');
 assert(indexHtml.includes('id="revenue-flow-diagnostics"'), 'sales flow diagnostics block should exist');
 assert(indexHtml.includes('calendar-candidate-import-result'), 'schedule import result panel should remain');
 
@@ -186,4 +186,4 @@ const workOrders = [{
   assert(ctx.d.nextAction.includes('売上確定'), 'next action should mention post-work confirmation');
 }
 
-console.log('All v4.8.30 sales flow diagnostics checks passed.');
+console.log('All v4.8.31 sales flow diagnostics checks passed.');

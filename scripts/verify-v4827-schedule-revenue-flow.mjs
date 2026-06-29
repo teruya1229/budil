@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.30 schedule → revenue confirmation flow verification.
+ * Budil v4.8.31 schedule → revenue confirmation flow verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -72,11 +72,11 @@ const appJs = load('js/app.js');
 const summaryBrain = load('js/revenue-summary-brain.js');
 const completionBrain = load('js/work-completion-brain.js');
 
-console.log('== v4.8.30 schedule to revenue flow ==');
+console.log('== v4.8.31 schedule to revenue flow ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.30'), 'header version should be v4.8.30');
-assert(indexHtml.includes('Budil v4.8.30'), 'sidebar version should be v4.8.30');
-assert(indexHtml.includes('js/app.js?v=4.8.30'), 'app.js cache buster should be v4.8.30');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.31'), 'header version should be v4.8.31');
+assert(indexHtml.includes('Budil v4.8.31'), 'sidebar version should be v4.8.31');
+assert(indexHtml.includes('js/app.js?v=4.8.31'), 'app.js cache buster should be v4.8.31');
 assert(indexHtml.includes('\u58f2\u4e0a\u4e88\u5b9a\uff08\u672a\u78ba\u5b9a\uff09'), 'daily schedule title should show unconfirmed label');
 assert(indexHtml.includes('daily-section-schedule'), 'daily schedule section should exist');
 assert(indexHtml.indexOf('daily-section-schedule') < indexHtml.indexOf('daily-section-revenue-assist'),
@@ -84,7 +84,7 @@ assert(indexHtml.indexOf('daily-section-schedule') < indexHtml.indexOf('daily-se
 
 assert(appJs.includes('isRevenueConfirmationQueueCandidate') || summaryBrain.includes('isRevenueConfirmationQueueCandidate'), 'queue candidate filter should exist');
 assert(appJs.includes('showFlowNote'), 'daily schedule should show flow note');
-assert(appJs.includes('\u4f5c\u696d\u65e5\u3092\u904e\u304e\u305f\u4e88\u5b9a'), 'revenue queue lead should mention past work day');
+assert(appJs.includes('\u4f5c\u696d\u65e5\u5f53\u65e5\u4ee5\u964d\u3067\u3001\u307e\u3060\u58f2\u4e0a\u78ba\u5b9a\u3057\u3066\u3044\u306a\u3044\u4e88\u5b9a'), 'revenue queue lead should mention on-or-after work day');
 
 assert(summaryBrain.includes('isRevenueConfirmationQueueCandidate'), 'brain should define queue candidate helper');
 assert(summaryBrain.includes('flowNote'), 'brain should define flow note');
@@ -194,4 +194,4 @@ const confirmedWo = {
   assert(ctx.queue === false, 'confirmed work order should be excluded from revenue queue');
 }
 
-console.log('All v4.8.30 schedule to revenue flow checks passed.');
+console.log('All v4.8.31 schedule to revenue flow checks passed.');
