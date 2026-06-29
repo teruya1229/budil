@@ -10275,6 +10275,37 @@ body.sales-page {
   margin: 0 0 1rem;
 }
 
+.monthly-closing-check-block {
+  margin: 0 0 1rem;
+}
+
+.monthly-closing-check-status-list {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  list-style: none;
+  font-size: 0.88rem;
+}
+
+.monthly-closing-check-status-list li {
+  margin: 0.15rem 0;
+}
+
+.monthly-closing-check-status-list.is-ok {
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+}
+
+.monthly-closing-check-status-list.is-warn {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fcd34d;
+}
+
+.monthly-closing-check-status-list.is-info {
+  background: rgba(56, 189, 248, 0.12);
+  color: #7dd3fc;
+}
+
 .profit-expense-breakdown-block {
   margin: 0 0 1rem;
 }

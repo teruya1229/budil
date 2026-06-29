@@ -1,5 +1,5 @@
 /**
- * Budil v4.9.2 profit operations MVP verification.
+ * Budil v4.9.3 profit operations MVP verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -65,12 +65,12 @@ const appJs = load('js/app.js');
 const profitBrain = load('js/profit-brain.js');
 const css = load('css/style.css');
 
-console.log('== v4.9.2 profit operations MVP ==');
+console.log('== v4.9.3 profit operations MVP ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.2'), 'header version should be v4.9.2');
-assert(indexHtml.includes('Budil v4.9.2'), 'sidebar version should be v4.9.2');
-assert(indexHtml.includes('js/app.js?v=4.9.2'), 'app.js cache buster should be v4.9.2');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.9.2'"), 'storage version should be v4.9.2');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.3'), 'header version should be v4.9.3');
+assert(indexHtml.includes('Budil v4.9.3'), 'sidebar version should be v4.9.3');
+assert(indexHtml.includes('js/app.js?v=4.9.3'), 'app.js cache buster should be v4.9.3');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.9.3'"), 'storage version should be v4.9.3');
 
 assert(indexHtml.includes('nav-label">\u58f2\u4e0a\u7ba1\u7406'), 'nav should use \u58f2\u4e0a\u7ba1\u7406');
 assert(indexHtml.includes('nav-label">\u5229\u76ca\u7ba1\u7406'), 'nav should use \u5229\u76ca\u7ba1\u7406');
@@ -204,4 +204,4 @@ const expenses = [{
   assert(ctx.d.primaryAction && ctx.d.primaryAction.id === 'expense_breakdown', 'deficit should suggest expense breakdown');
 }
 
-console.log('All v4.9.2 profit operations MVP checks passed.');
+console.log('All v4.9.3 profit operations MVP checks passed.');

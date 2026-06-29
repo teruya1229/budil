@@ -1484,6 +1484,8 @@
     const warningsEl = document.getElementById('exec-home-warnings');
     if (warningsEl) warningsEl.innerHTML = renderExecutiveWarningsHtml(ctx.warnings);
 
+    renderMonthlyClosingCheck('exec-home-monthly-closing-check');
+
     renderExecutiveHomeCheck();
     bindExecutiveHomeEvents();
     bindExecutiveMarketingLinks();
@@ -4866,7 +4868,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.9.2</span>
+        <span class="business-report-version">v4.9.3</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -9953,6 +9955,64 @@
     navigateToView(action.view, action.scrollSelector || null);
   }
 
+  function handleMonthlyClosingAction(action) {
+    if (!action || !action.view) return;
+    navigateToView(action.view, action.scrollSelector || null);
+  }
+
+  function renderMonthlyClosingCheck(containerId) {
+    const el = document.getElementById(containerId);
+    if (!el || typeof ProfitBrain === 'undefined') return;
+    const today = TODAY();
+    const profitCtx = getProfitContext();
+    const check = ProfitBrain.buildMonthlyClosingCheck({
+      today,
+      profitCtx,
+      workOrders: Storage.getWorkOrders(),
+      revenues: Storage.getRevenueRecords(),
+      monthlyResults: Storage.getMonthlyResults(),
+      expenses: Storage.getExpenseRecords()
+    });
+    const statusClass = check.statusKey === 'ready'
+      ? 'is-ok'
+      : (check.statusKey === 'reconciliation_gap' || check.statusKey === 'revenue_queue' ? 'is-warn' : 'is-info');
+    const queueLabel = check.revenueConfirmationQueueCount > 0
+      ? `${check.revenueConfirmationQueueCount}件`
+      : 'なし';
+    const upcomingLabel = check.upcomingScheduleCount > 0
+      ? `${check.upcomingScheduleCount}件`
+      : 'なし';
+    const statusList = (check.statusMessages || [])
+      .map(msg => `<li>${esc(msg)}</li>`)
+      .join('');
+    const action = check.primaryAction;
+    const actionBtn = action
+      ? `<div class="revenue-flow-diagnostics-action-wrap"><button type="button" class="btn btn-sm btn-primary monthly-closing-check-action">${esc(action.label)}</button></div>`
+      : '';
+    el.innerHTML = `
+      <div class="revenue-flow-diagnostics monthly-closing-check">
+        <h3 class="revenue-flow-diagnostics-title">月次締めチェック</h3>
+        <p class="revenue-flow-diagnostics-note">読み取り専用です。データの修正・削除・自動同期は行いません。</p>
+        <ul class="revenue-flow-diagnostics-stats">
+          <li><span>今月売上：</span><strong>${esc(ProfitBrain.formatYen(check.monthRevenue))}</strong></li>
+          <li><span>今月経費：</span><strong>${esc(ProfitBrain.formatYen(check.monthExpense))}</strong></li>
+          <li><span>今月利益：</span><strong>${esc(ProfitBrain.formatYen(check.monthProfit))}</strong></li>
+          <li><span>売上確定待ち：</span><strong>${esc(queueLabel)}</strong></li>
+          <li><span>売上予定：</span><strong>${esc(upcomingLabel)}</strong></li>
+          <li><span>月次実績：</span><strong>${esc(check.monthlyResultLabel)}</strong></li>
+          <li><span>整合チェック：</span><strong>${esc(check.reconciliationLabel)}</strong></li>
+        </ul>
+        <ul class="monthly-closing-check-status-list ${statusClass}">${statusList}</ul>
+        <p class="revenue-flow-diagnostics-next">次にやること：${esc(check.nextAction)}</p>
+        ${actionBtn}
+        <p class="revenue-flow-diagnostics-flow">${esc(check.flowNote)}</p>
+      </div>`;
+    const btn = el.querySelector('.monthly-closing-check-action');
+    if (btn && action) {
+      btn.addEventListener('click', () => handleMonthlyClosingAction(action));
+    }
+  }
+
   function renderProfitOperationsDiagnostics(ctx) {
     const el = document.getElementById('profit-operations-diagnostics');
     if (!el || typeof ProfitBrain === 'undefined') return;
@@ -10291,6 +10351,7 @@
       const dateEl = document.getElementById('profit-expense-date');
       if (dateEl && !dateEl.value) dateEl.value = TODAY();
       const ctx = getProfitContext();
+      renderMonthlyClosingCheck('profit-monthly-closing-check');
       renderProfitOperationsDiagnostics(ctx);
       renderProfitExpenseBreakdown(ctx);
       renderProfitSummary(ctx);
@@ -15069,6 +15130,7 @@
       fillRevenueLeadSelect(leadEl ? leadEl.value : '');
       toggleRevenueLeadOptions();
       safeRenderSection('revenue-summary', () => renderRevenueSummaryPanel(), '売上サマリー');
+      safeRenderSection('revenue-monthly-closing-check', () => renderMonthlyClosingCheck('revenue-monthly-closing-check'), '月次締めチェック');
       safeRenderSection('revenue-flow-diagnostics', () => renderRevenueFlowDiagnostics(), '売上フロー診断');
       safeRenderSection('revenue-aggregation-panel', () => renderRevenueAggregationPanel(), '売上集計');
       safeRenderSection(null, () => renderRevenueAreaBrief(), '売上エリア');

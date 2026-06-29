@@ -821,5 +821,151 @@ const ProfitBrain = {
       primaryAction,
       flowNote: '売上確定→経費入力→利益集計→経費内訳。月次実績がある月は月次実績ベースを優先表示します。'
     };
+  },
+
+  buildMonthlyClosingCheck(options) {
+    const opts = options || {};
+    const today = opts.today || new Date().toISOString().slice(0, 10);
+    const profitCtx = opts.profitCtx || this.buildProfitContext({
+      today,
+      revenues: opts.revenues || [],
+      expenses: opts.expenses || [],
+      workOrders: opts.workOrders || [],
+      leads: opts.leads || [],
+      intakes: opts.intakes || [],
+      monthlyResults: opts.monthlyResults || []
+    });
+    const summary = profitCtx.summary || {};
+    const monthKey = summary.monthKey || this.currentMonthKey(today);
+    const workOrders = opts.workOrders || [];
+    const revenues = opts.revenues || (profitCtx.revenues || []);
+    const monthlyResults = opts.monthlyResults || [];
+    const expenses = opts.expenses || (profitCtx.expenses || []);
+
+    const revenueConfirmationQueueCount = typeof RevenueSummaryBrain !== 'undefined'
+      ? RevenueSummaryBrain.countRevenueConfirmationQueue(workOrders, today)
+      : 0;
+    const upcoming = typeof RevenueSummaryBrain !== 'undefined'
+      ? RevenueSummaryBrain.buildUpcomingRevenueScheduleSummary(workOrders, today)
+      : { upcomingCount: 0 };
+    const upcomingScheduleCount = upcoming.upcomingCount || 0;
+    const monthExpenses = this.filterMonthExpenses(expenses, monthKey);
+    const expenseInputCount = monthExpenses.length;
+
+    const monthlyRecord = typeof MonthlyResultsBrain !== 'undefined'
+      ? MonthlyResultsBrain.findForMonth(monthlyResults, monthKey)
+      : null;
+    const hasMonthlyResult = !!monthlyRecord;
+    const monthlyResultLabel = hasMonthlyResult ? '入力済み' : '未入力';
+
+    let reconciliationLabel = '—';
+    let hasReconciliationGap = false;
+    if (typeof MonthlyResultsBrain !== 'undefined') {
+      const row = MonthlyResultsBrain.buildReconciliationRow(monthKey, monthlyResults, revenues);
+      reconciliationLabel = row.status;
+      hasReconciliationGap = row.status === '差額あり';
+    }
+
+    const monthRevenue = Number(summary.monthRevenue) || 0;
+    const monthExpense = Number(summary.monthExpense) || 0;
+    const monthProfit = Number(summary.monthGrossProfit) || 0;
+    const isProfitable = monthProfit >= 0;
+
+    const statusMessages = [];
+    if (revenueConfirmationQueueCount > 0) {
+      statusMessages.push('未確定売上があります');
+    }
+    if (expenseInputCount === 0) {
+      statusMessages.push('経費入力がまだありません');
+    }
+    if (hasReconciliationGap) {
+      statusMessages.push('月次実績と売上明細に差額があります');
+    }
+    if (!hasMonthlyResult) {
+      statusMessages.push('月次実績が未入力です');
+    }
+    if (isProfitable && revenueConfirmationQueueCount === 0 && !hasReconciliationGap) {
+      statusMessages.push('今月の利益は黒字です');
+    }
+    if (statusMessages.length === 0
+      || (statusMessages.length === 1 && statusMessages[0] === '今月の利益は黒字です')) {
+      statusMessages.push('月次締めの確認ができます');
+    }
+
+    let statusKey = 'ready';
+    let nextAction = '月次締めの確認は完了に近い状態です。';
+    let primaryAction = {
+      id: 'ready',
+      label: '月次実績を確認する',
+      view: 'monthly-results',
+      scrollSelector: '#monthly-results-form-card'
+    };
+
+    if (revenueConfirmationQueueCount > 0) {
+      statusKey = 'revenue_queue';
+      nextAction = '売上確定待ちを確認してください。';
+      primaryAction = {
+        id: 'revenue_queue',
+        label: '売上確定待ちを見る',
+        view: 'dashboard',
+        scrollSelector: '#daily-section-revenue-queue'
+      };
+    } else if (expenseInputCount === 0) {
+      statusKey = 'no_expense';
+      nextAction = '使ったお金を経費入力に記録してください。';
+      primaryAction = {
+        id: 'daily_expense',
+        label: '経費入力を見る',
+        view: 'dashboard',
+        scrollSelector: '#daily-section-expense'
+      };
+    } else if (hasReconciliationGap) {
+      statusKey = 'reconciliation_gap';
+      nextAction = '整合チェックを確認してください。';
+      primaryAction = {
+        id: 'reconciliation',
+        label: '整合チェックを見る',
+        view: 'revenue',
+        scrollSelector: '#revenue-reconciliation-check'
+      };
+    } else if (!hasMonthlyResult) {
+      statusKey = 'no_monthly';
+      nextAction = '月次実績を入力してください。';
+      primaryAction = {
+        id: 'monthly_results',
+        label: '月次実績を入力する',
+        view: 'monthly-results',
+        scrollSelector: '#monthly-results-form-card'
+      };
+    } else if (upcomingScheduleCount > 0) {
+      statusKey = 'upcoming';
+      nextAction = '今後の売上予定を確認してください。';
+      primaryAction = {
+        id: 'upcoming',
+        label: '売上予定を見る',
+        view: 'revenue',
+        scrollSelector: '#revenue-upcoming-schedule'
+      };
+    }
+
+    return {
+      monthKey,
+      monthRevenue,
+      monthExpense,
+      monthProfit,
+      revenueConfirmationQueueCount,
+      upcomingScheduleCount,
+      monthlyResultLabel,
+      hasMonthlyResult,
+      reconciliationLabel,
+      hasReconciliationGap,
+      expenseInputCount,
+      usesMonthlyResult: !!summary.usesMonthlyResult,
+      statusMessages,
+      statusKey,
+      nextAction,
+      primaryAction,
+      flowNote: '今月の売上→今月の経費→今月の利益→未確定の売上→月次実績との整合→月次締めで次にやること'
+    };
   }
 };

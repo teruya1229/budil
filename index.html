@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.9.2">
+  <link rel="stylesheet" href="css/style.css?v=4.9.3">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.9.2</small>
+          <small>AI経営脳みそ v4.9.3</small>
         </div>
       </div>
       <nav class="nav">
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.9.2</small>
+        <small>Budil v4.9.3</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">毎朝5分で、今日の結論・売上・直近予定・集客管理を確認</p>
             </div>
-            <span class="exec-home-version">v4.9.2</span>
+            <span class="exec-home-version">v4.9.3</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
           <details class="exec-collapse exec-home-start-collapse" id="exec-home-start-collapse">
@@ -215,6 +215,10 @@
             <div class="exec-home-block exec-tower-block-upcoming">
               <h3>売上予定</h3>
               <div id="exec-home-upcoming-schedule" class="exec-home-upcoming-schedule"></div>
+            </div>
+            <div class="exec-home-block exec-home-block-monthly-closing exec-tower-span-full">
+              <h3>月次締めチェック</h3>
+              <div id="exec-home-monthly-closing-check" class="monthly-closing-check-block" aria-live="polite"></div>
             </div>
             <div class="exec-home-block exec-tower-block-marketing">
               <h3>集客管理</h3>
@@ -524,7 +528,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.9.2</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.9.3</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -1964,6 +1968,7 @@
           <div id="revenue-summary" class="revenue-summary-grid"></div>
           <div id="revenue-upcoming-schedule" class="upcoming-revenue-schedule-block"></div>
           <div id="revenue-monthly-reconciliation" class="revenue-monthly-reconciliation"></div>
+          <div id="revenue-monthly-closing-check" class="monthly-closing-check-block" aria-live="polite"></div>
           <p id="revenue-bantou-comment" class="revenue-bantou-comment"></p>
           <div id="revenue-area-brief" class="revenue-area-brief"></div>
         </div>
@@ -2446,6 +2451,7 @@
 
         <div class="card card-wide card-profit-comment">
           <h2>経営サマリー（今月）</h2>
+          <div id="profit-monthly-closing-check" class="monthly-closing-check-block" aria-live="polite"></div>
           <div id="profit-operations-diagnostics" class="profit-operations-diagnostics-block" aria-live="polite"></div>
           <div id="profit-expense-breakdown" class="profit-expense-breakdown-block" aria-live="polite"></div>
           <div id="profit-summary" class="profit-summary-grid"></div>
@@ -3389,30 +3395,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.9.2"></script>
-  <script src="js/messages.js?v=4.9.2"></script>
-  <script src="js/demand-brain.js?v=4.9.2"></script>
-  <script src="js/demand-radar.js?v=4.9.2"></script>
-  <script src="js/sales-brain.js?v=4.9.2"></script>
-  <script src="js/management-brain.js?v=4.9.2"></script>
-  <script src="js/payment-brain.js?v=4.9.2"></script>
-  <script src="js/revenue-brain.js?v=4.9.2"></script>
-  <script src="js/revenue-summary-brain.js?v=4.9.2"></script>
-  <script src="js/reception-brain.js?v=4.9.2"></script>
-  <script src="js/map-brain.js?v=4.9.2"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.9.2"></script>
-  <script src="js/external-check-brain.js?v=4.9.2"></script>
-  <script src="js/action-brain.js?v=4.9.2"></script>
-  <script src="js/work-order-brain.js?v=4.9.2"></script>
-  <script src="js/follow-up-brain.js?v=4.9.2"></script>
-  <script src="js/work-completion-brain.js?v=4.9.2"></script>
-  <script src="js/profit-brain.js?v=4.9.2"></script>
-  <script src="js/analytics-brain.js?v=4.9.2"></script>
-  <script src="js/monthly-results-brain.js?v=4.9.2"></script>
-  <script src="js/documents-brain.js?v=4.9.2"></script>
-  <script src="js/executive-brain.js?v=4.9.2"></script>
-  <script src="js/card-ocr.js?v=4.9.2"></script>
-  <script src="js/data-backup.js?v=4.9.2"></script>
-  <script src="js/app.js?v=4.9.2"></script>
+  <script src="js/storage.js?v=4.9.3"></script>
+  <script src="js/messages.js?v=4.9.3"></script>
+  <script src="js/demand-brain.js?v=4.9.3"></script>
+  <script src="js/demand-radar.js?v=4.9.3"></script>
+  <script src="js/sales-brain.js?v=4.9.3"></script>
+  <script src="js/management-brain.js?v=4.9.3"></script>
+  <script src="js/payment-brain.js?v=4.9.3"></script>
+  <script src="js/revenue-brain.js?v=4.9.3"></script>
+  <script src="js/revenue-summary-brain.js?v=4.9.3"></script>
+  <script src="js/reception-brain.js?v=4.9.3"></script>
+  <script src="js/map-brain.js?v=4.9.3"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.9.3"></script>
+  <script src="js/external-check-brain.js?v=4.9.3"></script>
+  <script src="js/action-brain.js?v=4.9.3"></script>
+  <script src="js/work-order-brain.js?v=4.9.3"></script>
+  <script src="js/follow-up-brain.js?v=4.9.3"></script>
+  <script src="js/work-completion-brain.js?v=4.9.3"></script>
+  <script src="js/profit-brain.js?v=4.9.3"></script>
+  <script src="js/analytics-brain.js?v=4.9.3"></script>
+  <script src="js/monthly-results-brain.js?v=4.9.3"></script>
+  <script src="js/documents-brain.js?v=4.9.3"></script>
+  <script src="js/executive-brain.js?v=4.9.3"></script>
+  <script src="js/card-ocr.js?v=4.9.3"></script>
+  <script src="js/data-backup.js?v=4.9.3"></script>
+  <script src="js/app.js?v=4.9.3"></script>
 </body>
 </html>
