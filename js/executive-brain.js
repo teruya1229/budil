@@ -266,7 +266,7 @@ const ExecutiveBrain = {
         rank: 5,
         title: hint.title || '利益改善を確認',
         reason: hint.detail || '支出・粗利の注意点を確認',
-        source: '支出登録・計算',
+        source: '利益管理',
         sourceKey: 'profit',
         dedupeKey: ['exec-priority', today, 'profit', hint.type].join('|')
       });

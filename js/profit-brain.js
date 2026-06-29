@@ -521,7 +521,7 @@ const ProfitBrain = {
       push('direct', '直受け強化：口コミ・LINE・GBPを増やす', '直受けの利益が良い傾向です。口コミ・LINE・GBPを増やしましょう。');
     }
     if (!hints.length && expenses.length === 0) {
-      push('start', '支出登録：今月の支出を1件登録', '薬剤・燃料・広告費などを登録すると利益が見えます。');
+      push('start', '経費入力：今月の経費を1件記録', '薬剤・燃料・広告費などを記録すると利益が見えます。');
     }
     return hints.slice(0, 6);
   },

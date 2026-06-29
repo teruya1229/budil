@@ -3606,7 +3606,7 @@
             <li>カレンダー登録</li>
             <li>売上登録</li>
             <li>フォロー</li>
-            <li>支出登録・計算</li>
+            <li>利益管理</li>
             <li>アナリティクス</li>
             <li>経営レポート</li>
             <li>データ診断</li>
@@ -3770,7 +3770,7 @@
           <li>売上登録</li>
           <li>売上登録</li>
           <li>フォロー</li>
-          <li>支出登録・計算</li>
+          <li>利益管理</li>
           <li>アナリティクス</li>
           <li>経営レポート</li>
           <li>データ診断</li>
@@ -4866,7 +4866,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.9.0</span>
+        <span class="business-report-version">v4.9.1</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
