@@ -235,10 +235,12 @@ const ProfitBrain = {
     const activeStatuses = typeof WorkOrderBrain !== 'undefined'
       ? WorkOrderBrain.ACTIVE_STATUSES
       : ['tentative', 'confirmed', 'completed'];
-    return (workOrders || [])
-      .filter(w => w && activeStatuses.includes(w.status) && !w.actualRevenueId)
-      .slice()
-      .sort((a, b) => (a.scheduledDate || '').localeCompare(b.scheduledDate || ''))
+    const sorted = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.sortByScheduledDateTimeAsc(
+        (workOrders || []).filter(w => w && activeStatuses.includes(w.status) && !w.actualRevenueId)
+      )
+      : (workOrders || []).filter(w => w && activeStatuses.includes(w.status) && !w.actualRevenueId);
+    return sorted
       .map(w => {
         const linked = this.getExpensesForWorkOrder(w.id, expenses);
         const estimate = Number(w.estimateAmount || 0);

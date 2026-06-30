@@ -2842,18 +2842,15 @@
       workOrderItems.push({
         type: 'work-order',
         id: wo.id,
-        sortKey: isCompleted ? 0 : 1,
         scheduledDate: wo.scheduledDate || '',
+        startTime: wo.startTime || '',
+        endTime: wo.endTime || '',
+        createdAt: wo.createdAt || '',
         customerName: wo.customerName || 'お客様',
         serviceText: wo.serviceText || '',
         amount: wo.estimateAmount,
         statusLabel
       });
-    });
-
-    workOrderItems.sort((a, b) => {
-      if (a.sortKey !== b.sortKey) return a.sortKey - b.sortKey;
-      return (b.scheduledDate || '').localeCompare(a.scheduledDate || '');
     });
 
     const workOrderIds = new Set(workOrderItems.map(item => item.id));
@@ -2879,6 +2876,9 @@
           type: 'past-recovery',
           id: wo.id,
           scheduledDate: wo.scheduledDate || '',
+          startTime: wo.startTime || '',
+          endTime: wo.endTime || '',
+          createdAt: wo.createdAt || '',
           customerName: wo.customerName || 'お客様',
           serviceText: wo.serviceText || '',
           amount: wo.estimateAmount,
@@ -2887,9 +2887,7 @@
       });
     }
 
-    pastRecoveryItems.sort((a, b) => (b.scheduledDate || '').localeCompare(a.scheduledDate || ''));
-
-    const allItems = [...workOrderItems, ...pastRecoveryItems];
+    const allItems = WorkOrderBrain.sortByScheduledDateTimeAsc([...workOrderItems, ...pastRecoveryItems]);
     return {
       visible: allItems.slice(0, 3),
       hiddenCount: Math.max(0, allItems.length - 3),
@@ -7979,8 +7977,18 @@
         : '';
     }
     if (listEl) {
-      listEl.innerHTML = (preview.items || []).length
-        ? preview.items.map((item, i) => {
+      const previewItems = (preview.items || [])
+        .map((item, originalIndex) => ({ item, originalIndex }))
+        .sort((a, b) => {
+          const ca = (a.item.candidate || {});
+          const cb = (b.item.candidate || {});
+          return WorkOrderBrain.compareScheduledDateTimeAsc(
+            { scheduledDate: ca.scheduledDate, startTime: ca.startTime, endTime: ca.endTime, createdAt: ca.createdAt },
+            { scheduledDate: cb.scheduledDate, startTime: cb.startTime, endTime: cb.endTime, createdAt: cb.createdAt }
+          );
+        });
+      listEl.innerHTML = previewItems.length
+        ? previewItems.map(({ item, originalIndex }) => {
           const c = item.candidate;
           const isExcluded = item.futureImport && item.futureImport.status === 'excluded';
           const dup = item.isDuplicate
@@ -8009,7 +8017,7 @@
             ${itemWarnings}
             ${excluded}
             ${dup}
-            <button type="button" class="btn btn-sm btn-primary" data-cal-save-one="${i}"${saveDisabled ? ' disabled' : ''}>作業予定として保存</button>
+            <button type="button" class="btn btn-sm btn-primary" data-cal-save-one="${originalIndex}"${saveDisabled ? ' disabled' : ''}>作業予定として保存</button>
           </div>`;
         }).join('')
         : '<p class="placeholder-text">解析結果がありません</p>';
@@ -8123,10 +8131,11 @@
   function renderCalendarCandidateSavedList() {
     const el = document.getElementById('calendar-candidate-saved-list');
     if (!el || typeof CalendarCandidateBrain === 'undefined') return;
-    const list = Storage.getWorkOrders()
-      .filter(w => CalendarCandidateBrain.isCalendarCandidateWorkOrder(w))
-      .map(w => WorkOrderBrain.normalizeWorkOrder(w))
-      .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+    const list = WorkOrderBrain.sortByScheduledDateTimeAsc(
+      Storage.getWorkOrders()
+        .filter(w => CalendarCandidateBrain.isCalendarCandidateWorkOrder(w))
+        .map(w => WorkOrderBrain.normalizeWorkOrder(w))
+    );
     if (!list.length) {
       el.innerHTML = '<p class="placeholder-text">取り込み済みの作業予定はありません。上のカレンダーJSON取り込みから今日以降の予定を読み込んでください。</p>';
       return;

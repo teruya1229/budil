@@ -16,7 +16,7 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.10.6 |
+| 最新バージョン | v4.10.7 |
 | 最新commit | f4c6f84 |
 | ブランチ | `main` push 済み |
 
@@ -46,6 +46,14 @@ output/budil-calendar-events.json
 
 - Firebase / Functions API 案（`hub/functions`）は **一旦保留**。将来候補としてコードは残置
 - v4.10.1 の JSON ファイル取り込み・貼り付け取り込みは維持
+
+## v4.10.7で入ったもの
+
+- 日付系一覧（取り込み済み予定・今週/今日の作業予定・見込み利益・売上予定・売上確定待ち）を date → startTime → endTime → createdAt 昇順に統一
+- `WorkOrderBrain.sortByScheduledDateTimeAsc` / `compareScheduledDateTimeAsc` を共通化
+- verify `scripts/verify-v4107-date-sort-order.mjs`
+- cache buster を v4.10.7 に更新
+- v4.10.6 以降の既存機能は維持
 
 ## v4.10.6で入ったもの
 

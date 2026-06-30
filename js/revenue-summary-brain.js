@@ -689,14 +689,20 @@ const RevenueSummaryBrain = {
   buildUpcomingRevenueScheduleSummary(workOrders, today) {
     const t = today || new Date().toISOString().slice(0, 10);
     const monthKey = t.slice(0, 7);
-    const eligible = (workOrders || [])
-      .map(w => this.normalizeScheduleWorkOrder(w))
-      .filter(w => this.isUpcomingRevenueScheduleWorkOrder(w, t))
-      .sort((a, b) => {
-        const d = (a.scheduledDate || '').localeCompare(b.scheduledDate || '');
-        if (d !== 0) return d;
-        return (a.startTime || '').localeCompare(b.startTime || '');
-      });
+    const eligible = (typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.sortByScheduledDateTimeAsc(
+        (workOrders || [])
+          .map(w => this.normalizeScheduleWorkOrder(w))
+          .filter(w => this.isUpcomingRevenueScheduleWorkOrder(w, t))
+      )
+      : (workOrders || [])
+        .map(w => this.normalizeScheduleWorkOrder(w))
+        .filter(w => this.isUpcomingRevenueScheduleWorkOrder(w, t))
+        .sort((a, b) => {
+          const d = (a.scheduledDate || '').localeCompare(b.scheduledDate || '');
+          if (d !== 0) return d;
+          return (a.startTime || '').localeCompare(b.startTime || '');
+        }));
     const thisMonth = eligible.filter(w => w.scheduledDate && w.scheduledDate.startsWith(monthKey));
     const monthTotal = thisMonth.reduce((sum, w) => sum + Number(w.estimateAmount || 0), 0);
     return {

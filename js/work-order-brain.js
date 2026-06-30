@@ -214,6 +214,22 @@ const WorkOrderBrain = {
     return { url: 'https://calendar.google.com/calendar/render?' + params.toString(), ready: true, reason: '' };
   },
 
+  compareScheduledDateTimeAsc(a, b) {
+    const dateA = a.scheduledDate || a.date || '';
+    const dateB = b.scheduledDate || b.date || '';
+    const d = dateA.localeCompare(dateB);
+    if (d !== 0) return d;
+    const st = (a.startTime || '').localeCompare(b.startTime || '');
+    if (st !== 0) return st;
+    const et = (a.endTime || '').localeCompare(b.endTime || '');
+    if (et !== 0) return et;
+    return (a.createdAt || '').localeCompare(b.createdAt || '');
+  },
+
+  sortByScheduledDateTimeAsc(items) {
+    return (items || []).slice().sort((a, b) => this.compareScheduledDateTimeAsc(a, b));
+  },
+
   filterActive(workOrders) {
     return this.forOperationalList(workOrders).map(w => this.normalizeWorkOrder(w))
       .filter(w => w.status !== 'archived' && w.status !== 'cancelled');
@@ -221,23 +237,23 @@ const WorkOrderBrain = {
 
   getTodayWorkOrders(workOrders, today) {
     const t = today || new Date().toISOString().slice(0, 10);
-    return this.filterActive(workOrders).filter(w =>
-      w.scheduledDate === t && this.ACTIVE_STATUSES.includes(w.status)
+    return this.sortByScheduledDateTimeAsc(
+      this.filterActive(workOrders).filter(w =>
+        w.scheduledDate === t && this.ACTIVE_STATUSES.includes(w.status)
+      )
     );
   },
 
   getWeekWorkOrders(workOrders, today) {
     const t = today || new Date().toISOString().slice(0, 10);
     const end = this.addDays(t, 6);
-    return this.filterActive(workOrders).filter(w => {
-      if (!w.scheduledDate) return false;
-      return w.scheduledDate >= t && w.scheduledDate <= end
-        && this.ACTIVE_STATUSES.includes(w.status);
-    }).sort((a, b) => {
-      const d = (a.scheduledDate || '').localeCompare(b.scheduledDate || '');
-      if (d !== 0) return d;
-      return (a.startTime || '').localeCompare(b.startTime || '');
-    });
+    return this.sortByScheduledDateTimeAsc(
+      this.filterActive(workOrders).filter(w => {
+        if (!w.scheduledDate) return false;
+        return w.scheduledDate >= t && w.scheduledDate <= end
+          && this.ACTIVE_STATUSES.includes(w.status);
+      })
+    );
   },
 
   sumEstimate(workOrders) {
@@ -396,6 +412,9 @@ const WorkOrderBrain = {
       if (!groups[d]) groups[d] = [];
       groups[d].push(w);
     });
-    return Object.keys(groups).sort().map(date => ({ date, items: groups[date] }));
+    return Object.keys(groups).sort().map(date => ({
+      date,
+      items: this.sortByScheduledDateTimeAsc(groups[date])
+    }));
   }
 };
