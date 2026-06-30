@@ -10393,6 +10393,87 @@ body.sales-page {
   padding: 0 0.85rem 0.85rem;
 }
 
+.exec-home-operations-start-check-block {
+  margin: 0 0 1rem;
+}
+
+.exec-home-operations-start-check {
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.exec-home-operations-start-check.is-ok {
+  border-color: rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.exec-home-operations-start-check.is-warn {
+  border-color: rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.exec-home-operations-start-check.is-info {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.exec-home-operations-start-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.exec-home-operations-start-status {
+  margin: 0 0 0.55rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.exec-home-operations-start-stats {
+  margin: 0 0 0.55rem;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.exec-home-operations-start-stats li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.86rem;
+  color: #cbd5e1;
+}
+
+.exec-home-operations-start-stats strong {
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+.exec-home-operations-start-next {
+  margin: 0 0 0.55rem;
+  font-size: 0.88rem;
+  color: #e2e8f0;
+}
+
+.exec-home-operations-start-action-wrap {
+  margin: 0;
+}
+
+.exec-home-operations-start-action-wrap .btn {
+  width: 100%;
+}
+
+@media (max-width: 390px) {
+  .exec-home-operations-start-stats li {
+    flex-wrap: wrap;
+  }
+}
+
 .exec-home-priority-action-block {
   margin: 0 0 1rem;
 }

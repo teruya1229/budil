@@ -1455,6 +1455,7 @@
     updateExecutiveSectionBadges(ctx);
 
     renderExecutivePriorityAction();
+    renderOperationsStartCheck();
 
     const conclusionEl = document.getElementById('exec-home-conclusion');
     if (conclusionEl) {
@@ -4883,7 +4884,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.9.9</span>
+        <span class="business-report-version">v4.10.0</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -9983,6 +9984,54 @@
   function handleExecutivePriorityAction(action) {
     if (!action || !action.view) return;
     navigateToView(action.view, action.scrollSelector || null);
+  }
+
+  function handleOperationsStartAction(action) {
+    if (!action || !action.view) return;
+    navigateToView(action.view, action.scrollSelector || null);
+  }
+
+  function renderOperationsStartCheck() {
+    const el = document.getElementById('exec-home-operations-start-check');
+    if (!el || typeof ProfitBrain === 'undefined') return;
+    const check = ProfitBrain.buildOperationsStartCheck({
+      today: TODAY(),
+      workOrders: Storage.getWorkOrders(),
+      revenues: Storage.getRevenueRecords(),
+      expenses: Storage.getExpenseRecords(),
+      monthlyResults: Storage.getMonthlyResults(),
+      settings: Storage.getSettings()
+    });
+    const statusClass = check.statusKey === 'ok'
+      ? 'is-ok'
+      : (check.statusKey === 'test_data' || check.statusKey === 'backup' ? 'is-warn' : 'is-info');
+    const action = check.primaryAction;
+    const actionBtn = action
+      ? `<div class="exec-home-operations-start-action-wrap"><button type="button" class="btn btn-sm btn-primary exec-home-operations-start-action-btn">${esc(action.label)}</button></div>`
+      : '';
+    const testDataLabel = check.testLikeCount > 0
+      ? `${check.testLikeCount}件`
+      : 'なし';
+    el.innerHTML = `
+      <div class="exec-home-operations-start-check ${statusClass}">
+        <h3 class="exec-home-operations-start-title">実運用開始チェック</h3>
+        <p class="exec-home-operations-start-status">${esc(check.statusLabel)}</p>
+        <ul class="exec-home-operations-start-stats">
+          <li><span>バックアップ：</span><strong>${esc(check.backupLabel)}</strong></li>
+          <li><span>売上予定：</span><strong>${check.upcomingCount}件</strong></li>
+          <li><span>売上確定待ち：</span><strong>${check.revenueQueueCount}件</strong></li>
+          <li><span>今月の経費入力：</span><strong>${check.monthExpenseCount}件</strong></li>
+          <li><span>月次実績：</span><strong>${esc(check.monthlyLabel)}</strong></li>
+          <li><span>データ整合チェック：</span><strong>${esc(check.consistencyLabel)}</strong></li>
+          <li><span>テストデータらしき予定：</span><strong>${esc(testDataLabel)}</strong></li>
+        </ul>
+        <p class="exec-home-operations-start-next">次にやること：${esc(check.nextAction)}</p>
+        ${actionBtn}
+      </div>`;
+    const btn = el.querySelector('.exec-home-operations-start-action-btn');
+    if (btn && action) {
+      btn.addEventListener('click', () => handleOperationsStartAction(action));
+    }
   }
 
   function renderExecutivePriorityAction() {

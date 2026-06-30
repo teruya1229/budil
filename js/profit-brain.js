@@ -1353,5 +1353,145 @@ const ProfitBrain = {
         orphanActualRevenueId
       }
     };
+  },
+
+  OPERATIONS_START_TEST_PATTERNS: [
+    'テスト', '確認', 'v499', '既存fmt', 'サンプル', 'dummy', 'sample'
+  ],
+
+  matchesOperationsStartTestPattern(text) {
+    const raw = String(text || '');
+    const lower = raw.toLowerCase();
+    return this.OPERATIONS_START_TEST_PATTERNS.some(pattern => {
+      if (/^[a-z]+$/i.test(pattern)) return lower.includes(pattern.toLowerCase());
+      return raw.includes(pattern);
+    });
+  },
+
+  isTestLikeWorkOrder(wo) {
+    if (!wo || typeof wo !== 'object') return false;
+    const haystack = [wo.customerName, wo.serviceText].map(v => String(v || '')).join(' ');
+    return this.matchesOperationsStartTestPattern(haystack);
+  },
+
+  detectTestLikeWorkOrders(workOrders) {
+    return (workOrders || []).filter(wo => this.isTestLikeWorkOrder(wo));
+  },
+
+  buildOperationsStartCheck(options) {
+    const opts = options || {};
+    const today = opts.today || new Date().toISOString().slice(0, 10);
+    const settings = opts.settings || {};
+    const workOrders = opts.workOrders || [];
+    const consistency = this.buildDataConsistencyCheck({ ...opts, today });
+    const upcoming = typeof RevenueSummaryBrain !== 'undefined'
+      ? RevenueSummaryBrain.buildUpcomingRevenueScheduleSummary(workOrders, today)
+      : { upcomingCount: 0 };
+
+    const testLikeOrders = this.detectTestLikeWorkOrders(workOrders);
+    const testLikeCount = testLikeOrders.length;
+    const needsBackupCheck = !settings.lastBackupAt;
+    let backupLabel = '確認してください';
+    if (!needsBackupCheck) {
+      backupLabel = typeof DataBackup !== 'undefined' && DataBackup.formatBackupDate
+        ? DataBackup.formatBackupDate(settings.lastBackupAt)
+        : '保存済み';
+    }
+
+    const upcomingCount = upcoming.upcomingCount || 0;
+    const revenueQueueCount = consistency.revenueQueueCount || 0;
+    const monthExpenseCount = consistency.monthExpenseInputCount || 0;
+    const hasCurrentMonthMonthly = !!consistency.hasCurrentMonthMonthly;
+    const monthlyLabel = hasCurrentMonthMonthly ? '入力済み' : '未入力';
+    const consistencyReviewCount = consistency.reviewCount || 0;
+    const consistencyLabel = consistencyReviewCount > 0
+      ? `確認が必要な項目 ${consistencyReviewCount}件`
+      : '問題なし';
+
+    let statusKey = 'ok';
+    let statusLabel = '状態：実運用を開始できます';
+    let nextAction = '大きな問題はありません。実運用を開始できます。';
+    let primaryAction = null;
+
+    if (testLikeCount > 0) {
+      statusKey = 'test_data';
+      statusLabel = '状態：確認が必要です';
+      nextAction = 'テストデータを確認してください。';
+      primaryAction = {
+        id: 'test_data',
+        label: '予定取り込みを見る',
+        view: 'calendar-candidate',
+        scrollSelector: '#calendar-candidate-saved-list'
+      };
+    } else if (needsBackupCheck) {
+      statusKey = 'backup';
+      statusLabel = '状態：確認が必要です';
+      nextAction = '実運用前にバックアップを確認してください。';
+      primaryAction = {
+        id: 'backup',
+        label: 'バックアップを見る',
+        view: 'data',
+        scrollSelector: '.backup-status-card'
+      };
+    } else if (revenueQueueCount > 0) {
+      statusKey = 'revenue_queue';
+      statusLabel = '状態：確認が必要です';
+      nextAction = '売上確定待ちを確認してください。';
+      primaryAction = {
+        id: 'revenue_queue',
+        label: '売上確定待ちを見る',
+        view: 'dashboard',
+        scrollSelector: '#daily-section-revenue-queue'
+      };
+    } else if (monthExpenseCount === 0) {
+      statusKey = 'no_expense';
+      statusLabel = '状態：確認が必要です';
+      nextAction = '使ったお金を経費入力に記録してください。';
+      primaryAction = {
+        id: 'daily_expense',
+        label: '経費入力を見る',
+        view: 'dashboard',
+        scrollSelector: '#daily-section-expense'
+      };
+    } else if (!hasCurrentMonthMonthly) {
+      statusKey = 'no_monthly';
+      statusLabel = '状態：確認が必要です';
+      nextAction = '月次実績を確認してください。';
+      primaryAction = {
+        id: 'monthly_results',
+        label: '月次実績を見る',
+        view: 'monthly-results',
+        scrollSelector: '#monthly-results-form-card'
+      };
+    } else if (consistencyReviewCount > 0) {
+      statusKey = 'consistency';
+      statusLabel = '状態：確認が必要です';
+      nextAction = 'データ整合チェックを確認してください。';
+      primaryAction = {
+        id: 'consistency',
+        label: 'データ整合チェックを見る',
+        view: 'data',
+        scrollSelector: '#data-consistency-check'
+      };
+    }
+
+    return {
+      today,
+      statusKey,
+      statusLabel,
+      backupLabel,
+      needsBackupCheck,
+      upcomingCount,
+      revenueQueueCount,
+      monthExpenseCount,
+      monthlyLabel,
+      hasCurrentMonthMonthly,
+      consistencyReviewCount,
+      consistencyLabel,
+      testLikeCount,
+      testLikeOrders,
+      nextAction,
+      primaryAction
+    };
   }
 };
