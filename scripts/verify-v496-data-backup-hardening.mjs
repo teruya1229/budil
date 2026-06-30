@@ -1,7 +1,7 @@
 /**
  * Budil v4.10.1 data backup hardening verification.
  */
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,18 +12,40 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-function readSourceFiles(dir, out = []) {
-  for (const name of readdirSync(dir)) {
-    const path = join(dir, name);
-    const rel = relative(root, path).replace(/\\/g, '/');
-    if (rel.startsWith('.git/') || rel.startsWith('auth/') || rel.startsWith('hub/')) continue;
-    if (rel === 'js/hub-import.js') continue;
-    if (rel === 'scripts/verify-v496-data-backup-hardening.mjs') continue;
-    const st = statSync(path);
-    if (st.isDirectory()) readSourceFiles(path, out);
-    else if (/\.(js|mjs|html|md)$/.test(name)) out.push(path);
+/** アプリ本体のみ（index.html + js/*.js）。verify / docs は対象外。 */
+function collectAppSourceFiles() {
+  const files = [join(root, 'index.html')];
+  const jsDir = join(root, 'js');
+  for (const name of readdirSync(jsDir)) {
+    if (!name.endsWith('.js')) continue;
+    if (name === 'hub-import.js') continue;
+    files.push(join(jsDir, name));
   }
-  return out;
+  return files;
+}
+
+/** コメント・文字列リテラルを除いたうえで localStorage.clear( の実呼び出しを検出 */
+function stripCommentsAndStringLiterals(code) {
+  return String(code || '')
+    .replace(/\/\/.*$/gm, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/'(?:\\.|[^'\\])*'/g, '""')
+    .replace(/"(?:\\.|[^"\\])*"/g, '""')
+    .replace(/`(?:\\.|[^`\\])*`/g, '""');
+}
+
+function hasLocalStorageClearCall(code) {
+  return /localStorage\s*\.\s*clear\s*\(/.test(stripCommentsAndStringLiterals(code));
+}
+
+function findLocalStorageClearInAppSources(files) {
+  const hits = [];
+  for (const filePath of files) {
+    const rel = relative(root, filePath).replace(/\\/g, '/');
+    const content = readFileSync(filePath, 'utf8');
+    if (hasLocalStorageClearCall(content)) hits.push(rel);
+  }
+  return hits;
 }
 
 execSync(`node --check "${join(root, 'js', 'app.js')}"`, { stdio: 'inherit' });
@@ -43,8 +65,12 @@ assert(indexHtml.includes('js/app.js?v=4.10.1'), 'app.js cache buster should be 
 assert(storageJs.includes("BUDIL_VERSION: 'v4.10.1'"), 'storage version should be v4.10.1');
 assert(dataBackupJs.includes("APP_VERSION: 'v4.10.1'"), 'data-backup version should be v4.10.1');
 
-const sourceText = readSourceFiles(root).map(p => readFileSync(p, 'utf8')).join('\n');
-assert(!(new RegExp('localStorage' + '\\.clear\\s*\\(')).test(sourceText), 'localStorage.clear must not be used');
+const appSourceFiles = collectAppSourceFiles();
+const clearHits = findLocalStorageClearInAppSources(appSourceFiles);
+assert(
+  clearHits.length === 0,
+  `localStorage.clear must not be used in app sources (found in: ${clearHits.join(', ') || 'n/a'})`
+);
 
 const protectedKeys = [
   'budil_revenue_records',
