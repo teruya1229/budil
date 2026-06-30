@@ -1901,7 +1901,7 @@
     }
     if (!lines.length) {
       if (!opts.brief) {
-        el.innerHTML = '<p class="placeholder-text">データが揃うと、今月の状況と優先アクションをここに表示します。まずは営業先と売上を1件ずつ登録してみましょう。</p>';
+        el.innerHTML = '<p class="placeholder-text">データが揃うと、今月の状況と優先アクションをここに表示します。まずは営業先と売上明細を1件ずつ追加してみましょう。</p>';
       } else {
         el.innerHTML = '';
       }
@@ -3133,7 +3133,7 @@
     if (!el) return;
     el.classList.remove('hidden');
     el.innerHTML = `
-      <p class="daily-revenue-notice-text">売上を登録しました。売上一覧で確認できます。</p>
+      <p class="daily-revenue-notice-text">売上明細を保存しました。売上一覧で確認できます。</p>
       <div class="daily-revenue-notice-actions">
         <button type="button" class="btn btn-sm btn-primary" data-daily-revenue-go-list>売上一覧を見る</button>
         <button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-stay>この画面に残る</button>
@@ -3442,7 +3442,7 @@
     const monthlyBrief = overlay && overlay.usesMonthlyResult
       ? renderCurrentMonthReconciliationBrief(summary.monthKey, overlay)
       : '';
-    const plannedLabel = overlay && overlay.usesMonthlyResult ? '今月実績' : '売上予定';
+    const plannedLabel = overlay && overlay.usesMonthlyResult ? '今月実績' : '確定売上';
     const lines = [
       monthlyBrief,
       `<p class="revenue-summary-line">${plannedLabel}：<strong>${esc(RevenueBrain.formatYen(summary.planned))}</strong>${overlay && overlay.usesMonthlyResult ? ' <span class="revenue-monthly-badge">月次実績ベース</span>' : ''}</p>`,
@@ -3586,10 +3586,10 @@
     { key: 'businessProfile', label: '事業プロフィールを設定', btn: '設定する', action: 'profile' },
     { key: 'monthlyTarget', label: '月間売上目標を設定', btn: '設定する', action: 'target' },
     { key: 'leads', label: '営業先を1件登録', btn: '登録する', action: 'lead' },
-    { key: 'revenue', label: '売上を1件登録', btn: '登録する', action: 'revenue' },
+    { key: 'revenue', label: '売上明細を1件追加', btn: '追加する', action: 'revenue' },
     { key: 'pickups', label: 'クロクロ需要を3件取り込み', btn: '開く', action: 'pickup' },
     { key: 'reception', label: 'AI番頭受付を1件取り込む', btn: '開く', action: 'reception' },
-    { key: 'taskCompleted', label: '毎日やることを1件完了', btn: '開く', action: 'task' },
+    { key: 'taskCompleted', label: '毎日やることを1件済ませる', btn: '開く', action: 'task' },
     { key: 'reportGenerated', label: '経営レポートをコピー', btn: 'コピーする', action: 'report' }
   ];
 
@@ -3929,8 +3929,11 @@
     const containerId = mode === 'detail' ? 'product-overview-data' : 'product-overview-dash';
     const el = document.getElementById(containerId);
     if (!el) return;
+    const titleHtml = mode === 'detail'
+      ? ''
+      : '<h2>Budilでできること</h2>';
     el.innerHTML = `
-      <h2>Budilでできること</h2>
+      ${titleHtml}
       <p class="product-overview-lead">${mode === 'detail'
         ? 'Budilの主要機能一覧です。デモや説明時にご利用ください。'
         : 'このツールでできることをまとめています。'}</p>
@@ -3950,8 +3953,9 @@
     const containerId = mode === 'detail' ? 'recommended-ops-data' : 'recommended-ops-dash';
     const el = document.getElementById(containerId);
     if (!el) return;
+    const titleHtml = mode === 'detail' ? '' : '<h2>おすすめ運用</h2>';
     el.innerHTML = `
-      <h2>おすすめ運用</h2>
+      ${titleHtml}
       <div class="recommended-ops-grid">
         <div class="recommended-ops-block">
           <h3>毎朝5分</h3>
@@ -4556,9 +4560,9 @@
         'まだレポートに使えるデータが少ないです。',
         'まずは以下を保存すると、週次レポートが作れます。',
         '',
-        '1. 売上を1件登録',
+        '1. 売上明細を1件追加',
         '2. クロクロ需要を3件取り込み',
-        '3. 毎日やることを1件完了',
+        '3. 毎日やることを1件済ませる',
         '4. 投稿・広告の成果メモを1件入力'
       ].join('\n');
     }
@@ -10174,7 +10178,7 @@
         <p class="exec-home-operations-start-status">${esc(check.statusLabel)}</p>
         <ul class="exec-home-operations-start-stats">
           <li><span>バックアップ：</span><strong>${esc(check.backupLabel)}</strong></li>
-          <li><span>売上予定：</span><strong>${check.upcomingCount}件</strong></li>
+          <li><span>売上予定（未確定）：</span><strong>${check.upcomingCount}件</strong></li>
           <li><span>売上確定待ち：</span><strong>${check.revenueQueueCount}件</strong></li>
           <li><span>今月の経費入力：</span><strong>${check.monthExpenseCount}件</strong></li>
           <li><span>月次実績：</span><strong>${esc(check.monthlyLabel)}</strong></li>
@@ -10340,7 +10344,7 @@
           <li><span>今月経費：</span><strong>${esc(ProfitBrain.formatYen(check.monthExpense))}</strong></li>
           <li><span>今月利益：</span><strong>${esc(ProfitBrain.formatYen(check.monthProfit))}</strong></li>
           <li><span>売上確定待ち：</span><strong>${esc(queueLabel)}</strong></li>
-          <li><span>売上予定：</span><strong>${esc(upcomingLabel)}</strong></li>
+          <li><span>売上予定（未確定）：</span><strong>${esc(upcomingLabel)}</strong></li>
           <li><span>月次実績：</span><strong>${esc(check.monthlyResultLabel)}</strong></li>
           <li><span>整合チェック：</span><strong>${esc(check.reconciliationLabel)}</strong></li>
         </ul>
@@ -14826,7 +14830,7 @@
     const el = document.getElementById(id);
     if (!el) return;
     if (!items.length) {
-      el.innerHTML = '<li class="placeholder-text">今月の内訳データはまだありません。売上を登録すると表示されます。</li>';
+      el.innerHTML = '<li class="placeholder-text">今月の内訳データはまだありません。売上明細を追加すると表示されます。</li>';
       return;
     }
     el.innerHTML = items.map(item =>
@@ -15405,7 +15409,7 @@
     }
 
     if (summaryEl) {
-      const plannedLabel = monthlyOverlay && monthlyOverlay.usesMonthlyResult ? '今月実績' : '売上予定';
+      const plannedLabel = monthlyOverlay && monthlyOverlay.usesMonthlyResult ? '今月実績' : '確定売上';
       const baseItems = [
         { label: plannedLabel, value: RevenueBrain.formatYen(summary.planned) + (monthlyOverlay && monthlyOverlay.usesMonthlyResult ? '（月次実績）' : '') },
         { label: '確定', value: RevenueBrain.formatYen(summary.confirmed) },

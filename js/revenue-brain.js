@@ -506,10 +506,10 @@ const RevenueBrain = {
       return { lines: [line], brief: line };
     }
 
-    lines.push(`今月の売上予定は${this.formatYen(summary.planned)}です。`);
+    lines.push(`今月の確定売上は${this.formatYen(summary.planned)}です。`);
 
     if (targetNotMet) {
-      lines.push(`目標まであと${this.formatYen(summary.remainingToTarget)}です。売上予定と確定売上を確認してください。`);
+      lines.push(`目標まであと${this.formatYen(summary.remainingToTarget)}です。確定売上と売上予定（未確定）を確認してください。`);
     } else if (targetMet) {
       lines.push('今月の目標を達成しています。確定売上明細を確認してください。');
     } else if (summary.confirmed > 0) {
@@ -652,7 +652,7 @@ const RevenueBrain = {
       comments.push('月間目標を設定してください。');
     }
     if (summary.recordCount === 0) {
-      comments.push('今月の売上予定がありません。予定取り込みから始めてください。');
+      comments.push('今月の確定売上がありません。予定取り込みから始めてください。');
     } else if (summary.monthlyTarget && summary.achievementRate < 30) {
       comments.push('売上強化が必要です。営業・追客を優先してください。');
     } else if (summary.monthlyTarget && summary.achievementRate < 60) {
@@ -677,7 +677,7 @@ const RevenueBrain = {
 
   buildSummaryText(summary, comment) {
     const lines = [
-      `売上予定：${this.formatYen(summary.planned)}`,
+      `確定売上：${this.formatYen(summary.planned)}`,
       `入金済み：${this.formatYen(summary.paid)}`,
       `入金待ち：${this.formatYen(summary.unpaid)}`,
       `月間目標：${this.formatYen(summary.monthlyTarget)}`,
