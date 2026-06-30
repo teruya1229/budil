@@ -967,5 +967,122 @@ const ProfitBrain = {
       primaryAction,
       flowNote: '今月の売上→今月の経費→今月の利益→未確定の売上→月次実績との整合→月次締めで次にやること'
     };
+  },
+
+  isMonthlyClosingPeriod(today) {
+    const s = String(today || '').trim();
+    const day = parseInt(s.split('-')[2], 10);
+    if (!Number.isFinite(day)) return false;
+    return day >= 25 || day <= 5;
+  },
+
+  buildExecutivePriorityAction(options) {
+    const opts = options || {};
+    const today = opts.today || new Date().toISOString().slice(0, 10);
+    const workOrders = opts.workOrders || [];
+    const revenues = opts.revenues || [];
+    const monthlyResults = opts.monthlyResults || [];
+    const expenses = opts.expenses || [];
+    const profitCtx = opts.profitCtx || this.buildProfitContext({
+      today,
+      revenues,
+      expenses,
+      workOrders,
+      leads: opts.leads || [],
+      intakes: opts.intakes || [],
+      monthlyResults
+    });
+
+    const salesFlow = typeof RevenueSummaryBrain !== 'undefined'
+      ? RevenueSummaryBrain.buildSalesFlowDiagnostics(workOrders, revenues, monthlyResults, today)
+      : null;
+    const profitDiag = this.buildProfitOperationsDiagnostics(profitCtx, {
+      today,
+      monthlyResults,
+      revenues
+    });
+    const monthlyClosing = this.buildMonthlyClosingCheck({
+      today,
+      profitCtx,
+      workOrders,
+      revenues,
+      monthlyResults,
+      expenses
+    });
+
+    const revenueConfirmationQueueCount = monthlyClosing.revenueConfirmationQueueCount || 0;
+    const expenseInputCount = monthlyClosing.expenseInputCount || 0;
+    const inClosingPeriod = this.isMonthlyClosingPeriod(today);
+
+    if (revenueConfirmationQueueCount > 0) {
+      return {
+        statusKey: 'revenue_queue',
+        message: '売上確定待ちを確認してください。',
+        primaryAction: {
+          id: 'revenue_queue',
+          label: '売上確定待ちを見る',
+          view: 'dashboard',
+          scrollSelector: '#daily-section-revenue-queue'
+        },
+        source: 'sales-flow'
+      };
+    }
+
+    const needsExpense = expenseInputCount === 0
+      || profitDiag.statusKey === 'no_expense'
+      || (profitDiag.primaryAction && profitDiag.primaryAction.id === 'daily_expense')
+      || monthlyClosing.statusKey === 'no_expense';
+    if (needsExpense) {
+      return {
+        statusKey: 'no_expense',
+        message: '使ったお金を経費入力に記録してください。',
+        primaryAction: {
+          id: 'daily_expense',
+          label: '経費入力を見る',
+          view: 'dashboard',
+          scrollSelector: '#daily-section-expense'
+        },
+        source: 'profit'
+      };
+    }
+
+    if (inClosingPeriod && (monthlyClosing.hasReconciliationGap || !monthlyClosing.hasMonthlyResult)) {
+      const useReconciliation = monthlyClosing.hasReconciliationGap;
+      return {
+        statusKey: useReconciliation ? 'reconciliation_gap' : 'no_monthly',
+        message: '月次締めチェックを確認してください。',
+        primaryAction: {
+          id: 'monthly_closing',
+          label: '月次締めチェックを見る',
+          view: useReconciliation ? 'revenue' : 'dashboard',
+          scrollSelector: useReconciliation ? '#revenue-reconciliation-check' : '#exec-home-monthly-closing-check'
+        },
+        source: 'monthly-closing'
+      };
+    }
+
+    const upcomingCount = monthlyClosing.upcomingScheduleCount
+      || (salesFlow && salesFlow.upcomingScheduleCount)
+      || 0;
+    if (upcomingCount > 0) {
+      return {
+        statusKey: 'upcoming',
+        message: '今後の売上予定を確認してください。',
+        primaryAction: {
+          id: 'upcoming',
+          label: '売上予定を見る',
+          view: 'revenue',
+          scrollSelector: '#revenue-upcoming-schedule'
+        },
+        source: 'sales-flow'
+      };
+    }
+
+    return {
+      statusKey: 'ok',
+      message: '今日の確認は大きな問題ありません。',
+      primaryAction: null,
+      source: 'none'
+    };
   }
 };

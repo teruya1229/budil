@@ -1448,6 +1448,8 @@
     renderExecutiveHomeQuickActions();
     updateExecutiveSectionBadges(ctx);
 
+    renderExecutivePriorityAction();
+
     const conclusionEl = document.getElementById('exec-home-conclusion');
     if (conclusionEl) {
       conclusionEl.innerHTML = (summary.lines || [])
@@ -4868,7 +4870,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.9.3</span>
+        <span class="business-report-version">v4.9.4</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -9958,6 +9960,41 @@
   function handleMonthlyClosingAction(action) {
     if (!action || !action.view) return;
     navigateToView(action.view, action.scrollSelector || null);
+  }
+
+  function handleExecutivePriorityAction(action) {
+    if (!action || !action.view) return;
+    navigateToView(action.view, action.scrollSelector || null);
+  }
+
+  function renderExecutivePriorityAction() {
+    const el = document.getElementById('exec-home-priority-action');
+    if (!el || typeof ProfitBrain === 'undefined') return;
+    const today = TODAY();
+    const priority = ProfitBrain.buildExecutivePriorityAction({
+      today,
+      workOrders: Storage.getWorkOrders(),
+      revenues: Storage.getRevenueRecords(),
+      monthlyResults: Storage.getMonthlyResults(),
+      expenses: Storage.getExpenseRecords()
+    });
+    const statusClass = priority.statusKey === 'ok'
+      ? 'is-ok'
+      : (priority.statusKey === 'reconciliation_gap' || priority.statusKey === 'revenue_queue' ? 'is-warn' : 'is-info');
+    const action = priority.primaryAction;
+    const actionBtn = action
+      ? `<div class="exec-home-priority-action-btn-wrap"><button type="button" class="btn btn-sm btn-primary exec-home-priority-action-btn">${esc(action.label)}</button></div>`
+      : '';
+    el.innerHTML = `
+      <div class="exec-home-priority-action ${statusClass}">
+        <h3 class="exec-home-priority-action-title">今日の最優先アクション</h3>
+        <p class="exec-home-priority-action-message">${esc(priority.message)}</p>
+        ${actionBtn}
+      </div>`;
+    const btn = el.querySelector('.exec-home-priority-action-btn');
+    if (btn && action) {
+      btn.addEventListener('click', () => handleExecutivePriorityAction(action));
+    }
   }
 
   function renderMonthlyClosingCheck(containerId) {
