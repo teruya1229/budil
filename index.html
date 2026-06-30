@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.9.4">
+  <link rel="stylesheet" href="css/style.css?v=4.9.5">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.9.4</small>
+          <small>AI経営脳みそ v4.9.5</small>
         </div>
       </div>
       <nav class="nav">
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.9.4</small>
+        <small>Budil v4.9.5</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -171,57 +171,88 @@
           <div class="exec-home-header">
             <div>
               <h2>経営ホーム</h2>
-              <p class="exec-home-subtitle">毎朝5分で、今日の結論・売上・直近予定・集客管理を確認</p>
+              <p class="exec-home-subtitle">今日まずやること → 今月の経営サマリー → 詳細確認</p>
             </div>
-            <span class="exec-home-version">v4.9.4</span>
+            <span class="exec-home-version">v4.9.5</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
+
+          <div id="exec-home-priority-action" class="exec-home-priority-action-block" aria-live="polite"></div>
+
+          <div class="exec-home-ops-flow">
+            <section class="exec-home-section exec-home-section-summary exec-tower-span-full">
+              <h3 class="exec-home-section-title">経営サマリー（今月）</h3>
+              <p class="exec-home-section-lead">売上・経費・利益の今月状況です。</p>
+              <div id="exec-home-revenue-profit" class="exec-home-revenue-profit"></div>
+            </section>
+
+            <section class="exec-home-section exec-home-section-profit exec-tower-span-full">
+              <h3 class="exec-home-section-title">利益状態</h3>
+              <p class="exec-home-section-lead">今月の利益と経費入力の状態です。</p>
+              <div id="exec-home-profit-diagnostics" class="exec-home-profit-diagnostics-block" aria-live="polite"></div>
+            </section>
+
+            <section class="exec-home-section exec-home-section-monthly exec-tower-span-full">
+              <h3 class="exec-home-section-title">月次締めチェック</h3>
+              <p class="exec-home-section-lead">月末・月初に確認する項目です。</p>
+              <div id="exec-home-monthly-closing-check" class="monthly-closing-check-block" aria-live="polite"></div>
+            </section>
+
+            <details class="exec-collapse exec-home-section-collapse exec-tower-span-full">
+              <summary>経費内訳（詳細）</summary>
+              <div class="exec-collapse-body">
+                <div id="exec-home-expense-breakdown" class="exec-home-expense-breakdown-block" aria-live="polite"></div>
+                <p class="exec-home-section-hint">詳細は利益管理画面でも確認できます。</p>
+              </div>
+            </details>
+          </div>
+
+          <details class="exec-collapse exec-home-supplement-collapse exec-tower-span-full">
+            <summary>その他の今日の情報</summary>
+            <div class="exec-collapse-body exec-home-supplement-grid">
+              <div class="exec-home-block exec-home-block-hero">
+                <h3>今日の結論</h3>
+                <div id="exec-home-conclusion" class="exec-home-conclusion"></div>
+              </div>
+              <div class="exec-home-block exec-home-block-priority">
+                <h3>最優先3つ</h3>
+                <div id="exec-home-top-priorities" class="exec-home-top-priorities"></div>
+              </div>
+              <div class="exec-home-block exec-tower-block-work">
+                <h3>今日の作業</h3>
+                <div id="exec-home-work-orders" class="exec-home-work-orders"></div>
+              </div>
+              <div class="exec-home-block exec-tower-block-reception">
+                <h3>新規受付</h3>
+                <div id="exec-home-reception" class="exec-home-reception"></div>
+              </div>
+              <div class="exec-home-block exec-tower-block-upcoming">
+                <h3>売上予定</h3>
+                <div id="exec-home-upcoming-schedule" class="exec-home-upcoming-schedule"></div>
+              </div>
+            </div>
+          </details>
+
           <details class="exec-collapse exec-home-start-collapse" id="exec-home-start-collapse">
             <summary>はじめの3ステップ</summary>
             <div id="exec-home-start-guide" class="exec-home-start-guide"></div>
           </details>
-          <div class="exec-quick-section">
-            <p class="exec-quick-label">よく使うメニュー</p>
-            <div id="exec-home-quick-actions-primary" class="exec-home-quick-actions exec-quick-primary"></div>
-            <details class="exec-collapse exec-quick-more-collapse">
-              <summary>その他のクイックボタン</summary>
-              <div id="exec-home-quick-actions-secondary" class="exec-home-quick-actions exec-quick-secondary"></div>
-            </details>
-          </div>
-          <div class="exec-home-daily-link-row">
-            <button type="button" class="btn btn-sm btn-primary" id="btn-exec-go-daily-tasks">毎日やることを開く</button>
-          </div>
-          <div id="exec-home-priority-action" class="exec-home-priority-action-block" aria-live="polite"></div>
-          <div class="exec-tower-grid">
-            <div class="exec-home-block exec-home-block-hero exec-tower-span-full">
-              <h3>今日の結論</h3>
-              <div id="exec-home-conclusion" class="exec-home-conclusion"></div>
+          <details class="exec-collapse exec-quick-more-collapse exec-tower-span-full">
+            <summary>よく使うメニュー</summary>
+            <div class="exec-quick-section">
+              <div id="exec-home-quick-actions-primary" class="exec-home-quick-actions exec-quick-primary"></div>
+              <details class="exec-collapse exec-quick-more-collapse">
+                <summary>その他のクイックボタン</summary>
+                <div id="exec-home-quick-actions-secondary" class="exec-home-quick-actions exec-quick-secondary"></div>
+              </details>
             </div>
-            <div class="exec-home-block exec-home-block-priority exec-tower-span-full">
-              <h3>最優先3つ</h3>
-              <div id="exec-home-top-priorities" class="exec-home-top-priorities"></div>
+            <div class="exec-home-daily-link-row">
+              <button type="button" class="btn btn-sm btn-secondary" id="btn-exec-go-daily-tasks">毎日やることを開く</button>
             </div>
-            <div class="exec-home-block exec-tower-block-work">
-              <h3>今日の作業</h3>
-              <div id="exec-home-work-orders" class="exec-home-work-orders"></div>
-            </div>
-            <div class="exec-home-block exec-tower-block-reception">
-              <h3>新規受付</h3>
-              <div id="exec-home-reception" class="exec-home-reception"></div>
-            </div>
-            <div class="exec-home-block exec-tower-block-revenue">
-              <h3>売上状況</h3>
-              <div id="exec-home-revenue-profit" class="exec-home-revenue-profit"></div>
-            </div>
-            <div class="exec-home-block exec-tower-block-upcoming">
-              <h3>売上予定</h3>
-              <div id="exec-home-upcoming-schedule" class="exec-home-upcoming-schedule"></div>
-            </div>
-            <div class="exec-home-block exec-home-block-monthly-closing exec-tower-span-full">
-              <h3>月次締めチェック</h3>
-              <div id="exec-home-monthly-closing-check" class="monthly-closing-check-block" aria-live="polite"></div>
-            </div>
-            <div class="exec-home-block exec-tower-block-marketing">
+          </details>
+
+          <div class="exec-home-supplement-bottom">
+            <div class="exec-home-block exec-tower-block-marketing exec-tower-span-full">
               <h3>集客管理</h3>
               <div id="exec-home-marketing-links" class="exec-home-marketing-links">
                 <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="analytics">アクセス分析</button>
@@ -229,10 +260,12 @@
                 <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="strategy-memo">集客施策メモ</button>
               </div>
             </div>
-            <div class="exec-home-block exec-home-block-warnings exec-tower-span-full">
-              <h3>注意が必要なこと</h3>
-              <div id="exec-home-warnings" class="exec-home-warnings"></div>
-            </div>
+            <details class="exec-collapse exec-tower-span-full exec-home-warnings-collapse">
+              <summary>注意が必要なこと</summary>
+              <div class="exec-collapse-body">
+                <div id="exec-home-warnings" class="exec-home-warnings"></div>
+              </div>
+            </details>
             <details class="exec-collapse exec-tower-span-full" id="exec-collapse-follow">
               <summary>作業後フォロー・口コミ<span id="exec-follow-badge" class="exec-section-badge"></span></summary>
               <div class="exec-collapse-body">
@@ -529,7 +562,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.9.4</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.9.5</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -602,17 +635,27 @@
 
         <div id="dash-today-move" class="card card-move card-wide"></div>
 
+        <details class="card card-wide card-revenue-summary-collapse exec-dash-collapse">
+          <summary class="exec-dash-collapse-summary">今月の売上状況（詳細）</summary>
+          <div class="exec-dash-collapse-body">
         <div class="card card-wide card-revenue-summary">
           <h2>今月の売上状況</h2>
           <div id="dash-revenue-summary" class="revenue-summary-block"></div>
           <div id="dash-upcoming-revenue-schedule" class="upcoming-revenue-schedule-block"></div>
           <div id="dash-sales-outcome" class="revenue-sales-outcome"></div>
         </div>
+          </div>
+        </details>
 
+        <details class="card card-wide card-monthly-results-dash-collapse exec-dash-collapse">
+          <summary class="exec-dash-collapse-summary">月次実績（まとめ入力）</summary>
+          <div class="exec-dash-collapse-body">
         <div class="card card-wide card-monthly-results-dash">
           <h2>月次実績（まとめ入力）</h2>
           <div id="dash-monthly-results" class="monthly-results-dash-block"></div>
         </div>
+          </div>
+        </details>
 
         <div class="card card-mission card-wide">
           <h2>今日の営業ミッション</h2>
@@ -3396,30 +3439,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.9.4"></script>
-  <script src="js/messages.js?v=4.9.4"></script>
-  <script src="js/demand-brain.js?v=4.9.4"></script>
-  <script src="js/demand-radar.js?v=4.9.4"></script>
-  <script src="js/sales-brain.js?v=4.9.4"></script>
-  <script src="js/management-brain.js?v=4.9.4"></script>
-  <script src="js/payment-brain.js?v=4.9.4"></script>
-  <script src="js/revenue-brain.js?v=4.9.4"></script>
-  <script src="js/revenue-summary-brain.js?v=4.9.4"></script>
-  <script src="js/reception-brain.js?v=4.9.4"></script>
-  <script src="js/map-brain.js?v=4.9.4"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.9.4"></script>
-  <script src="js/external-check-brain.js?v=4.9.4"></script>
-  <script src="js/action-brain.js?v=4.9.4"></script>
-  <script src="js/work-order-brain.js?v=4.9.4"></script>
-  <script src="js/follow-up-brain.js?v=4.9.4"></script>
-  <script src="js/work-completion-brain.js?v=4.9.4"></script>
-  <script src="js/profit-brain.js?v=4.9.4"></script>
-  <script src="js/analytics-brain.js?v=4.9.4"></script>
-  <script src="js/monthly-results-brain.js?v=4.9.4"></script>
-  <script src="js/documents-brain.js?v=4.9.4"></script>
-  <script src="js/executive-brain.js?v=4.9.4"></script>
-  <script src="js/card-ocr.js?v=4.9.4"></script>
-  <script src="js/data-backup.js?v=4.9.4"></script>
-  <script src="js/app.js?v=4.9.4"></script>
+  <script src="js/storage.js?v=4.9.5"></script>
+  <script src="js/messages.js?v=4.9.5"></script>
+  <script src="js/demand-brain.js?v=4.9.5"></script>
+  <script src="js/demand-radar.js?v=4.9.5"></script>
+  <script src="js/sales-brain.js?v=4.9.5"></script>
+  <script src="js/management-brain.js?v=4.9.5"></script>
+  <script src="js/payment-brain.js?v=4.9.5"></script>
+  <script src="js/revenue-brain.js?v=4.9.5"></script>
+  <script src="js/revenue-summary-brain.js?v=4.9.5"></script>
+  <script src="js/reception-brain.js?v=4.9.5"></script>
+  <script src="js/map-brain.js?v=4.9.5"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.9.5"></script>
+  <script src="js/external-check-brain.js?v=4.9.5"></script>
+  <script src="js/action-brain.js?v=4.9.5"></script>
+  <script src="js/work-order-brain.js?v=4.9.5"></script>
+  <script src="js/follow-up-brain.js?v=4.9.5"></script>
+  <script src="js/work-completion-brain.js?v=4.9.5"></script>
+  <script src="js/profit-brain.js?v=4.9.5"></script>
+  <script src="js/analytics-brain.js?v=4.9.5"></script>
+  <script src="js/monthly-results-brain.js?v=4.9.5"></script>
+  <script src="js/documents-brain.js?v=4.9.5"></script>
+  <script src="js/executive-brain.js?v=4.9.5"></script>
+  <script src="js/card-ocr.js?v=4.9.5"></script>
+  <script src="js/data-backup.js?v=4.9.5"></script>
+  <script src="js/app.js?v=4.9.5"></script>
 </body>
 </html>

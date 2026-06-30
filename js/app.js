@@ -882,63 +882,69 @@
       </div>`).join('');
   }
 
-  function renderExecutiveRevenueProfitHtml(section) {
+  function renderExecutiveRevenueProfitHtml(section, options) {
+    const opts = options || {};
+    const isCompact = !!opts.compact;
     const s = section || {};
     const agg = s.revenueAggregation || {};
-    const compact = agg.compact || {};
-    const thisMonthView = compact.thisMonthView || {};
-    const diffClass = compact.monthDiff > 0 ? 'revenue-agg-diff-up' : (compact.monthDiff < 0 ? 'revenue-agg-diff-down' : '');
-    const diffSign = compact.monthDiff > 0 ? '+' : '';
-    const topSource = (compact.topSources || [])[0];
-    const topService = (compact.topServices || [])[0];
-    const monthlyNote = s.usesMonthlyResult && s.aggregationSourceNote
+    const aggCompact = agg.compact || {};
+    const thisMonthView = aggCompact.thisMonthView || {};
+    const diffClass = aggCompact.monthDiff > 0 ? 'revenue-agg-diff-up' : (aggCompact.monthDiff < 0 ? 'revenue-agg-diff-down' : '');
+    const diffSign = aggCompact.monthDiff > 0 ? '+' : '';
+    const topSource = (aggCompact.topSources || [])[0];
+    const topService = (aggCompact.topServices || [])[0];
+    const monthlyNote = isCompact ? '' : (s.usesMonthlyResult && s.aggregationSourceNote
       ? `<p class="profit-monthly-source-note">${esc(s.aggregationSourceNote)}</p>`
-      : (compact.usesMonthlyResultThisMonth && compact.monthlySourceNote
-        ? `<p class="profit-monthly-source-note">${esc(compact.monthlySourceNote)}</p>`
-        : '');
-    const thisMonthLabel = compact.usesMonthlyResultThisMonth ? '今月実績（月次実績ベース）' : '今月確定売上';
-    const breakdownNote = compact.usesMonthlyResultThisMonth
+      : (aggCompact.usesMonthlyResultThisMonth && aggCompact.monthlySourceNote
+        ? `<p class="profit-monthly-source-note">${esc(aggCompact.monthlySourceNote)}</p>`
+        : ''));
+    const thisMonthLabel = aggCompact.usesMonthlyResultThisMonth ? '今月実績（月次実績ベース）' : '今月確定売上';
+    const breakdownNote = !isCompact && aggCompact.usesMonthlyResultThisMonth
       ? `<p class="reconciliation-brief-line">明細売上合計：${esc(RevenueBrain.formatYen(thisMonthView.detailTotal || 0))} / 差額：${esc(RevenueBrain.formatYen(thisMonthView.diff || 0))}</p>`
       : '';
-    const breakdownWarn = compact.usesMonthlyResultThisMonth && thisMonthView.status === '差額あり'
+    const breakdownWarn = !isCompact && aggCompact.usesMonthlyResultThisMonth && thisMonthView.status === '差額あり'
       ? '<p class="reconciliation-brief-warn">※この月は月次実績と売上明細が一致していません。</p>'
       : '';
-    const sourceBreakdownNote = compact.usesMonthlyResultThisMonth
+    const sourceBreakdownNote = !isCompact && aggCompact.usesMonthlyResultThisMonth
       ? '<p class="revenue-agg-scope-note">月次実績ベース分は依頼元別・サービス別の内訳には含まれません。</p>'
       : '';
-    return `
-      ${monthlyNote}
-      <div class="exec-home-revenue-grid">
-        <div><span>今月売上</span><strong>${esc(RevenueBrain.formatYen(s.monthRevenue))}</strong></div>
-        <div><span>月間目標</span><strong>${esc(RevenueBrain.formatYen(s.monthlyTarget))}</strong></div>
-        <div><span>達成率</span><strong>${s.achievementRate}%</strong></div>
-        <div><span>今月支出</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
-        <div><span>今月利益</span><strong>${esc(ProfitBrain.formatYen(s.grossProfit))}</strong></div>
-        <div><span>利益率</span><strong>${esc(ProfitBrain.formatRate(s.grossRate))}</strong></div>
-        <div><span>今週見込み</span><strong>${esc(WorkOrderBrain.formatYen(s.weekForecast))}</strong></div>
-        <div><span>売上未登録</span><strong>${s.completedNoRevenue || 0}件</strong></div>
-      </div>
+    const summaryBlock = isCompact ? '' : `
       <div class="exec-home-revenue-summary">
-        <p class="exec-home-revenue-scope">売上集計${compact.usesMonthlyResultThisMonth ? '（月次実績を優先）' : '（確定売上のみ）'}</p>
-        <p>${esc(thisMonthLabel)}：${esc(RevenueBrain.formatYen(compact.thisMonthTotal || 0))}</p>
+        <p class="exec-home-revenue-scope">売上集計${aggCompact.usesMonthlyResultThisMonth ? '（月次実績を優先）' : '（確定売上のみ）'}</p>
+        <p>${esc(thisMonthLabel)}：${esc(RevenueBrain.formatYen(aggCompact.thisMonthTotal || 0))}</p>
         ${breakdownNote}
         ${breakdownWarn}
-        <p>先月比：<span class="${diffClass}">${diffSign}${esc(RevenueBrain.formatYen(compact.monthDiff || 0))}</span></p>
-        <p>今年売上合計：${esc(RevenueBrain.formatYen(compact.yearTotal || 0))}</p>
+        <p>先月比：<span class="${diffClass}">${diffSign}${esc(RevenueBrain.formatYen(aggCompact.monthDiff || 0))}</span></p>
+        <p>今年売上合計：${esc(RevenueBrain.formatYen(aggCompact.yearTotal || 0))}</p>
         <p>今月の主力：${esc(topSource ? topSource.name : '—')} / ${esc(topService ? topService.name : '—')}</p>
         ${sourceBreakdownNote}
-      </div>
-      ${(s.cautions || []).map(c => `<p class="exec-work-warn">${esc(c)}</p>`).join('')}
-      ${s.receivables ? `
+      </div>`;
+    const receivablesBlock = isCompact || !s.receivables ? '' : `
       <div class="exec-home-receivables">
         <div><span>入金待ち合計</span><strong>${esc(PaymentBrain.formatYen(s.receivables.pendingTotal || 0))}</strong></div>
         <div><span>今月入金予定</span><strong>${esc(PaymentBrain.formatYen(s.receivables.thisMonthExpected || 0))}</strong></div>
         <div><span>来月入金予定</span><strong>${esc(PaymentBrain.formatYen(s.receivables.nextMonthExpected || 0))}</strong></div>
         <div class="${s.receivables.overdueCount ? 'exec-home-receivables-warn' : ''}"><span>入金遅れ</span><strong>${s.receivables.overdueCount || 0}件</strong></div>
-      </div>` : ''}
+      </div>`;
+    const cautionsBlock = isCompact ? '' : (s.cautions || []).map(c => `<p class="exec-work-warn">${esc(c)}</p>`).join('');
+    return `
+      ${monthlyNote}
+      <div class="exec-home-revenue-grid${isCompact ? ' exec-home-revenue-grid-compact' : ''}">
+        <div><span>今月売上</span><strong>${esc(RevenueBrain.formatYen(s.monthRevenue))}</strong></div>
+        ${isCompact ? '' : `<div><span>月間目標</span><strong>${esc(RevenueBrain.formatYen(s.monthlyTarget))}</strong></div>
+        <div><span>達成率</span><strong>${s.achievementRate}%</strong></div>`}
+        <div><span>今月経費</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
+        <div><span>今月利益</span><strong>${esc(ProfitBrain.formatYen(s.grossProfit))}</strong></div>
+        <div><span>利益率</span><strong>${esc(ProfitBrain.formatRate(s.grossRate))}</strong></div>
+        ${isCompact ? '' : `<div><span>今週見込み</span><strong>${esc(WorkOrderBrain.formatYen(s.weekForecast))}</strong></div>
+        <div><span>売上未登録</span><strong>${s.completedNoRevenue || 0}件</strong></div>`}
+      </div>
+      ${summaryBlock}
+      ${cautionsBlock}
+      ${receivablesBlock}
       <div class="exec-work-actions">
         <button type="button" class="btn btn-sm btn-secondary exec-home-revenue-link">売上管理</button>
-        <button type="button" class="btn btn-sm btn-secondary exec-home-receivables-link">入金予定</button>
+        ${isCompact ? '' : '<button type="button" class="btn btn-sm btn-secondary exec-home-receivables-link">入金予定</button>'}
         <button type="button" class="btn btn-sm btn-secondary exec-home-profit-link">利益管理</button>
       </div>`;
   }
@@ -1475,7 +1481,7 @@
     if (receptionEl) receptionEl.innerHTML = renderExecutiveReceptionHtml(ctx.receptionSection);
 
     const revenueEl = document.getElementById('exec-home-revenue-profit');
-    if (revenueEl) revenueEl.innerHTML = renderExecutiveRevenueProfitHtml(ctx.revenueProfitSection);
+    if (revenueEl) revenueEl.innerHTML = renderExecutiveRevenueProfitHtml(ctx.revenueProfitSection, { compact: true });
 
     const followEl = document.getElementById('exec-home-follow-up');
     if (followEl) followEl.innerHTML = renderExecutiveFollowUpHtml(ctx.followUpSection);
@@ -1486,7 +1492,11 @@
     const warningsEl = document.getElementById('exec-home-warnings');
     if (warningsEl) warningsEl.innerHTML = renderExecutiveWarningsHtml(ctx.warnings);
 
-    renderMonthlyClosingCheck('exec-home-monthly-closing-check');
+    renderMonthlyClosingCheck('exec-home-monthly-closing-check', { compact: true });
+
+    const profitCtx = getProfitContext();
+    renderProfitOperationsDiagnostics(profitCtx, { targetId: 'exec-home-profit-diagnostics', compact: true });
+    renderProfitExpenseBreakdown(profitCtx, { targetId: 'exec-home-expense-breakdown' });
 
     renderExecutiveHomeCheck();
     bindExecutiveHomeEvents();
@@ -4870,7 +4880,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.9.4</span>
+        <span class="business-report-version">v4.9.5</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -9927,8 +9937,9 @@
       ${monthlyBrief}`;
   }
 
-  function renderProfitExpenseBreakdown(ctx) {
-    const el = document.getElementById('profit-expense-breakdown');
+  function renderProfitExpenseBreakdown(ctx, options) {
+    const opts = options || {};
+    const el = document.getElementById(opts.targetId || 'profit-expense-breakdown');
     if (!el || typeof ProfitBrain === 'undefined') return;
     const monthKey = (ctx.summary && ctx.summary.monthKey) || ProfitBrain.currentMonthKey(TODAY());
     const breakdown = ProfitBrain.buildMonthExpenseBreakdown(ctx.expenses || [], monthKey);
@@ -9988,6 +9999,7 @@
     el.innerHTML = `
       <div class="exec-home-priority-action ${statusClass}">
         <h3 class="exec-home-priority-action-title">今日の最優先アクション</h3>
+        <p class="exec-home-priority-action-lead">今すぐ確認する項目です。</p>
         <p class="exec-home-priority-action-message">${esc(priority.message)}</p>
         ${actionBtn}
       </div>`;
@@ -9997,9 +10009,11 @@
     }
   }
 
-  function renderMonthlyClosingCheck(containerId) {
+  function renderMonthlyClosingCheck(containerId, options) {
     const el = document.getElementById(containerId);
     if (!el || typeof ProfitBrain === 'undefined') return;
+    const opts = options || {};
+    const isCompact = !!opts.compact;
     const today = TODAY();
     const profitCtx = getProfitContext();
     const check = ProfitBrain.buildMonthlyClosingCheck({
@@ -10023,13 +10037,27 @@
       .map(msg => `<li>${esc(msg)}</li>`)
       .join('');
     const action = check.primaryAction;
-    const actionBtn = action
+    const suppressAction = isCompact || opts.suppressAction;
+    const actionBtn = !suppressAction && action
       ? `<div class="revenue-flow-diagnostics-action-wrap"><button type="button" class="btn btn-sm btn-primary monthly-closing-check-action">${esc(action.label)}</button></div>`
       : '';
+    const titleBlock = isCompact ? '' : '<h3 class="revenue-flow-diagnostics-title">月次締めチェック</h3>';
+    const noteBlock = isCompact
+      ? ''
+      : '<p class="revenue-flow-diagnostics-note">読み取り専用です。データの修正・削除・自動同期は行いません。</p>';
+    const nextBlock = suppressAction
+      ? ''
+      : `<p class="revenue-flow-diagnostics-next">次にやること：${esc(check.nextAction)}</p>`;
+    const flowBlock = isCompact
+      ? ''
+      : `<p class="revenue-flow-diagnostics-flow">${esc(check.flowNote)}</p>`;
+    const statusBlock = isCompact
+      ? `<p class="monthly-closing-check-status-brief ${statusClass}">${esc(check.statusMessages[0] || '確認できます')}</p>`
+      : `<ul class="monthly-closing-check-status-list ${statusClass}">${statusList}</ul>`;
     el.innerHTML = `
-      <div class="revenue-flow-diagnostics monthly-closing-check">
-        <h3 class="revenue-flow-diagnostics-title">月次締めチェック</h3>
-        <p class="revenue-flow-diagnostics-note">読み取り専用です。データの修正・削除・自動同期は行いません。</p>
+      <div class="revenue-flow-diagnostics monthly-closing-check${isCompact ? ' monthly-closing-check-compact' : ''}">
+        ${titleBlock}
+        ${noteBlock}
         <ul class="revenue-flow-diagnostics-stats">
           <li><span>今月売上：</span><strong>${esc(ProfitBrain.formatYen(check.monthRevenue))}</strong></li>
           <li><span>今月経費：</span><strong>${esc(ProfitBrain.formatYen(check.monthExpense))}</strong></li>
@@ -10039,10 +10067,10 @@
           <li><span>月次実績：</span><strong>${esc(check.monthlyResultLabel)}</strong></li>
           <li><span>整合チェック：</span><strong>${esc(check.reconciliationLabel)}</strong></li>
         </ul>
-        <ul class="monthly-closing-check-status-list ${statusClass}">${statusList}</ul>
-        <p class="revenue-flow-diagnostics-next">次にやること：${esc(check.nextAction)}</p>
+        ${statusBlock}
+        ${nextBlock}
         ${actionBtn}
-        <p class="revenue-flow-diagnostics-flow">${esc(check.flowNote)}</p>
+        ${flowBlock}
       </div>`;
     const btn = el.querySelector('.monthly-closing-check-action');
     if (btn && action) {
@@ -10050,9 +10078,11 @@
     }
   }
 
-  function renderProfitOperationsDiagnostics(ctx) {
-    const el = document.getElementById('profit-operations-diagnostics');
+  function renderProfitOperationsDiagnostics(ctx, options) {
+    const opts = options || {};
+    const el = document.getElementById(opts.targetId || 'profit-operations-diagnostics');
     if (!el || typeof ProfitBrain === 'undefined') return;
+    const isCompact = !!opts.compact;
     const diagnostics = ProfitBrain.buildProfitOperationsDiagnostics(ctx, {
       today: TODAY(),
       monthlyResults: Storage.getMonthlyResults(),
@@ -10064,32 +10094,45 @@
       ? 'is-ok'
       : (diagnostics.statusKey === 'deficit' || diagnostics.statusKey === 'reconciliation_gap' ? 'is-warn' : 'is-info');
     const action = diagnostics.primaryAction;
-    const actionBtn = action
+    const suppressAction = isCompact || opts.suppressAction;
+    const actionBtn = !suppressAction && action
       ? `<div class="revenue-flow-diagnostics-action-wrap"><button type="button" class="btn btn-sm btn-primary profit-operations-diagnostics-action">${esc(action.label)}</button></div>`
       : '';
+    const titleBlock = isCompact ? '' : '<h3 class="revenue-flow-diagnostics-title">利益状態</h3>';
+    const noteBlock = isCompact
+      ? ''
+      : '<p class="revenue-flow-diagnostics-note">読み取り専用です。データの修正・削除・自動同期は行いません。</p>';
+    const defsBlock = isCompact ? '' : `
+        <dl class="revenue-flow-diagnostics-defs">
+          <div><dt>売上</dt><dd>確定売上明細、または月次実績の売上です。</dd></div>
+          <div><dt>経費</dt><dd>経費入力で保存した支出明細です。</dd></div>
+          <div><dt>利益</dt><dd>売上 − 経費で確認します。</dd></div>
+          <div><dt>月次実績</dt><dd>ある月は月次実績ベースを優先表示します（売上明細とは別管理）。</dd></div>
+        </dl>`;
+    const nextBlock = suppressAction
+      ? `<p class="revenue-flow-diagnostics-status ${statusClass}">状態：${esc(diagnostics.statusMessage)}</p>`
+      : `<p class="revenue-flow-diagnostics-status ${statusClass}">状態：${esc(diagnostics.statusMessage)}</p>
+        <p class="revenue-flow-diagnostics-next">次にやること：${esc(diagnostics.nextAction)}</p>`;
+    const flowBlock = isCompact
+      ? ''
+      : `<p class="revenue-flow-diagnostics-flow">${esc(diagnostics.flowNote)}</p>`;
     el.innerHTML = `
-      <div class="revenue-flow-diagnostics profit-operations-diagnostics">
-        <h3 class="revenue-flow-diagnostics-title">利益状態</h3>
-        <p class="revenue-flow-diagnostics-note">読み取り専用です。データの修正・削除・自動同期は行いません。</p>
+      <div class="revenue-flow-diagnostics profit-operations-diagnostics${isCompact ? ' profit-operations-diagnostics-compact' : ''}">
+        ${titleBlock}
+        ${noteBlock}
         <ul class="revenue-flow-diagnostics-stats">
           <li><span>今月利益：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthProfit))}</strong></li>
           <li><span>利益率：</span><strong>${esc(ProfitBrain.formatRate(diagnostics.monthProfitRate))}</strong></li>
           <li><span>今月売上：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthRevenue))}</strong></li>
           <li><span>今月経費：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthExpense))}</strong></li>
           <li><span>経費入力：</span><strong>今月${expenseCount}件</strong></li>
-          <li><span>集計：</span><strong>${esc(diagnostics.aggregationLabel)}</strong></li>
-          <li><span>整合チェック：</span><strong>${esc(diagnostics.reconciliationLabel)}</strong></li>
+          ${isCompact ? '' : `<li><span>集計：</span><strong>${esc(diagnostics.aggregationLabel)}</strong></li>
+          <li><span>整合チェック：</span><strong>${esc(diagnostics.reconciliationLabel)}</strong></li>`}
         </ul>
-        <dl class="revenue-flow-diagnostics-defs">
-          <div><dt>売上</dt><dd>確定売上明細、または月次実績の売上です。</dd></div>
-          <div><dt>経費</dt><dd>経費入力で保存した支出明細です。</dd></div>
-          <div><dt>利益</dt><dd>売上 − 経費で確認します。</dd></div>
-          <div><dt>月次実績</dt><dd>ある月は月次実績ベースを優先表示します（売上明細とは別管理）。</dd></div>
-        </dl>
-        <p class="revenue-flow-diagnostics-status ${statusClass}">状態：${esc(diagnostics.statusMessage)}</p>
-        <p class="revenue-flow-diagnostics-next">次にやること：${esc(diagnostics.nextAction)}</p>
+        ${defsBlock}
+        ${nextBlock}
         ${actionBtn}
-        <p class="revenue-flow-diagnostics-flow">${esc(diagnostics.flowNote)}</p>
+        ${flowBlock}
       </div>`;
     const btn = el.querySelector('.profit-operations-diagnostics-action');
     if (btn && action) {
