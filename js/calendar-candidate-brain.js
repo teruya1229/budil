@@ -4,6 +4,7 @@
  */
 const CalendarCandidateBrain = {
   IMPORT_SOURCE: 'calendar-paste',
+  JSON_IMPORT_SOURCE: 'calendar-json-file',
   SOURCE_TYPE: 'work-order-candidate',
   BLOCK_MARKER: '【カレンダー予定】',
   CANDIDATE_STATUSES: [
@@ -100,6 +101,7 @@ const CalendarCandidateBrain = {
     const meta = wo.candidateMeta;
     if (meta) {
       if (meta.importSource === this.IMPORT_SOURCE) return true;
+      if (meta.importSource === this.JSON_IMPORT_SOURCE) return true;
       if (meta.sourceType === this.SOURCE_TYPE) return true;
       if (meta.originalText && String(meta.originalText).includes(this.BLOCK_MARKER)) return true;
     }
@@ -149,9 +151,113 @@ const CalendarCandidateBrain = {
       memo: String(c.memo || '').trim(),
       confidence: String(c.confidence || '').trim(),
       cautionNote: String(c.cautionNote || c.caution || '').trim(),
+      phone: String(c.phone || '').trim(),
+      calendarDedupeKey: String(c.calendarDedupeKey || '').trim(),
       importSource: this.IMPORT_SOURCE,
       sourceType: this.SOURCE_TYPE,
       originalText: String(originalText || c.originalText || meta.originalText || '').trim()
+    };
+  },
+
+  inferCustomerNameFromTitle(title) {
+    const fields = { title: String(title || '').trim() };
+    if (!fields.title) return '';
+    this.inferFromPlainTitle(fields);
+    if (fields.customerName) return fields.customerName;
+    const parts = this.parseTitleParts(fields.title);
+    if (parts.customerName) return parts.customerName;
+    return fields.title.slice(0, 40);
+  },
+
+  mapWorkerItemToCandidate(item) {
+    const row = item && typeof item === 'object' ? item : {};
+    const extracted = row.extracted && typeof row.extracted === 'object' ? row.extracted : {};
+    const budilImport = row.budilImport && typeof row.budilImport === 'object' ? row.budilImport : {};
+    const start = row.start && typeof row.start === 'object' ? row.start : {};
+    const end = row.end && typeof row.end === 'object' ? row.end : {};
+    const customerName = String(extracted.customerName || '').trim()
+      || this.inferCustomerNameFromTitle(row.title);
+    const serviceText = String(extracted.workType || extracted.workDetails || '').trim()
+      || String(row.title || '').trim();
+    const address = String(extracted.address || row.location || '').trim();
+    const amount = this.parseAmount(
+      extracted.amount != null && extracted.amount !== ''
+        ? extracted.amount
+        : extracted.amountText
+    );
+    const memoParts = [String(row.description || '').trim()];
+    if (extracted.phone) memoParts.push('電話：' + String(extracted.phone).trim());
+    return this.normalizeCandidate({
+      title: row.title,
+      scheduledDate: row.date,
+      date: row.date,
+      startTime: start.isAllDay ? '' : (start.time || ''),
+      endTime: end.isAllDay ? '' : (end.time || ''),
+      customerName,
+      serviceText,
+      address,
+      source: String(extracted.requestSource || budilImport.source || 'google_calendar').trim(),
+      estimateAmount: amount,
+      phone: extracted.phone,
+      memo: memoParts.filter(Boolean).join('\n'),
+      calendarDedupeKey: String(budilImport.dedupeKey || '').trim()
+    }, '');
+  },
+
+  parseBudilCalendarEventsJson(text) {
+    const warnings = [];
+    const errors = [];
+    const src = String(text || '').trim();
+    if (!src) {
+      return {
+        candidates: [],
+        warnings: ['JSONが空です'],
+        errors: [],
+        sourceFormat: 'json-file-empty'
+      };
+    }
+    let payload;
+    try {
+      payload = JSON.parse(src);
+    } catch {
+      return {
+        candidates: [],
+        warnings: [],
+        errors: ['JSONの形式が正しくありません'],
+        sourceFormat: 'json-file-invalid'
+      };
+    }
+    if (!payload || typeof payload !== 'object') {
+      return {
+        candidates: [],
+        warnings: [],
+        errors: ['JSONルートがオブジェクトではありません'],
+        sourceFormat: 'json-file-invalid'
+      };
+    }
+    const items = Array.isArray(payload.items) ? payload.items : null;
+    if (!items) {
+      return {
+        candidates: [],
+        warnings: [],
+        errors: ['items 配列が見つかりません'],
+        sourceFormat: 'json-file-invalid'
+      };
+    }
+    if (!items.length) warnings.push('items が0件です');
+    const candidates = items.map(item => this.mapWorkerItemToCandidate(item));
+    return {
+      candidates,
+      warnings,
+      errors,
+      sourceFormat: 'budil-calendar-json',
+      rawText: src,
+      meta: {
+        source: payload.source || '',
+        schemaVersion: payload.schemaVersion,
+        fetchedAt: payload.fetchedAt || '',
+        targetPeriod: payload.targetPeriod || null
+      }
     };
   },
 
@@ -594,7 +700,10 @@ const CalendarCandidateBrain = {
   detectDuplicates(candidate, workOrders, savedCandidates) {
     const c = this.normalizeCandidate(candidate);
     const key = this.buildDedupeKey(c);
-    const candidateCalendarKey = this.buildCalendarDedupeKey(c);
+    const workerDedupeKey = String(
+      (candidate && candidate.calendarDedupeKey) || c.calendarDedupeKey || ''
+    ).trim();
+    const candidateCalendarKey = workerDedupeKey || this.buildCalendarDedupeKey(c);
     const list = [...(workOrders || []), ...(savedCandidates || [])];
     const matches = [];
     list.forEach(item => {
@@ -812,7 +921,7 @@ const CalendarCandidateBrain = {
     const c = this.normalizeCandidate(candidate);
     const now = new Date().toISOString();
     const meta = this.normalizeCandidateMeta({
-      importSource: this.IMPORT_SOURCE,
+      importSource: (extra && extra.importSource) || this.IMPORT_SOURCE,
       sourceType: this.SOURCE_TYPE,
       originalText: c.originalText || (extra && extra.originalText) || '',
       confidence: c.confidence,
@@ -838,7 +947,9 @@ const CalendarCandidateBrain = {
       memo: [c.memo, c.cautionNote ? '注意：' + c.cautionNote : ''].filter(Boolean).join('\n'),
       status: 'tentative',
       candidateMeta: meta,
-      calendarDedupeKey: extra && extra.calendarDedupeKey ? extra.calendarDedupeKey : this.buildCalendarDedupeKey(c),
+      calendarDedupeKey: extra && extra.calendarDedupeKey
+        ? extra.calendarDedupeKey
+        : (c.calendarDedupeKey || this.buildCalendarDedupeKey(c)),
       isDemo: extra && extra.isDemo,
       isTest: extra && extra.isTest
     };

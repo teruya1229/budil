@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.0 data consistency check verification.
+ * Budil v4.10.1 data consistency check verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -70,12 +70,12 @@ const appJs = load('js/app.js');
 const profitJs = load('js/profit-brain.js');
 const css = load('css/style.css');
 
-console.log('== v4.10.0 data consistency check ==');
+console.log('== v4.10.1 data consistency check ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.0'), 'header version should be v4.10.0');
-assert(indexHtml.includes('Budil v4.10.0'), 'sidebar version should be v4.10.0');
-assert(indexHtml.includes('js/app.js?v=4.10.0'), 'app.js cache buster should be v4.10.0');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.0'"), 'storage version should be v4.10.0');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.1'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.10.1'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.10.1'), 'app.js cache buster should be v4.10.1');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.1'"), 'storage version should be v4.10.1');
 
 assert(indexHtml.includes('id="data-consistency-check"'), 'data management consistency block should exist');
 assert(indexHtml.includes('id="exec-home-data-consistency-check"'), 'exec home consistency block should exist');
@@ -183,4 +183,4 @@ console.log('== consistency check logic ==');
   assert(recon.primaryAction.scrollSelector === '#revenue-reconciliation-check', 'gap action should link to reconciliation');
 }
 
-console.log('All v4.10.0 data consistency check tests passed.');
+console.log('All v4.10.1 data consistency check tests passed.');

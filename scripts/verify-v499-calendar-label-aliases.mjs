@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.0 calendar paste label alias verification.
+ * Budil v4.10.1 calendar paste label alias verification.
  * Uses the same parse → preview → save handler sequence as the import UI.
  */
 import { readFileSync } from 'node:fs';
@@ -114,12 +114,12 @@ for (const file of ['calendar-candidate-brain.js', 'storage.js', 'app.js']) {
 const indexHtml = load('index.html');
 const calendarBrain = load('js/calendar-candidate-brain.js');
 
-console.log('== v4.10.0 calendar label aliases ==');
+console.log('== v4.10.1 calendar label aliases ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.0'), 'header version should be v4.10.0');
-assert(indexHtml.includes('Budil v4.10.0'), 'sidebar version should be v4.10.0');
-assert(indexHtml.includes('js/app.js?v=4.10.0'), 'app.js cache buster should be v4.10.0');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.0'"), 'storage version should be v4.10.0');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.1'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.10.1'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.10.1'), 'app.js cache buster should be v4.10.1');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.1'"), 'storage version should be v4.10.1');
 
 assert(calendarBrain.includes('PASTE_LABEL_ALIASES'), 'label alias map should exist');
 assert(calendarBrain.includes("'件名': 'title'"), '件名 alias should map to title');
@@ -252,4 +252,4 @@ const kariSample = [
   assert(result.saveSummary.savedCount === 0, 'past date should not save');
 }
 
-console.log('All v4.10.0 calendar label alias checks passed.');
+console.log('All v4.10.1 calendar label alias checks passed.');

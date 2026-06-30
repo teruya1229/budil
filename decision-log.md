@@ -13,6 +13,16 @@
 
 ### YYYY-MM-DD 判断タイトル
 
+### 2026-06-30 Budil v4.10.1 カレンダーJSON取り込みMVP
+
+判断：
+
+- GitHub Pages 上の静的 Budil から非公開 Google カレンダーを直接取得するには認証付き API が必要で、今回は実装しない
+- calendar-sync-worker が既に生成する Budil 用 JSON を、予定取り込み画面からファイル選択で読み込む最短 MVP を先に入れる
+- 新しい保存処理は作らず、既存の buildImportPreview / saveCalendarCandidate* / Storage.addWorkOrder へ接続する
+- worker の `budilImport.dedupeKey` を `calendarDedupeKey` として優先し、再取り込み時の重複を防ぐ
+- 貼り付け取り込みは補助として維持する
+
 ### 2026-06-30 Budil v4.10.0 実運用開始チェック
 
 判断：

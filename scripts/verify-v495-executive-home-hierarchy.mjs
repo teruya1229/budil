@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.0 executive home information hierarchy verification.
+ * Budil v4.10.1 executive home information hierarchy verification.
  */
 import { readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
@@ -18,12 +18,12 @@ const indexHtml = load('index.html');
 const appJs = load('js/app.js');
 const css = load('css/style.css');
 
-console.log('== v4.10.0 executive home hierarchy ==');
+console.log('== v4.10.1 executive home hierarchy ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.0'), 'header version should be v4.10.0');
-assert(indexHtml.includes('Budil v4.10.0'), 'sidebar version should be v4.10.0');
-assert(indexHtml.includes('js/app.js?v=4.10.0'), 'app.js cache buster should be v4.10.0');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.0'"), 'storage version should be v4.10.0');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.1'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.10.1'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.10.1'), 'app.js cache buster should be v4.10.1');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.1'"), 'storage version should be v4.10.1');
 
 assert(indexHtml.includes('id="exec-home-priority-action"'), 'priority action block should exist');
 assert(indexHtml.includes('exec-home-ops-flow'), 'ops flow section should exist');
@@ -61,4 +61,4 @@ assert(css.includes('exec-home-ops-flow'), 'ops flow styles should exist');
 assert(css.includes('exec-home-priority-action'), 'priority action styles should exist');
 assert(css.includes('@media (max-width: 390px)') || css.includes('overflow-x: hidden'), 'layout should avoid horizontal scroll');
 
-console.log('All v4.10.0 executive home hierarchy checks passed.');
+console.log('All v4.10.1 executive home hierarchy checks passed.');

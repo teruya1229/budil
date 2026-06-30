@@ -4884,7 +4884,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.10.0</span>
+        <span class="business-report-version">v4.10.1</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -7868,11 +7868,24 @@
     el.textContent = prompt;
   }
 
-  function parseCalendarCandidatePaste() {
-    const text = document.getElementById('calendar-candidate-paste')?.value || '';
+  function resolveCalendarCandidateSaveExtras(item, preview) {
+    const dedupeKey = (item.pastRecovery && item.pastRecovery.calendarDedupeKey)
+      || (item.candidate && item.candidate.calendarDedupeKey)
+      || '';
+    const importSource = preview && preview.sourceFormat === 'budil-calendar-json'
+      ? CalendarCandidateBrain.JSON_IMPORT_SOURCE
+      : CalendarCandidateBrain.IMPORT_SOURCE;
+    return {
+      originalText: preview ? preview.rawText : '',
+      candidateStatus: getCalendarImportCandidateStatus(item),
+      calendarDedupeKey: dedupeKey,
+      importSource
+    };
+  }
+
+  function applyCalendarCandidateParsed(parsed) {
     if (typeof CalendarCandidateBrain === 'undefined') return;
     lastCalendarCandidateImportResult = null;
-    const parsed = CalendarCandidateBrain.parseCalendarText(text);
     lastCalendarCandidatePreview = CalendarCandidateBrain.buildImportPreview(parsed, Storage.getWorkOrders());
     const past = getCalendarPastRecoveryOptions();
     if (past.enabled) {
@@ -7891,6 +7904,28 @@
       renderCalendarCandidateImportResult(summary, { phase: 'preview' });
     }
     renderCalendarCandidatePreview();
+  }
+
+  function parseCalendarCandidatePaste() {
+    const text = document.getElementById('calendar-candidate-paste')?.value || '';
+    if (typeof CalendarCandidateBrain === 'undefined') return;
+    const parsed = CalendarCandidateBrain.parseCalendarText(text);
+    applyCalendarCandidateParsed(parsed);
+  }
+
+  function handleCalendarCandidateJsonFile(file) {
+    if (!file || typeof CalendarCandidateBrain === 'undefined') return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const parsed = CalendarCandidateBrain.parseBudilCalendarEventsJson(reader.result);
+      if ((parsed.errors || []).length) {
+        alert(parsed.errors.join('\n'));
+        return;
+      }
+      applyCalendarCandidateParsed(parsed);
+    };
+    reader.onerror = () => alert('JSONファイルの読み込みに失敗しました');
+    reader.readAsText(file, 'utf-8');
   }
 
   function renderCalendarCandidatePreview() {
@@ -7975,11 +8010,10 @@
     if (item.isDuplicate && !force) {
       if (!confirm('重複の可能性があります。それでも候補として保存しますか？')) return;
     }
-    const payload = CalendarCandidateBrain.createWorkOrderPayload(item.candidate, {
-      originalText: preview.rawText,
-      candidateStatus: getCalendarImportCandidateStatus(item),
-      calendarDedupeKey: item.pastRecovery ? item.pastRecovery.calendarDedupeKey : ''
-    });
+    const payload = CalendarCandidateBrain.createWorkOrderPayload(
+      item.candidate,
+      resolveCalendarCandidateSaveExtras(item, preview)
+    );
     Storage.addWorkOrder(payload);
     const summary = getCalendarFutureImportSummary(preview);
     summary.savedCount = 1;
@@ -8007,11 +8041,10 @@
     savableItems.forEach(item => {
       if (!past.enabled && !CalendarCandidateBrain.isFutureImportSavable(item, force)) return;
       if (item.isDuplicate && !force) return;
-      const payload = CalendarCandidateBrain.createWorkOrderPayload(item.candidate, {
-        originalText: preview.rawText,
-        candidateStatus: getCalendarImportCandidateStatus(item),
-        calendarDedupeKey: item.pastRecovery ? item.pastRecovery.calendarDedupeKey : ''
-      });
+      const payload = CalendarCandidateBrain.createWorkOrderPayload(
+        item.candidate,
+        resolveCalendarCandidateSaveExtras(item, preview)
+      );
       Storage.addWorkOrder(payload);
       saved += 1;
     });
@@ -8240,6 +8273,17 @@
     if (saveAllBtn && !saveAllBtn.dataset.bound) {
       saveAllBtn.dataset.bound = '1';
       saveAllBtn.addEventListener('click', () => saveAllCalendarCandidates(false));
+    }
+    const jsonImportBtn = document.getElementById('btn-calendar-candidate-json-import');
+    const jsonInput = document.getElementById('calendar-candidate-json-input');
+    if (jsonImportBtn && jsonInput && !jsonImportBtn.dataset.bound) {
+      jsonImportBtn.dataset.bound = '1';
+      jsonImportBtn.addEventListener('click', () => jsonInput.click());
+      jsonInput.addEventListener('change', () => {
+        const file = jsonInput.files && jsonInput.files[0];
+        if (file) handleCalendarCandidateJsonFile(file);
+        jsonInput.value = '';
+      });
     }
     ['calendar-past-recovery-mode', 'calendar-past-recovery-start', 'calendar-past-recovery-end'].forEach(id => {
       const el = document.getElementById(id);

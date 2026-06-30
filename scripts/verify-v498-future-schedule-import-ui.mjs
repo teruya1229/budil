@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.0 future schedule import UI-flow verification.
+ * Budil v4.10.1 future schedule import UI-flow verification.
  * Simulates btn-calendar-candidate-parse → btn-calendar-candidate-save-all
  * (same handler sequence as js/app.js), starting from empty storage.
  */
@@ -135,12 +135,12 @@ const appJs = load('js/app.js');
 const calendarBrain = load('js/calendar-candidate-brain.js');
 const css = load('css/style.css');
 
-console.log('== v4.10.0 future schedule import UI flow ==');
+console.log('== v4.10.1 future schedule import UI flow ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.0'), 'header version should be v4.10.0');
-assert(indexHtml.includes('Budil v4.10.0'), 'sidebar version should be v4.10.0');
-assert(indexHtml.includes('js/app.js?v=4.10.0'), 'app.js cache buster should be v4.10.0');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.0'"), 'storage version should be v4.10.0');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.1'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.10.1'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.10.1'), 'app.js cache buster should be v4.10.1');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.1'"), 'storage version should be v4.10.1');
 
 assert(indexHtml.includes('Google\u30ab\u30ec\u30f3\u30c0\u30fc\u7b49\u304b\u3089\u30b3\u30d4\u30fc\u3057\u305f\u4e88\u5b9a\u3092\u8cbc\u308a\u4ed8\u3051\u3066\u304f\u3060\u3055\u3044'), 'paste hint should mention copy-paste not direct connect');
 assert(indexHtml.includes('Budil\u306f\u30ab\u30ec\u30f3\u30c0\u30fc\u306b\u76f4\u63a5\u63a5\u7d9a\u3057\u307e\u305b\u3093'), 'paste hint should clarify no direct calendar API');
@@ -246,4 +246,4 @@ const excludedPaste = [
   assert(result.saveSummary.savedCount === 0, 'empty paste should save 0');
 }
 
-console.log('All v4.10.0 future schedule import UI flow checks passed.');
+console.log('All v4.10.1 future schedule import UI flow checks passed.');

@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.0 operations start check verification.
+ * Budil v4.10.1 operations start check verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -70,12 +70,12 @@ const appJs = load('js/app.js');
 const profitJs = load('js/profit-brain.js');
 const css = load('css/style.css');
 
-console.log('== v4.10.0 operations start check ==');
+console.log('== v4.10.1 operations start check ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.0'), 'header version should be v4.10.0');
-assert(indexHtml.includes('Budil v4.10.0'), 'sidebar version should be v4.10.0');
-assert(indexHtml.includes('js/app.js?v=4.10.0'), 'app.js cache buster should be v4.10.0');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.0'"), 'storage version should be v4.10.0');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.1'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.10.1'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.10.1'), 'app.js cache buster should be v4.10.1');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.1'"), 'storage version should be v4.10.1');
 
 assert(indexHtml.includes('id="exec-home-operations-start-check"'), 'operations start check container should exist');
 assert(indexHtml.includes('exec-home-operations-start-check-block'), 'operations start check block class should exist');
@@ -153,4 +153,4 @@ assert(indexHtml.includes('exec-home-ops-flow'), 'executive home hierarchy from 
 assert(appJs.includes('renderDataConsistencyCheck'), 'data consistency rendering should remain');
 assert(appJs.includes('renderExecutivePriorityAction'), 'executive priority action should remain');
 
-console.log('All v4.10.0 operations start check tests passed.');
+console.log('All v4.10.1 operations start check tests passed.');

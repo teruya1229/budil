@@ -16,9 +16,18 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.10.0 |
+| 最新バージョン | v4.10.1 |
 | 最新commit | a09f41d |
 | ブランチ | `main` push 済み |
+
+## v4.10.1で入ったもの
+
+- 予定取り込み画面に「カレンダーJSONを取り込む」導線（calendar-sync-worker 出力用）
+- worker 形式 `{ items: [...] }` の解析と既存プレビュー・作業予定保存フローへの接続
+- `budilImport.dedupeKey` を `calendarDedupeKey` として優先利用
+- verify `scripts/verify-v4101-calendar-json-file-import.mjs`
+- cache buster を v4.10.1 に更新
+- v4.10.0 実運用開始チェック以降の既存機能は維持
 
 ## v4.10.0で入ったもの
 

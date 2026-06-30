@@ -1,5 +1,15 @@
 # Budil status
 
+## v4.10.1 実装内容（カレンダーJSON取り込みMVP）
+
+- 表示バージョンを v4.10.1 に更新（CSS/JSキャッシュバスターも揃え）
+- 予定取り込み画面に「カレンダーJSONを取り込む」導線を追加（calendar-sync-worker 出力 JSON 用）
+- `calendar-candidate-brain.js` に worker 形式 `{ items: [...] }` の解析・候補変換を追加
+- `budilImport.dedupeKey` を `calendarDedupeKey` として優先利用（再取り込み重複防止）
+- 既存の貼り付け取り込み・プレビュー・作業予定保存フローへ接続（売上明細への自動追加なし）
+- 検証 `scripts/verify-v4101-calendar-json-file-import.mjs` を追加
+- v4.10.0 実運用開始チェック以降の既存機能は維持
+
 ## v4.10.0 実装内容（実運用開始チェック）
 
 - 表示バージョンを v4.10.0 に更新（CSS/JSキャッシュバスターも揃え）

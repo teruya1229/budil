@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.0 schedule → revenue confirmation flow verification.
+ * Budil v4.10.1 schedule → revenue confirmation flow verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -72,11 +72,11 @@ const appJs = load('js/app.js');
 const summaryBrain = load('js/revenue-summary-brain.js');
 const completionBrain = load('js/work-completion-brain.js');
 
-console.log('== v4.10.0 schedule to revenue flow ==');
+console.log('== v4.10.1 schedule to revenue flow ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.0'), 'header version should be v4.10.0');
-assert(indexHtml.includes('Budil v4.10.0'), 'sidebar version should be v4.10.0');
-assert(indexHtml.includes('js/app.js?v=4.10.0'), 'app.js cache buster should be v4.10.0');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.1'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.10.1'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.10.1'), 'app.js cache buster should be v4.10.1');
 assert(indexHtml.includes('\u58f2\u4e0a\u4e88\u5b9a\uff08\u672a\u78ba\u5b9a\uff09'), 'daily schedule title should show unconfirmed label');
 assert(indexHtml.includes('daily-section-schedule'), 'daily schedule section should exist');
 assert(indexHtml.indexOf('daily-section-schedule') < indexHtml.indexOf('daily-section-revenue-assist'),
@@ -194,4 +194,4 @@ const confirmedWo = {
   assert(ctx.queue === false, 'confirmed work order should be excluded from revenue queue');
 }
 
-console.log('All v4.10.0 schedule to revenue flow checks passed.');
+console.log('All v4.10.1 schedule to revenue flow checks passed.');

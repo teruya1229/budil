@@ -8503,7 +8503,10 @@ body.sales-page {
 }
 
 /* v4.3 予定候補取り込み */
-.card-calendar-candidate {
+.calendar-json-import-hint {
+  margin-bottom: 0.75rem;
+}
+
   border-left: 4px solid #f59e0b;
 }
 
