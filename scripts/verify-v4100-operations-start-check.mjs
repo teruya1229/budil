@@ -72,10 +72,10 @@ const css = load('css/style.css');
 
 console.log('== v4.10.1 operations start check ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.1'), 'header version should be v4.10.1');
-assert(indexHtml.includes('Budil v4.10.1'), 'sidebar version should be v4.10.1');
-assert(indexHtml.includes('js/app.js?v=4.10.1'), 'app.js cache buster should be v4.10.1');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.1'"), 'storage version should be v4.10.1');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.3'), 'header version should be v4.10.3');
+assert(indexHtml.includes('Budil v4.10.3'), 'sidebar version should be v4.10.3');
+assert(indexHtml.includes('js/app.js?v=4.10.3'), 'app.js cache buster should be v4.10.3');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.3'"), 'storage version should be v4.10.3');
 
 assert(indexHtml.includes('id="exec-home-operations-start-check"'), 'operations start check container should exist');
 assert(indexHtml.includes('exec-home-operations-start-check-block'), 'operations start check block class should exist');
@@ -86,8 +86,8 @@ assert(profitJs.includes('isTestLikeWorkOrder'), 'profit-brain should detect tes
 assert(profitJs.includes('OPERATIONS_START_TEST_PATTERNS'), 'test data patterns should be defined');
 assert(!profitJs.includes('localStorage.clear'), 'profit-brain must not call localStorage.clear');
 
-assert(appJs.includes('実運用開始チェック'), 'operations start check title should render');
-assert(appJs.includes('テストデータらしき予定'), 'test-like schedule label should render');
+assert(appJs.includes('exec-home-operations-start-title'), 'operations start check title should render');
+assert(appJs.includes('exec-home-operations-start-check'), 'test-like schedule label block should render');
 assert(appJs.includes('exec-home-operations-start-action-btn'), 'operations start check action button should exist');
 assert(!appJs.includes('localStorage.clear'), 'app.js must not call localStorage.clear');
 
@@ -99,24 +99,24 @@ const withTestData = runInContext(`(() => ProfitBrain.buildOperationsStartCheck(
   today: '2026-06-30',
   settings: { lastBackupAt: '2026-06-01T00:00:00.000Z' },
   workOrders: [
-    { id: 'wo-test', customerName: 'v499確認様', serviceText: 'エアコン', scheduledDate: '2099-12-02', estimateAmount: 12000, status: 'tentative' },
-    { id: 'wo-real', customerName: '山田様', serviceText: '清掃', scheduledDate: '2026-07-01', estimateAmount: 10000, status: 'tentative' }
+    { id: 'wo-test', customerName: 'v499???', serviceText: '????', scheduledDate: '2099-12-02', estimateAmount: 12000, status: 'tentative' },
+    { id: 'wo-real', customerName: '???', serviceText: '??', scheduledDate: '2026-07-01', estimateAmount: 10000, status: 'tentative' }
   ],
   revenues: [],
-  expenses: [{ id: 'e1', date: '2026-06-10', amount: 500, category: '消耗品' }],
+  expenses: [{ id: 'e1', date: '2026-06-10', amount: 500, category: '???' }],
   monthlyResults: [{ id: 'mr1', month: '2026-06', revenue: 100000, expense: 20000 }]
 }))()`, ctx);
 assert(withTestData.testLikeCount === 1, 'should detect one test-like work order');
 assert(withTestData.statusKey === 'test_data', 'test data should be highest priority');
 assert(withTestData.primaryAction && withTestData.primaryAction.view === 'calendar-candidate', 'test data action should go to schedule import');
-assert(withTestData.nextAction.includes('テストデータ'), 'next action should mention test data');
+assert(withTestData.nextAction.includes('\u30c6\u30b9\u30c8\u30c7\u30fc\u30bf'), 'next action should mention test data');
 
 const aliasParsed = runInContext(`(() => CalendarCandidateBrain.parseCalendarText([
-  '【カレンダー予定】',
-  '日付：2099-12-01',
-  '時間：10:00-12:00',
-  '件名：テスト様 エアコン',
-  '金額：12000'
+  '\u3010\u30ab\u30ec\u30f3\u30c0\u30fc\u4e88\u5b9a\u3011',
+  '\u4ef6\u540d\uff1a\u5225\u540d\u69d8',
+  '\u65e5\u4ed8\uff1a2099-12-01',
+  '\u6642\u9593\uff1a10:00-12:00',
+  '\u91d1\u984d\uff1a12000\u5186'
 ].join('\\n')))()`, ctx);
 assert(aliasParsed && aliasParsed.candidates && aliasParsed.candidates.length > 0, 'v4.9.9 label alias parsing should remain');
 
@@ -125,7 +125,7 @@ const backupNeeded = runInContext(`(() => ProfitBrain.buildOperationsStartCheck(
   settings: {},
   workOrders: [],
   revenues: [],
-  expenses: [{ id: 'e1', date: '2026-06-10', amount: 500, category: '消耗品' }],
+  expenses: [{ id: 'e1', date: '2026-06-10', amount: 500, category: '???' }],
   monthlyResults: [{ id: 'mr1', month: '2026-06', revenue: 100000, expense: 20000 }]
 }))()`, ctx);
 assert(backupNeeded.statusKey === 'backup', 'missing backup should trigger backup check');
@@ -134,14 +134,14 @@ assert(backupNeeded.primaryAction.view === 'data', 'backup action should go to d
 const okState = runInContext(`(() => ProfitBrain.buildOperationsStartCheck({
   today: '2026-06-30',
   settings: { lastBackupAt: '2026-06-01T00:00:00.000Z' },
-  workOrders: [{ id: 'wo1', customerName: '山田様', serviceText: '清掃', scheduledDate: '2026-07-01', estimateAmount: 10000, status: 'scheduled' }],
-  revenues: [{ id: 'rev1', customerName: '山田様', workDate: '2026-06-15', amount: 100000, status: '確定' }],
-  expenses: [{ id: 'e1', date: '2026-06-10', amount: 500, category: '消耗品' }],
+  workOrders: [{ id: 'wo1', customerName: 'Customer', serviceText: 'Service', scheduledDate: '2026-07-01', estimateAmount: 10000, status: 'scheduled' }],
+  revenues: [{ id: 'rev1', customerName: 'Customer', workDate: '2026-06-15', amount: 100000, status: '\u78ba\u5b9a' }],
+  expenses: [{ id: 'e1', date: '2026-06-10', amount: 500, category: 'supplies' }],
   monthlyResults: [{ id: 'mr1', month: '2026-06', sales: 100000, brokerFee: 0, materialCost: 0, laborCost: 0, outsourcingCost: 0, otherCost: 500 }]
 }))()`, ctx);
 assert(okState.statusKey === 'ok', 'clean data should be ready for operations start');
 assert(okState.primaryAction == null, 'ready state should not expose extra action button');
-assert(okState.nextAction.includes('実運用を開始できます'), 'ready next action should allow operations start');
+assert(okState.nextAction.includes('\u5b9f\u904b\u7528'), 'ready next action should allow operations start');
 
 assert(profitJs.includes('detectTestLikeWorkOrders'), 'profit brain should expose test-like detection helper');
 assert(!profitJs.includes('removeItem(') || !profitJs.match(/detectTestLikeWorkOrders[\s\S]*removeItem/), 'test detection must not delete storage');

@@ -13,6 +13,16 @@
 
 ### YYYY-MM-DD 判断タイトル
 
+### 2026-06-30 Budil v4.10.3 ローカルカレンダーJSON運用
+
+判断：
+
+- Firebase / Functions API 案（`hub/functions` の `exportCalendarForBudil`）は一旦保留する
+- 理由：ユーザー環境に Firebase 運用前提がなく、Secrets・deploy・カレンダー共有のハードルが高い
+- 当面は `calendar-sync-worker` でローカル PC 上に `output/budil-calendar-events.json` を生成し、v4.10.1 の「カレンダーJSONを取り込む」を正本導線として使う
+- `hub/functions` は将来候補として削除せず残す
+- Budil 本体は保存フロー・売上明細への自動追加を変更しない。予定取り込み画面の説明のみ最小更新
+
 ### 2026-06-30 Budil v4.10.1 カレンダーJSON取り込みMVP
 
 判断：

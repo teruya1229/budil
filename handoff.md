@@ -16,9 +16,33 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.10.1 |
-| 最新commit | a09f41d |
-| ブランチ | `main` push 済み |
+| 最新バージョン | v4.10.3 |
+| 最新commit | （v4.10.3 push 後に更新） |
+| ブランチ | `main` |
+
+## カレンダー予定の正本導線（v4.10.3）
+
+```text
+Googleカレンダー
+  ↓ calendar-sync-worker（run-budil-calendar-export.bat）
+output/budil-calendar-events.json
+  ↓ Budil「カレンダーJSONを取り込む」
+作業予定に保存
+  ↓
+売上予定に表示（未確定）
+```
+
+- Firebase / Functions API 案（`hub/functions`）は **一旦保留**。将来候補としてコードは残置
+- v4.10.1 の JSON ファイル取り込み・貼り付け取り込みは維持
+
+## v4.10.3で入ったもの
+
+- ローカル `calendar-sync-worker` 運用を正本導線として文書化
+- 予定取り込み画面のカレンダーJSON説明を bat 運用向けに最小更新
+- Firebase / Functions API 案の保留を status / handoff / decision-log に明記
+- verify `scripts/verify-v4103-local-calendar-json-workflow.mjs`
+- cache buster を v4.10.3 に更新
+- v4.10.1 JSON 取り込み以降の既存機能は維持
 
 ## v4.10.1で入ったもの
 

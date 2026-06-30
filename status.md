@@ -1,5 +1,15 @@
 # Budil status
 
+## v4.10.3 実装内容（ローカルカレンダーJSON運用）
+
+- 表示バージョンを v4.10.3 に更新（CSS/JSキャッシュバスターも揃え）
+- Firebase / Functions API 案は一旦保留（ユーザー環境に Firebase 運用前提がないため）
+- 当面は `calendar-sync-worker` のローカル JSON 運用を正本導線とする（v4.10.1 JSON 取り込みを継続利用）
+- 予定取り込み画面のカレンダーJSON説明を、`run-budil-calendar-export.bat` 運用に合わせて最小更新
+- `hub/functions` の API 案は将来候補として残置（今回 deploy なし）
+- 検証 `scripts/verify-v4103-local-calendar-json-workflow.mjs` を追加
+- v4.10.1 カレンダーJSON取り込み・貼り付け取り込み・売上明細への自動追加なしは維持
+
 ## v4.10.1 実装内容（カレンダーJSON取り込みMVP）
 
 - 表示バージョンを v4.10.1 に更新（CSS/JSキャッシュバスターも揃え）
