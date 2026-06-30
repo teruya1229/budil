@@ -21,6 +21,7 @@ const CalendarCandidateBrain = {
   PAST_RECOVERY_EXCLUDED: 'excluded',
   PAST_RECOVERY_DUPLICATE: 'duplicate_suspected',
   PAST_RECOVERY_EXCLUDED_PATTERN: /キャンセル|取消|取り消し|中止|見積|見積もり|見積り|見積のみ|日程調整|調整中|仮予定|仮押さえ|未確定/,
+  FUTURE_IMPORT_EXCLUDED_PATTERN: /キャンセル|取消|取り消し|中止|見積もり|見積り|見積のみ|見積$|日程調整中|調整中/,
 
   PASTE_LABELS: {
     '日付': 'scheduledDate',
@@ -327,6 +328,20 @@ const CalendarCandidateBrain = {
     return this.PAST_RECOVERY_EXCLUDED_PATTERN.test(text);
   },
 
+  hasFutureImportExcludedWord(candidate) {
+    const c = this.normalizeCandidate(candidate);
+    const text = [
+      c.title,
+      c.customerName,
+      c.serviceText,
+      c.source,
+      c.memo,
+      c.cautionNote
+    ].join(' ');
+    if (this.FUTURE_IMPORT_EXCLUDED_PATTERN.test(text)) return true;
+    return /(?:^|\s)見積(?:$|\s)/.test(text);
+  },
+
   isInPastRecoveryRange(candidate, options) {
     const c = this.normalizeCandidate(candidate);
     const opts = options || {};
@@ -489,29 +504,48 @@ const CalendarCandidateBrain = {
   },
 
   detectDuplicates(candidate, workOrders, savedCandidates) {
-    const key = this.buildDedupeKey(candidate);
+    const c = this.normalizeCandidate(candidate);
+    const key = this.buildDedupeKey(c);
+    const candidateCalendarKey = this.buildCalendarDedupeKey(c);
     const list = [...(workOrders || []), ...(savedCandidates || [])];
     const matches = [];
     list.forEach(item => {
       const wo = typeof WorkOrderBrain !== 'undefined'
         ? WorkOrderBrain.normalizeWorkOrder(item)
         : item;
+      if (candidateCalendarKey && wo.calendarDedupeKey && wo.calendarDedupeKey === candidateCalendarKey) {
+        matches.push({
+          type: 'calendarDedupeKey',
+          workOrder: wo,
+          reason: '同じカレンダー予定が既に取り込み済みです'
+        });
+        return;
+      }
       const itemKey = this.buildDedupeKey({
         scheduledDate: wo.scheduledDate,
         startTime: wo.startTime,
         customerName: wo.customerName,
         serviceText: wo.serviceText,
         address: wo.address,
-        title: wo.candidateMeta && wo.candidateMeta.originalText
+        title: ''
       });
       if (!itemKey || itemKey !== key) {
         const near = (
-          wo.scheduledDate === candidate.scheduledDate
-          && wo.customerName && candidate.customerName
-          && wo.customerName === candidate.customerName
-          && (wo.serviceText === candidate.serviceText || wo.startTime === candidate.startTime)
+          wo.scheduledDate === c.scheduledDate
+          && wo.customerName && c.customerName
+          && wo.customerName === c.customerName
+          && Number(wo.estimateAmount || 0) === Number(c.estimateAmount || 0)
+          && (wo.serviceText === c.serviceText || wo.startTime === c.startTime)
         );
-        if (near) matches.push({ type: 'near', workOrder: wo, reason: '日付・顧客名・作業内容が近い予定があります' });
+        if (near) {
+          matches.push({
+            type: 'near',
+            workOrder: wo,
+            reason: this.isCalendarCandidateWorkOrder(wo)
+              ? '同じカレンダー予定が既に取り込み済みです'
+              : '日付・顧客名・作業内容が近い予定があります'
+          });
+        }
         return;
       }
       matches.push({
@@ -558,11 +592,14 @@ const CalendarCandidateBrain = {
     return preview;
   },
 
-  classifyFutureImportCandidate(candidate) {
+  classifyFutureImportCandidate(candidate, today) {
     const c = this.normalizeCandidate(candidate);
+    const t = today || new Date().toISOString().slice(0, 10);
     const reasons = [];
+    if (!c.scheduledDate) reasons.push('日付なし');
+    if (c.scheduledDate && c.scheduledDate < t) reasons.push('過去日付');
     if (!Number(c.estimateAmount || 0)) reasons.push('金額なし');
-    if (this.hasPastRecoveryExcludedWord(c)) reasons.push('対象外ワードあり');
+    if (this.hasFutureImportExcludedWord(c)) reasons.push('対象外ワードあり');
     if (reasons.length) {
       return {
         status: 'excluded',
@@ -581,6 +618,7 @@ const CalendarCandidateBrain = {
 
   isFutureImportSavable(item, force) {
     if (!item) return false;
+    if (item.isPastDate && !force) return false;
     if (item.futureImport && item.futureImport.savable === false) return false;
     if (item.isDuplicate && !force) return false;
     return true;
@@ -621,12 +659,11 @@ const CalendarCandidateBrain = {
       const isPastDate = !!(c.scheduledDate && c.scheduledDate < t);
       if (isPastDate) pastCount += 1;
       const warnings = [...(item.warnings || [])];
-      if (isPastDate) {
-        warnings.push('過去日付の予定です。近未来取り込みでは今日以降を推奨します（保存は可能です）');
-      }
-      const futureImport = this.classifyFutureImportCandidate(c);
+      const futureImport = this.classifyFutureImportCandidate(c, t);
       if (futureImport.status === 'excluded') {
-        warnings.push(`対象外：${futureImport.reasons.join(' / ')}（売上予定には含まれません）`);
+        warnings.push(`対象外：${futureImport.reasons.join(' / ')}（保存対象外）`);
+      } else if (isPastDate) {
+        warnings.push('過去日付の予定です。近未来取り込みでは今日以降を推奨します');
       }
       return { ...item, warnings, isPastDate, futureImport };
     });
@@ -647,7 +684,7 @@ const CalendarCandidateBrain = {
     const period = opts.periodLabel || '今日以降（今週と来週を中心）';
     const pastRecoveryMode = opts.pastRecoveryMode === true;
     return [
-      'Googleカレンダーを確認して、指定期間の作業予定をBudil取り込み用に整理してください。',
+      'Googleカレンダー等の予定一覧を確認し、Budil取り込み用フォーマットに整理してください（Budilはカレンダーに直接接続しません）。',
       '',
       '目的：',
       pastRecoveryMode

@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.31 near-future schedule import verification.
+ * Budil v4.9.8 near-future schedule import verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -67,13 +67,13 @@ const indexHtml = load('index.html');
 const appJs = load('js/app.js');
 const calendarBrain = load('js/calendar-candidate-brain.js');
 
-console.log('== v4.8.31 future schedule import ==');
+console.log('== v4.9.8 future schedule import ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.31'), 'header version should be v4.8.31');
-assert(indexHtml.includes('Budil v4.8.31'), 'sidebar version should be v4.8.31');
-assert(indexHtml.includes('js/app.js?v=4.8.31'), 'app.js cache buster should be v4.8.31');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.8'), 'header version should be v4.9.8');
+assert(indexHtml.includes('Budil v4.9.8'), 'sidebar version should be v4.9.8');
+assert(indexHtml.includes('js/app.js?v=4.9.8'), 'app.js cache buster should be v4.9.8');
 
-assert(indexHtml.includes('\u4eca\u65e5\u4ee5\u964d\u306e\u30ab\u30ec\u30f3\u30c0\u30fc\u4e88\u5b9a\u3092\u4f5c\u696d\u4e88\u5b9a\u3068\u3057\u3066\u4fdd\u5b58\u3057\u307e\u3059'), 'future import subtitle should mention work order save');
+assert(indexHtml.includes('Google\u30ab\u30ec\u30f3\u30c0\u30fc\u7b49\u306e\u4e88\u5b9a\u3092\u30b3\u30d4\u30fc\u3057\u3066\u8cbc\u308a\u4ed8\u3051\u308b\u3068'), 'future import subtitle should mention copy-paste import');
 assert(indexHtml.includes('\u4e88\u5b9a\u53d6\u308a\u8fbc\u307f\u3060\u3051\u3067\u306f\u78ba\u5b9a\u58f2\u4e0a\u306b\u306f\u5165\u308a\u307e\u305b\u3093'), 'future import should clarify not confirmed revenue');
 assert(indexHtml.includes('calendar-past-recovery-panel hidden'), 'past recovery panel should stay hidden');
 assert(!indexHtml.includes('nav-label">\u904e\u53bb\u58f2\u4e0a\u5fa9\u5143'), 'past recovery nav label should not appear');
@@ -85,7 +85,7 @@ assert(appJs.includes('attachFutureImportPreview'), 'future import preview helpe
 assert(appJs.includes('getCalendarImportCandidateStatus'), 'import status helper should exist');
 assert(appJs.includes('\u4f5c\u696d\u4e88\u5b9a\u306b\u8ffd\u52a0\u6e08\u307f'), 'saved imports should default to operational work order status');
 
-assert(calendarBrain.includes('attachFutureImportPreview'), 'future import preview should exist in brain');
+assert(calendarBrain.includes('hasFutureImportExcludedWord'), 'future import exclusion helper should exist');
 assert(calendarBrain.includes('isOnOrAfterToday'), 'today-or-later helper should exist');
 assert(calendarBrain.includes('\u58f2\u4e0a\u78ba\u5b9a\u5f85\u3061\u304b\u3089\u58f2\u4e0a\u5316'), 'browser prompt should mention revenue queue');
 
@@ -191,6 +191,7 @@ const completedPaste = [
     preview = CalendarCandidateBrain.attachFutureImportPreview(preview, '2026-06-28');
   `, ctx);
   assert(ctx.preview.items[0].isPastDate === true, 'past date should be flagged in future import preview');
+  assert(ctx.preview.items[0].futureImport.status === 'excluded', 'past date should be excluded from future import');
   assert((ctx.preview.warnings || []).some(w => w.includes('\u904e\u53bb\u65e5\u4ed8')), 'preview should warn about past dates');
 }
 
@@ -217,4 +218,4 @@ const completedPaste = [
   assert(ctx.inQueue === true, 'past-scheduled imported work order should be revenue-queue eligible');
 }
 
-console.log('All v4.8.31 future schedule import checks passed.');
+console.log('All v4.9.8 future schedule import checks passed.');

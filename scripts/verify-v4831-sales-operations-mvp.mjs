@@ -1,5 +1,5 @@
 /**
- * Budil v4.9.7 sales operations MVP final polish verification.
+ * Budil v4.9.8 sales operations MVP final polish verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -79,18 +79,18 @@ const summaryBrain = load('js/revenue-summary-brain.js');
 const css = load('css/style.css');
 const visibleIndex = stripHiddenHtml(indexHtml);
 
-console.log('== v4.9.7 sales operations MVP ==');
+console.log('== v4.9.8 sales operations MVP ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.7'), 'header version should be v4.9.7');
-assert(indexHtml.includes('Budil v4.9.7'), 'sidebar version should be v4.9.7');
-assert(indexHtml.includes('js/app.js?v=4.9.7'), 'app.js cache buster should be v4.9.7');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.9.7'"), 'storage version should be v4.9.7');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.8'), 'header version should be v4.9.8');
+assert(indexHtml.includes('Budil v4.9.8'), 'sidebar version should be v4.9.8');
+assert(indexHtml.includes('js/app.js?v=4.9.8'), 'app.js cache buster should be v4.9.8');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.9.8'"), 'storage version should be v4.9.8');
 
 for (const pattern of PAST_RECOVERY_PATTERNS) {
   assert(!visibleIndex.includes(pattern), `visible index should not include "${pattern}"`);
 }
 
-assert(visibleIndex.includes('今日以降のカレンダー予定を作業予定として保存します'), 'schedule import should mention work order save');
+assert(visibleIndex.includes('Googleカレンダー等の予定をコピーして貼り付けると'), 'schedule import should mention copy-paste import');
 assert(visibleIndex.includes('予定取り込みだけでは確定売上には入りません'), 'schedule import should clarify not confirmed revenue');
 assert(visibleIndex.includes('売上予定（未確定）'), 'upcoming revenue label should be visible');
 assert(visibleIndex.includes('確定売上・月次実績とは合算しません'), 'upcoming should clarify no merge');
@@ -181,4 +181,4 @@ const workOrders = [{
   assert(ctx.d.primaryAction.view === 'calendar-candidate', 'schedule import view should match');
 }
 
-console.log('All v4.9.7 sales operations MVP checks passed.');
+console.log('All v4.9.8 sales operations MVP checks passed.');

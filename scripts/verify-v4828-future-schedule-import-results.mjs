@@ -1,5 +1,5 @@
 /**
- * Budil v4.8.31 future schedule import result summary verification.
+ * Budil v4.9.8 future schedule import result summary verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -69,11 +69,11 @@ const appJs = load('js/app.js');
 const calendarBrain = load('js/calendar-candidate-brain.js');
 const css = load('css/style.css');
 
-console.log('== v4.8.31 future schedule import results ==');
+console.log('== v4.9.8 future schedule import results ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.31'), 'header version should be v4.8.31');
-assert(indexHtml.includes('Budil v4.8.31'), 'sidebar version should be v4.8.31');
-assert(indexHtml.includes('js/app.js?v=4.8.31'), 'app.js cache buster should be v4.8.31');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.8'), 'header version should be v4.9.8');
+assert(indexHtml.includes('Budil v4.9.8'), 'sidebar version should be v4.9.8');
+assert(indexHtml.includes('js/app.js?v=4.9.8'), 'app.js cache buster should be v4.9.8');
 assert(indexHtml.includes('id="calendar-candidate-import-result"'), 'import result panel should exist');
 
 assert(appJs.includes('renderCalendarCandidateImportSummaryHtml'), 'import result renderer should exist');
@@ -84,7 +84,7 @@ assert(appJs.includes('calendar-import-go-revenue'), 'revenue navigation button 
 assert(appJs.includes('calendar-import-go-daily'), 'daily tasks navigation button should exist');
 assert(appJs.includes('\u53d6\u308a\u8fbc\u307f\u5bfe\u8c61\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f'), 'zero-case guidance should exist');
 
-assert(calendarBrain.includes('classifyFutureImportCandidate'), 'future import classifier should exist');
+assert(calendarBrain.includes('hasFutureImportExcludedWord'), 'future import exclusion helper should exist');
 assert(calendarBrain.includes('summarizeFutureImportPreview'), 'future import summary should exist');
 assert(calendarBrain.includes('isFutureImportSavable'), 'savable filter should exist');
 
@@ -249,4 +249,4 @@ const excludedPaste = [
   assert(ctx.summary.readCount === 0, 'empty paste should read 0');
 }
 
-console.log('All v4.8.31 future schedule import result checks passed.');
+console.log('All v4.9.8 future schedule import result checks passed.');

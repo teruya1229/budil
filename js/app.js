@@ -4883,7 +4883,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.9.7</span>
+        <span class="business-report-version">v4.9.8</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -8227,7 +8227,7 @@
           periodLabel,
           pastRecoveryMode: past.enabled
         });
-        copyText(prompt).then(() => alert('カレンダー確認用の文をコピーしました')).catch(() => alert('コピーに失敗しました'));
+        copyText(prompt).then(() => alert('取り込み用フォーマットをコピーしました')).catch(() => alert('コピーに失敗しました'));
       });
     }
     const parseBtn = document.getElementById('btn-calendar-candidate-parse');
@@ -10895,18 +10895,20 @@
   function renderCalendarCandidateImportSummaryHtml(summary, options) {
     const opts = options || {};
     const phase = opts.phase || 'result';
+    const zeroGuidance = `
+          <ul class="calendar-import-result-checks">
+            <li>今日以降の予定が含まれていますか？</li>
+            <li>日付が読み取れる形式ですか？</li>
+            <li>金額が入っていますか？</li>
+            <li>キャンセル・見積・日程調整中だけになっていませんか？</li>
+          </ul>`;
     if (!summary || summary.readCount === 0) {
       return `
         <div class="calendar-import-result calendar-import-result-zero">
           <h3>予定取り込み結果</h3>
           <p class="calendar-import-result-lead">取り込み対象が見つかりませんでした。</p>
           <p class="calendar-import-result-checks-title">確認してください：</p>
-          <ul class="calendar-import-result-checks">
-            <li>カレンダー予定のテキストを貼り付けていますか？</li>
-            <li>今日以降の予定が含まれていますか？</li>
-            <li>金額が入っていますか？</li>
-            <li>キャンセル・見積・日程調整中だけになっていませんか？</li>
-          </ul>
+          ${zeroGuidance}
         </div>`;
     }
     const saveLabel = phase === 'result'
@@ -10922,8 +10924,10 @@
            <button type="button" class="btn btn-sm btn-secondary calendar-import-go-daily">毎日やることを見る</button>
          </div>`
       : `<p class="calendar-import-result-hint">※予定取り込みだけでは売上明細には登録されません。作業後に「売上確定待ち」から確定してください。</p>`;
-    const zeroSavableHint = phase === 'preview' && summary.savableCount === 0
-      ? '<p class="calendar-import-result-warn">保存できる候補がありません。重複・対象外・金額なしを確認してください。</p>'
+    const zeroSavableHint = summary.savableCount === 0
+      ? `<p class="calendar-import-result-warn">${phase === 'result' ? '作業予定に保存できる候補がありませんでした。' : '保存できる候補がありません。'}重複・対象外・金額なし・過去日付を確認してください。</p>
+         <p class="calendar-import-result-checks-title">確認してください：</p>
+         ${zeroGuidance}`
       : '';
     return `
       <div class="calendar-import-result">
