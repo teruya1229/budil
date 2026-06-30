@@ -5,8 +5,8 @@ const WorkCompletionBrain = {
   PAYMENT_METHODS: ['現金', 'カード', '振込', 'PayPay', 'その他'],
 
   TASK_TYPES: {
-    confirm: '作業後確定',
-    revenue: '売上確定確認',
+    confirm: '売上確定',
+    revenue: '売上確定',
     payment: '入金確認',
     cancelFollow: 'キャンセル後フォロー'
   },
@@ -322,8 +322,8 @@ const WorkCompletionBrain = {
     const t = today || new Date().toISOString().slice(0, 10);
     const name = wo.customerName || 'お客様';
     const titles = {
-      confirm: `作業後確定：${name}`,
-      revenue: `売上確定確認：${name}`,
+      confirm: `売上確定：${name}`,
+      revenue: `売上確定：${name}`,
       payment: `入金確認：${name}`,
       cancelFollow: `キャンセル後フォロー：${name}`
     };
@@ -336,7 +336,7 @@ const WorkCompletionBrain = {
       memo: wo.serviceText || '',
       dueDate: t,
       status: 'open',
-      reason: '作業後確定処理番頭から',
+      reason: '売上確定待ちから',
       leadId: wo.leadId || '',
       leadName: name,
       pickupDedupeKey: ['work-completion', type, t, wo.id, title].join('|'),
@@ -348,7 +348,7 @@ const WorkCompletionBrain = {
     const s = summary || {};
     const parts = [];
     if (s.pendingConfirmCount) {
-      parts.push(`作業後確定待ちが${s.pendingConfirmCount}件あります。金額・作業内容・支払い状態を確認して、確定売上に登録してください`);
+      parts.push(`売上確定待ちが${s.pendingConfirmCount}件あります。金額・作業内容・支払い状態を確認して、確定売上に登録してください`);
     }
     if (s.unpaidCount) {
       parts.push(`入金待ちが${s.unpaidCount}件あります`);
@@ -362,7 +362,7 @@ const WorkCompletionBrain = {
   buildMorningReport(summary) {
     const s = summary || {};
     if (!s.pendingConfirmCount && !s.unpaidCount && !s.cancelFollowUpCount) return [];
-    const lines = ['作業後確定：'];
+    const lines = ['売上確定待ち：'];
     if (s.pendingConfirmCount) lines.push(`・売上確定待ち ${s.pendingConfirmCount}件`);
     if (s.unpaidCount) lines.push(`・入金待ち ${s.unpaidCount}件`);
     if (s.cancelFollowUpCount) lines.push(`・キャンセル後フォロー ${s.cancelFollowUpCount}件`);
@@ -372,7 +372,7 @@ const WorkCompletionBrain = {
   buildWarnings(workOrders, revenues, today) {
     const warnings = [];
     const s = this.summarizeTargets(workOrders, revenues, today);
-    if (s.pendingConfirmCount) warnings.push(`作業後確定待ち（売上未確定）：${s.pendingConfirmCount}件`);
+    if (s.pendingConfirmCount) warnings.push(`売上確定待ち（売上未確定）：${s.pendingConfirmCount}件`);
     if (s.needsReviewCount) warnings.push(`要確認の作業予定：${s.needsReviewCount}件`);
     if (s.unpaidCount) warnings.push(`入金待ちの確定売上：${s.unpaidCount}件`);
     const t = today || new Date().toISOString().slice(0, 10);

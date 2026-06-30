@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.10.7">
+  <link rel="stylesheet" href="css/style.css?v=4.10.8">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.10.7</small>
+          <small>AI経営脳みそ v4.10.8</small>
         </div>
       </div>
       <nav class="nav">
@@ -154,7 +154,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.10.7</small>
+        <small>Budil v4.10.8</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -176,15 +176,25 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の優先 → 今月の数字 → 次にやること</p>
             </div>
-            <span class="exec-home-version">v4.10.7</span>
+            <span class="exec-home-version">v4.10.8</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
+
+          <section class="exec-home-revenue-queue exec-tower-span-full">
+            <h3 class="exec-home-section-title">売上確定待ち</h3>
+            <div id="exec-home-revenue-queue-list" class="daily-revenue-queue-list" aria-live="polite"></div>
+          </section>
 
           <div id="exec-home-priority-action" class="exec-home-priority-action-block" aria-live="polite"></div>
 
           <section class="exec-home-daily-core exec-tower-span-full">
             <h3 class="exec-home-section-title">今月の数字</h3>
             <div id="exec-home-revenue-profit" class="exec-home-revenue-profit"></div>
+          </section>
+
+          <section class="exec-home-upcoming exec-tower-span-full">
+            <h3 class="exec-home-section-title">直近予定</h3>
+            <div id="exec-home-upcoming-schedule-main" class="exec-home-upcoming-schedule"></div>
           </section>
 
           <section class="exec-home-daily-next exec-tower-span-full">
@@ -229,10 +239,6 @@
               <div class="exec-home-block exec-tower-block-reception">
                 <h3>新規受付</h3>
                 <div id="exec-home-reception" class="exec-home-reception"></div>
-              </div>
-              <div class="exec-home-block exec-tower-block-upcoming">
-                <h3>売上予定</h3>
-                <div id="exec-home-upcoming-schedule" class="exec-home-upcoming-schedule"></div>
               </div>
             </div>
           </details>
@@ -311,7 +317,7 @@
             <span class="daily-flow-arrow">→</span>
             <span class="daily-flow-current">毎日やること</span>
             <span class="daily-flow-arrow">→</span>
-            <button type="button" class="btn btn-sm btn-secondary daily-flow-btn" data-daily-flow="revenue">売上登録</button>
+            <button type="button" class="btn btn-sm btn-secondary daily-flow-btn" data-daily-flow="revenue">売上明細を手入力</button>
             <span class="daily-flow-arrow">→</span>
             <button type="button" class="btn btn-sm btn-secondary daily-flow-btn" data-daily-flow="revenue-list">売上一覧</button>
           </div>
@@ -321,16 +327,16 @@
             <p class="daily-tasks-lead">予定取り込み → 売上予定（未確定）→ 作業日後に売上確定待ち → 売上確定 → 確定売上明細 → 月次実績・整合チェック、の順で進めます。</p>
           </details>
 
-          <div id="daily-section-priority" class="daily-section daily-section-priority">
-            <h3 class="daily-section-title">今日の最優先</h3>
-            <div id="daily-priority-list" class="daily-priority-list"></div>
-          </div>
-
           <div id="daily-section-revenue-queue" class="daily-section daily-section-revenue-queue">
             <h3 class="daily-section-title">売上確定待ち</h3>
             <p class="daily-section-lead">作業日当日以降で、まだ売上確定していない予定です。</p>
             <div id="daily-revenue-queue-list" class="daily-revenue-queue-list"></div>
             <div id="daily-revenue-confirmed-notice" class="daily-revenue-confirmed-notice hidden"></div>
+          </div>
+
+          <div id="daily-section-priority" class="daily-section daily-section-priority">
+            <h3 class="daily-section-title">今日の最優先</h3>
+            <div id="daily-priority-list" class="daily-priority-list"></div>
           </div>
 
           <div id="daily-section-expense" class="daily-section daily-section-expense">
@@ -375,7 +381,7 @@
           </div>
 
           <details class="daily-section daily-section-revenue-assist" id="daily-section-revenue-assist">
-            <summary class="daily-section-title">手入力で売上を追加</summary>
+            <summary class="daily-section-title">手入力で売上明細を追加</summary>
             <p class="daily-section-lead">予定にない売上だけ、ここから手入力します（売上予定・売上確定待ちとは別です）。</p>
             <div id="daily-revenue-notice" class="daily-revenue-notice hidden"></div>
             <form id="daily-revenue-quick-form" class="daily-revenue-quick-form">
@@ -508,11 +514,18 @@
 
         <div id="dash-action-candidates" class="card card-wide card-action-candidates"></div>
 
-        <div id="onboarding-guide-dash" class="card card-wide card-onboarding-guide"></div>
+        <details class="card card-wide card-onboarding-guide-collapse">
+          <summary>はじめてガイドを見る</summary>
+          <div id="onboarding-guide-dash" class="card-onboarding-guide"></div>
+        </details>
 
-        <div id="business-report-dash" class="card card-wide card-business-report card-business-report-compact"></div>
+        <details class="card card-wide card-business-report-collapse">
+          <summary>経営メモを見る</summary>
+          <div id="business-report-dash" class="card-business-report card-business-report-compact"></div>
+        </details>
 
-        <div id="dash-start-guide" class="card card-wide card-start-guide hidden">
+        <details id="dash-start-guide" class="card card-wide card-start-guide hidden">
+          <summary>はじめてガイドを見る</summary>
           <h2>はじめての方へ</h2>
           <p class="start-guide-lead">Budilを使い始めるには、まず以下の3つから始めてください。</p>
           <ol class="start-guide-steps">
@@ -525,7 +538,7 @@
             <button type="button" id="btn-start-add-revenue" class="btn btn-secondary btn-sm">売上を登録</button>
             <button type="button" id="btn-start-add-task" class="btn btn-secondary btn-sm">毎日やることを追加</button>
           </div>
-        </div>
+        </details>
 
         <details class="dash-detail-sections">
           <summary class="dash-detail-summary">詳細ダッシュボードを開く</summary>
@@ -573,7 +586,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.7</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.8</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -607,7 +620,7 @@
               <div id="mgmt-demand-top" class="mgmt-demand-top-block"></div>
             </div>
             <div class="morning-section">
-              <h3>作業後確定</h3>
+              <h3>売上確定待ち</h3>
               <div id="mgmt-work-completion" class="mgmt-work-completion-block"></div>
             </div>
             <div class="morning-section hidden" id="mgmt-calendar-candidates-section">
@@ -1624,13 +1637,34 @@
         </header>
 
         <div class="card card-wide card-calendar-source-notice">
-          <p class="calendar-source-flow-note">正本フロー：AI受付補助で整理 → Googleカレンダーに登録 → 予定取り込みで読み込み → 作業予定・売上予定を確認 → 作業後に売上確定</p>
+          <p class="calendar-source-flow-note">正本フロー：Googleカレンダー → JSON取り込み → 作業予定確認 → 作業後に売上確定</p>
+          <button type="button" class="btn btn-sm btn-primary nav-item" data-view="calendar-candidate">予定取り込みを見る</button>
         </div>
 
-        <div class="card card-wide card-reception-section">
-          <h2>受付入力</h2>
-          <p class="calendar-source-hint">受付内容の整理補助と記録用です。日程確定後はGoogleカレンダーへ登録してください。</p>
+        <div class="card card-wide card-revenue-queue card-work-order-pending-completion">
+          <h2>売上確定待ち</h2>
+          <p class="calendar-source-hint">作業日当日以降で、まだ売上確定していない予定です。</p>
+          <div id="work-order-pending-completion-list" class="work-order-schedule-list daily-revenue-queue-list"></div>
         </div>
+
+        <div class="card card-wide card-work-order-week">
+          <h2>今週の作業予定</h2>
+          <p class="calendar-source-hint">Googleカレンダーから読み込んだ予定をここで確認します。</p>
+          <div id="work-order-week-list" class="work-order-schedule-list"></div>
+          <details class="work-order-today-collapse">
+            <summary>今日の作業予定だけ見る</summary>
+            <div id="work-order-today-list" class="work-order-schedule-list"></div>
+          </details>
+        </div>
+
+        <div class="card card-wide card-revenue-schedule-link">
+          <p class="calendar-source-revenue-link">売上予定・見込み利益は売上管理で確認できます。</p>
+          <button type="button" class="btn btn-sm btn-secondary nav-item" data-view="revenue">売上管理を見る</button>
+        </div>
+
+        <details class="card card-wide card-reception-section card-reception-input-collapse">
+          <summary>受付入力</summary>
+          <p class="calendar-source-hint">受付内容の整理補助と記録用です。日程確定後はGoogleカレンダーへ登録してください。</p>
 
         <div class="card card-wide card-reception-comment">
           <h3>受付コメント</h3>
@@ -1715,35 +1749,17 @@
             </div>
           </form>
         </div>
+        </details>
 
-        <div class="card card-wide">
-          <h3>受付一覧</h3>
+        <details class="card card-wide card-reception-list-collapse">
+          <summary>受付一覧</summary>
           <div id="reception-saved-list" class="reception-saved-list"></div>
-        </div>
+        </details>
 
-        <div class="card card-wide card-work-order-completion-notice">
+        <details class="card card-wide card-work-order-completion-notice-collapse">
+          <summary>作業予定と売上の関係</summary>
           <p class="work-completion-notice">作業予定は売上集計に含まれません。確定売上として登録されたものだけ集計されます。</p>
-        </div>
-
-        <div class="card card-wide card-work-order-pending-completion">
-          <h2>作業後確定待ち</h2>
-          <div id="work-order-pending-completion-list" class="work-order-schedule-list"></div>
-        </div>
-
-        <div class="card card-wide card-revenue-schedule-link">
-          <p class="calendar-source-revenue-link">売上予定・見込み利益は売上管理で確認できます。</p>
-          <button type="button" class="btn btn-sm btn-secondary nav-item" data-view="revenue">売上管理を見る</button>
-        </div>
-
-        <div class="card card-wide card-work-order-week">
-          <h2>今週の作業予定</h2>
-          <p class="calendar-source-hint">Googleカレンダーから読み込んだ予定をここで確認します。</p>
-          <div id="work-order-week-list" class="work-order-schedule-list"></div>
-          <details class="work-order-today-collapse">
-            <summary>今日の作業予定だけ見る</summary>
-            <div id="work-order-today-list" class="work-order-schedule-list"></div>
-          </details>
-        </div>
+        </details>
 
         <details class="card card-wide work-order-manual-entry" id="work-order-manual-entry">
           <summary>緊急手入力：カレンダーにない予定を追加する</summary>
@@ -1854,7 +1870,7 @@
         </header>
 
         <div class="card card-wide card-calendar-candidate">
-          <p class="calendar-candidate-notice calendar-source-primary-notice"><strong>正本フロー：</strong> Googleカレンダー → JSON出力 → Budil取り込み → 作業予定確認 → 作業後売上確定</p>
+          <p class="calendar-candidate-notice calendar-source-primary-notice"><strong>正本フロー：</strong> Googleカレンダー → JSON出力 → Budil取り込み → 作業予定確認 → 売上確定</p>
 
           <div class="calendar-past-recovery-panel hidden" aria-hidden="true">
             <label class="calendar-past-recovery-toggle">
@@ -2025,6 +2041,17 @@
 
         <div id="revenue-unlinked-banner" class="revenue-unlinked-banner hidden" role="alert" hidden aria-hidden="true"></div>
 
+        <div class="card card-wide card-revenue-queue">
+          <h2>売上確定待ち</h2>
+          <p class="calendar-source-hint">作業日当日以降で、まだ売上確定していない予定です。</p>
+          <div id="revenue-confirmation-queue-list" class="daily-revenue-queue-list"></div>
+        </div>
+
+        <div class="card card-wide card-revenue-upcoming">
+          <h2>売上予定（未確定）</h2>
+          <div id="revenue-upcoming-schedule" class="upcoming-revenue-schedule-block"></div>
+        </div>
+
         <details class="card card-wide card-management-comment card-collapsible">
           <summary>経営番頭コメント</summary>
           <div id="revenue-management-comment" class="management-comment-body"></div>
@@ -2033,7 +2060,6 @@
         <div class="card card-wide card-revenue-daily">
           <h2>今月サマリー</h2>
           <div id="revenue-summary" class="revenue-summary-grid"></div>
-          <div id="revenue-upcoming-schedule" class="upcoming-revenue-schedule-block"></div>
           <div id="revenue-monthly-reconciliation" class="revenue-monthly-reconciliation"></div>
           <details class="revenue-detail-collapse">
             <summary>月次締め・補足</summary>
@@ -2074,7 +2100,7 @@
 
         <div class="revenue-layout">
           <div class="card">
-            <h2 id="revenue-form-title">売上登録</h2>
+            <h2 id="revenue-form-title">売上明細を手入力</h2>
             <form id="revenue-form">
               <input type="hidden" id="revenue-edit-id">
               <div class="form-row form-row-2">
@@ -3379,7 +3405,7 @@
 
   <div id="work-completion-modal" class="modal hidden">
     <div class="modal-content modal-lg">
-      <h2>作業後確定 — 実績入力</h2>
+      <h2>売上確定 — 実績入力</h2>
       <p class="work-completion-modal-notice">予定金額ではなく、実際の金額・作業内容を確認してから確定売上に登録してください。</p>
       <form id="work-completion-form">
         <input type="hidden" id="work-completion-wo-id">
@@ -3499,30 +3525,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.10.7"></script>
-  <script src="js/messages.js?v=4.10.7"></script>
-  <script src="js/demand-brain.js?v=4.10.7"></script>
-  <script src="js/demand-radar.js?v=4.10.7"></script>
-  <script src="js/sales-brain.js?v=4.10.7"></script>
-  <script src="js/management-brain.js?v=4.10.7"></script>
-  <script src="js/payment-brain.js?v=4.10.7"></script>
-  <script src="js/revenue-brain.js?v=4.10.7"></script>
-  <script src="js/revenue-summary-brain.js?v=4.10.7"></script>
-  <script src="js/reception-brain.js?v=4.10.7"></script>
-  <script src="js/map-brain.js?v=4.10.7"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.10.7"></script>
-  <script src="js/external-check-brain.js?v=4.10.7"></script>
-  <script src="js/action-brain.js?v=4.10.7"></script>
-  <script src="js/work-order-brain.js?v=4.10.7"></script>
-  <script src="js/follow-up-brain.js?v=4.10.7"></script>
-  <script src="js/work-completion-brain.js?v=4.10.7"></script>
-  <script src="js/profit-brain.js?v=4.10.7"></script>
-  <script src="js/analytics-brain.js?v=4.10.7"></script>
-  <script src="js/monthly-results-brain.js?v=4.10.7"></script>
-  <script src="js/documents-brain.js?v=4.10.7"></script>
-  <script src="js/executive-brain.js?v=4.10.7"></script>
-  <script src="js/card-ocr.js?v=4.10.7"></script>
-  <script src="js/data-backup.js?v=4.10.7"></script>
-  <script src="js/app.js?v=4.10.7"></script>
+  <script src="js/storage.js?v=4.10.8"></script>
+  <script src="js/messages.js?v=4.10.8"></script>
+  <script src="js/demand-brain.js?v=4.10.8"></script>
+  <script src="js/demand-radar.js?v=4.10.8"></script>
+  <script src="js/sales-brain.js?v=4.10.8"></script>
+  <script src="js/management-brain.js?v=4.10.8"></script>
+  <script src="js/payment-brain.js?v=4.10.8"></script>
+  <script src="js/revenue-brain.js?v=4.10.8"></script>
+  <script src="js/revenue-summary-brain.js?v=4.10.8"></script>
+  <script src="js/reception-brain.js?v=4.10.8"></script>
+  <script src="js/map-brain.js?v=4.10.8"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.10.8"></script>
+  <script src="js/external-check-brain.js?v=4.10.8"></script>
+  <script src="js/action-brain.js?v=4.10.8"></script>
+  <script src="js/work-order-brain.js?v=4.10.8"></script>
+  <script src="js/follow-up-brain.js?v=4.10.8"></script>
+  <script src="js/work-completion-brain.js?v=4.10.8"></script>
+  <script src="js/profit-brain.js?v=4.10.8"></script>
+  <script src="js/analytics-brain.js?v=4.10.8"></script>
+  <script src="js/monthly-results-brain.js?v=4.10.8"></script>
+  <script src="js/documents-brain.js?v=4.10.8"></script>
+  <script src="js/executive-brain.js?v=4.10.8"></script>
+  <script src="js/card-ocr.js?v=4.10.8"></script>
+  <script src="js/data-backup.js?v=4.10.8"></script>
+  <script src="js/app.js?v=4.10.8"></script>
 </body>
 </html>

@@ -667,7 +667,7 @@ const RevenueSummaryBrain = {
     const wo = this.normalizeScheduleWorkOrder(workOrder);
     const t = today || new Date().toISOString().slice(0, 10);
     if (!wo.scheduledDate) return '予定';
-    if (wo.scheduledDate === t) return '作業後に売上確定';
+    if (wo.scheduledDate === t) return '本日';
     const soonEnd = typeof WorkOrderBrain !== 'undefined'
       ? WorkOrderBrain.addDays(t, 3)
       : t;

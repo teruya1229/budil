@@ -10808,3 +10808,67 @@ body.sales-page {
 .calendar-candidate-primary-actions {
   margin-bottom: 1rem;
 }
+
+/* v4.10.8 実運用前 横断整合 */
+.exec-home-revenue-queue,
+.card-revenue-queue,
+.card-revenue-upcoming,
+.exec-home-upcoming {
+  margin-bottom: 1rem;
+}
+
+.card-onboarding-guide-collapse,
+.card-business-report-collapse,
+.card-reception-input-collapse,
+.card-reception-list-collapse,
+.card-start-guide {
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  color: var(--text-primary, #e2e8f0);
+}
+
+.card-onboarding-guide-collapse > summary,
+.card-business-report-collapse > summary,
+.card-reception-input-collapse > summary,
+.card-reception-list-collapse > summary,
+.card-start-guide > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-primary, #e2e8f0);
+  padding: 0.35rem 0;
+}
+
+.card-onboarding-guide,
+.card-business-report,
+.reception-saved-item,
+.work-order-item,
+.daily-revenue-queue-card,
+.upcoming-revenue-schedule-item,
+.business-report-summary-card,
+.strategy-memo-card,
+.card-onboarding-guide .onboarding-step {
+  background: rgba(15, 23, 42, 0.85) !important;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  color: var(--text-primary, #e2e8f0);
+}
+
+.placeholder-text,
+.calendar-source-hint,
+.daily-section-lead,
+.upcoming-revenue-schedule-note,
+.upcoming-revenue-schedule-scope,
+.upcoming-revenue-schedule-hint {
+  color: #cbd5e1;
+}
+
+.daily-revenue-queue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.exec-home-revenue-queue .daily-revenue-queue-card,
+.card-revenue-queue .daily-revenue-queue-card {
+  margin-bottom: 0.5rem;
+}

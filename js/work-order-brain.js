@@ -88,7 +88,16 @@ const WorkOrderBrain = {
   },
 
   forOperationalList(workOrders) {
-    return (workOrders || []).filter(w => !this.isPendingCalendarCandidate(w));
+    return (workOrders || []).filter(w => {
+      const wo = this.normalizeWorkOrder(w);
+      if (typeof CalendarCandidateBrain !== 'undefined'
+        && CalendarCandidateBrain.isCalendarCandidateWorkOrder(wo)
+        && wo.scheduledDate
+        && CalendarCandidateBrain.getCandidateStatus(wo) !== 'スキップ') {
+        return true;
+      }
+      return !this.isPendingCalendarCandidate(w);
+    });
   },
 
   isValidTime(str) {

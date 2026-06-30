@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.7 — Google Calendar source-of-truth flow simplification verification.
+ * Budil v4.10.8 — Google Calendar source-of-truth flow simplification verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -12,7 +12,7 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-console.log('== v4.10.7 calendar source flow simplification ==');
+console.log('== v4.10.8 calendar source flow simplification ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -21,7 +21,7 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.7'), 'index.html should show v4.10.7');
+assert(indexHtml.includes('v4.10.8'), 'index.html should show v4.10.8');
 assert(indexHtml.includes('受付・予定確認'), 'calendar registration view should be renamed');
 assert(
   indexHtml.includes('Googleカレンダー登録後の予定をBudilで確認'),
@@ -100,10 +100,10 @@ assert(!appJs.includes('unlinked-revenue'), 'v4.10.4 unlinked revenue prompts sh
 assert(indexHtml.includes('btn-calendar-candidate-json-import'), 'v4.10.1 JSON import should remain');
 assert(!appJs.includes('localStorage.clear()'), 'localStorage.clear must not be used');
 
-assert(statusMd.includes('v4.10.7'), 'status.md should document v4.10.7');
-assert(handoffMd.includes('v4.10.7'), 'handoff.md should document v4.10.7');
-assert(decisionLog.includes('v4.10.7'), 'decision-log.md should record v4.10.7');
+assert(statusMd.includes('v4.10.8'), 'status.md should document v4.10.8');
+assert(handoffMd.includes('v4.10.8'), 'handoff.md should document v4.10.8');
+assert(decisionLog.includes('v4.10.8'), 'decision-log.md should record v4.10.8');
 
 execSync('node scripts/verify-v4105-simple-daily-and-analysis-split.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('All v4.10.7 calendar source flow simplification checks passed.');
+console.log('All v4.10.8 calendar source flow simplification checks passed.');

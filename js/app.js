@@ -746,7 +746,7 @@
       'next-sales': '営業提案',
       'target-remaining': '売上目標',
       repeat: 'リピート',
-      'register-revenue': '売上登録',
+      'register-revenue': '売上明細を手入力',
       'maintain-relationship': '関係維持'
     };
     if (task.pickupActionType) {
@@ -907,14 +907,12 @@
         <p class="exec-work-meta">${esc(wo.serviceText || '—')} / ${esc(wo.area)} / 見込み${WorkOrderBrain.formatYen(wo.estimateAmount)}</p>
         ${wo.warnings.length ? `<p class="exec-work-warn">${wo.warnings.map(w => esc(w)).join(' · ')}</p>` : ''}
         <div class="exec-work-actions">
-          <button type="button" class="btn btn-sm btn-primary" data-exec-wo-completion="${esc(wo.id)}">作業後確定</button>
+          <button type="button" class="btn btn-sm btn-primary" data-exec-wo-completion="${esc(wo.id)}">売上確定</button>
           <details class="exec-work-detail-actions">
             <summary>詳細操作</summary>
             <div class="exec-work-actions-secondary">
               ${renderMapActionsHtml(wo.address, { area: wo.area, showNoAddress: true })}
               ${wo.calendarReady ? `<a class="btn btn-sm btn-secondary" href="${esc(wo.calendarUrl)}" target="_blank" rel="noopener noreferrer">Googleカレンダー</a>` : ''}
-              <button type="button" class="btn btn-sm btn-secondary" data-exec-wo-complete="${esc(wo.id)}">作業完了</button>
-              <button type="button" class="btn btn-sm btn-secondary" data-exec-wo-revenue="${esc(wo.id)}">売上確定へ</button>
             </div>
           </details>
         </div>
@@ -1535,8 +1533,12 @@
         : '<p class="placeholder-text">今日の最優先はまだありません。予定取り込み・改善リスト・経営ホームから追加できます。</p>';
     }
 
-    const upcomingEl = document.getElementById('exec-home-upcoming-schedule');
-    if (upcomingEl) upcomingEl.innerHTML = renderUpcomingRevenueScheduleHtml({ compact: true, limit: 3 });
+    const upcomingMainEl = document.getElementById('exec-home-upcoming-schedule-main');
+    if (upcomingMainEl) {
+      upcomingMainEl.innerHTML = renderUpcomingRevenueScheduleHtml({ compact: true, limit: 5, emptyText: EMPTY_SCHEDULE_COPY });
+    }
+
+    renderRevenueConfirmationQueueBlock('exec-home-revenue-queue-list', { limit: 3 });
 
     const workEl = document.getElementById('exec-home-work-orders');
     if (workEl) workEl.innerHTML = renderExecutiveWorkOrdersHtml(ctx.workSection);
@@ -1677,7 +1679,7 @@
       );
       completionMorningEl.innerHTML = completionLines.length
         ? `<ul class="mgmt-work-completion-list">${completionLines.slice(1).map(l => `<li>${esc(l)}</li>`).join('')}</ul>`
-        : '<p class="placeholder-text">作業後確定待ちはありません</p>';
+        : '<p class="placeholder-text">売上確定待ちはありません</p>';
     }
 
     const demandTopEl = document.getElementById('mgmt-demand-top');
@@ -2835,9 +2837,9 @@
       const isPastScheduled = WorkCompletionBrain.isPastScheduledActive(wo, today);
       if (!isCompleted && !isPastScheduled && !(wo.completion && wo.completion.needsReview)) return;
 
-      let statusLabel = '売上未登録';
-      if (isCompleted) statusLabel = '完了済み';
-      else if (isPastScheduled || (wo.completion && wo.completion.needsReview)) statusLabel = '作業後確認';
+      let statusLabel = '売上未確定';
+      if (isCompleted) statusLabel = '売上未確定';
+      else if (isPastScheduled || (wo.completion && wo.completion.needsReview)) statusLabel = '売上確定待ち';
 
       workOrderItems.push({
         type: 'work-order',
@@ -2904,11 +2906,15 @@
     return dateStr;
   }
 
-  function renderRevenueConfirmationQueueCard(item) {
+  function renderRevenueConfirmationQueueCard(item, options) {
+    const opts = options || {};
     const amountLabel = item.amount ? WorkOrderBrain.formatYen(item.amount) : '—';
-    const calendarBtn = item.type === 'past-recovery'
-      ? `<button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-past-recovery>過去売上復元を見る</button>`
-      : `<button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-calendar>受付・予定確認を見る</button>`;
+    const detailBtn = item.type === 'past-recovery'
+      ? `<button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-past-recovery>詳細を見る</button>`
+      : `<button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-calendar>詳細を見る</button>`;
+  const confirmBtn = opts.hideConfirm
+      ? ''
+      : `<button type="button" class="btn btn-sm btn-primary" data-daily-revenue-confirm="${esc(item.id)}" data-daily-revenue-source="${esc(item.type)}">売上確定</button>`;
     return `<div class="daily-revenue-queue-card daily-revenue-queue-${esc(item.type)}">
       <div class="daily-revenue-queue-meta">
         <span class="daily-revenue-queue-date">${esc(formatRevenueQueueDate(item.scheduledDate))}</span>
@@ -2918,8 +2924,8 @@
         <span class="daily-revenue-queue-status">${esc(item.statusLabel)}</span>
       </div>
       <div class="daily-revenue-queue-actions">
-        <button type="button" class="btn btn-sm btn-primary" data-daily-revenue-confirm="${esc(item.id)}" data-daily-revenue-source="${esc(item.type)}">売上確定へ</button>
-        ${calendarBtn}
+        ${confirmBtn}
+        ${detailBtn}
       </div>
     </div>`;
   }
@@ -2958,24 +2964,35 @@
     });
   }
 
-  function renderDailyRevenueConfirmationQueue() {
-    const el = document.getElementById('daily-revenue-queue-list');
+  function renderRevenueConfirmationQueueBlock(targetId, options) {
+    const el = typeof targetId === 'string' ? document.getElementById(targetId) : targetId;
     if (!el) return;
+    const opts = options || {};
+    const limit = opts.limit || 3;
     const queue = collectRevenueConfirmationQueue();
     if (!queue.totalCount) {
-      el.innerHTML = '<p class="placeholder-text">売上確定待ちはありません。作業日当日以降で、まだ売上確定していない予定がここに表示されます（未来の売上予定は下の「売上予定（未確定）」を確認）。</p>';
+      el.innerHTML = `<p class="placeholder-text">${esc(opts.emptyText || '売上確定待ちはありません。作業日当日以降で、まだ売上確定していない予定がここに表示されます。')}</p>`;
       bindDailyRevenueQueueEvents(el);
       return;
     }
-    const cards = queue.visible.map(renderRevenueConfirmationQueueCard).join('');
-    const more = queue.hiddenCount
-      ? `<p class="daily-revenue-queue-more">ほか${queue.hiddenCount}件あります</p>
+    const visible = queue.visible.slice(0, limit);
+    const hiddenCount = Math.max(0, queue.totalCount - visible.length);
+    const cards = visible.map(item => renderRevenueConfirmationQueueCard(item, opts)).join('');
+    const more = hiddenCount
+      ? `<p class="daily-revenue-queue-more">ほか${hiddenCount}件あります</p>
          <div class="daily-revenue-queue-more-actions">
-           <button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-calendar>受付・予定確認を見る</button>
+           <button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-daily>毎日やることを見る</button>
          </div>`
       : '';
     el.innerHTML = `<div class="daily-revenue-queue-cards">${cards}</div>${more}`;
     bindDailyRevenueQueueEvents(el);
+    el.querySelectorAll('[data-daily-revenue-go-daily]').forEach(btn => {
+      btn.addEventListener('click', () => scrollToElement('.card-daily-action-tasks'));
+    });
+  }
+
+  function renderDailyRevenueConfirmationQueue() {
+    renderRevenueConfirmationQueueBlock('daily-revenue-queue-list');
   }
 
   function renderDailyPrioritySection() {
@@ -3443,7 +3460,7 @@
       lines.push(`<p class="revenue-bantou-comment">${esc(comment)}</p>`);
     }
     if (opts.showLink) {
-      lines.push('<button type="button" class="btn btn-sm btn-secondary" id="btn-go-revenue">売上登録を開く</button>');
+      lines.push('<button type="button" class="btn btn-sm btn-secondary" id="btn-go-revenue">売上明細を手入力</button>');
     }
     return lines.join('');
   }
@@ -3580,7 +3597,7 @@
     { title: '毎日やることを整理', desc: '優先タスクを毎朝確認', action: 'task' },
     { title: '集客施策メモ', desc: 'クロクロ調査結果を集客施策メモに取り込み', action: 'pickup' },
     { title: '受付・予定確認', desc: '受付内容を整理し、Googleカレンダー登録後の予定を確認', action: 'reception' },
-    { title: '直近予定を確認', desc: '今日/今週の予定から毎日やること・売上登録へ', action: 'work-order' },
+    { title: '直近予定を確認', desc: '今日/今週の予定から毎日やること・売上確定へ', action: 'work-order' },
     { title: '作業後フォローをつなぐ', desc: 'お礼・口コミ依頼・リピート提案を文面生成', action: 'follow-up' },
     { title: 'エリアで移動を判断', desc: 'エリア別サマリーとGoogleマップ導線', action: 'area' },
     { title: '投稿・広告文案を作る', desc: '需要から投稿・広告案を生成', action: 'pickup' },
@@ -3658,7 +3675,7 @@
           <ol class="onboarding-demo-order">
             <li>経営ホーム</li>
             <li>カレンダー登録</li>
-            <li>売上登録</li>
+            <li>売上明細を手入力</li>
             <li>フォロー</li>
             <li>利益管理</li>
             <li>アナリティクス</li>
@@ -3674,7 +3691,7 @@
         return `<li class="onboarding-step ${done ? 'onboarding-step-done' : ''}">
           <span class="onboarding-step-num">${i + 1}</span>
           <span class="onboarding-step-label">${esc(step.label)}</span>
-          <span class="onboarding-step-status">${done ? '完了 ✓' : '未完了'}</span>
+          <span class="onboarding-step-status">${done ? '済み ✓' : '未完了'}</span>
           ${done ? '' : `<button type="button" class="btn btn-sm ${i === 0 ? 'btn-primary' : 'btn-secondary'}" data-onboarding-action="${esc(step.action)}">${esc(step.btn)}</button>`}
         </li>`;
       }).join('')}</ol>
@@ -3685,7 +3702,7 @@
           return `<li class="onboarding-step ${done ? 'onboarding-step-done' : ''}">
             <span class="onboarding-step-num">${i + 4}</span>
             <span class="onboarding-step-label">${esc(step.label)}</span>
-            <span class="onboarding-step-status">${done ? '完了 ✓' : '未完了'}</span>
+            <span class="onboarding-step-status">${done ? '済み ✓' : '未完了'}</span>
             ${done ? '' : `<button type="button" class="btn btn-sm btn-secondary" data-onboarding-action="${esc(step.action)}">${esc(step.btn)}</button>`}
           </li>`;
         }).join('')}</ol>
@@ -3694,7 +3711,7 @@
         return `<li class="onboarding-step ${done ? 'onboarding-step-done' : ''}">
           <span class="onboarding-step-num">${i + 4}</span>
           <span class="onboarding-step-label">${esc(step.label)}</span>
-          <span class="onboarding-step-status">${done ? '完了 ✓' : '未完了'}</span>
+          <span class="onboarding-step-status">${done ? '済み ✓' : '未完了'}</span>
           ${done ? '' : `<button type="button" class="btn btn-sm btn-secondary" data-onboarding-action="${esc(step.action)}">${esc(step.btn)}</button>`}
         </li>`;
       }).join('')}</ol>`}
@@ -3703,7 +3720,7 @@
         <ul class="onboarding-workflow-list">
           <li>カレンダー登録でAI番頭の結果を取り込み、日程を入れてカレンダー登録</li>
           <li>作業完了後はフォローでお礼LINE・口コミ依頼・リピート提案</li>
-          <li>作業後に売上登録</li>
+          <li>作業後に売上確定</li>
         </ul>
       </div>
       ${mode === 'detail' ? `
@@ -9290,19 +9307,7 @@
   }
 
   function renderWorkOrderPendingCompletionList() {
-    const el = document.getElementById('work-order-pending-completion-list');
-    if (!el || typeof WorkCompletionBrain === 'undefined') return;
-    const targets = WorkCompletionBrain.getCompletionTargets(
-      Storage.getWorkOrders(),
-      Storage.getRevenueRecords(),
-      TODAY()
-    );
-    if (!targets.length) {
-      el.innerHTML = '<p class="placeholder-text">作業後確定待ちはありません。</p>';
-      return;
-    }
-    el.innerHTML = targets.map(t => renderWorkOrderItemCard(t.workOrder)).join('');
-    bindWorkOrderItemEvents(el);
+    renderRevenueConfirmationQueueBlock('work-order-pending-completion-list', { limit: 5 });
   }
 
   function renderWorkOrderItemActions(workOrder) {
@@ -9315,17 +9320,15 @@
     const canConfirm = !hasRevenue && !isCancelled && typeof WorkCompletionBrain !== 'undefined'
       && WorkCompletionBrain.isOperationalWorkOrder(wo);
     const primary = [
-      canConfirm ? `<button type="button" class="btn btn-sm btn-primary" data-wo-completion="${esc(wo.id)}">作業後確定</button>` : '',
-      hasRevenue ? `<button type="button" class="btn btn-sm btn-primary" data-wo-open-revenue="${esc(wo.id)}">売上を開く</button>` : ''
+      canConfirm ? `<button type="button" class="btn btn-sm btn-primary" data-wo-completion="${esc(wo.id)}">売上確定</button>` : '',
+      hasRevenue ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-open-revenue="${esc(wo.id)}">売上明細を開く</button>` : ''
     ].filter(Boolean).join('');
     const secondary = [
       mapUrl ? `<a href="${esc(mapUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary">Googleマップで開く</a>` : '',
       cal.ready ? `<a href="${esc(cal.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary" data-wo-calendar="${esc(wo.id)}">Googleカレンダーに追加</a>` : '',
-      canConfirm ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-completion-open="${esc(wo.id)}">売上確定へ</button>` : '',
       `<button type="button" class="btn btn-sm btn-secondary" data-wo-add-task="${esc(wo.id)}">毎日やることに追加</button>`,
       canConfirm ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-needs-review="${esc(wo.id)}">要確認</button>` : '',
       hasRevenue ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-goto-follow="${esc(wo.id)}">フォローへ</button>` : '',
-      completed && !hasRevenue ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-fill-revenue="${esc(wo.id)}">売上フォームへ反映</button>` : '',
       `<button type="button" class="btn btn-sm btn-secondary" data-wo-edit="${esc(wo.id)}">編集</button>`,
       canConfirm ? `<button type="button" class="btn btn-sm btn-secondary btn-danger-outline" data-wo-cancel-open="${esc(wo.id)}">キャンセル</button>` : ''
     ].filter(Boolean).join('');
@@ -9441,7 +9444,7 @@
     const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
     if (!wo) return;
     if (isWorkOrderRevenueLocked(wo)) {
-      alert('この作業予定はすでに売上確定済みです。作業後確定処理をご利用ください。');
+      alert('この作業予定はすでに売上確定済みです。');
       return;
     }
     const candidate = WorkOrderBrain.buildRevenueFormPayload(wo);
@@ -9531,7 +9534,7 @@
   function renderWorkOrderView() {
     try {
       safeRenderSection(null, () => renderWorkOrderCalendarBrief(), '過去売上復元');
-      safeRenderSection('work-order-pending-completion-list', () => renderWorkOrderPendingCompletionList(), '作業後確定待ち');
+      safeRenderSection('work-order-pending-completion-list', () => renderWorkOrderPendingCompletionList(), '売上確定待ち');
       if (document.getElementById('work-order-forecast')) {
         safeRenderSection('work-order-forecast', () => renderWorkOrderForecast(), '売上見込み');
       }
@@ -14454,7 +14457,7 @@
     document.getElementById('revenue-status').value = prefill.status;
     writeRevenuePaymentFieldsToForm(prefill);
     document.getElementById('revenue-memo').value = prefill.memo;
-    document.getElementById('revenue-form-title').textContent = '売上登録（請求書から反映）';
+    document.getElementById('revenue-form-title').textContent = '売上明細を手入力（請求書から反映）';
     showAppToast('売上登録フォームに反映しました。保存すると請求書とリンクされます。');
     document.getElementById('revenue-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -14652,7 +14655,7 @@
     fillRevenueSelects();
     fillRevenuePaymentSelects();
     document.getElementById('revenue-edit-id').value = '';
-    document.getElementById('revenue-form-title').textContent = '売上登録';
+    document.getElementById('revenue-form-title').textContent = '売上明細を手入力';
     document.getElementById('btn-revenue-cancel').classList.add('hidden');
     document.getElementById('revenue-work-date').value = TODAY();
     document.getElementById('revenue-customer').value = lead.company || '';
@@ -14734,7 +14737,7 @@
     fillRevenueLeadSelect('');
     toggleRevenueLeadOptions();
     toggleRevenueOpenLeadButton();
-    document.getElementById('revenue-form-title').textContent = '売上登録';
+    document.getElementById('revenue-form-title').textContent = '売上明細を手入力';
     document.getElementById('btn-revenue-cancel').classList.add('hidden');
   }
 
@@ -15406,12 +15409,6 @@
           <strong>${esc(item.value)}</strong>
         </div>`).join('');
     }
-    const upcomingScheduleEl = document.getElementById('revenue-upcoming-schedule');
-    if (upcomingScheduleEl) {
-      upcomingScheduleEl.innerHTML = renderUpcomingRevenueScheduleHtml({ limit: 3, showScheduleImportBtn: true });
-      const importBtn = upcomingScheduleEl.querySelector('.upcoming-go-schedule-import');
-      if (importBtn) importBtn.addEventListener('click', () => navigateToView('calendar-candidate'));
-    }
     if (commentEl) commentEl.textContent = comment;
     if (targetEl) targetEl.value = settings.monthlyTarget || '';
     if (outcomeEl) outcomeEl.innerHTML = '';
@@ -15437,6 +15434,15 @@
       const leadEl = document.getElementById('revenue-lead');
       fillRevenueLeadSelect(leadEl ? leadEl.value : '');
       toggleRevenueLeadOptions();
+      safeRenderSection('revenue-confirmation-queue-list', () => renderRevenueConfirmationQueueBlock('revenue-confirmation-queue-list', { limit: 5 }), '売上確定待ち');
+      safeRenderSection('revenue-upcoming-schedule', () => {
+        const upcomingScheduleEl = document.getElementById('revenue-upcoming-schedule');
+        if (upcomingScheduleEl) {
+          upcomingScheduleEl.innerHTML = renderUpcomingRevenueScheduleHtml({ limit: 5, showScheduleImportBtn: true });
+          const importBtn = upcomingScheduleEl.querySelector('.upcoming-go-schedule-import');
+          if (importBtn) importBtn.addEventListener('click', () => navigateToView('calendar-candidate'));
+        }
+      }, '売上予定');
       safeRenderSection('revenue-summary', () => renderRevenueSummaryPanel(), '売上サマリー');
       safeRenderSection('revenue-monthly-closing-check', () => renderMonthlyClosingCheck('revenue-monthly-closing-check', { compact: true }), '月次締めチェック');
       safeRenderSection('revenue-tbody', () => renderRevenueList(), '売上一覧');
