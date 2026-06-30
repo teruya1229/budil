@@ -398,7 +398,7 @@ const ReceptionBrain = {
       primaryLabel = '売上を開く';
     } else if (completedNoRevenue) {
       primaryAction = 'fillRevenue';
-      primaryLabel = '売上登録へ進む';
+      primaryLabel = '売上確定へ進む';
     } else if (hasWorkOrder) {
       primaryAction = 'openWorkOrder';
       primaryLabel = '作業予定を開く';
@@ -423,8 +423,8 @@ const ReceptionBrain = {
         '受付保存済み',
         hasLead ? '営業先あり' : '未案件化',
         hasWorkOrder ? '作業予定あり' : '予定未作成',
-        hasWorkOrder ? (hasWorkCompleted ? '作業完了' : '作業未完了') : '',
-        hasRevenue ? '売上登録済み' : '売上未登録'
+        hasWorkOrder ? (hasWorkCompleted ? '対応済み' : '作業未完了') : '',
+        hasRevenue ? '売上確定済み' : '売上未確定'
       ].filter(Boolean)
     };
   },

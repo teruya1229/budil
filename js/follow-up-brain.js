@@ -466,7 +466,7 @@ const FollowUpBrain = {
       t.hasRevenue && t.followUp.thanksStatus === 'pending' && t.followUp.reviewStatus === 'pending'
     );
     if (doneNoFollow.length) {
-      warnings.push(`作業完了・売上登録済みだがフォロー未対応：${doneNoFollow.length}件`);
+      warnings.push(`売上確定済み・フォロー未対応：${doneNoFollow.length}件`);
     }
     return warnings;
   },

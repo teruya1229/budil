@@ -976,7 +976,7 @@ const CalendarCandidateBrain = {
       status: '確定',
       paymentStatus: '未入金',
       paymentConcern: false,
-      memo: [wo.memo, 'Googleカレンダー過去分復元モードから一括売上登録'].filter(Boolean).join('\n'),
+      memo: [wo.memo, 'Googleカレンダー過去分復元モードから一括売上確定'].filter(Boolean).join('\n'),
       sourceWorkOrderId: wo.id || '',
       sourceCandidateId: wo.id || '',
       calendarDedupeKey: wo.calendarDedupeKey || this.buildCalendarDedupeKey(wo),

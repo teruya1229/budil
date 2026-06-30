@@ -66,7 +66,7 @@ const WorkCompletionBrain = {
     if (completion && completion.needsReview) return '要確認';
     const rev = this.getLinkedRevenue(wo, revenues);
     if (rev) {
-      if (typeof PaymentBrain !== 'undefined' ? PaymentBrain.isReceivablePending(rev) : rev.paymentStatus === '未入金') return '作業完了・入金待ち';
+      if (typeof PaymentBrain !== 'undefined' ? PaymentBrain.isReceivablePending(rev) : rev.paymentStatus === '未入金') return '売上確定済み・入金待ち';
       return '売上確定済み';
     }
     if (wo.status === 'completed' || this.isPastScheduledActive(wo)) return '売上未確定';

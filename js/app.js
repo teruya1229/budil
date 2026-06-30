@@ -1452,7 +1452,7 @@
     const quickSteps = [
       { n: 1, text: 'デモデータを作成して全体の流れを確認', action: 'demo', btn: 'デモ作成' },
       { n: 2, text: '経営ホームで今日の結論と最優先3つを見る', action: 'home', btn: 'この画面を見る' },
-      { n: 3, text: 'カレンダー登録から受付・日程・売上登録まで試す', action: 'reception', btn: 'カレンダー登録へ' }
+      { n: 3, text: 'カレンダー登録から受付・日程・売上確定まで試す', action: 'reception', btn: 'カレンダー登録へ' }
     ];
     el.innerHTML = `
       <div class="exec-start-guide-inner">
@@ -1463,7 +1463,7 @@
         <details class="exec-start-guide-more">
           <summary>詳しい使い方を見る</summary>
           <ol class="exec-start-guide-full" start="4">
-            <li>日程を入れてカレンダー登録 → 作業後に売上登録</li>
+            <li>日程を入れてカレンダー登録 → 作業後に売上確定</li>
             <li>フォロー・口コミ依頼を確認</li>
             <li>アクセス分析で改善点を見る</li>
           </ol>
@@ -1635,7 +1635,7 @@
         <ul class="mgmt-profit-list">
           <li>今月売上 ${esc(RevenueBrain.formatYen(rp.monthRevenue))} / 目標 ${esc(RevenueBrain.formatYen(rp.monthlyTarget))}（${rp.achievementRate}%）</li>
           <li>支出 ${esc(ProfitBrain.formatYen(rp.monthExpense))} / 粗利 ${esc(ProfitBrain.formatYen(rp.grossProfit))}（${esc(ProfitBrain.formatRate(rp.grossRate))}）</li>
-          ${rp.completedNoRevenue ? `<li>作業完了・売上未登録 ${rp.completedNoRevenue}件</li>` : ''}
+          ${rp.completedNoRevenue ? `<li>作業日経過・売上未確定 ${rp.completedNoRevenue}件</li>` : ''}
         </ul>`;
     }
 
@@ -2698,7 +2698,7 @@
 
   function getUpcomingRevenueScheduleSummary() {
     if (typeof RevenueSummaryBrain === 'undefined') {
-      return { monthCount: 0, monthTotal: 0, upcoming: [], upcomingCount: 0, label: '売上予定（未確定）', scopeNote: '', hint: '' };
+      return { monthCount: 0, monthTotal: 0, displayCount: 0, displayTotal: 0, upcoming: [], upcomingCount: 0, label: '売上予定（未確定）', scopeNote: '', hint: '' };
     }
     return RevenueSummaryBrain.buildUpcomingRevenueScheduleSummary(Storage.getWorkOrders(), TODAY());
   }
@@ -2708,12 +2708,14 @@
     const summary = opts.summary || getUpcomingRevenueScheduleSummary();
     const limit = opts.limit || 3;
     const upcoming = (summary.upcoming || []).slice(0, limit);
-    const monthAmount = RevenueBrain.formatYen(summary.monthTotal || 0);
-    if (!summary.monthCount && !upcoming.length) {
+    const displayCount = summary.displayCount ?? summary.upcomingCount ?? 0;
+    const displayTotal = summary.displayTotal ?? summary.monthTotal ?? 0;
+    const displayAmount = RevenueBrain.formatYen(displayTotal);
+    if (!displayCount && !upcoming.length) {
       return `<p class="placeholder-text upcoming-revenue-schedule-empty">${esc(opts.emptyText || '今日以降の売上予定はありません。予定取り込みから読み込めます。')}</p>`;
     }
-    const head = `<p class="upcoming-revenue-schedule-head">今月の売上予定：<strong>${summary.monthCount || 0}件 / ${esc(monthAmount)}</strong></p>`;
-    const note = `<p class="upcoming-revenue-schedule-note">${esc(summary.label || '売上予定（未確定）')}：${esc(monthAmount)}</p>`;
+    const head = `<p class="upcoming-revenue-schedule-head">${esc(summary.label || '売上予定（未確定）')}：<strong>${displayCount}件 / ${esc(displayAmount)}</strong></p>`;
+    const note = '';
     const scope = summary.scopeNote
       ? `<p class="upcoming-revenue-schedule-scope">${esc(summary.scopeNote)}</p>`
       : '';
@@ -3662,7 +3664,7 @@
     el.innerHTML = `
       <div class="onboarding-header">
         <h2>はじめてガイド</h2>
-        <span class="onboarding-progress">${doneCount}/${ONBOARDING_STEPS.length} 完了</span>
+        <span class="onboarding-progress">${doneCount}/${ONBOARDING_STEPS.length} 済み</span>
       </div>
       <p class="onboarding-lead">${mode === 'detail'
         ? 'Budilを初めて使う方・デモを見る方向けのセットアップ手順です。'
@@ -3719,7 +3721,7 @@
         <h3 class="onboarding-subtitle">カレンダー〜売上の流れ</h3>
         <ul class="onboarding-workflow-list">
           <li>カレンダー登録でAI番頭の結果を取り込み、日程を入れてカレンダー登録</li>
-          <li>作業完了後はフォローでお礼LINE・口コミ依頼・リピート提案</li>
+          <li>売上確定後はフォローでお礼LINE・口コミ依頼・リピート提案</li>
           <li>作業後に売上確定</li>
         </ul>
       </div>
@@ -3838,8 +3840,8 @@
         <ol class="demo-data-guide-order">
           <li>経営ホーム</li>
           <li>カレンダー登録</li>
-          <li>売上登録</li>
-          <li>売上登録</li>
+          <li>売上管理</li>
+          <li>売上明細を手入力</li>
           <li>フォロー</li>
           <li>利益管理</li>
           <li>アナリティクス</li>
@@ -8161,6 +8163,17 @@
       ${list.map(wo => {
         const st = CalendarCandidateBrain.getCandidateStatus(wo);
         const timeLabel = wo.startTime && wo.endTime ? `${wo.startTime}〜${wo.endTime}` : (wo.startTime || '時間未設定');
+        const isPromoted = CalendarCandidateBrain.isPromotedCandidate(wo);
+        const canPromote = st === '候補' || st === '要確認';
+        const primaryAction = isPromoted
+          ? `<span class="calendar-candidate-saved-status">作業予定に追加済み</span>`
+          : (canPromote
+            ? `<button type="button" class="btn btn-sm btn-primary" data-cal-promote="${esc(wo.id)}">作業予定に追加</button>`
+            : '');
+        const moreActions = `
+            <button type="button" class="btn btn-sm btn-secondary" data-cal-task="${esc(wo.id)}">毎日やることに追加</button>
+            ${st !== 'スキップ' && !isPromoted ? `<button type="button" class="btn btn-sm btn-secondary" data-cal-review="${esc(wo.id)}">要確認にする</button>` : ''}
+            ${st !== 'スキップ' ? `<button type="button" class="btn btn-sm btn-secondary" data-cal-skip="${esc(wo.id)}">このまま保持</button>` : ''}`;
         return `<div class="calendar-candidate-saved-item" data-cal-wo-id="${esc(wo.id)}">
           <div class="calendar-candidate-saved-header">
             <strong>${esc(wo.customerName || '（名前なし）')}</strong>
@@ -8170,10 +8183,11 @@
           <p class="calendar-candidate-saved-meta">依頼元：${esc(wo.source || '—')} / 見込み：${esc(WorkOrderBrain.formatYen(wo.estimateAmount))} / 確度：${esc((wo.candidateMeta && wo.candidateMeta.confidence) || '—')}</p>
           ${wo.candidateMeta && wo.candidateMeta.cautionNote ? `<p class="calendar-candidate-saved-warn">注意：${esc(wo.candidateMeta.cautionNote)}</p>` : ''}
           <div class="calendar-candidate-saved-actions">
-            ${st === '候補' || st === '要確認' ? `<button type="button" class="btn btn-sm btn-primary" data-cal-promote="${esc(wo.id)}">作業予定に追加</button>` : ''}
-            <button type="button" class="btn btn-sm btn-secondary" data-cal-task="${esc(wo.id)}">毎日やることに追加</button>
-            ${st !== 'スキップ' ? `<button type="button" class="btn btn-sm btn-secondary" data-cal-review="${esc(wo.id)}">要確認にする</button>` : ''}
-            ${st !== 'スキップ' ? `<button type="button" class="btn btn-sm btn-secondary" data-cal-skip="${esc(wo.id)}">このまま保持</button>` : ''}
+            ${primaryAction}
+            <details class="calendar-candidate-saved-more">
+              <summary>詳細操作</summary>
+              <div class="calendar-candidate-saved-more-actions">${moreActions}</div>
+            </details>
           </div>
         </div>`;
       }).join('')}`;
@@ -8222,19 +8236,19 @@
     const report = getCalendarPastRecoveryReport(false);
     const ids = report ? report.eligible.map(item => item.workOrder.id).filter(Boolean) : [];
     if (!ids.length) {
-      alert('一括売上登録できる登録対象がありません。');
+      alert('一括売上確定できる登録対象がありません。');
       return;
     }
     const amountLabel = WorkOrderBrain.formatYen(report.totalAmount);
     if (!confirm(`売上実績候補 ${ids.length}件 / ${amountLabel} を一括で確定売上に登録します。\n既存売上は上書きせず、重複疑いは除外します。よろしいですか？`)) return;
     const result = Storage.bulkConvertCalendarPastCandidatesToRevenue(ids, options);
     if (!result || !result.ok) {
-      alert('一括売上登録に失敗しました。売上データは更新していません。');
+      alert('一括売上確定に失敗しました。売上データは更新していません。');
       return;
     }
     refreshCalendarCandidateViews();
     renderRevenueView();
-    alert(`一括売上登録が完了しました。\n追加：${result.added}件 / ${WorkOrderBrain.formatYen(result.addedAmount || 0)}\n重複・対象外スキップ：${result.skipped}件\n売上件数：${result.beforeCount}件 → ${result.afterCount}件`);
+    alert(`一括売上確定が完了しました。\n追加：${result.added}件 / ${WorkOrderBrain.formatYen(result.addedAmount || 0)}\n重複・対象外スキップ：${result.skipped}件\n売上件数：${result.beforeCount}件 → ${result.afterCount}件`);
   }
 
   function promoteCalendarCandidate(workOrderId) {
@@ -8249,7 +8263,7 @@
       }
     });
     refreshCalendarCandidateViews();
-    alert('作業予定に反映しました。売上は売上登録で確定してください。');
+    alert('作業予定に反映しました。売上は売上確定で反映してください。');
   }
 
   function skipCalendarCandidate(workOrderId) {
@@ -9041,7 +9055,7 @@
     const label = WorkCompletionBrain.getDisplayStatus(workOrder, revenues);
     const cls = {
       '売上確定済み': 'status-confirmed',
-      '作業完了・入金待ち': 'status-unpaid',
+      '売上確定済み・入金待ち': 'status-unpaid',
       '売上未確定': 'status-pending',
       'キャンセル': 'status-cancelled',
       '要確認': 'status-review'
@@ -9122,7 +9136,7 @@
     const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
     if (!wo) return;
     if (isWorkOrderRevenueLocked(wo)) {
-      alert('売上確定済みの作業予定はキャンセルできません。売上登録で対応してください。');
+      alert('売上確定済みの作業予定はキャンセルできません。売上明細で対応してください。');
       return;
     }
     if (wo.status === 'cancelled') {
@@ -9849,7 +9863,7 @@
     const actionable = targets.filter(t => t.needsThanks || t.needsReview || t.maintenanceNear);
     const list = actionable;
     if (!list.length) {
-      el.innerHTML = '<p class="placeholder-text">フォローが必要な作業はありません。作業完了・売上登録後に表示されます。</p>';
+      el.innerHTML = '<p class="placeholder-text">フォローが必要な作業はありません。売上確定後に表示されます。</p>';
       selectedFollowUpTargetId = null;
       const panel = document.getElementById('follow-up-detail-panel');
       if (panel) panel.classList.add('hidden');
@@ -14031,7 +14045,7 @@
     const company = (fields.customerName || '').trim();
     if (!company) return null;
     const workDate = fields.workDate || TODAY();
-    const memoParts = ['【売上登録から作成】'];
+    const memoParts = ['【売上明細から作成】'];
     if (fields.source) memoParts.push('依頼元: ' + fields.source);
     if (fields.amount) memoParts.push('金額: ' + RevenueBrain.formatYen(fields.amount));
     if (fields.memo) memoParts.push(fields.memo);
@@ -14394,7 +14408,7 @@
     if (item.linkedBroken === 'revenue' && item.primaryKind === 'document') {
       return `
         <button type="button" class="btn btn-sm btn-secondary" data-unlink-document-link="${esc(item.primaryId)}">リンク解除</button>
-        <button type="button" class="btn btn-sm btn-secondary" data-reflect-doc-revenue="${esc(item.primaryId)}">売上登録に反映</button>`;
+        <button type="button" class="btn btn-sm btn-secondary" data-reflect-doc-revenue="${esc(item.primaryId)}">売上明細に反映</button>`;
     }
     return '';
   }
@@ -14432,7 +14446,7 @@
       return;
     }
     if (linked.state === 'missing') {
-      alert('linked売上が見つかりません。入金予定一覧またはデータ診断からリンク解除してから売上登録に反映してください。');
+      alert('linked売上が見つかりません。入金予定一覧またはデータ診断からリンク解除してから売上明細に反映してください。');
       return;
     }
     const prefill = DocumentsBrain.toRevenuePrefill(doc);
@@ -14458,7 +14472,7 @@
     writeRevenuePaymentFieldsToForm(prefill);
     document.getElementById('revenue-memo').value = prefill.memo;
     document.getElementById('revenue-form-title').textContent = '売上明細を手入力（請求書から反映）';
-    showAppToast('売上登録フォームに反映しました。保存すると請求書とリンクされます。');
+    showAppToast('売上明細フォームに反映しました。保存すると請求書とリンクされます。');
     document.getElementById('revenue-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -14972,9 +14986,9 @@
     const cardList = document.getElementById('revenue-card-list');
 
     if (!records.length) {
-      const empty = '<tr><td colspan="9" class="empty-state">今月の売上登録がまだありません。作業が終わったら1件登録してみましょう。</td></tr>';
+      const empty = '<tr><td colspan="9" class="empty-state">今月の確定売上がまだありません。作業が終わったら売上確定してみましょう。</td></tr>';
       if (tbody) tbody.innerHTML = empty;
-      if (cardList) cardList.innerHTML = '<p class="empty-state">今月の売上登録がまだありません。作業が終わったら1件登録してみましょう。</p>';
+      if (cardList) cardList.innerHTML = '<p class="empty-state">今月の確定売上がまだありません。作業が終わったら売上確定してみましょう。</p>';
       return;
     }
 
@@ -15240,7 +15254,7 @@
     const thisMonthLabel = compact.usesMonthlyResultThisMonth ? '今月実績（月次実績ベース）' : '今月確定売上';
     const scopeNote = compact.usesMonthlyResultThisMonth
       ? '月次実績がある月は月次実績ベースで表示します。明細売上とは別管理です。'
-      : '確定売上のみ集計（売上登録で「確定」登録済み）。見込み・候補は含みません。';
+      : '確定売上のみ集計（売上確定済みの明細のみ）。見込み・候補は含みません。';
     const monthlyBreakdown = compact.usesMonthlyResultThisMonth
       ? `<p class="reconciliation-brief-line">明細売上合計：${esc(RevenueSummaryBrain.formatYen(thisMonthView.detailTotal || 0))} / 差額：${esc(RevenueSummaryBrain.formatYen(thisMonthView.diff || 0))}</p>
          ${thisMonthView.status === '差額あり' ? '<p class="reconciliation-brief-warn">※この月は月次実績と売上明細が一致していません。</p>' : ''}
@@ -16034,7 +16048,7 @@
       revenueBtn.classList.toggle('hidden', normalized.type !== 'invoice');
       if (normalized.type === 'invoice') {
         const linked = getDocumentLinkedRevenueState(normalized);
-        revenueBtn.textContent = linked.state === 'linked' ? 'linked売上を開く' : '売上登録に反映';
+        revenueBtn.textContent = linked.state === 'linked' ? 'linked売上を開く' : '売上明細に反映';
       }
     }
     document.getElementById('documents-preview-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });

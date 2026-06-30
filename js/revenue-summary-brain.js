@@ -705,9 +705,12 @@ const RevenueSummaryBrain = {
         }));
     const thisMonth = eligible.filter(w => w.scheduledDate && w.scheduledDate.startsWith(monthKey));
     const monthTotal = thisMonth.reduce((sum, w) => sum + Number(w.estimateAmount || 0), 0);
+    const displayTotal = eligible.reduce((sum, w) => sum + Number(w.estimateAmount || 0), 0);
     return {
       monthCount: thisMonth.length,
       monthTotal,
+      displayCount: eligible.length,
+      displayTotal,
       upcoming: eligible.slice(0, 3).map(wo => ({
         id: wo.id || '',
         scheduledDate: wo.scheduledDate || '',

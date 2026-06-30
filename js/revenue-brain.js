@@ -502,7 +502,7 @@ const RevenueBrain = {
     const targetNotMet = hasTarget && summary.remainingToTarget > 0 && summary.achievementRate < 100;
 
     if (summary.recordCount === 0) {
-      const line = '今月の売上登録がまだありません。売上明細を確認し、直近の作業・予約を登録してください。';
+      const line = '今月の確定売上がまだありません。売上明細を確認し、直近の作業・予約から売上確定してください。';
       return { lines: [line], brief: line };
     }
 
@@ -602,7 +602,7 @@ const RevenueBrain = {
         title: '売上候補を増やす',
         targetName: this.formatYen(summary.remainingToTarget),
         reason: `目標まで残り${this.formatYen(summary.remainingToTarget)}`,
-        action: '営業先への追加提案または新規売上登録を進める',
+        action: '営業先への追加提案または売上明細を手入力する',
         openTarget: 'sales'
       });
     }
@@ -636,8 +636,8 @@ const RevenueBrain = {
         type: 'register-revenue',
         title: '直近の作業・予約・見込み客を登録',
         targetName: '売上番頭',
-        reason: '今月の売上登録がまだありません',
-        action: '売上登録から状況を見える化する',
+        reason: '今月の確定売上がまだありません',
+        action: '売上確定から状況を見える化する',
         openTarget: 'revenue'
       });
     }
@@ -652,7 +652,7 @@ const RevenueBrain = {
       comments.push('月間目標を設定してください。');
     }
     if (summary.recordCount === 0) {
-      comments.push('今月の売上予定がありません。売上登録から始めてください。');
+      comments.push('今月の売上予定がありません。予定取り込みから始めてください。');
     } else if (summary.monthlyTarget && summary.achievementRate < 30) {
       comments.push('売上強化が必要です。営業・追客を優先してください。');
     } else if (summary.monthlyTarget && summary.achievementRate < 60) {

@@ -17,7 +17,7 @@ const ExecutiveBrain = {
   QUICK_LINKS: [
     { id: 'tasks', label: '毎日やること', action: 'tasks', tier: 'primary' },
     { id: 'reception', label: 'カレンダー登録', view: 'reception', tier: 'primary' },
-    { id: 'revenue', label: '売上登録', view: 'revenue', tier: 'primary' },
+    { id: 'revenue', label: '売上管理', view: 'revenue', tier: 'primary' },
     { id: 'analytics', label: '集客管理', view: 'analytics', tier: 'primary' },
     { id: 'monthly-results', label: '月次実績入力', view: 'monthly-results', tier: 'secondary' },
     { id: 'external-check', label: 'サイト確認記録', view: 'external-check', tier: 'secondary' },
@@ -194,8 +194,8 @@ const ExecutiveBrain = {
         rank: 1,
         title: `${wo.customerName || 'お客様'} ${wo.serviceText || ''}`.trim(),
         reason: wo.startTime
-          ? `今日${wo.startTime}〜の確定作業。作業後に売上登録まで行う`
-          : '今日の確定作業。作業後に売上登録まで行う',
+          ? `今日${wo.startTime}〜の確定作業。作業後に売上確定まで行う`
+          : '今日の確定作業。作業後に売上確定まで行う',
         source: 'カレンダー登録',
         sourceKey: 'work-order',
         workOrderId: wo.id,
@@ -234,8 +234,8 @@ const ExecutiveBrain = {
         rank: 3,
         title: `${label}：${target.customerName || target.leadName || 'お客様'}`,
         reason: target.needsThanks
-          ? '作業完了済み・お礼未送信'
-          : '作業完了済み・口コミ依頼未対応',
+          ? '売上確定済み・お礼未送信'
+          : '売上確定済み・口コミ依頼未対応',
         source: 'フォロー',
         sourceKey: 'follow-up',
         followTargetId: target.id,
@@ -568,7 +568,7 @@ const ExecutiveBrain = {
       lines: [
         `今月売上 ${RevenueBrain.formatYen(rp.monthRevenue)} / 目標 ${RevenueBrain.formatYen(rp.monthlyTarget)}（${rp.achievementRate}%）`,
         `支出 ${ProfitBrain.formatYen(rp.monthExpense)} / 粗利 ${ProfitBrain.formatYen(rp.grossProfit)}（${ProfitBrain.formatRate(rp.grossRate)}）`,
-        rp.completedNoRevenue ? `作業完了・売上未登録 ${rp.completedNoRevenue}件` : ''
+        rp.completedNoRevenue ? `作業日経過・売上未確定 ${rp.completedNoRevenue}件` : ''
       ].filter(Boolean)
     });
     const fu = c.followUpSection || {};

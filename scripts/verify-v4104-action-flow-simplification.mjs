@@ -24,7 +24,7 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.8'), 'index.html should show v4.10.8');
+assert(indexHtml.includes('v4.10.9'), 'index.html should show v4.10.9');
 assert(!indexHtml.includes('<option value="完了">完了</option>'), 'revenue status select should not include 完了');
 assert(
   revenueBrain.includes('displayRevenueStatus') && revenueBrain.includes("status === '完了'"),
@@ -92,9 +92,9 @@ assert(
 assert(indexHtml.includes('btn-calendar-candidate-json-import'), 'v4.10.1 JSON import button should remain');
 assert(indexHtml.includes('btn-calendar-candidate-parse'), 'paste import button should remain');
 
-assert(statusMd.includes('v4.10.8'), 'status.md should document v4.10.8');
-assert(handoffMd.includes('v4.10.8'), 'handoff.md should document v4.10.8');
-assert(decisionLog.includes('v4.10.8'), 'decision-log.md should record v4.10.8');
+assert(statusMd.includes('v4.10.9'), 'status.md should document v4.10.9');
+assert(handoffMd.includes('v4.10.9'), 'handoff.md should document v4.10.9');
+assert(decisionLog.includes('v4.10.9'), 'decision-log.md should record v4.10.9');
 
 assert(
   css.includes('@media (max-width: 390px)') || css.includes('overflow-x: hidden') || css.includes('overflow-x: clip'),

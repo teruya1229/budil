@@ -16,7 +16,7 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.10.8 |
+| 最新バージョン | v4.10.9 |
 | 最新commit | f4c6f84 |
 | ブランチ | `main` push 済み |
 
@@ -46,6 +46,17 @@ output/budil-calendar-events.json
 
 - Firebase / Functions API 案（`hub/functions`）は **一旦保留**。将来候補としてコードは残置
 - v4.10.1 の JSON ファイル取り込み・貼り付け取り込みは維持
+
+## v4.10.9で入ったもの
+
+- 通常UIの「売上登録」文言整理・フォロー/診断の完了系文言修正
+- 売上予定ヘッダとリストの件数/金額一致（displayCount/displayTotal）
+- データ管理のはじめてガイド折りたたみ
+- 予定取り込み済み一覧のボタン整理（主1つ＋詳細操作）
+- 今週の作業予定に短い補足
+- verify `scripts/verify-v4109-final-operational-polish.mjs`
+- cache buster を v4.10.9 に更新
+- v4.10.8 以降の既存機能は維持
 
 ## v4.10.8で入ったもの
 

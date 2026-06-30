@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.10.8',
+  BUDIL_VERSION: 'v4.10.9',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -618,7 +618,7 @@ const Storage = {
         paymentStatus: record.paymentStatus || '未入金',
         memo: itemOverrides && itemOverrides.singleConvert
           ? 'Googleカレンダー過去分復元から売上確定'
-          : 'Googleカレンダー過去分復元モードで一括売上登録',
+          : 'Googleカレンダー過去分復元モードで一括売上確定',
         needsReview: false,
         updatedAt: now
       },
@@ -2062,10 +2062,10 @@ const Storage = {
       if (badLeadRef) add('review', `存在しない営業先を指すleadId ${badLeadRef}件`);
       if (badIntakeRef) add('review', `存在しない受付を指すintakeId ${badIntakeRef}件`);
       if (badRevRef) add('review', `存在しない売上を指すactualRevenueId ${badRevRef}件`);
-      if (completedNoRev) add('caution', `作業完了済みで売上未登録 ${completedNoRev}件`);
+      if (completedNoRev) add('caution', `作業日経過・売上未確定 ${completedNoRev}件`);
       if (typeof WorkCompletionBrain !== 'undefined') {
         const wcDiag = WorkCompletionBrain.getDiagnosticsCounts(workOrders, revenues, todayDiag);
-        if (wcDiag.completedNoRevenue) add('caution', `作業完了っぽいが売上未確定 ${wcDiag.completedNoRevenue}件`);
+        if (wcDiag.completedNoRevenue) add('caution', `作業日経過・売上未確定 ${wcDiag.completedNoRevenue}件`);
         if (wcDiag.overdueActive) add('caution', `予定日が過ぎたが未完了の作業予定 ${wcDiag.overdueActive}件`);
         if (wcDiag.orphanConfirmed) add('caution', `売上確定済みだが作業予定に未紐付け ${wcDiag.orphanConfirmed}件`);
         if (wcDiag.unpaid) add('caution', `入金待ちの確定売上 ${wcDiag.unpaid}件`);
@@ -2094,8 +2094,8 @@ const Storage = {
     if (typeof FollowUpBrain !== 'undefined') {
       try {
         const fuDiag = FollowUpBrain.getDiagnosticsCounts(workOrders, revenues, leads, todayDiag);
-        if (fuDiag.thanksPending) add('caution', `作業完了済み・お礼未送信 ${fuDiag.thanksPending}件`);
-        if (fuDiag.reviewPending) add('caution', `作業完了済み・口コミ依頼未送信 ${fuDiag.reviewPending}件`);
+        if (fuDiag.thanksPending) add('caution', `売上確定済み・お礼未送信 ${fuDiag.thanksPending}件`);
+        if (fuDiag.reviewPending) add('caution', `売上確定済み・口コミ依頼未送信 ${fuDiag.reviewPending}件`);
         if (fuDiag.maintNear) add('caution', `次回メンテナンス日が近い ${fuDiag.maintNear}件`);
         if (fuDiag.badFollowUp) add('caution', `followUp形式不正 ${fuDiag.badFollowUp}件`);
       } catch (e) {

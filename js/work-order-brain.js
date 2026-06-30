@@ -7,7 +7,7 @@ const WorkOrderBrain = {
   STATUS_LABELS: {
     tentative: '仮予定',
     confirmed: '確定',
-    completed: '作業完了',
+    completed: '対応済み',
     cancelled: 'キャンセル',
     archived: '保管'
   },
@@ -306,9 +306,9 @@ const WorkOrderBrain = {
       parts.push(`今日は作業予定が${forecast.todayCount}件、見込み売上は${this.formatYen(forecast.todayAmount)}です`);
     }
     if (forecast.completedNoRevenueCount) {
-      parts.push(`作業完了後の売上未登録が${forecast.completedNoRevenueCount}件あります`);
+      parts.push(`作業日経過後の売上未確定が${forecast.completedNoRevenueCount}件あります`);
     } else if (forecast.todayCount) {
-      parts.push('作業完了後に売上登録を忘れないようにしましょう');
+      parts.push('作業日経過後に売上確定を忘れないようにしましょう');
     }
     return parts.join('。') + (parts.length ? '。' : '');
   },
@@ -319,7 +319,7 @@ const WorkOrderBrain = {
     const warnings = [];
     const completedNoRevenue = list.filter(w => w.status === 'completed' && !w.actualRevenueId);
     if (completedNoRevenue.length) {
-      warnings.push(`作業完了済みだが売上未登録：${completedNoRevenue.length}件`);
+      warnings.push(`作業日経過・売上未確定：${completedNoRevenue.length}件`);
     }
     const overdue = list.filter(w =>
       this.ACTIVE_STATUSES.includes(w.status) && w.scheduledDate && w.scheduledDate < t
@@ -354,7 +354,7 @@ const WorkOrderBrain = {
       lines.push(`・今週 ${forecast.weekCount}件 / 見込み ${this.formatYen(forecast.weekAmount)}`);
     }
     if (forecast.completedNoRevenueCount) {
-      lines.push(`・作業完了後の売上未登録 ${forecast.completedNoRevenueCount}件`);
+      lines.push(`・作業日経過・売上未確定 ${forecast.completedNoRevenueCount}件`);
     }
     return lines.length > 1 ? lines : [];
   },

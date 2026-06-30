@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.10.8">
+  <link rel="stylesheet" href="css/style.css?v=4.10.9">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.10.8</small>
+          <small>AI経営脳みそ v4.10.9</small>
         </div>
       </div>
       <nav class="nav">
@@ -60,7 +60,7 @@
 
         <details class="nav-group" open>
           <summary class="nav-group-title"><span class="nav-group-icon">💰</span><span class="nav-group-label">売上・利益</span></summary>
-          <p class="nav-group-hint">売上登録、入金予定、月次実績入力、経費入力、フォロー</p>
+          <p class="nav-group-hint">売上確定、入金予定、月次実績入力、経費入力、フォロー</p>
           <div class="nav-group-items">
             <button class="nav-item nav-item-main" data-view="revenue">
               <span class="nav-icon">💰</span><span class="nav-label">売上管理</span>
@@ -154,7 +154,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.10.8</small>
+        <small>Budil v4.10.9</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -176,7 +176,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の優先 → 今月の数字 → 次にやること</p>
             </div>
-            <span class="exec-home-version">v4.10.8</span>
+            <span class="exec-home-version">v4.10.9</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
 
@@ -381,7 +381,7 @@
           </div>
 
           <details class="daily-section daily-section-revenue-assist" id="daily-section-revenue-assist">
-            <summary class="daily-section-title">手入力で売上明細を追加</summary>
+            <summary class="daily-section-title">売上明細を手入力</summary>
             <p class="daily-section-lead">予定にない売上だけ、ここから手入力します（売上予定・売上確定待ちとは別です）。</p>
             <div id="daily-revenue-notice" class="daily-revenue-notice hidden"></div>
             <form id="daily-revenue-quick-form" class="daily-revenue-quick-form">
@@ -586,7 +586,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.8</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.9</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -1650,6 +1650,7 @@
         <div class="card card-wide card-work-order-week">
           <h2>今週の作業予定</h2>
           <p class="calendar-source-hint">Googleカレンダーから読み込んだ予定をここで確認します。</p>
+          <p class="calendar-source-hint calendar-week-scope-note">今週分のみ表示しています。来週以降は売上予定で確認できます。</p>
           <div id="work-order-week-list" class="work-order-schedule-list"></div>
           <details class="work-order-today-collapse">
             <summary>今日の作業予定だけ見る</summary>
@@ -1822,7 +1823,7 @@
                 <select id="work-order-status">
                   <option value="tentative">仮予定</option>
                   <option value="confirmed">確定</option>
-                  <option value="completed">作業完了</option>
+                  <option value="completed">対応済み</option>
                   <option value="cancelled">キャンセル</option>
                   <option value="archived">保管</option>
                 </select>
@@ -1883,20 +1884,20 @@
               <label for="calendar-past-recovery-end">終了</label>
               <input type="date" id="calendar-past-recovery-end" value="2026-06-30">
             </div>
-            <p class="calendar-past-recovery-desc">過去日付・金額あり・対象外ワードなし・重複なしの復元対象だけを売上登録対象として扱います。</p>
+            <p class="calendar-past-recovery-desc">過去日付・金額あり・対象外ワードなし・重複なしの復元対象だけを売上確定対象として扱います。</p>
             <div class="calendar-past-recovery-safety">
               <strong>安全確認：</strong>
               <ul>
-                <li>一括売上登録の前に安全バックアップを作成します</li>
+                <li>一括売上確定の前に安全バックアップを作成します</li>
                 <li>既存売上は上書きせず、新規分だけ追加します</li>
                 <li>元のカレンダー復元データは削除しません</li>
-                <li>登録対象が0件のときは一括売上登録できません</li>
+                <li>登録対象が0件のときは一括売上確定できません</li>
                 <li>キャンセル、見積、日程調整中、金額なし、重複疑いは一括登録対象外です</li>
               </ul>
             </div>
             <div id="calendar-past-recovery-summary" class="calendar-past-recovery-summary"></div>
             <div class="calendar-candidate-actions">
-              <button type="button" id="btn-calendar-past-bulk-convert" class="btn btn-sm btn-primary" disabled>登録対象を売上登録</button>
+              <button type="button" id="btn-calendar-past-bulk-convert" class="btn btn-sm btn-primary" disabled>登録対象を売上確定</button>
             </div>
           </div>
 
@@ -2034,7 +2035,7 @@
         <header class="view-header view-header-with-link">
           <div>
             <h1>売上管理</h1>
-            <p class="view-subtitle">売上予定・確定・登録の日常操作</p>
+            <p class="view-subtitle">売上予定・売上確定・手入力の日常操作</p>
           </div>
           <button type="button" class="btn btn-sm btn-secondary view-header-link nav-item" data-view="revenue-analysis">売上分析を見る</button>
         </header>
@@ -2547,7 +2548,7 @@
             <button type="button" class="btn btn-primary btn-sm" id="btn-doc-print">印刷 / PDF</button>
             <button type="button" class="btn btn-secondary btn-sm" id="btn-doc-edit-from-preview">編集</button>
             <button type="button" class="btn btn-secondary btn-sm hidden" id="btn-doc-convert-invoice">見積書を請求書に変換</button>
-            <button type="button" class="btn btn-secondary btn-sm hidden" id="btn-doc-reflect-revenue">売上登録に反映</button>
+            <button type="button" class="btn btn-secondary btn-sm hidden" id="btn-doc-reflect-revenue">売上明細に反映</button>
             <button type="button" class="btn btn-secondary btn-sm" id="btn-doc-back-from-preview">一覧に戻る</button>
           </div>
           <div id="documents-preview-body" class="documents-preview-body doc-print-area"></div>
@@ -3098,7 +3099,10 @@
           <div id="data-consistency-check" class="data-consistency-check-block" aria-live="polite"></div>
         </div>
 
-        <div id="onboarding-guide-data" class="card card-wide card-onboarding-guide"></div>
+        <details class="card card-wide card-onboarding-guide-collapse">
+          <summary>はじめてガイドを見る</summary>
+          <div id="onboarding-guide-data" class="card-onboarding-guide"></div>
+        </details>
 
         <div id="business-profile-settings" class="card card-wide card-business-profile"></div>
 
@@ -3525,30 +3529,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.10.8"></script>
-  <script src="js/messages.js?v=4.10.8"></script>
-  <script src="js/demand-brain.js?v=4.10.8"></script>
-  <script src="js/demand-radar.js?v=4.10.8"></script>
-  <script src="js/sales-brain.js?v=4.10.8"></script>
-  <script src="js/management-brain.js?v=4.10.8"></script>
-  <script src="js/payment-brain.js?v=4.10.8"></script>
-  <script src="js/revenue-brain.js?v=4.10.8"></script>
-  <script src="js/revenue-summary-brain.js?v=4.10.8"></script>
-  <script src="js/reception-brain.js?v=4.10.8"></script>
-  <script src="js/map-brain.js?v=4.10.8"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.10.8"></script>
-  <script src="js/external-check-brain.js?v=4.10.8"></script>
-  <script src="js/action-brain.js?v=4.10.8"></script>
-  <script src="js/work-order-brain.js?v=4.10.8"></script>
-  <script src="js/follow-up-brain.js?v=4.10.8"></script>
-  <script src="js/work-completion-brain.js?v=4.10.8"></script>
-  <script src="js/profit-brain.js?v=4.10.8"></script>
-  <script src="js/analytics-brain.js?v=4.10.8"></script>
-  <script src="js/monthly-results-brain.js?v=4.10.8"></script>
-  <script src="js/documents-brain.js?v=4.10.8"></script>
-  <script src="js/executive-brain.js?v=4.10.8"></script>
-  <script src="js/card-ocr.js?v=4.10.8"></script>
-  <script src="js/data-backup.js?v=4.10.8"></script>
-  <script src="js/app.js?v=4.10.8"></script>
+  <script src="js/storage.js?v=4.10.9"></script>
+  <script src="js/messages.js?v=4.10.9"></script>
+  <script src="js/demand-brain.js?v=4.10.9"></script>
+  <script src="js/demand-radar.js?v=4.10.9"></script>
+  <script src="js/sales-brain.js?v=4.10.9"></script>
+  <script src="js/management-brain.js?v=4.10.9"></script>
+  <script src="js/payment-brain.js?v=4.10.9"></script>
+  <script src="js/revenue-brain.js?v=4.10.9"></script>
+  <script src="js/revenue-summary-brain.js?v=4.10.9"></script>
+  <script src="js/reception-brain.js?v=4.10.9"></script>
+  <script src="js/map-brain.js?v=4.10.9"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.10.9"></script>
+  <script src="js/external-check-brain.js?v=4.10.9"></script>
+  <script src="js/action-brain.js?v=4.10.9"></script>
+  <script src="js/work-order-brain.js?v=4.10.9"></script>
+  <script src="js/follow-up-brain.js?v=4.10.9"></script>
+  <script src="js/work-completion-brain.js?v=4.10.9"></script>
+  <script src="js/profit-brain.js?v=4.10.9"></script>
+  <script src="js/analytics-brain.js?v=4.10.9"></script>
+  <script src="js/monthly-results-brain.js?v=4.10.9"></script>
+  <script src="js/documents-brain.js?v=4.10.9"></script>
+  <script src="js/executive-brain.js?v=4.10.9"></script>
+  <script src="js/card-ocr.js?v=4.10.9"></script>
+  <script src="js/data-backup.js?v=4.10.9"></script>
+  <script src="js/app.js?v=4.10.9"></script>
 </body>
 </html>

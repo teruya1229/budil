@@ -59,11 +59,11 @@ const css = load('css/style.css');
 
 console.log('== v4.10.1 data backup hardening ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.8'), 'header version should be v4.10.8');
-assert(indexHtml.includes('Budil v4.10.8'), 'sidebar version should be v4.10.8');
-assert(indexHtml.includes('js/app.js?v=4.10.8'), 'app.js cache buster should be v4.10.8');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.8'"), 'storage version should be v4.10.8');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.8'"), 'data-backup version should be v4.10.8');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.9'), 'header version should be v4.10.9');
+assert(indexHtml.includes('Budil v4.10.9'), 'sidebar version should be v4.10.9');
+assert(indexHtml.includes('js/app.js?v=4.10.9'), 'app.js cache buster should be v4.10.9');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.9'"), 'storage version should be v4.10.9');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.9'"), 'data-backup version should be v4.10.9');
 
 const appSourceFiles = collectAppSourceFiles();
 const clearHits = findLocalStorageClearInAppSources(appSourceFiles);
@@ -101,8 +101,8 @@ assert(!indexHtml.includes('\u652f\u51fa\u767b\u9332'), 'index should not use ol
 assert(indexHtml.includes('id="exec-home-priority-action"'), 'v4.9.4 priority action should remain');
 assert(indexHtml.includes('id="exec-home-monthly-closing-check"'), 'v4.9.3 monthly closing should remain');
 assert(indexHtml.includes('id="exec-home-expense-breakdown"'), 'v4.9.2 expense breakdown should remain');
-assert(indexHtml.includes('exec-home-daily-core'), 'v4.10.8 executive home daily core should remain');
-assert(indexHtml.includes('id="view-revenue-analysis"'), 'v4.10.8 revenue analysis view should exist');
+assert(indexHtml.includes('exec-home-daily-core'), 'v4.10.9 executive home daily core should remain');
+assert(indexHtml.includes('id="view-revenue-analysis"'), 'v4.10.9 revenue analysis view should exist');
 assert(indexHtml.includes('revenue-flow-diagnostics'), 'sales flow diagnostics should remain');
 assert(indexHtml.includes('profit-operations-diagnostics'), 'profit operations should remain');
 assert(appJs.includes('renderExecutivePriorityAction'), 'priority action renderer should remain');

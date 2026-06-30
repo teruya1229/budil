@@ -10872,3 +10872,40 @@ body.sales-page {
 .card-revenue-queue .daily-revenue-queue-card {
   margin-bottom: 0.5rem;
 }
+
+/* v4.10.9 実運用前 最終仕上げ */
+.calendar-week-scope-note {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin-top: -0.25rem;
+}
+
+.calendar-candidate-saved-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.calendar-candidate-saved-status {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.calendar-candidate-saved-more {
+  margin-left: auto;
+}
+
+.calendar-candidate-saved-more > summary {
+  cursor: pointer;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.calendar-candidate-saved-more-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
