@@ -1,5 +1,5 @@
 /**
- * Budil v4.9.8 upcoming revenue schedule summary verification.
+ * Budil v4.9.9 upcoming revenue schedule summary verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -62,11 +62,11 @@ const appJs = load('js/app.js');
 const summaryBrain = load('js/revenue-summary-brain.js');
 const css = load('css/style.css');
 
-console.log('== v4.9.8 upcoming revenue schedule ==');
+console.log('== v4.9.9 upcoming revenue schedule ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.8'), 'header version should be v4.9.8');
-assert(indexHtml.includes('Budil v4.9.8'), 'sidebar version should be v4.9.8');
-assert(indexHtml.includes('js/app.js?v=4.9.8'), 'app.js cache buster should be v4.9.8');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.9'), 'header version should be v4.9.9');
+assert(indexHtml.includes('Budil v4.9.9'), 'sidebar version should be v4.9.9');
+assert(indexHtml.includes('js/app.js?v=4.9.9'), 'app.js cache buster should be v4.9.9');
 assert(indexHtml.includes('dash-upcoming-revenue-schedule'), 'dashboard upcoming schedule block should exist');
 assert(indexHtml.includes('revenue-upcoming-schedule'), 'revenue view upcoming schedule block should exist');
 assert(indexHtml.includes('\u58f2\u4e0a\u4e88\u5b9a\uff08\u672a\u78ba\u5b9a\uff09'), 'daily schedule title should show unconfirmed upcoming revenue');
@@ -192,4 +192,4 @@ const workOrders = [
   assert(!ctx.monthly || ctx.monthly === '[]', 'monthly results must remain unchanged');
 }
 
-console.log('All v4.9.8 upcoming revenue schedule checks passed.');
+console.log('All v4.9.9 upcoming revenue schedule checks passed.');

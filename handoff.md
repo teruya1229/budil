@@ -16,9 +16,17 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.9.8 |
+| 最新バージョン | v4.9.9 |
 | 最新commit | 5286aba |
 | ブランチ | `main` push 済み |
+
+## v4.9.9で入ったもの
+
+- 予定取り込み貼り付けパーサのラベル別名対応（件名/金額/時間 等）
+- 時間レンジ・金額表記ゆれの読み取り
+- verify `scripts/verify-v499-calendar-label-aliases.mjs`
+- cache buster を v4.9.9 に更新
+- v4.9.8 未来予定取り込みP0修正以降の既存機能は維持
 
 ## v4.9.8で入ったもの
 

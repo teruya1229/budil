@@ -38,6 +38,42 @@ const CalendarCandidateBrain = {
     '注意': 'cautionNote'
   },
 
+  PASTE_LABEL_ALIASES: {
+    '件名': 'title',
+    '予定名': 'title',
+    '作業名': 'title',
+    '内容': 'title',
+    '金額': 'estimateAmount',
+    '料金': 'estimateAmount',
+    '売上予定': 'estimateAmount',
+    '売上金額': 'estimateAmount',
+    '見込み金額': 'estimateAmount',
+    '時間': 'startTime',
+    '時刻': 'startTime',
+    '作業時間': 'startTime',
+    '開始': 'startTime',
+    '終了': 'endTime',
+    '顧客名': 'customerName',
+    '氏名': 'customerName',
+    '名前': 'customerName',
+    '顧客': 'customerName',
+    '場所': 'address',
+    '所在地': 'address',
+    '訪問先': 'address',
+    '備考': 'memo',
+    '詳細': 'memo',
+    '説明': 'memo',
+    'ステータス': 'confidence',
+    '状態': 'confidence'
+  },
+
+  resolvePasteField(labelKey) {
+    const key = String(labelKey || '').trim();
+    if (!key) return '';
+    if (this.PASTE_LABELS[key]) return this.PASTE_LABELS[key];
+    return this.PASTE_LABEL_ALIASES[key] || '';
+  },
+
   normalizeCandidateMeta(raw) {
     const item = raw && typeof raw === 'object' ? raw : {};
     const now = new Date().toISOString();
@@ -170,6 +206,21 @@ const CalendarCandidateBrain = {
     return /^\d{2}:\d{2}$/.test(raw) ? raw : '';
   },
 
+  parseTimeField(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return { startTime: '', endTime: '' };
+    const range = raw.match(
+      /(\d{1,2}[:：時]\d{0,2})\s*[-–—~〜～]\s*(\d{1,2}[:：時]\d{0,2})/
+    );
+    if (range) {
+      return {
+        startTime: this.normalizeTime(range[1]),
+        endTime: this.normalizeTime(range[2])
+      };
+    }
+    return { startTime: this.normalizeTime(raw), endTime: '' };
+  },
+
   parseAmount(value) {
     if (value == null || value === '') return 0;
     if (typeof value === 'number' && Number.isFinite(value)) return Math.max(0, value);
@@ -194,19 +245,56 @@ const CalendarCandidateBrain = {
     return { serviceText: title };
   },
 
+  inferFromPlainTitle(fields) {
+    const title = String(fields.title || '').trim();
+    if (!title || fields.customerName) return;
+    const bySuffix = title.match(/^(.+?様)\s+(.+)$/);
+    if (bySuffix) {
+      fields.customerName = bySuffix[1].trim();
+      if (!fields.serviceText) fields.serviceText = bySuffix[2].trim();
+      return;
+    }
+    if (/様$/.test(title)) {
+      fields.customerName = title;
+      return;
+    }
+    if (!fields.serviceText) fields.serviceText = title;
+  },
+
+  applyPasteField(fields, mapped, value) {
+    const raw = String(value || '').trim();
+    if (!mapped || !raw) return;
+    if (mapped === 'startTime') {
+      const times = this.parseTimeField(raw);
+      if (times.startTime) fields.startTime = times.startTime;
+      if (times.endTime) fields.endTime = times.endTime;
+      return;
+    }
+    if (mapped === 'endTime') {
+      fields.endTime = this.normalizeTime(raw);
+      return;
+    }
+    if (mapped === 'estimateAmount') {
+      fields.estimateAmount = raw;
+      return;
+    }
+    fields[mapped] = raw;
+  },
+
   parseCandidateBlock(text) {
     const fields = {};
     const lines = String(text || '').split('\n');
     lines.forEach(line => {
       const field = this.extractLabelValue(line.trim());
       if (!field) return;
-      const mapped = this.PASTE_LABELS[field.key];
-      if (mapped) fields[mapped] = field.value;
+      const mapped = this.resolvePasteField(field.key);
+      if (mapped) this.applyPasteField(fields, mapped, field.value);
     });
     if (fields.title && !fields.customerName) {
       const fromTitle = this.parseTitleParts(fields.title);
       Object.assign(fields, fromTitle);
     }
+    this.inferFromPlainTitle(fields);
     if (!fields.serviceText && fields.title) {
       fields.serviceText = fields.title;
     }
