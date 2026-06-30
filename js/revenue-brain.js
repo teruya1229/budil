@@ -244,32 +244,12 @@ const RevenueBrain = {
     };
   },
 
-  buildSalesOutcomeComment(outcome) {
-    const lines = [];
-    if (outcome.linkedTotal > 0) {
-      lines.push(`今月、営業先に紐付いた売上は${this.formatYen(outcome.linkedTotal)}です`);
-    }
-    if (outcome.unlinkedTotal > 0) {
-      lines.push('未紐付け売上があります。あとで営業先と紐付けると成果分析がしやすくなります');
-    }
-    if (outcome.contractedCount > 0) {
-      lines.push('成約済み営業先があります。口コミ・次回提案・法人化提案を忘れずに確認してください');
-    }
-    return lines;
+  buildSalesOutcomeComment() {
+    return [];
   },
 
-  buildMorningSalesOutcomeLines(outcome) {
-    if (!outcome) return [];
-    const lines = [`今月の紐付け売上：${this.formatYen(outcome.linkedTotal)}`];
-    if (outcome.unlinkedTotal > 0) {
-      lines.push(`未紐付け売上：${this.formatYen(outcome.unlinkedTotal)}`);
-    } else {
-      lines.push('未紐付け売上なし');
-    }
-    if (outcome.paymentConcernLeads && outcome.paymentConcernLeads.length) {
-      lines.push('入金注意あり：' + outcome.paymentConcernLeads.map(l => l.leadName).join('、'));
-    }
-    return lines;
+  buildMorningSalesOutcomeLines() {
+    return [];
   },
 
   daysSince(dateStr, today) {
@@ -516,41 +496,28 @@ const RevenueBrain = {
 
   buildManagementComment(context) {
     const summary = (context && context.summary) || {};
-    const salesOutcome = (context && context.salesOutcome) || {};
-    const nextCandidates = (context && (context.nextSalesCandidates || context.nextCandidates)) || [];
-    const holdCandidates = (context && (context.salesHoldCandidates || context.holdCandidates)) || [];
     const lines = [];
-    const top = nextCandidates[0];
-    const hasHold = holdCandidates.length > 0;
     const hasTarget = summary.monthlyTarget > 0;
     const targetMet = hasTarget && summary.achievementRate >= 100;
     const targetNotMet = hasTarget && summary.remainingToTarget > 0 && summary.achievementRate < 100;
 
     if (summary.recordCount === 0) {
-      const line = '今月の売上登録がまだありません。まずは直近の作業・予約・見込み客を登録して、状況を見える化してください。';
+      const line = '今月の売上登録がまだありません。売上明細を確認し、直近の作業・予約を登録してください。';
       return { lines: [line], brief: line };
     }
 
+    lines.push(`今月の売上予定は${this.formatYen(summary.planned)}です。`);
+
     if (targetNotMet) {
-      lines.push(`今月は目標まであと${this.formatYen(summary.remainingToTarget)}です。売上候補を増やすか、既存営業先への追加提案を優先してください。`);
-    } else if (targetMet && salesOutcome.unlinkedTotal === 0 && !hasHold) {
-      lines.push('今月は売上管理が順調です。次はリピート候補と法人提案を増やして、翌月の売上につなげましょう。');
-    } else if (salesOutcome.linkedTotal > 0) {
-      lines.push(`今月は営業先に紐付いた売上が${this.formatYen(salesOutcome.linkedTotal)}あります。売上が出た営業先へのお礼・次回提案を忘れずに確認してください。`);
-    } else {
-      lines.push(`今月の売上予定は${this.formatYen(summary.planned)}です。`);
+      lines.push(`目標まであと${this.formatYen(summary.remainingToTarget)}です。売上予定と確定売上を確認してください。`);
+    } else if (targetMet) {
+      lines.push('今月の目標を達成しています。確定売上明細を確認してください。');
+    } else if (summary.confirmed > 0) {
+      lines.push('確定売上明細を確認してください。');
     }
 
-    if (top) {
-      lines.push(`今日の優先営業候補は${top.leadName}です。理由：${top.reason}。まずこの1件から動くのがおすすめです。`);
-    }
-
-    if (hasHold) {
-      lines.push('営業保留中の案件があります。入金注意の確認が終わるまでは追加営業を控えてください。');
-    } else if (salesOutcome.unlinkedTotal > 0) {
-      lines.push('未紐付け売上があります。営業先と紐付けると、営業成果の分析に反映されます。');
-    } else if (salesOutcome.linkedTotal > 0 || targetMet) {
-      lines.push('未紐付け売上はありません。営業成果は正しく分析できています。');
+    if (summary.paymentConcernCount > 0) {
+      lines.push('入金注意タグの案件があります。入金予定を確認してください。');
     }
 
     const finalLines = lines.slice(0, 3);
@@ -563,7 +530,6 @@ const RevenueBrain = {
   buildDailyActionTasks(context) {
     const today = (context && context.today) || new Date().toISOString().slice(0, 10);
     const summary = (context && context.summary) || {};
-    const salesOutcome = (context && context.salesOutcome) || {};
     const holdCandidates = (context && context.salesHoldCandidates) || [];
     const nextCandidates = (context && context.nextSalesCandidates) || [];
     const records = (context && context.records) || [];
@@ -587,24 +553,6 @@ const RevenueBrain = {
       });
       addedLeadIds.add(h.leadId);
     });
-
-    const monthKey = summary.monthKey || this.currentMonthKey(today);
-    const unlinkedRecords = this.activeRecords(this.filterMonthRecords(records, monthKey))
-      .filter(r => !r.leadId);
-    if (salesOutcome.unlinkedTotal > 0) {
-      const first = unlinkedRecords[0];
-      tasks.push({
-        id: 'unlinked-revenue',
-        priority: '高',
-        type: 'unlinked-revenue',
-        title: '売上を営業先に紐付け',
-        targetName: this.formatYen(salesOutcome.unlinkedTotal),
-        reason: '営業成果分析に反映されていない',
-        action: '未紐付け売上を営業先と紐付ける',
-        revenueId: first ? first.id : '',
-        openTarget: 'revenue'
-      });
-    }
 
     enrichedLeads.forEach(lead => {
       if (addedLeadIds.has(lead.id)) return;
@@ -691,20 +639,6 @@ const RevenueBrain = {
         reason: '今月の売上登録がまだありません',
         action: '売上登録から状況を見える化する',
         openTarget: 'revenue'
-      });
-    }
-
-    const hasHold = holdCandidates.length > 0;
-    if (summary.recordCount > 0 && salesOutcome.linkedTotal > 0 && salesOutcome.unlinkedTotal === 0 && !hasHold) {
-      tasks.push({
-        id: 'maintain-relationship',
-        priority: '低',
-        type: 'maintain-relationship',
-        title: '既存営業先の関係維持',
-        targetName: '営業番頭',
-        reason: '紐付け売上あり・保留なし・未紐付けなし',
-        action: '定期的なお礼・フォローを継続する',
-        openTarget: 'sales'
       });
     }
 

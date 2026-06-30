@@ -64,6 +64,27 @@ assert(
 );
 
 assert(!appJs.includes('localStorage.clear()'), 'app.js must not use localStorage.clear()');
+
+const leadLinkPromptPatterns = [
+  '売上を営業先に紐付け',
+  '未紐付け売上があります',
+  '営業先と紐付けると',
+  "type: 'unlinked-revenue'",
+  'unlinked-revenue',
+  '紐付け売上',
+  '売上発生営業先',
+  '成約営業先'
+];
+for (const pattern of leadLinkPromptPatterns) {
+  assert(!appJs.includes(pattern), `app.js should not show lead-link prompt: ${pattern}`);
+  assert(!revenueBrain.includes(pattern), `revenue-brain.js should not show lead-link prompt: ${pattern}`);
+}
+assert(!indexHtml.includes('売上を営業先に紐付け'), 'index.html should not prompt revenue lead linking');
+assert(!indexHtml.includes('未紐付け売上があります'), 'index.html should not warn about unlinked revenue');
+assert(indexHtml.includes('id="view-sales"'), 'sales view should remain');
+assert(indexHtml.includes('revenue-lead-row') && indexHtml.includes('hidden'), 'revenue lead linking UI should stay hidden');
+assert(indexHtml.includes('class="hidden">紐付け営業先</th>'), 'revenue list lead column should stay hidden');
+
 assert(
   indexHtml.includes('確定売上明細には入りません') || indexHtml.includes('確定売上には入りません') || appJs.includes('売上明細には登録されません'),
   'calendar import should still warn that import does not add confirmed revenue'

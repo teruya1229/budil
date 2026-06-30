@@ -373,9 +373,6 @@ const ExecutiveBrain = {
         .filter(r => r.label === '赤字注意').length;
       if (deficitCount) cautions.push(`赤字注意の売上${deficitCount}件`);
     }
-    if (!usesMonthly && rev.salesOutcome && rev.salesOutcome.unlinkedTotal > 0) {
-      cautions.push('未紐付け売上あり');
-    }
     const revenueAggregation = rev.revenueSummary || (typeof RevenueSummaryBrain !== 'undefined'
       ? RevenueSummaryBrain.buildFullSummary(rev.records || [], { year: (ctx.today || '').slice(0, 4) }, ctx.today, {
         workOrders: ctx.workOrders || [],

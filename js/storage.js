@@ -1743,7 +1743,7 @@ const Storage = {
 
       const revIds = new Set(revenues.filter(r => r && r.id).map(r => r.id));
       let noId = 0; let badAmount = 0; let noDate = 0; let badLeadRef = 0;
-      let paymentConcern = 0; let unlinked = 0;
+      let paymentConcern = 0;
 
       revenues.forEach(r => {
         if (!r || typeof r !== 'object') return;
@@ -1752,7 +1752,6 @@ const Storage = {
         if (!r.workDate) noDate++;
         const lid = r.leadId;
         if (lid && !leadIds.has(lid)) badLeadRef++;
-        if (!lid) unlinked++;
         if (r.paymentConcern === true) paymentConcern++;
       });
 
@@ -1761,7 +1760,6 @@ const Storage = {
       if (noDate) add('caution', `日付なしの売上 ${noDate}件`);
       if (badLeadRef) add('review', `存在しない営業先に紐付いた売上 ${badLeadRef}件`);
       if (paymentConcern) add('caution', `入金注意（paymentConcern） ${paymentConcern}件`);
-      if (unlinked) add('caution', `未紐付け売上 ${unlinked}件`);
 
       if (typeof RevenueSummaryBrain !== 'undefined') {
         const revWarnings = RevenueSummaryBrain.getRevenueWarnings(revenues);

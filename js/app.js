@@ -739,7 +739,6 @@
     }
     const map = {
       'sales-hold': '営業保留',
-      'unlinked-revenue': '売上紐付け',
       'next-action': '営業連絡',
       'next-sales': '営業提案',
       'target-remaining': '売上目標',
@@ -773,7 +772,6 @@
     if (task.pickupActionType && task.pickupActionType.startsWith('decision-improve')) return 3;
     if (task.dueDate === today) return 1;
     if (task.type === 'next-action' || task.type === 'next-sales') return 4;
-    if (task.type === 'unlinked-revenue') return 5;
     if (task.type === 'manual') return 6;
     return 7;
   }
@@ -3232,7 +3230,7 @@
     const { nextSalesCandidates } = getRevenueContext();
     const candidates = (nextSalesCandidates || []).slice(0, limit || 5);
     if (!candidates.length) {
-      el.innerHTML = '<p class="placeholder-text">次に売るべき営業先はまだありません。売上を営業先に紐付けて登録すると、ここに提案が出ます。</p>';
+      el.innerHTML = '<p class="placeholder-text">次に売るべき営業先はまだありません。営業画面で営業先を登録すると、ここに提案が出ます。</p>';
       return;
     }
     el.innerHTML = candidates.map(c => `
@@ -3338,52 +3336,8 @@
     });
   }
 
-  function renderSalesOutcomeHtml(outcome, options) {
-    const opts = options || {};
-    if (!outcome) return '';
-
-    if (opts.brief) {
-      return RevenueBrain.buildMorningSalesOutcomeLines(outcome)
-        .map(l => `<p class="revenue-outcome-brief-line">${esc(l)}</p>`)
-        .join('');
-    }
-
-    const unlinkedClass = outcome.unlinkedTotal > 0 ? 'revenue-outcome-item-warn' : 'revenue-outcome-item-ok';
-    const linkedClass = outcome.linkedTotal > 0 ? 'revenue-outcome-item-highlight' : '';
-    const leads = opts.leads || Storage.getLeads();
-
-    const lines = [
-      `<div class="revenue-outcome-grid">`,
-      `<div class="revenue-outcome-item ${linkedClass}"><span>紐付け売上</span><strong>${esc(RevenueBrain.formatYen(outcome.linkedTotal))}</strong></div>`,
-      `<div class="revenue-outcome-item ${unlinkedClass}"><span>未紐付け売上</span><strong>${outcome.unlinkedTotal > 0 ? esc(RevenueBrain.formatYen(outcome.unlinkedTotal)) : 'なし ✓'}</strong></div>`,
-      `<div class="revenue-outcome-item"><span>売上発生営業先</span><strong>${outcome.leadCount}件</strong></div>`,
-      `<div class="revenue-outcome-item"><span>成約営業先</span><strong>${outcome.contractedCount}件</strong></div>`,
-      `</div>`
-    ];
-
-    if (outcome.topLeads && outcome.topLeads.length) {
-      lines.push('<p class="revenue-outcome-section-title label-muted">売上上位営業先</p>');
-      lines.push('<ul class="revenue-outcome-list">');
-      outcome.topLeads.forEach(l => {
-        lines.push(`<li><span>${renderOutcomeLeadName(l, leads)}</span><strong>${esc(RevenueBrain.formatYen(l.total))}</strong></li>`);
-      });
-      lines.push('</ul>');
-    }
-
-    if (outcome.paymentConcernLeads && outcome.paymentConcernLeads.length) {
-      lines.push('<p class="revenue-outcome-section-title label-muted">入金注意がある営業先</p>');
-      lines.push('<ul class="revenue-outcome-list revenue-outcome-list-warn">');
-      outcome.paymentConcernLeads.forEach(l => {
-        lines.push(`<li><span>${renderOutcomeLeadName(l, leads)}</span><strong>${esc(RevenueBrain.formatYen(l.paymentConcernAmount))}</strong></li>`);
-      });
-      lines.push('</ul>');
-    }
-
-    if (opts.showComments) {
-      const comments = RevenueBrain.buildSalesOutcomeComment(outcome);
-      comments.forEach(c => lines.push(`<p class="revenue-outcome-comment">${esc(c)}</p>`));
-    }
-    return lines.join('');
+  function renderSalesOutcomeHtml() {
+    return '';
   }
 
   function renderRevenueUnlinkedBanner(salesOutcome) {
@@ -3550,7 +3504,7 @@
   ];
 
   const PRODUCT_OVERVIEW_ITEMS = [
-    { title: '売上を見える化', desc: '月間目標・達成率・未紐付け売上を確認', action: 'revenue' },
+    { title: '売上を見える化', desc: '月間目標・達成率・売上明細を確認', action: 'revenue' },
     { title: '営業先を管理', desc: '次の一手・保留・活動履歴を整理', action: 'sales' },
     { title: '毎日やることを整理', desc: '優先タスクを毎朝確認', action: 'task' },
     { title: '集客施策メモ', desc: 'クロクロ調査結果を集客施策メモに取り込み', action: 'pickup' },
@@ -4301,7 +4255,6 @@
     const records = RevenueBrain.normalizeRevenueRecords(Storage.getRevenueRecords());
     const leads = Storage.getLeads();
     const leadIds = new Set(leads.map(l => l.id));
-    const unlinked = records.filter(r => r.status !== 'キャンセル' && !r.leadId).length;
     const badLeadRef = records.filter(r => r.leadId && !leadIds.has(r.leadId)).length;
     const missingPerf = countMissingPerformanceInPickups(Storage.getDemandPickups());
     const usage = Storage.getLocalStorageUsage();
@@ -4317,7 +4270,6 @@
       ? RevenueSummaryBrain.getRevenueWarnings(records)
       : null;
 
-    if (unlinked) notes.push(`未紐付け売上 ${unlinked}件`);
     if (badLeadRef) notes.push(`紐付け切れ ${badLeadRef}件`);
     if (revWarnings) {
       if (revWarnings.noDate) notes.push(`日付不明の確定売上 ${revWarnings.noDate}件`);
@@ -4484,10 +4436,6 @@
     (context.salesActions || []).slice(0, 2).forEach(a => {
       push(a.action, a.reason, { source: 'sales', leadId: a.leadId, leadName: a.leadName });
     });
-    if (context.revCtx.salesOutcome && context.revCtx.salesOutcome.unlinkedTotal > 0) {
-      const n = context.revCtx.salesOutcome.unlinkedCount || context.revCtx.records.filter(r => !r.leadId).length;
-      push(`未紐付け売上${n}件を営業先に紐付ける`, '売上と営業先の紐付けで次の提案精度が上がります', { source: 'revenue' });
-    }
     (context.stopImprove || []).slice(0, 2).forEach(c => {
       push(c.nextStep || `${c.topic}を見直す`, c.reason, { source: 'decision' });
     });
@@ -4558,7 +4506,6 @@
     lines.push(`期間内売上：${RevenueBrain.formatYen(c.summary.periodRevenue)}`);
     lines.push(`目標：${RevenueBrain.formatYen(rev.monthlyTarget)}`);
     lines.push(`達成率：${rev.achievementRate}%`);
-    lines.push(`未紐付け売上：${c.revCtx.salesOutcome && c.revCtx.salesOutcome.unlinkedTotal > 0 ? RevenueBrain.formatYen(c.revCtx.salesOutcome.unlinkedTotal) : 'なし'}`);
     const holdNames = (c.revCtx.salesHoldCandidates || []).map(h => h.leadName).join('、');
     lines.push(`入金確認・保留：${holdNames || (c.paymentConcern.length ? `${c.paymentConcern.length}件` : 'なし')}`);
     if (c.revenueSummary && c.revenueSummary.compact) {
@@ -11969,7 +11916,7 @@
         parts.push('</ul>');
       }
       if (w.type === 'revenue-unknown' && w.count) {
-        parts.push(`<p class="area-warnings-meta">エリア不明の紐付け売上：${w.count}件</p>`);
+        parts.push(`<p class="area-warnings-meta">エリア不明の売上：${w.count}件</p>`);
       }
     });
     el.innerHTML = parts.length ? parts.join('') : '<p class="placeholder-text">遠方案件・住所未入力はありません。</p>';
@@ -15465,13 +15412,6 @@
       renderRevenueView();
       renderDashboard();
     });
-    const scrollUnlinkedBtn = document.getElementById('btn-scroll-unlinked-revenue');
-    if (scrollUnlinkedBtn) {
-      scrollUnlinkedBtn.addEventListener('click', () => {
-        const section = document.getElementById('revenue-list-section');
-        if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-    }
     if (!revenueAggregationFilter.year) {
       resetRevenueAggregationFilter();
     }
