@@ -625,13 +625,39 @@ const RevenueSummaryBrain = {
       : (workOrder || {});
   },
 
+  getScheduleEstimateAmount(workOrder) {
+    const wo = this.normalizeScheduleWorkOrder(workOrder);
+    const top = Number(wo.estimateAmount || 0);
+    if (Number.isFinite(top) && top > 0) return top;
+    const meta = wo.candidateMeta;
+    if (meta && meta.estimatedAmount != null && meta.estimatedAmount !== '') {
+      if (typeof CalendarCandidateBrain !== 'undefined') {
+        return CalendarCandidateBrain.parseAmount(meta.estimatedAmount);
+      }
+      const parsed = parseInt(String(meta.estimatedAmount).replace(/[^\d]/g, ''), 10);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  },
+
+  isCalendarUpcomingScheduleWorkOrder(workOrder) {
+    if (typeof CalendarCandidateBrain === 'undefined') return false;
+    const wo = this.normalizeScheduleWorkOrder(workOrder);
+    if (!CalendarCandidateBrain.isCalendarCandidateWorkOrder(wo)) return false;
+    const status = CalendarCandidateBrain.getCandidateStatus(wo);
+    return status !== 'スキップ';
+  },
+
   hasUpcomingScheduleExcludedWord(workOrder) {
     const wo = this.normalizeScheduleWorkOrder(workOrder);
     if (typeof CalendarCandidateBrain !== 'undefined') {
-      return CalendarCandidateBrain.hasPastRecoveryExcludedWord(wo);
+      return CalendarCandidateBrain.hasFutureImportExcludedWord(
+        CalendarCandidateBrain.normalizeCandidate(wo)
+      );
     }
     const text = [wo.customerName, wo.serviceText, wo.source, wo.memo].join(' ');
-    return /キャンセル|取消|取り消し|中止|見積|見積もり|見積り|見積のみ|日程調整|調整中|仮予定|仮押さえ|未確定/.test(text);
+    if (/キャンセル|取消|取り消し|中止|見積もり|見積り|見積のみ|日程調整中|調整中/.test(text)) return true;
+    return /(?:^|\s)見積(?:$|\s)/.test(text);
   },
 
   isUpcomingRevenueScheduleWorkOrder(workOrder, today) {
@@ -644,9 +670,10 @@ const RevenueSummaryBrain = {
     if (wo.status === 'cancelled' || wo.status === 'archived' || wo.status === 'completed') return false;
     const meta = wo.candidateMeta;
     if (meta && meta.candidateStatus === 'スキップ') return false;
-    const amt = Number(wo.estimateAmount || 0);
-    if (!Number.isFinite(amt) || amt <= 0) return false;
     if (this.hasUpcomingScheduleExcludedWord(wo)) return false;
+    if (this.isCalendarUpcomingScheduleWorkOrder(wo)) return true;
+    const amt = this.getScheduleEstimateAmount(wo);
+    if (!Number.isFinite(amt) || amt <= 0) return false;
     return true;
   },
 
@@ -704,20 +731,26 @@ const RevenueSummaryBrain = {
           return (a.startTime || '').localeCompare(b.startTime || '');
         }));
     const thisMonth = eligible.filter(w => w.scheduledDate && w.scheduledDate.startsWith(monthKey));
-    const monthTotal = thisMonth.reduce((sum, w) => sum + Number(w.estimateAmount || 0), 0);
-    const displayTotal = eligible.reduce((sum, w) => sum + Number(w.estimateAmount || 0), 0);
+    const monthTotal = thisMonth.reduce((sum, w) => {
+      const amt = this.getScheduleEstimateAmount(w);
+      return sum + (amt > 0 ? amt : 0);
+    }, 0);
+    const displayTotal = eligible.reduce((sum, w) => {
+      const amt = this.getScheduleEstimateAmount(w);
+      return sum + (amt > 0 ? amt : 0);
+    }, 0);
     return {
       monthCount: thisMonth.length,
       monthTotal,
       displayCount: eligible.length,
       displayTotal,
-      upcoming: eligible.slice(0, 3).map(wo => ({
+      upcoming: eligible.map(wo => ({
         id: wo.id || '',
         scheduledDate: wo.scheduledDate || '',
         dateLabel: this.formatUpcomingScheduleDate(wo.scheduledDate, t),
         customerName: wo.customerName || '（名前なし）',
         serviceText: wo.serviceText || '—',
-        amount: Number(wo.estimateAmount || 0),
+        amount: this.getScheduleEstimateAmount(wo),
         statusLabel: this.getUpcomingScheduleStatusLabel(wo, t)
       })),
       upcomingCount: eligible.length,

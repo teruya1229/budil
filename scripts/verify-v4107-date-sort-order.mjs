@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.10 — scheduled list date/time ascending sort verification.
+ * Budil v4.10.11 — scheduled list date/time ascending sort verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -12,7 +12,7 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-console.log('== v4.10.10 date sort order ==');
+console.log('== v4.10.11 date sort order ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -25,10 +25,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.10'), 'index.html should show v4.10.10');
-assert(indexHtml.includes('js/app.js?v=4.10.10'), 'app.js cache buster should be v4.10.10');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.10'"), 'storage version should be v4.10.10');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.10'"), 'data-backup version should be v4.10.10');
+assert(indexHtml.includes('v4.10.11'), 'index.html should show v4.10.11');
+assert(indexHtml.includes('js/app.js?v=4.10.11'), 'app.js cache buster should be v4.10.11');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.11'"), 'storage version should be v4.10.11');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.11'"), 'data-backup version should be v4.10.11');
 
 assert(workOrderBrain.includes('compareScheduledDateTimeAsc'), 'work-order brain should define compareScheduledDateTimeAsc');
 assert(workOrderBrain.includes('sortByScheduledDateTimeAsc'), 'work-order brain should define sortByScheduledDateTimeAsc');
@@ -95,10 +95,10 @@ assert(appJs.includes('applyMonthlyReconciliationAdjustment'), 'v4.10.5 reconcil
 assert(appJs.includes('navigateAfterAction'), 'v4.10.4 action navigation maintained');
 assert(indexHtml.includes('btn-calendar-candidate-json-import'), 'v4.10.1 JSON import maintained');
 
-assert(statusMd.includes('v4.10.10'), 'status.md should document v4.10.10');
-assert(handoffMd.includes('v4.10.10'), 'handoff.md should document v4.10.10');
-assert(decisionLog.includes('v4.10.10'), 'decision-log.md should record v4.10.10');
+assert(statusMd.includes('v4.10.11'), 'status.md should document v4.10.11');
+assert(handoffMd.includes('v4.10.11'), 'handoff.md should document v4.10.11');
+assert(decisionLog.includes('v4.10.11'), 'decision-log.md should record v4.10.11');
 
 execSync('node scripts/verify-v4106-calendar-source-flow-simplification.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('All v4.10.10 date sort order checks passed.');
+console.log('All v4.10.11 date sort order checks passed.');

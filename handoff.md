@@ -16,8 +16,8 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.10.10 |
-| 最新commit | a606cc3 |
+| 最新バージョン | v4.10.11 |
+| 最新commit | v4.10.11 リリース報告参照（push後に更新） |
 | ブランチ | `main` push 済み |
 
 ## Firebase / Functions 下書き（作業ツリー外・保留）
@@ -46,6 +46,14 @@ output/budil-calendar-events.json
 
 - Firebase / Functions API 案（`hub/functions`）は **一旦保留**。将来候補としてコードは残置
 - v4.10.1 の JSON ファイル取り込み・貼り付け取り込みは維持
+
+## v4.10.11で入ったもの
+
+- 予定取り込み一覧（作業予定に追加済み）と経営ホーム直近予定／売上予定のデータ源を `budil_work_orders` で統一
+- カレンダー由来予定は金額なしでも件数に含め、除外ワードは未来取り込み用ルールに限定（未確定ラベルで落とさない）
+- `candidateMeta.estimatedAmount` を売上予定の金額解決に使用
+- 直近予定リストは日付昇順の全候補を返し、表示件数は描画側で制御
+- cache buster を v4.10.11 に更新
 
 ## v4.10.10で入ったもの
 
