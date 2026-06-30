@@ -17,7 +17,7 @@
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
 | 最新バージョン | v4.10.6 |
-| 最新commit | （v4.10.6 反映後に更新） |
+| 最新commit | f4c6f84 |
 | ブランチ | `main` push 済み |
 
 ## Firebase / Functions 下書き（作業ツリー外・保留）
