@@ -149,8 +149,6 @@ const WorkCompletionBrain = {
       paymentStatus: input.paymentStatus || '未入金',
       paymentConcern: input.paymentConcern === true,
       memo: memoParts.join('\n'),
-      leadId: input.leadId || wo.leadId || '',
-      leadName: '',
       sourceWorkOrderId: wo.id,
       intakeId: wo.intakeId || '',
       receptionIntakeId: wo.receptionIntakeId || wo.intakeId || '',

@@ -756,7 +756,7 @@ const RevenueSummaryBrain = {
     const workOrders = (extra && extra.workOrders) || [];
     const intakes = (extra && extra.intakes) || [];
     return {
-      scopeNote: '確定売上（売上番頭で確定・完了登録済み）のみ集計。見込み・候補は含みません。',
+      scopeNote: '確定売上（売上番頭で確定登録済み）のみ集計。見込み・候補は含みません。',
       forecast: this.buildWorkOrderForecastSummary(workOrders, today),
       receptionCandidates: this.buildReceptionCandidateSummary(intakes),
       plannedRevenue: {

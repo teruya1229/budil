@@ -137,10 +137,10 @@ const css = load('css/style.css');
 
 console.log('== v4.10.1 future schedule import UI flow ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.3'), 'header version should be v4.10.3');
-assert(indexHtml.includes('Budil v4.10.3'), 'sidebar version should be v4.10.3');
-assert(indexHtml.includes('js/app.js?v=4.10.3'), 'app.js cache buster should be v4.10.3');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.3'"), 'storage version should be v4.10.3');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.4'), 'header version should be v4.10.4');
+assert(indexHtml.includes('Budil v4.10.4'), 'sidebar version should be v4.10.4');
+assert(indexHtml.includes('js/app.js?v=4.10.4'), 'app.js cache buster should be v4.10.4');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.4'"), 'storage version should be v4.10.4');
 
 assert(indexHtml.includes('Google\u30ab\u30ec\u30f3\u30c0\u30fc\u7b49\u304b\u3089\u30b3\u30d4\u30fc\u3057\u305f\u4e88\u5b9a\u3092\u8cbc\u308a\u4ed8\u3051\u3066\u304f\u3060\u3055\u3044'), 'paste hint should mention copy-paste not direct connect');
 assert(indexHtml.includes('Budil\u306f\u30ab\u30ec\u30f3\u30c0\u30fc\u306b\u76f4\u63a5\u63a5\u7d9a\u3057\u307e\u305b\u3093'), 'paste hint should clarify no direct calendar API');

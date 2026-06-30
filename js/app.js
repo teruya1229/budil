@@ -235,6 +235,58 @@
     setTimeout(() => el.classList.remove('visible'), 2200);
   }
 
+  function scrollToTopOrTarget(selector) {
+    if (selector) {
+      scrollNavTarget(selector);
+      return;
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  const ACTION_NAV_TARGETS = {
+    'calendar-import-save': { targetView: 'revenue', targetSelector: '#revenue-upcoming-schedule' },
+    'revenue-confirm': { targetView: 'dashboard', targetSelector: '#executive-home' },
+    'revenue-save': { targetView: 'revenue', targetSelector: '#revenue-aggregation-card' },
+    'expense-save': { targetView: 'profit', targetSelector: '#profit-summary' },
+    'monthly-results-save': { targetView: 'revenue', targetSelector: '#revenue-monthly-closing-check' }
+  };
+
+  function showActionResult(message, options) {
+    const opts = options || {};
+    showAppToast(message);
+    if (opts.targetView) {
+      navigateToView(opts.targetView, opts.targetSelector || null);
+    } else if (opts.targetSelector) {
+      scrollToTopOrTarget(opts.targetSelector);
+    } else if (opts.scrollTop !== false) {
+      scrollToTopOrTarget(null);
+    }
+  }
+
+  function navigateAfterAction(actionType, message) {
+    const target = ACTION_NAV_TARGETS[actionType];
+    if (target) {
+      showActionResult(message, {
+        targetView: target.targetView,
+        targetSelector: target.targetSelector,
+        scrollTop: false
+      });
+    } else {
+      showActionResult(message, { scrollTop: true });
+    }
+  }
+
+  function formatRevenueStatusLabel(status) {
+    return typeof RevenueBrain !== 'undefined' && RevenueBrain.displayRevenueStatus
+      ? RevenueBrain.displayRevenueStatus(status)
+      : (status === '完了' ? '確定' : (status || '予定'));
+  }
+
+  function formatRevenueStatusBadge(status) {
+    const label = formatRevenueStatusLabel(status);
+    return `<span class="revenue-status-badge revenue-status-${esc(label)}">${esc(label)}</span>`;
+  }
+
   function fillAreaSelectOptions(selectEl, selected) {
     if (!selectEl) return;
     const areas = MapBrain.AREAS;
@@ -1989,12 +2041,10 @@
     const normalized = SalesBrain.normalizeLead(lead);
     const enriched = getEnrichedLead(leadId) || normalized;
     const { records, leads } = getRevenueContext();
-    const revSummary = RevenueBrain.getLeadRevenueSummary(leadId, records);
     const hold = RevenueBrain.getLeadSalesHold(leadId, records, leads);
     const priority = normalized.priority || enriched.priorityLabel || '—';
     const lastContact = normalized.lastContactAt || normalized.lastContact || '—';
     const nextContact = normalized.nextActionDate || normalized.nextContact || '—';
-    const totalText = revSummary.count ? RevenueBrain.formatYen(revSummary.total) : '—';
     const statusLine = hold
       ? `<p class="lead-status-line lead-status-hold"><span class="label-muted">状態</span> 営業保留</p>
          <p class="lead-status-line lead-status-hold-reason"><span class="label-muted">理由</span> ${esc(hold.reason)}</p>`
@@ -2004,29 +2054,13 @@
       <p class="lead-status-line lead-status-main">${esc(normalized.salesStatus || '—')} / 優先度${esc(priority)}</p>
       <p class="lead-status-line"><span class="label-muted">最終連絡</span> ${esc(lastContact)}</p>
       <p class="lead-status-line"><span class="label-muted">次回連絡</span> ${esc(nextContact)}</p>
-      <p class="lead-status-line"><span class="label-muted">累計売上</span> ${esc(totalText)}</p>
       ${statusLine}`;
   }
 
   function renderLeadRevenueCompact(leadId) {
     const el = document.getElementById('lead-revenue-compact');
     if (!el) return;
-    const summary = RevenueBrain.getLeadRevenueSummary(leadId, Storage.getRevenueRecords());
-    if (!summary.count) {
-      el.innerHTML = `
-        <h3>累計売上</h3>
-        <p class="placeholder-text">この営業先に紐付いた売上はまだありません。作業が終わったら売上登録から登録できます。</p>`;
-      return;
-    }
-    el.innerHTML = `
-      <h3>累計売上</h3>
-      <div class="lead-revenue-compact-grid">
-        <div class="lead-revenue-compact-item"><span>累計売上</span><strong>${esc(RevenueBrain.formatYen(summary.total))}</strong></div>
-        <div class="lead-revenue-compact-item"><span>入金済み</span><strong>${esc(RevenueBrain.formatYen(summary.paid))}</strong></div>
-        <div class="lead-revenue-compact-item${summary.unpaid > 0 ? ' lead-revenue-pending-cell' : ''}"><span>入金待ち</span><strong>${esc(RevenueBrain.formatYen(summary.unpaid))}</strong></div>
-        <div class="lead-revenue-compact-item"><span>売上件数</span><strong>${summary.count}件</strong></div>
-        <div class="lead-revenue-compact-item lead-revenue-compact-wide"><span>最終売上日</span><strong>${esc(summary.latestDate || '—')}</strong></div>
-      </div>`;
+    el.innerHTML = '';
   }
 
   function renderLeadDailyTasks(leadId) {
@@ -2836,28 +2870,8 @@
   }
 
   function showRevenueConfirmedNotice(revenueRecord) {
-    const el = document.getElementById('daily-revenue-confirmed-notice');
-    if (!el || !revenueRecord) return;
-    el.classList.remove('hidden');
-    el.innerHTML = `
-      <p class="daily-revenue-confirmed-text">売上を確定しました。次に口コミ依頼を送れます。</p>
-      <div class="daily-revenue-confirmed-actions">
-        <button type="button" class="btn btn-sm btn-primary" data-revenue-confirmed-copy-review="${esc(revenueRecord.id)}">口コミ文をコピー</button>
-        <button type="button" class="btn btn-sm btn-secondary" data-revenue-confirmed-go-follow>フォローを見る</button>
-        <button type="button" class="btn btn-sm btn-secondary" data-revenue-confirmed-go-list>売上一覧を見る</button>
-        <button type="button" class="btn btn-sm btn-secondary" data-revenue-confirmed-stay>この画面に残る</button>
-      </div>`;
-    el.querySelector('[data-revenue-confirmed-copy-review]')?.addEventListener('click', () => {
-      copyReviewMessageForRevenue(revenueRecord.id);
-    });
-    el.querySelector('[data-revenue-confirmed-go-follow]')?.addEventListener('click', () => goToFollowUp());
-    el.querySelector('[data-revenue-confirmed-go-list]')?.addEventListener('click', () => {
-      navigateToView('revenue', '#revenue-aggregation-card');
-    });
-    el.querySelector('[data-revenue-confirmed-stay]')?.addEventListener('click', () => {
-      el.classList.add('hidden');
-    });
-    scrollToElement('#daily-section-revenue-queue');
+    if (!revenueRecord) return;
+    navigateAfterAction('revenue-confirm', '売上を確定しました。次にやることを確認してください。');
   }
 
   function bindDailyRevenueQueueEvents(root) {
@@ -3375,7 +3389,7 @@
   function renderRevenueUnlinkedBanner(salesOutcome) {
     const banner = document.getElementById('revenue-unlinked-banner');
     if (!banner) return;
-    banner.classList.toggle('hidden', !(salesOutcome && salesOutcome.unlinkedTotal > 0));
+    banner.classList.add('hidden');
   }
 
   function renderRevenueSummaryHtml(summary, comment, options) {
@@ -3397,7 +3411,6 @@
     if (opts.showExtra) {
       lines.push(
         `<p class="revenue-summary-line">確定：${esc(RevenueBrain.formatYen(summary.confirmed))}</p>`,
-        `<p class="revenue-summary-line">完了：${esc(RevenueBrain.formatYen(summary.completed))}</p>`,
         `<p class="revenue-summary-line">残り日数：${summary.daysLeft}日 / 1日あたり必要：${esc(RevenueBrain.formatYen(summary.dailyNeeded))}</p>`
       );
     }
@@ -8025,6 +8038,7 @@
     if (previewPanel) previewPanel.classList.add('hidden');
     renderCalendarCandidateImportResult(summary, { phase: 'result' });
     refreshCalendarCandidateViews();
+    navigateAfterAction('calendar-import-save', '作業予定に保存しました。売上予定を確認してください。');
   }
 
   function saveAllCalendarCandidates(force) {
@@ -8058,6 +8072,12 @@
     if (previewPanel) previewPanel.classList.add('hidden');
     renderCalendarCandidateImportResult(summary, { phase: 'result' });
     refreshCalendarCandidateViews();
+    if (saved > 0) {
+      navigateAfterAction('calendar-import-save', `作業予定に${saved}件保存しました。売上予定を確認してください。`);
+    } else {
+      showAppToast('保存対象がありませんでした');
+      scrollToTopOrTarget(null);
+    }
   }
 
   function refreshCalendarCandidateViews() {
@@ -9142,8 +9162,7 @@
       paymentConcern: document.getElementById('work-completion-payment-concern').checked,
       actualMemo: document.getElementById('work-completion-actual-memo').value.trim(),
       additionalMemo: '',
-      followMemo: document.getElementById('work-completion-follow-memo').value.trim(),
-      leadId: wo.leadId || ''
+      followMemo: document.getElementById('work-completion-follow-memo').value.trim()
     };
     if (!input.customerName || !input.amount) {
       alert('お客様名と実際の売上金額は必須です。');
@@ -10587,7 +10606,7 @@
     clearProfitExpenseForm();
     renderProfitView();
     renderDashboard();
-    alert('支出を保存しました。');
+    navigateAfterAction('expense-save', '経費を入力しました。利益管理に反映しました。');
   }
 
   function renderProfitView() {
@@ -10727,7 +10746,10 @@
     renderMonthlyResultsView();
     renderProfitView();
     renderDashboard();
-    showAppToast(editId || !result.created ? '月次実績を更新しました' : '月次実績を保存しました');
+    const msg = editId || !result.created
+      ? '月次実績を更新しました。月次締めチェックを確認してください。'
+      : '月次実績を保存しました。月次締めチェックを確認してください。';
+    navigateAfterAction('monthly-results-save', msg);
   }
 
   function renderMonthlyResultsSummary(records) {
@@ -14569,26 +14591,11 @@
   }
 
   function renderRevenueLeadLinkHtml(record, leads) {
-    if (!record.leadId) {
-      return `<div class="revenue-lead-cell">
-        <span class="revenue-lead-unlinked">未紐付け</span>
-        <button type="button" class="btn btn-sm btn-secondary" data-create-lead-revenue="${esc(record.id)}">営業先作成</button>
-      </div>`;
-    }
-    const label = RevenueBrain.resolveLeadLabel(record, leads);
-    if (leads.find(l => l.id === record.leadId)) {
-      return `<button type="button" class="revenue-lead-link" data-revenue-open-lead="${esc(record.leadId)}">${esc(label)}</button>`;
-    }
-    return `<span class="revenue-lead-deleted">${esc(label)}</span>`;
+    return '';
   }
 
   function bindRevenueLeadListActions() {
-    document.querySelectorAll('[data-revenue-open-lead]').forEach(btn => {
-      btn.addEventListener('click', () => openSalesDetail(btn.dataset.revenueOpenLead, { navigate: true }));
-    });
-    document.querySelectorAll('[data-create-lead-revenue]').forEach(btn => {
-      btn.addEventListener('click', () => createLeadFromRevenueRecord(btn.dataset.createLeadRevenue));
-    });
+    /* 売上と営業の紐づけUIは v4.10.4 で通常表示から外した */
   }
 
   function updateLeadStatusFromRevenue(leadId) {
@@ -14609,25 +14616,7 @@
   function renderLeadRevenuePanel(leadId) {
     const container = document.getElementById('lead-revenue-panel');
     if (!container) return;
-    const summary = RevenueBrain.getLeadRevenueSummary(leadId, Storage.getRevenueRecords());
-    if (!summary.count) {
-      container.innerHTML = '<p class="placeholder-text">この営業先の売上履歴はまだありません。作業が終わったら「売上を登録」から追加できます。</p>';
-      return;
-    }
-    const historyHtml = summary.records
-      .filter(r => r.status !== 'キャンセル')
-      .slice(0, 5)
-      .map(r => `
-        <li>
-          <strong>${esc(RevenueBrain.formatYen(r.amount))}</strong>
-          <div class="lead-revenue-history-meta">
-            <span>${esc(r.workDate || '—')}</span>
-            <span>${esc(r.service || '—')}</span>
-            <span class="revenue-status-badge revenue-status-${esc(r.status)}">${esc(r.status)}</span>
-            ${renderPaymentStatusBadge(r)}
-          </div>
-        </li>`).join('');
-    container.innerHTML = `<ul class="lead-revenue-history">${historyHtml}</ul>`;
+    container.innerHTML = '';
   }
 
   function fillRevenueSelects() {
@@ -14684,7 +14673,7 @@
       grossEl.dataset.manualGrossMarginRate = grossEl.value ? '1' : '';
       grossEl.dataset.autoGrossMarginRate = '';
     }
-    document.getElementById('revenue-status').value = record.status || '予定';
+    document.getElementById('revenue-status').value = formatRevenueStatusLabel(record.status || '予定');
     writeRevenuePaymentFieldsToForm(record);
     document.getElementById('revenue-payment-concern').checked = record.paymentConcern === true;
     document.getElementById('revenue-memo').value = record.memo || '';
@@ -14700,8 +14689,7 @@
   }
 
   function getRevenueFormData() {
-    const leadId = document.getElementById('revenue-lead').value;
-    const leads = Storage.getLeads();
+    const editId = document.getElementById('revenue-edit-id').value;
     const paymentFields = readRevenuePaymentFieldsFromForm();
     const grossMarginRateInput = String(document.getElementById('revenue-gross-margin-rate')?.value || '').trim();
     const data = {
@@ -14711,7 +14699,7 @@
       source: document.getElementById('revenue-source').value,
       amount: Number(document.getElementById('revenue-amount').value) || 0,
       grossMarginRate: grossMarginRateInput === '' ? '' : Number(grossMarginRateInput),
-      status: document.getElementById('revenue-status').value,
+      status: RevenueBrain.normalizeRevenueStatusForSave(document.getElementById('revenue-status').value),
       paymentConcern: document.getElementById('revenue-payment-concern').checked,
       memo: document.getElementById('revenue-memo').value.trim(),
       ...paymentFields,
@@ -14719,13 +14707,12 @@
     };
     const normalizedPayment = normalizeRevenueFormPayment(data);
     Object.assign(data, normalizedPayment);
-    if (leadId) {
-      const lead = leads.find(l => l.id === leadId);
-      data.leadId = leadId;
-      data.leadName = lead ? lead.company : (Storage.getRevenueRecords().find(r => r.leadId === leadId)?.leadName || '');
-    } else {
-      data.leadId = '';
-      data.leadName = '';
+    if (editId) {
+      const existing = Storage.getRevenueRecords().find(r => r.id === editId);
+      if (existing && existing.leadId) {
+        data.leadId = existing.leadId;
+        data.leadName = existing.leadName || '';
+      }
     }
     if (pendingRevenueWorkOrderId) data.sourceWorkOrderId = pendingRevenueWorkOrderId;
     if (pendingRevenueIntakeId) {
@@ -14900,7 +14887,7 @@
     const cardList = document.getElementById('revenue-card-list');
 
     if (!records.length) {
-      const empty = '<tr><td colspan="10" class="empty-state">今月の売上登録がまだありません。作業が終わったら1件登録してみましょう。</td></tr>';
+      const empty = '<tr><td colspan="9" class="empty-state">今月の売上登録がまだありません。作業が終わったら1件登録してみましょう。</td></tr>';
       if (tbody) tbody.innerHTML = empty;
       if (cardList) cardList.innerHTML = '<p class="empty-state">今月の売上登録がまだありません。作業が終わったら1件登録してみましょう。</p>';
       return;
@@ -14915,11 +14902,10 @@
         <tr>
           <td>${esc(r.workDate)}</td>
           <td>${esc(r.customerName)}${fuBadges ? `<div class="revenue-follow-up-badges">${fuBadges}</div>` : ''}</td>
-          <td class="revenue-lead-label">${renderRevenueLeadLinkHtml(r, leads)}</td>
           <td>${esc(r.service)}<br><small class="area-label-compact">${esc(area)}</small></td>
           <td>${esc(r.source)}</td>
           <td>${esc(RevenueBrain.formatYen(r.amount))}</td>
-          <td><span class="revenue-status-badge revenue-status-${esc(r.status)}">${esc(r.status)}</span></td>
+          <td>${formatRevenueStatusBadge(r.status)}</td>
           <td>${renderPaymentMethodBadge(r)}</td>
           <td>${renderPaymentStatusBadge(r)}</td>
           <td class="actions revenue-actions-cell">
@@ -14932,16 +14918,6 @@
 
     if (cardList) {
       cardList.innerHTML = records.map(r => {
-        let cardLeadHtml;
-        if (!r.leadId) {
-          cardLeadHtml = `<span class="revenue-lead-unlinked">未紐付け</span>
-            <button type="button" class="btn btn-sm btn-secondary" data-create-lead-revenue="${esc(r.id)}">営業先作成</button>`;
-        } else if (leads.find(l => l.id === r.leadId)) {
-          cardLeadHtml = `<span>${esc(RevenueBrain.resolveLeadLabel(r, leads))}</span>
-            <button type="button" class="btn btn-sm btn-secondary" data-revenue-open-lead="${esc(r.leadId)}">営業先を開く</button>`;
-        } else {
-          cardLeadHtml = `<span class="revenue-lead-deleted">${esc(RevenueBrain.resolveLeadLabel(r, leads))}</span>`;
-        }
         const area = MapBrain.getRevenueArea(r, leads);
         const fu = getRevenueFollowUpFromWorkOrder(r);
         const fuBadges = fu ? FollowUpBrain.formatFollowUpBadges(fu) : '';
@@ -14953,11 +14929,8 @@
           </div>
           ${fuBadges ? `<div class="revenue-follow-up-badges">${fuBadges}</div>` : ''}
           <p class="revenue-card-meta">${esc(r.workDate)} ｜ ${esc(r.service)} ｜ ${esc(r.source)} ｜ ${esc(area)}</p>
-          <div class="revenue-card-meta revenue-card-lead-row">
-            <span>紐付け:</span> ${cardLeadHtml}
-          </div>
           <p class="revenue-card-meta">
-            <span class="revenue-status-badge revenue-status-${esc(r.status)}">${esc(r.status)}</span>
+            ${formatRevenueStatusBadge(r.status)}
             ${renderPaymentMethodBadge(r)}
             ${renderPaymentStatusBadge(r)}
           </p>
@@ -15179,7 +15152,7 @@
     const thisMonthLabel = compact.usesMonthlyResultThisMonth ? '今月実績（月次実績ベース）' : '今月確定売上';
     const scopeNote = compact.usesMonthlyResultThisMonth
       ? '月次実績がある月は月次実績ベースで表示します。明細売上とは別管理です。'
-      : '確定売上のみ集計（売上登録で「確定」「完了」登録済み）。見込み・候補は含みません。';
+      : '確定売上のみ集計（売上登録で「確定」登録済み）。見込み・候補は含みません。';
     const monthlyBreakdown = compact.usesMonthlyResultThisMonth
       ? `<p class="reconciliation-brief-line">明細売上合計：${esc(RevenueSummaryBrain.formatYen(thisMonthView.detailTotal || 0))} / 差額：${esc(RevenueSummaryBrain.formatYen(thisMonthView.diff || 0))}</p>
          ${thisMonthView.status === '差額あり' ? '<p class="reconciliation-brief-warn">※この月は月次実績と売上明細が一致していません。</p>' : ''}
@@ -15332,7 +15305,6 @@
       const baseItems = [
         { label: plannedLabel, value: RevenueBrain.formatYen(summary.planned) + (monthlyOverlay && monthlyOverlay.usesMonthlyResult ? '（月次実績）' : '') },
         { label: '確定', value: RevenueBrain.formatYen(summary.confirmed) },
-        { label: '完了', value: RevenueBrain.formatYen(summary.completed) },
         { label: '入金済み', value: RevenueBrain.formatYen(summary.paid) },
         { label: '入金待ち', value: RevenueBrain.formatYen(summary.unpaid) },
         { label: '月間目標', value: RevenueBrain.formatYen(summary.monthlyTarget) },
@@ -15341,13 +15313,7 @@
         { label: '残り日数', value: summary.daysLeft + '日' },
         { label: '1日あたり必要', value: RevenueBrain.formatYen(summary.dailyNeeded) }
       ];
-      const outcomeItems = [
-        { label: '紐付け売上', value: RevenueBrain.formatYen(salesOutcome.linkedTotal), extraClass: 'revenue-summary-outcome revenue-summary-outcome-linked' },
-        { label: '未紐付け売上', value: salesOutcome.unlinkedTotal > 0 ? RevenueBrain.formatYen(salesOutcome.unlinkedTotal) : 'なし ✓', extraClass: 'revenue-summary-outcome ' + (salesOutcome.unlinkedTotal > 0 ? 'revenue-summary-outcome-warn' : 'revenue-summary-outcome-ok') },
-        { label: '売上発生営業先', value: salesOutcome.leadCount + '件', extraClass: 'revenue-summary-outcome' },
-        { label: '成約営業先', value: salesOutcome.contractedCount + '件', extraClass: 'revenue-summary-outcome' }
-      ];
-      summaryEl.innerHTML = [...baseItems, ...outcomeItems].map(item => `
+      summaryEl.innerHTML = baseItems.map(item => `
         <div class="revenue-summary-item ${item.extraClass || ''}">
           <span>${esc(item.label)}</span>
           <strong>${esc(item.value)}</strong>
@@ -15361,12 +15327,7 @@
     }
     if (commentEl) commentEl.textContent = comment;
     if (targetEl) targetEl.value = settings.monthlyTarget || '';
-    if (outcomeEl) {
-      outcomeEl.innerHTML = renderSalesOutcomeHtml(salesOutcome, { leads });
-      bindSalesOutcomeLeadLinks(outcomeEl);
-    }
-    renderNextSalesCandidatesList('revenue-next-sales', 5);
-    renderSalesHoldCandidatesList('revenue-sales-hold', 5);
+    if (outcomeEl) outcomeEl.innerHTML = '';
     renderManagementComment('revenue-management-comment');
     renderRevenueBreakdown('revenue-by-service', summary.byService);
     renderRevenueBreakdown('revenue-by-source', summary.bySource);
@@ -15400,7 +15361,7 @@
       alert('顧客名は必須です');
       return;
     }
-    const markWon = document.getElementById('revenue-mark-won').checked;
+    const markWon = false;
     const leadId = data.leadId;
     const id = document.getElementById('revenue-edit-id').value;
     const workOrderId = pendingRevenueWorkOrderId;
@@ -15470,9 +15431,8 @@
     renderWorkOrderView();
     renderReceptionView();
     renderDashboard();
-    if (currentMessageLeadId === leadId) {
-      renderLeadDetailSubpanels(leadId);
-    }
+    const saveMsg = id ? '売上を更新しました。売上集計を確認してください。' : '売上を保存しました。売上集計を確認してください。';
+    navigateAfterAction('revenue-save', saveMsg);
   }
 
   function initRevenue() {

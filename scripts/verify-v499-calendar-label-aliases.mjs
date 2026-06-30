@@ -116,10 +116,10 @@ const calendarBrain = load('js/calendar-candidate-brain.js');
 
 console.log('== v4.10.1 calendar label aliases ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.3'), 'header version should be v4.10.3');
-assert(indexHtml.includes('Budil v4.10.3'), 'sidebar version should be v4.10.3');
-assert(indexHtml.includes('js/app.js?v=4.10.3'), 'app.js cache buster should be v4.10.3');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.3'"), 'storage version should be v4.10.3');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.4'), 'header version should be v4.10.4');
+assert(indexHtml.includes('Budil v4.10.4'), 'sidebar version should be v4.10.4');
+assert(indexHtml.includes('js/app.js?v=4.10.4'), 'app.js cache buster should be v4.10.4');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.4'"), 'storage version should be v4.10.4');
 
 assert(calendarBrain.includes('PASTE_LABEL_ALIASES'), 'label alias map should exist');
 assert(calendarBrain.includes("'件名': 'title'"), '件名 alias should map to title');

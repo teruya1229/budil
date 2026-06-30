@@ -34,7 +34,23 @@ const RevenueBrain = {
     if (/\bLP\b|ホームページ|\bHP\b|\bWeb\b|\bWEB\b|サイト/i.test(s)) return 'LP';
     return 'その他';
   },
-  STATUSES: ['予定', '確定', '完了', 'キャンセル'],
+  STATUSES: ['予定', '確定', 'キャンセル'],
+
+  displayRevenueStatus(status) {
+    if (status === '完了') return '確定';
+    return status || '予定';
+  },
+
+  normalizeRevenueStatusForSave(status) {
+    const s = String(status || '').trim();
+    if (s === '完了') return '確定';
+    if (this.STATUSES.includes(s)) return s;
+    return '予定';
+  },
+
+  isConfirmedRevenueStatus(status) {
+    return status === '確定' || status === '完了';
+  },
   PAYMENT_STATUSES: ['pending', 'paid', 'partial', 'uncollected', 'cancelled'],
 
   formatYen(amount) {
@@ -451,8 +467,8 @@ const RevenueBrain = {
     const active = this.activeRecords(monthAll);
 
     const planned = this.sumAmount(active);
-    const confirmed = this.sumAmount(active.filter(r => r.status === '確定'));
-    const completed = this.sumAmount(active.filter(r => r.status === '完了'));
+    const confirmed = this.sumAmount(active.filter(r => this.isConfirmedRevenueStatus(r.status)));
+    const completed = 0;
     const paid = active.reduce((sum, r) => {
       if (typeof PaymentBrain !== 'undefined') return sum + PaymentBrain.getPaidAmount(r);
       return sum + (this.isPaidPaymentStatus(r.paymentStatus) ? Number(r.amount || 0) : 0);
