@@ -1493,6 +1493,7 @@
     if (warningsEl) warningsEl.innerHTML = renderExecutiveWarningsHtml(ctx.warnings);
 
     renderMonthlyClosingCheck('exec-home-monthly-closing-check', { compact: true });
+    renderDataConsistencyCheck('exec-home-data-consistency-check', { compact: true });
 
     const profitCtx = getProfitContext();
     renderProfitOperationsDiagnostics(profitCtx, { targetId: 'exec-home-profit-diagnostics', compact: true });
@@ -4221,6 +4222,7 @@
         .map(t => '<li>' + esc(t) + '</li>').join('');
     }
     renderDataDiagnosticsSummary();
+    renderDataConsistencyCheck('data-consistency-check');
     renderBusinessReport('detail');
     renderSalesDemoSections();
   }
@@ -4881,7 +4883,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.9.6</span>
+        <span class="business-report-version">v4.9.7</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -10011,6 +10013,71 @@
     const btn = el.querySelector('.exec-home-priority-action-btn');
     if (btn && action) {
       btn.addEventListener('click', () => handleExecutivePriorityAction(action));
+    }
+  }
+
+  function handleDataConsistencyAction(action) {
+    if (!action || !action.view) return;
+    navigateToView(action.view, action.scrollSelector || null);
+  }
+
+  function renderDataConsistencyCheck(containerId, options) {
+    const el = document.getElementById(containerId);
+    if (!el || typeof ProfitBrain === 'undefined') return;
+    const opts = options || {};
+    const isCompact = !!opts.compact;
+    const check = ProfitBrain.buildDataConsistencyCheck({
+      today: TODAY(),
+      revenues: Storage.getRevenueRecords(),
+      expenses: Storage.getExpenseRecords(),
+      workOrders: Storage.getWorkOrders(),
+      monthlyResults: Storage.getMonthlyResults(),
+      settings: Storage.getSettings()
+    });
+    const statusClass = check.statusKey === 'ok'
+      ? 'is-ok'
+      : (check.statusKey === 'reconciliation_gap' || check.statusKey === 'input_leaks' ? 'is-warn' : 'is-info');
+    const monthlyLabel = check.monthlyResultsMonthCount > 0
+      ? `${check.monthlyResultsMonthCount}ヶ月分`
+      : 'なし';
+    const noticeItems = (check.notices || [])
+      .slice(0, isCompact ? 3 : 8)
+      .map(msg => `<li>${esc(msg)}</li>`)
+      .join('');
+    const action = check.primaryAction;
+    const actionBtn = action
+      ? `<div class="revenue-flow-diagnostics-action-wrap"><button type="button" class="btn btn-sm btn-primary data-consistency-check-action">${esc(action.label)}</button></div>`
+      : '';
+    const titleBlock = isCompact ? '' : '<h3 class="revenue-flow-diagnostics-title">データ整合チェック</h3>';
+    const noteBlock = isCompact
+      ? ''
+      : '<p class="revenue-flow-diagnostics-note">読み取り専用です。データの修正・削除・自動同期は行いません。</p>';
+    const backupBlock = check.backupWarning
+      ? `<p class="data-consistency-backup-hint">${esc(check.backupWarning)}</p>`
+      : '';
+    const reviewBlock = check.reviewCount > 0
+      ? `<p class="data-consistency-review-count">確認が必要な項目：${check.reviewCount}件</p>`
+      : '';
+    el.innerHTML = `
+      <div class="revenue-flow-diagnostics data-consistency-check${isCompact ? ' data-consistency-check-compact' : ''}">
+        ${titleBlock}
+        ${noteBlock}
+        <ul class="revenue-flow-diagnostics-stats">
+          <li><span>売上明細：</span><strong>${check.revenueCount}件</strong></li>
+          <li><span>作業予定：</span><strong>${check.workOrderCount}件</strong></li>
+          <li><span>経費入力：</span><strong>${check.expenseCount}件</strong></li>
+          <li><span>月次実績：</span><strong>${esc(monthlyLabel)}</strong></li>
+        </ul>
+        ${noticeItems ? `<ul class="data-consistency-notices ${statusClass}">${noticeItems}</ul>` : ''}
+        <p class="revenue-flow-diagnostics-status ${statusClass}">${esc(check.statusLabel)}</p>
+        ${reviewBlock}
+        <p class="revenue-flow-diagnostics-next">次にやること：${esc(check.nextAction)}</p>
+        ${backupBlock}
+        ${actionBtn}
+      </div>`;
+    const btn = el.querySelector('.data-consistency-check-action');
+    if (btn && action) {
+      btn.addEventListener('click', () => handleDataConsistencyAction(action));
     }
   }
 

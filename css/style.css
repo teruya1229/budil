@@ -10330,10 +10330,38 @@ body.sales-page {
 }
 
 .monthly-closing-check-compact,
-.profit-operations-diagnostics-compact {
+.profit-operations-diagnostics-compact,
+.data-consistency-check-compact {
   padding: 0;
   border: none;
   background: transparent;
+}
+
+.data-consistency-notices {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+}
+
+.data-consistency-notices.is-warn li,
+.data-consistency-notices.is-info li {
+  color: #b45309;
+}
+
+.data-consistency-review-count {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.data-consistency-backup-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: #b45309;
+}
+
+.exec-home-section-consistency {
+  margin-bottom: 0.75rem;
 }
 
 .monthly-closing-check-status-brief {

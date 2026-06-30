@@ -1084,5 +1084,274 @@ const ProfitBrain = {
       primaryAction: null,
       source: 'none'
     };
+  },
+
+  buildDataConsistencyCheck(options) {
+    const opts = options || {};
+    const today = opts.today || new Date().toISOString().slice(0, 10);
+    const monthKey = this.currentMonthKey(today);
+    const revenues = opts.revenues || [];
+    const expenses = opts.expenses || [];
+    const workOrders = opts.workOrders || [];
+    const monthlyResults = opts.monthlyResults || [];
+    const settings = opts.settings || {};
+
+    const revList = revenues || [];
+    const revenueCount = revList.length;
+    const workOrderList = (workOrders || []).map(w =>
+      typeof WorkOrderBrain !== 'undefined' ? WorkOrderBrain.normalizeWorkOrder(w) : w
+    );
+    const workOrderCount = workOrderList.filter(w => {
+      if (typeof WorkOrderBrain !== 'undefined') {
+        return WorkOrderBrain.ACTIVE_STATUSES.includes(w.status) || w.status === 'completed';
+      }
+      return w.status !== 'cancelled' && w.status !== 'archived';
+    }).length;
+    const expenseCount = (expenses || []).length;
+
+    const monthlyMonthKeys = new Set();
+    (monthlyResults || []).forEach(r => {
+      const key = typeof MonthlyResultsBrain !== 'undefined'
+        ? MonthlyResultsBrain.normalizeMonth(r.month || r.id)
+        : String(r.month || '').slice(0, 7);
+      if (key) monthlyMonthKeys.add(key);
+    });
+    const monthlyResultsMonthCount = monthlyMonthKeys.size;
+
+    const revById = new Map(revList.filter(r => r && r.id).map(r => [r.id, r]));
+    const woById = new Map(workOrderList.filter(w => w && w.id).map(w => [w.id, w]));
+
+    let revenueMissingDate = 0;
+    let revenueMissingAmount = 0;
+    let revenueMissingCustomer = 0;
+    let revenueUnknownStatus = 0;
+    let revenueLinkBroken = 0;
+
+    revList.forEach(raw => {
+      const r = typeof RevenueSummaryBrain !== 'undefined'
+        ? RevenueSummaryBrain.normalizeRevenueRecord(raw)
+        : raw;
+      if (!r || r.status === 'キャンセル') return;
+      if (typeof RevenueSummaryBrain !== 'undefined' && RevenueSummaryBrain.isRevenueCandidateRecord(r)) return;
+
+      const date = typeof RevenueSummaryBrain !== 'undefined'
+        ? RevenueSummaryBrain.getRevenueDate(r)
+        : String(r.workDate || '').slice(0, 10);
+      if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) revenueMissingDate += 1;
+
+      const amt = typeof RevenueSummaryBrain !== 'undefined'
+        ? RevenueSummaryBrain.getRevenueAmount(r)
+        : Number(r.amount);
+      if (amt == null || amt <= 0) revenueMissingAmount += 1;
+
+      if (!String(r.customerName || r.leadName || '').trim()) revenueMissingCustomer += 1;
+
+      const st = String(r.status || '').trim();
+      const knownStatuses = typeof RevenueSummaryBrain !== 'undefined'
+        ? [...RevenueSummaryBrain.CONFIRMED_STATUSES, '予定']
+        : ['確定', '完了', '予定'];
+      if (!st || !knownStatuses.includes(st)) revenueUnknownStatus += 1;
+
+      const srcWoId = String(r.sourceWorkOrderId || '').trim();
+      if (srcWoId) {
+        const wo = woById.get(srcWoId);
+        if (!wo || String(wo.actualRevenueId || '') !== String(r.id)) revenueLinkBroken += 1;
+      }
+    });
+
+    let expenseMissingDate = 0;
+    let expenseMissingAmount = 0;
+    let expenseMissingCategory = 0;
+    (expenses || []).forEach(raw => {
+      const e = raw && typeof raw === 'object' ? raw : {};
+      if (!String(e.date || '').trim()) expenseMissingDate += 1;
+      const amt = Number(e.amount);
+      if (!Number.isFinite(amt) || amt <= 0) expenseMissingAmount += 1;
+      if (!String(e.category || '').trim()) expenseMissingCategory += 1;
+    });
+    const monthExpenses = this.filterMonthExpenses(expenses, monthKey);
+    const monthExpenseInputCount = monthExpenses.length;
+
+    const revenueQueueCount = typeof RevenueSummaryBrain !== 'undefined'
+      ? RevenueSummaryBrain.countRevenueConfirmationQueue(workOrders, today)
+      : 0;
+
+    let futureInQueue = 0;
+    let missingDedupeKey = 0;
+    let orphanActualRevenueId = 0;
+
+    workOrderList.forEach(wo => {
+      if (typeof WorkCompletionBrain !== 'undefined' && !WorkCompletionBrain.isOperationalWorkOrder(wo)) return;
+      if (wo.status === 'cancelled' || wo.status === 'archived') return;
+
+      if (typeof WorkCompletionBrain !== 'undefined' && WorkCompletionBrain.needsCompletionConfirm(wo, today)) {
+        if (wo.scheduledDate && wo.scheduledDate > today) futureInQueue += 1;
+      }
+
+      const calendarImport = typeof CalendarCandidateBrain !== 'undefined'
+        ? CalendarCandidateBrain.isPastRecoverySourceWorkOrder(wo)
+        : !!(wo.candidateMeta && wo.candidateMeta.importSource === 'calendar-paste');
+      if (calendarImport && !String(wo.calendarDedupeKey || '').trim()) missingDedupeKey += 1;
+
+      const actualId = String(wo.actualRevenueId || '').trim();
+      if (actualId && !revById.has(actualId)) orphanActualRevenueId += 1;
+    });
+
+    const reconciliationRows = typeof MonthlyResultsBrain !== 'undefined'
+      ? MonthlyResultsBrain.buildReconciliationReport(monthlyResults, revenues, {})
+      : [];
+    const gapMonths = reconciliationRows.filter(r => r.status === '差額あり').length;
+    const monthlyOnlyMonths = reconciliationRows.filter(r => r.status === '月次実績のみ').length;
+    const detailOnlyMonths = reconciliationRows.filter(r => r.status === '明細のみ').length;
+    const hasReconciliationGap = gapMonths > 0;
+    const currentMonthRow = typeof MonthlyResultsBrain !== 'undefined'
+      ? MonthlyResultsBrain.buildReconciliationRow(monthKey, monthlyResults, revenues)
+      : null;
+    const currentMonthGap = !!(currentMonthRow && currentMonthRow.status === '差額あり');
+    const hasCurrentMonthMonthly = typeof MonthlyResultsBrain !== 'undefined'
+      ? !!MonthlyResultsBrain.findForMonth(monthlyResults, monthKey)
+      : false;
+
+    const revenueInputLeakCount = revenueMissingDate + revenueMissingAmount + revenueMissingCustomer
+      + revenueUnknownStatus + revenueLinkBroken;
+    const expenseInputLeakCount = expenseMissingDate + expenseMissingAmount + expenseMissingCategory;
+    const workOrderIssueCount = futureInQueue + missingDedupeKey + orphanActualRevenueId;
+
+    const notices = [];
+    if (revenueQueueCount > 0) notices.push(`注意：売上確定待ちが${revenueQueueCount}件あります。`);
+    if (monthExpenseInputCount === 0) notices.push('注意：今月の経費入力がまだありません。');
+    if (hasReconciliationGap || currentMonthGap) notices.push('注意：月次実績と売上明細に差額があります。');
+    if (monthlyOnlyMonths > 0) notices.push(`注意：月次実績のみの月が${monthlyOnlyMonths}件あります。`);
+    if (detailOnlyMonths > 0) notices.push(`注意：売上明細のみの月が${detailOnlyMonths}件あります。`);
+    if (!hasCurrentMonthMonthly) notices.push('注意：今月の月次実績が未入力です。');
+    if (revenueInputLeakCount > 0) notices.push(`注意：売上明細の入力漏れが${revenueInputLeakCount}件あります。`);
+    if (expenseInputLeakCount > 0) notices.push(`注意：経費入力の入力漏れが${expenseInputLeakCount}件あります。`);
+    if (workOrderIssueCount > 0) notices.push(`注意：作業予定と売上確定のズレが${workOrderIssueCount}件あります。`);
+
+    let reviewCount = 0;
+    if (revenueQueueCount > 0) reviewCount += 1;
+    if (monthExpenseInputCount === 0) reviewCount += 1;
+    if (hasReconciliationGap || currentMonthGap) reviewCount += 1;
+    if (monthlyOnlyMonths > 0) reviewCount += 1;
+    if (detailOnlyMonths > 0) reviewCount += 1;
+    if (!hasCurrentMonthMonthly) reviewCount += 1;
+    if (revenueInputLeakCount > 0) reviewCount += 1;
+    if (expenseInputLeakCount > 0) reviewCount += 1;
+    if (workOrderIssueCount > 0) reviewCount += 1;
+
+    let statusKey = 'ok';
+    let statusLabel = '状態：大きな問題はありません';
+    let nextAction = '大きな問題はありません。バックアップしてから運用を続けてください。';
+    let primaryAction = {
+      id: 'backup',
+      label: 'バックアップを見る',
+      view: 'data',
+      scrollSelector: '.backup-status-card'
+    };
+
+    if (revenueQueueCount > 0) {
+      statusKey = 'revenue_queue';
+      statusLabel = '状態：売上確定待ちがあります';
+      nextAction = '売上確定待ちを確認してください。';
+      primaryAction = {
+        id: 'revenue_queue',
+        label: '売上確定待ちを見る',
+        view: 'dashboard',
+        scrollSelector: '#daily-section-revenue-queue'
+      };
+    } else if (monthExpenseInputCount === 0) {
+      statusKey = 'no_expense';
+      statusLabel = '状態：経費入力がまだありません';
+      nextAction = '使ったお金を経費入力に記録してください。';
+      primaryAction = {
+        id: 'daily_expense',
+        label: '経費入力を見る',
+        view: 'dashboard',
+        scrollSelector: '#daily-section-expense'
+      };
+    } else if (hasReconciliationGap || currentMonthGap) {
+      statusKey = 'reconciliation_gap';
+      statusLabel = '状態：確認が必要です';
+      nextAction = '整合チェックを確認してください。';
+      primaryAction = {
+        id: 'reconciliation',
+        label: '整合チェックを見る',
+        view: 'revenue',
+        scrollSelector: '#revenue-reconciliation-check'
+      };
+    } else if (revenueInputLeakCount > 0 || expenseInputLeakCount > 0 || workOrderIssueCount > 0) {
+      statusKey = 'input_leaks';
+      statusLabel = '状態：確認が必要です';
+      nextAction = '入力漏れのあるデータを確認してください。';
+      if (revenueInputLeakCount >= expenseInputLeakCount && revenueInputLeakCount >= workOrderIssueCount) {
+        primaryAction = {
+          id: 'revenue_input',
+          label: '売上明細を確認する',
+          view: 'revenue',
+          scrollSelector: '#revenue-aggregation-card'
+        };
+      } else if (expenseInputLeakCount > 0) {
+        primaryAction = {
+          id: 'expense_input',
+          label: '経費入力を見る',
+          view: 'dashboard',
+          scrollSelector: '#daily-section-expense'
+        };
+      } else {
+        primaryAction = {
+          id: 'work_order_gap',
+          label: '売上確定待ちを見る',
+          view: 'dashboard',
+          scrollSelector: '#daily-section-revenue-queue'
+        };
+      }
+    }
+
+    const backupWarning = reviewCount > 0 && !settings.lastBackupAt
+      ? 'バックアップ未実施です。修正前にバックアップしてください。'
+      : (reviewCount > 0 ? '修正前にバックアップすることをおすすめします。' : '');
+
+    return {
+      today,
+      monthKey,
+      revenueCount,
+      workOrderCount,
+      expenseCount,
+      monthlyResultsMonthCount,
+      monthExpenseInputCount,
+      revenueQueueCount,
+      revenueInputLeakCount,
+      expenseInputLeakCount,
+      workOrderIssueCount,
+      gapMonths,
+      monthlyOnlyMonths,
+      detailOnlyMonths,
+      hasCurrentMonthMonthly,
+      hasReconciliationGap,
+      reviewCount,
+      notices,
+      statusKey,
+      statusLabel,
+      nextAction,
+      primaryAction,
+      backupWarning,
+      revenueIssues: {
+        missingDate: revenueMissingDate,
+        missingAmount: revenueMissingAmount,
+        missingCustomer: revenueMissingCustomer,
+        unknownStatus: revenueUnknownStatus,
+        linkBroken: revenueLinkBroken
+      },
+      expenseIssues: {
+        missingDate: expenseMissingDate,
+        missingAmount: expenseMissingAmount,
+        missingCategory: expenseMissingCategory
+      },
+      workOrderIssues: {
+        futureInQueue,
+        missingDedupeKey,
+        orphanActualRevenueId
+      }
+    };
   }
 };
