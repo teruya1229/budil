@@ -1,5 +1,5 @@
 /**
- * Budil v4.9.5 expense input wording normalization verification.
+ * Budil v4.9.6 expense input wording normalization verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -22,12 +22,12 @@ for (const file of ['profit-brain.js', 'app.js', 'executive-brain.js']) {
   execSync(`node --check "${join(root, 'js', file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.9.5 expense input wording ==');
+console.log('== v4.9.6 expense input wording ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.5'), 'header version should be v4.9.5');
-assert(indexHtml.includes('Budil v4.9.5'), 'sidebar version should be v4.9.5');
-assert(indexHtml.includes('js/app.js?v=4.9.5'), 'app.js cache buster should be v4.9.5');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.9.5'"), 'storage version should be v4.9.5');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.6'), 'header version should be v4.9.6');
+assert(indexHtml.includes('Budil v4.9.6'), 'sidebar version should be v4.9.6');
+assert(indexHtml.includes('js/app.js?v=4.9.6'), 'app.js cache buster should be v4.9.6');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.9.6'"), 'storage version should be v4.9.6');
 
 assert(indexHtml.includes('<h2>\u7d4c\u8cbb\u5165\u529b</h2>'), 'profit view expense section should use \u7d4c\u8cbb\u5165\u529b');
 assert(!indexHtml.includes('\u652f\u51fa\u767b\u9332'), 'index.html should not use \u652f\u51fa\u767b\u9332');
@@ -45,4 +45,4 @@ assert(indexHtml.includes('\u7d4c\u55b6\u30b5\u30de\u30ea\u30fc\uff08\u4eca\u670
 assert(css.includes('profit-operations-diagnostics-block'), 'profit diagnostics styles should exist');
 assert(css.includes('@media (max-width: 390px)') || css.includes('overflow-x: hidden'), 'layout should avoid horizontal scroll');
 
-console.log('All v4.9.5 expense input wording checks passed.');
+console.log('All v4.9.6 expense input wording checks passed.');

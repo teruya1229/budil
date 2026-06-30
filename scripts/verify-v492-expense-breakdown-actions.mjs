@@ -1,5 +1,5 @@
 /**
- * Budil v4.9.5 expense breakdown and profit action verification.
+ * Budil v4.9.6 expense breakdown and profit action verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -65,12 +65,12 @@ const appJs = load('js/app.js');
 const profitBrain = load('js/profit-brain.js');
 const css = load('css/style.css');
 
-console.log('== v4.9.5 expense breakdown and profit actions ==');
+console.log('== v4.9.6 expense breakdown and profit actions ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.5'), 'header version should be v4.9.5');
-assert(indexHtml.includes('Budil v4.9.5'), 'sidebar version should be v4.9.5');
-assert(indexHtml.includes('js/app.js?v=4.9.5'), 'app.js cache buster should be v4.9.5');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.9.5'"), 'storage version should be v4.9.5');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.6'), 'header version should be v4.9.6');
+assert(indexHtml.includes('Budil v4.9.6'), 'sidebar version should be v4.9.6');
+assert(indexHtml.includes('js/app.js?v=4.9.6'), 'app.js cache buster should be v4.9.6');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.9.6'"), 'storage version should be v4.9.6');
 
 assert(indexHtml.includes('id="profit-expense-breakdown"'), 'expense breakdown block should exist');
 assert(appJs.includes('renderProfitExpenseBreakdown'), 'app should render expense breakdown');
@@ -209,4 +209,4 @@ const revenues = [{
   assert(ctx.d.primaryAction && ctx.d.primaryAction.id === 'expense_breakdown', 'low margin should suggest expense breakdown');
 }
 
-console.log('All v4.9.5 expense breakdown and profit action checks passed.');
+console.log('All v4.9.6 expense breakdown and profit action checks passed.');

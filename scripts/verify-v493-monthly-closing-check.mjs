@@ -1,5 +1,5 @@
 /**
- * Budil v4.9.5 monthly closing check verification.
+ * Budil v4.9.6 monthly closing check verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -65,12 +65,12 @@ const appJs = load('js/app.js');
 const profitBrain = load('js/profit-brain.js');
 const css = load('css/style.css');
 
-console.log('== v4.9.5 monthly closing check ==');
+console.log('== v4.9.6 monthly closing check ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.5'), 'header version should be v4.9.5');
-assert(indexHtml.includes('Budil v4.9.5'), 'sidebar version should be v4.9.5');
-assert(indexHtml.includes('js/app.js?v=4.9.5'), 'app.js cache buster should be v4.9.5');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.9.5'"), 'storage version should be v4.9.5');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.6'), 'header version should be v4.9.6');
+assert(indexHtml.includes('Budil v4.9.6'), 'sidebar version should be v4.9.6');
+assert(indexHtml.includes('js/app.js?v=4.9.6'), 'app.js cache buster should be v4.9.6');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.9.6'"), 'storage version should be v4.9.6');
 
 assert(indexHtml.includes('id="profit-monthly-closing-check"'), 'profit monthly closing block should exist');
 assert(indexHtml.includes('id="revenue-monthly-closing-check"'), 'revenue monthly closing block should exist');
@@ -291,4 +291,4 @@ function buildCheck(ctxCode) {
   assert(c.monthRevenue > 0 && c.monthExpense >= 0 && typeof c.monthProfit === 'number', 'healthy should expose month totals');
 }
 
-console.log('All v4.9.5 monthly closing check tests passed.');
+console.log('All v4.9.6 monthly closing check tests passed.');

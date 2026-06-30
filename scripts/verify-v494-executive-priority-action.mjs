@@ -1,5 +1,5 @@
 /**
- * Budil v4.9.5 executive priority action verification.
+ * Budil v4.9.6 executive priority action verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -65,12 +65,12 @@ const appJs = load('js/app.js');
 const profitBrain = load('js/profit-brain.js');
 const css = load('css/style.css');
 
-console.log('== v4.9.5 executive priority action ==');
+console.log('== v4.9.6 executive priority action ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.5'), 'header version should be v4.9.5');
-assert(indexHtml.includes('Budil v4.9.5'), 'sidebar version should be v4.9.5');
-assert(indexHtml.includes('js/app.js?v=4.9.5'), 'app.js cache buster should be v4.9.5');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.9.5'"), 'storage version should be v4.9.5');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.9.6'), 'header version should be v4.9.6');
+assert(indexHtml.includes('Budil v4.9.6'), 'sidebar version should be v4.9.6');
+assert(indexHtml.includes('js/app.js?v=4.9.6'), 'app.js cache buster should be v4.9.6');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.9.6'"), 'storage version should be v4.9.6');
 
 assert(indexHtml.includes('id="exec-home-priority-action"'), 'executive priority action block should exist');
 assert(appJs.includes('renderExecutivePriorityAction'), 'app should render executive priority action');
@@ -231,4 +231,4 @@ function buildPriority(ctxCode) {
   assert(ctx.earlyPeriod === true, 'day 3 should be in closing period');
 }
 
-console.log('All v4.9.5 executive priority action checks passed.');
+console.log('All v4.9.6 executive priority action checks passed.');

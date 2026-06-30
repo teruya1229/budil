@@ -3460,14 +3460,14 @@
     if (summary.hasCardDraft) items.push('名刺ドラフト あり');
     if (summary.hasDemandNotes) items.push('需要メモ あり');
     if (summary.hasSettings) items.push('設定 あり');
-    if (summary.revenueRecords) items.push('売上記録 ' + summary.revenueRecords + '件');
+    if (summary.revenueRecords) items.push('売上明細 ' + summary.revenueRecords + '件');
     if (summary.hasRevenueSettings) items.push('売上目標 あり');
     if (summary.dailyTaskStates) items.push('タスク状態 ' + summary.dailyTaskStates + '件');
     if (summary.manualTasks) items.push('手動タスク ' + summary.manualTasks + '件');
     if (summary.demandPickups) items.push('需要ピックアップ ' + summary.demandPickups + '件');
     if (summary.receptionIntakes) items.push('受付データ ' + summary.receptionIntakes + '件');
     if (summary.workOrders) items.push('作業予定 ' + summary.workOrders + '件');
-    if (summary.expenseRecords) items.push('支出記録 ' + summary.expenseRecords + '件');
+    if (summary.expenseRecords) items.push('経費入力 ' + summary.expenseRecords + '件');
     if (summary.analyticsRecords) items.push('アナリティクス ' + summary.analyticsRecords + '件');
     if (summary.monthlyResults) items.push('月次実績 ' + summary.monthlyResults + '件');
     if (summary.documents) items.push('請求書・見積書 ' + summary.documents + '件');
@@ -3858,6 +3858,7 @@
       <ul class="data-safety-list">
         <li>Budilは現在、ブラウザの <strong>localStorage</strong> にデータを保存します</li>
         <li>別の端末・別ブラウザでは、同じデータは自動では見えません</li>
+        <li>保護対象：売上明細・月次実績・作業予定・経費入力・設定</li>
         <li>機種変更や誤操作に備え、<strong>定期的なバックアップ</strong>を推奨します</li>
         <li>本番データを誤って消さない設計です（デモ削除は <code>isDemo</code> / <code>isTest</code> のみ）</li>
         <li>販売・複数端末での本格運用には、将来のクラウド保存が必要です</li>
@@ -4880,7 +4881,7 @@
     el.innerHTML = `
       <div class="business-report-header">
         <h2>経営メモ</h2>
-        <span class="business-report-version">v4.9.5</span>
+        <span class="business-report-version">v4.9.6</span>
       </div>
       <p class="business-report-desc">${isDetail
         ? '週次・月次の振り返りと次の作戦をテキストで出力します。ChatGPT / クロクロ / Cursor に貼って追加分析できます。'
@@ -5094,7 +5095,7 @@
       if (!pendingImport) return;
       const ok = confirm(
         'このバックアップを復元します。\n' +
-        '現在のデータは上書きされます。\n' +
+        '現在のデータは上書きされます（売上明細・月次実績・作業予定・経費入力を含む）。\n' +
         '必要なら先に現在データをバックアップしてください。\n\n' +
         'よろしいですか？'
       );
@@ -5117,7 +5118,11 @@
 
     resetBtn.addEventListener('click', () => {
       if (resetInput.value.trim() !== 'BUDIL DELETE') return;
-      const ok = confirm('全Budilデータを削除します。この操作は取り消せません。本当に実行しますか？');
+      const ok = confirm(
+        '全Budilデータを削除します。売上明細・月次実績・作業予定・経費入力も消えます。\n' +
+        'この操作は取り消せません。実行前にバックアップしましたか？\n\n' +
+        '本当に実行しますか？'
+      );
       if (!ok) return;
 
       DataBackup.clearAllData();

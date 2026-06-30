@@ -1803,6 +1803,13 @@ body {
   margin: 0;
 }
 
+.backup-protected-note {
+  font-size: 0.85rem;
+  color: var(--text);
+  margin: 8px 0 0;
+  font-weight: 600;
+}
+
 .data-summary-list {
   list-style: none;
   padding: 0;
