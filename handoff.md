@@ -17,8 +17,20 @@
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
 | 最新バージョン | v4.10.3 |
-| 最新commit | （v4.10.3 push 後に更新） |
-| ブランチ | `main` |
+| 最新commit | 6ebbe82 |
+| ブランチ | `main` push 済み |
+
+## Firebase / Functions 下書き（作業ツリー外・保留）
+
+v4.10.2 Phase 1.5 の deploy 準備で試したが、**main には未マージ**。作業ツリーからは整理済み。
+
+| 項目 | 内容 |
+|------|------|
+| 対象 | `hub/functions/api.js` の `onRequest` に `secrets: [BUDIL_HUB_API_KEY, GOOGLE_CALENDAR_SA_JSON, GOOGLE_CALENDAR_ID]` を追加する差分 |
+| 下書き | `hub/.firebaserc`（`default: budil-reception`） |
+| 状態 | いずれも commit なし。再開時は Secrets 設定・カレンダー共有・deploy から |
+
+正本導線は v4.10.3 のローカル JSON 運用。`hub/functions` の API コード自体はリポジトリに残置。
 
 ## カレンダー予定の正本導線（v4.10.3）
 
