@@ -1,0 +1,9 @@
+rules_version = '2';
+// BT Hub 用: Budil 本体は Cloud Functions（Admin SDK）経由のみ。クライアント直書きはしない。
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /receptionIntakes/{docId} {
+      allow read, write: if false;
+    }
+  }
+}

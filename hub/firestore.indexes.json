@@ -1,0 +1,20 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "receptionIntakes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "receptionIntakes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "importedToBudil", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

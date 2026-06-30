@@ -1,0 +1,8 @@
+node_modules/
+.env
+.env.*
+!.env.example
+credentials/
+output/
+*-service-account*.json
+service-account.json
