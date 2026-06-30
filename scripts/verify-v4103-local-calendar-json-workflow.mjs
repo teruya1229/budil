@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.4 local calendar JSON workflow verification.
+ * Budil v4.10.5 local calendar JSON workflow verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -14,7 +14,7 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-console.log('== v4.10.4 local calendar JSON workflow ==');
+console.log('== v4.10.5 local calendar JSON workflow ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -24,7 +24,7 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.4'), 'index.html should show v4.10.4');
+assert(indexHtml.includes('v4.10.5'), 'index.html should show v4.10.5');
 assert(indexHtml.includes('run-budil-calendar-export.bat'), 'calendar JSON hint should mention bat launcher');
 assert(indexHtml.includes('budil-calendar-events.json'), 'calendar JSON hint should mention output filename');
 assert(indexHtml.includes('btn-calendar-candidate-json-import'), 'v4.10.1 JSON import button should remain');
@@ -52,10 +52,10 @@ assert(workerGitignore.includes('output/'), 'worker output/ should be gitignored
 assert(workerGitignore.includes('.env'), 'worker .env should be gitignored');
 assert(workerGitignore.includes('credentials/'), 'worker credentials/ should be gitignored');
 
-assert(statusMd.includes('v4.10.4'), 'status.md should document v4.10.4');
+assert(statusMd.includes('v4.10.5'), 'status.md should document v4.10.5');
 assert(statusMd.includes('Firebase / Functions API 案は一旦保留'), 'status.md should note Firebase on hold');
 assert(handoffMd.includes('calendar-sync-worker'), 'handoff.md should document local worker path');
-assert(decisionLog.includes('v4.10.4'), 'decision-log.md should record v4.10.4 decision');
+assert(decisionLog.includes('v4.10.5'), 'decision-log.md should record v4.10.5 decision');
 assert(decisionLog.includes('hub/functions'), 'decision-log should keep hub/functions as future option');
 
 assert(
@@ -65,4 +65,4 @@ assert(
 
 execSync('node scripts/verify-v4101-calendar-json-file-import.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('All v4.10.4 local calendar JSON workflow checks passed.');
+console.log('All v4.10.5 local calendar JSON workflow checks passed.');

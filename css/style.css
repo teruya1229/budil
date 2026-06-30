@@ -10626,3 +10626,95 @@ body.sales-page {
 .profit-summary-highlight strong {
   color: #86efac;
 }
+
+/* v4.10.5 — daily view simplification */
+.exec-home-daily-core,
+.exec-home-daily-next {
+  margin-bottom: 1rem;
+}
+
+.exec-home-next-action {
+  padding: 0.75rem 1rem;
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.exec-next-action-message {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.exec-home-detail-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.reconciliation-action-card {
+  margin-top: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  background: rgba(120, 53, 15, 0.2);
+}
+
+.reconciliation-action-card-negative {
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(127, 29, 29, 0.2);
+}
+
+.reconciliation-action-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.reconciliation-action-lead {
+  margin: 0 0 0.75rem;
+  font-size: 0.88rem;
+  color: #cbd5e1;
+}
+
+.reconciliation-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.reconciliation-brief-ok {
+  margin-top: 0.5rem;
+  font-size: 0.88rem;
+  color: #86efac;
+}
+
+.card-collapsible > summary,
+.revenue-detail-collapse > summary,
+.daily-tasks-about > summary,
+.expense-advanced-settings > summary,
+.revenue-analysis-about > summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.35rem 0;
+}
+
+.card-collapsible.card-wide {
+  padding: 1rem 1.25rem;
+}
+
+.revenue-analysis-breakdown {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.expense-advanced-body {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.card-revenue-daily .revenue-detail-collapse-body {
+  margin-top: 0.75rem;
+}

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.10.4">
+  <link rel="stylesheet" href="css/style.css?v=4.10.5">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.10.4</small>
+          <small>AI経営脳みそ v4.10.5</small>
         </div>
       </div>
       <nav class="nav">
@@ -64,6 +64,9 @@
           <div class="nav-group-items">
             <button class="nav-item nav-item-main" data-view="revenue">
               <span class="nav-icon">💰</span><span class="nav-label">売上管理</span>
+            </button>
+            <button class="nav-item nav-item-sub" data-view="revenue-analysis">
+              <span class="nav-icon">📊</span><span class="nav-label">売上分析</span>
             </button>
             <button class="nav-item nav-item-main" data-view="receivables">
               <span class="nav-icon">📥</span><span class="nav-label">入金予定</span>
@@ -151,7 +154,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.10.4</small>
+        <small>Budil v4.10.5</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -171,43 +174,42 @@
           <div class="exec-home-header">
             <div>
               <h2>経営ホーム</h2>
-              <p class="exec-home-subtitle">今日まずやること → 今月の経営サマリー → 詳細確認</p>
+              <p class="exec-home-subtitle">今日の優先 → 今月の数字 → 次にやること</p>
             </div>
-            <span class="exec-home-version">v4.10.4</span>
+            <span class="exec-home-version">v4.10.5</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
 
           <div id="exec-home-priority-action" class="exec-home-priority-action-block" aria-live="polite"></div>
 
-          <div id="exec-home-operations-start-check" class="exec-home-operations-start-check-block" aria-live="polite"></div>
+          <section class="exec-home-daily-core exec-tower-span-full">
+            <h3 class="exec-home-section-title">今月の数字</h3>
+            <div id="exec-home-revenue-profit" class="exec-home-revenue-profit"></div>
+          </section>
 
-          <div class="exec-home-ops-flow">
-            <section class="exec-home-section exec-home-section-summary exec-tower-span-full">
-              <h3 class="exec-home-section-title">経営サマリー（今月）</h3>
-              <p class="exec-home-section-lead">売上・経費・利益の今月状況です。</p>
-              <div id="exec-home-revenue-profit" class="exec-home-revenue-profit"></div>
-            </section>
+          <section class="exec-home-daily-next exec-tower-span-full">
+            <h3 class="exec-home-section-title">次にやること</h3>
+            <div id="exec-home-next-action" class="exec-home-next-action" aria-live="polite"></div>
+          </section>
 
-            <section class="exec-home-section exec-home-section-profit exec-tower-span-full">
-              <h3 class="exec-home-section-title">利益状態</h3>
-              <p class="exec-home-section-lead">今月の利益と経費入力の状態です。</p>
-              <div id="exec-home-profit-diagnostics" class="exec-home-profit-diagnostics-block" aria-live="polite"></div>
-            </section>
-
-            <section class="exec-home-section exec-home-section-monthly exec-tower-span-full">
-              <h3 class="exec-home-section-title">月次締めチェック</h3>
-              <p class="exec-home-section-lead">月末・月初に確認する項目です。</p>
+          <details class="exec-collapse exec-home-detail-collapse exec-tower-span-full">
+            <summary>詳細チェック・運用状況</summary>
+            <div class="exec-collapse-body exec-home-detail-grid">
+              <div id="exec-home-operations-start-check" class="exec-home-operations-start-check-block" aria-live="polite"></div>
               <div id="exec-home-monthly-closing-check" class="monthly-closing-check-block" aria-live="polite"></div>
-            </section>
-
-            <details class="exec-collapse exec-home-section-collapse exec-tower-span-full">
-              <summary>経費内訳（詳細）</summary>
-              <div class="exec-collapse-body">
-                <div id="exec-home-expense-breakdown" class="exec-home-expense-breakdown-block" aria-live="polite"></div>
-                <p class="exec-home-section-hint">詳細は利益管理画面でも確認できます。</p>
-              </div>
-            </details>
-          </div>
+              <div id="exec-home-profit-diagnostics" class="exec-home-profit-diagnostics-block" aria-live="polite"></div>
+              <details class="exec-collapse exec-home-section-collapse">
+                <summary>経費内訳（詳細）</summary>
+                <div class="exec-collapse-body">
+                  <div id="exec-home-expense-breakdown" class="exec-home-expense-breakdown-block" aria-live="polite"></div>
+                </div>
+              </details>
+              <section class="exec-home-section exec-home-section-consistency">
+                <h3 class="exec-home-section-title">データ整合チェック</h3>
+                <div id="exec-home-data-consistency-check" class="data-consistency-check-block" aria-live="polite"></div>
+              </section>
+            </div>
+          </details>
 
           <details class="exec-collapse exec-home-supplement-collapse exec-tower-span-full">
             <summary>その他の今日の情報</summary>
@@ -254,19 +256,18 @@
           </details>
 
           <div class="exec-home-supplement-bottom">
-            <section class="exec-home-section exec-home-section-consistency exec-tower-span-full">
-              <h3 class="exec-home-section-title">データ整合チェック</h3>
-              <p class="exec-home-section-lead">入力漏れやデータのズレを確認します。</p>
-              <div id="exec-home-data-consistency-check" class="data-consistency-check-block" aria-live="polite"></div>
-            </section>
-            <div class="exec-home-block exec-tower-block-marketing exec-tower-span-full">
-              <h3>集客管理</h3>
-              <div id="exec-home-marketing-links" class="exec-home-marketing-links">
-                <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="analytics">アクセス分析</button>
-                <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="external-check">サイト確認記録</button>
-                <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="strategy-memo">集客施策メモ</button>
+            <details class="exec-collapse exec-tower-span-full">
+              <summary>集客管理・分析</summary>
+              <div class="exec-collapse-body">
+                <div class="exec-home-block exec-tower-block-marketing">
+                  <div id="exec-home-marketing-links" class="exec-home-marketing-links">
+                    <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="analytics">アクセス分析</button>
+                    <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="external-check">サイト確認記録</button>
+                    <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="strategy-memo">集客施策メモ</button>
+                  </div>
+                </div>
               </div>
-            </div>
+            </details>
             <details class="exec-collapse exec-tower-span-full exec-home-warnings-collapse">
               <summary>注意が必要なこと</summary>
               <div class="exec-collapse-body">
@@ -315,7 +316,10 @@
             <button type="button" class="btn btn-sm btn-secondary daily-flow-btn" data-daily-flow="revenue-list">売上一覧</button>
           </div>
           <h2>毎日やること</h2>
-          <p class="daily-tasks-lead">予定取り込み → 売上予定（未確定）→ 作業日後に売上確定待ち → 売上確定 → 確定売上明細 → 月次実績・整合チェック、の順で進めます。</p>
+          <details class="daily-tasks-about">
+            <summary>この画面の流れ</summary>
+            <p class="daily-tasks-lead">予定取り込み → 売上予定（未確定）→ 作業日後に売上確定待ち → 売上確定 → 確定売上明細 → 月次実績・整合チェック、の順で進めます。</p>
+          </details>
 
           <div id="daily-section-priority" class="daily-section daily-section-priority">
             <h3 class="daily-section-title">今日の最優先</h3>
@@ -569,7 +573,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.4</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.5</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -2006,34 +2010,33 @@
 
       <!-- 売上管理 -->
       <section id="view-revenue" class="view">
-        <header class="view-header">
-          <h1>売上管理</h1>
-          <p class="view-subtitle">売上確定・入金・月次実績・売上フロー診断を確認します</p>
+        <header class="view-header view-header-with-link">
+          <div>
+            <h1>売上管理</h1>
+            <p class="view-subtitle">売上予定・確定・登録の日常操作</p>
+          </div>
+          <button type="button" class="btn btn-sm btn-secondary view-header-link nav-item" data-view="revenue-analysis">売上分析を見る</button>
         </header>
 
         <div id="revenue-unlinked-banner" class="revenue-unlinked-banner hidden" role="alert" hidden aria-hidden="true"></div>
 
-        <div class="card card-wide card-management-comment">
-          <h2>経営番頭コメント</h2>
+        <details class="card card-wide card-management-comment card-collapsible">
+          <summary>経営番頭コメント</summary>
           <div id="revenue-management-comment" class="management-comment-body"></div>
-        </div>
+        </details>
 
-        <div class="card card-wide">
+        <div class="card card-wide card-revenue-daily">
           <h2>今月サマリー</h2>
           <div id="revenue-summary" class="revenue-summary-grid"></div>
           <div id="revenue-upcoming-schedule" class="upcoming-revenue-schedule-block"></div>
           <div id="revenue-monthly-reconciliation" class="revenue-monthly-reconciliation"></div>
-          <div id="revenue-monthly-closing-check" class="monthly-closing-check-block" aria-live="polite"></div>
-          <p id="revenue-bantou-comment" class="revenue-bantou-comment"></p>
-          <div id="revenue-area-brief" class="revenue-area-brief"></div>
-        </div>
-
-        <div class="card card-wide" id="revenue-aggregation-card">
-          <h2>売上集計</h2>
-          <p class="view-subtitle revenue-aggregation-subtitle">月別・年別の売上を確認できます。月次実績がある月は月次実績ベースで表示します。</p>
-          <div id="revenue-flow-diagnostics" class="revenue-flow-diagnostics-block" aria-live="polite"></div>
-          <p class="work-completion-notice work-completion-notice-inline">作業予定・候補は売上集計に含まれません。確定売上として登録されたものだけ集計されます。</p>
-          <div id="revenue-aggregation-panel" class="revenue-aggregation-panel"></div>
+          <details class="revenue-detail-collapse">
+            <summary>月次締め・補足</summary>
+            <div class="revenue-detail-collapse-body">
+              <div id="revenue-monthly-closing-check" class="monthly-closing-check-block" aria-live="polite"></div>
+              <p id="revenue-bantou-comment" class="revenue-bantou-comment"></p>
+            </div>
+          </details>
         </div>
 
         <div class="card card-wide hidden" id="revenue-sales-outcome-card">
@@ -2051,8 +2054,8 @@
           <div id="revenue-sales-hold" class="next-sales-list"></div>
         </div>
 
-        <div class="card card-wide">
-          <h2>月間目標設定</h2>
+        <details class="card card-wide card-collapsible">
+          <summary>月間目標設定</summary>
           <div class="form-row form-row-2 revenue-target-row">
             <div class="form-group">
               <label for="revenue-monthly-target">月間目標（円）</label>
@@ -2062,7 +2065,7 @@
               <button type="button" id="btn-save-revenue-target" class="btn btn-primary btn-sm">目標を保存</button>
             </div>
           </div>
-        </div>
+        </details>
 
         <div class="revenue-layout">
           <div class="card">
@@ -2199,16 +2202,6 @@
               </div>
             </form>
           </div>
-
-          <div class="card">
-            <h2>サービス別売上（今月）</h2>
-            <ul id="revenue-by-service" class="revenue-breakdown-list"></ul>
-          </div>
-
-          <div class="card">
-            <h2>依頼元別売上（今月）</h2>
-            <ul id="revenue-by-source" class="revenue-breakdown-list"></ul>
-          </div>
         </div>
 
         <div class="card card-wide" id="revenue-list-section">
@@ -2236,6 +2229,40 @@
             </table>
           </div>
           <div id="revenue-card-list" class="revenue-card-list"></div>
+        </div>
+      </section>
+
+      <!-- 売上分析 -->
+      <section id="view-revenue-analysis" class="view">
+        <header class="view-header view-header-with-link">
+          <div>
+            <h1>売上分析</h1>
+            <p class="view-subtitle">依頼元別・サービス別・月別比較・差額チェック詳細</p>
+          </div>
+          <button type="button" class="btn btn-sm btn-secondary view-header-link nav-item" data-view="revenue">売上管理に戻る</button>
+        </header>
+
+        <div class="card card-wide" id="revenue-aggregation-card">
+          <h2>売上集計</h2>
+          <details class="revenue-analysis-about">
+            <summary>この画面について</summary>
+            <p class="view-subtitle revenue-aggregation-subtitle">月別・年別の売上を確認できます。月次実績がある月は月次実績ベースで表示します。</p>
+            <p class="work-completion-notice work-completion-notice-inline">作業予定・候補は売上集計に含まれません。確定売上として登録されたものだけ集計されます。</p>
+          </details>
+          <div id="revenue-flow-diagnostics" class="revenue-flow-diagnostics-block" aria-live="polite"></div>
+          <div id="revenue-aggregation-panel" class="revenue-aggregation-panel"></div>
+          <div id="revenue-area-brief" class="revenue-area-brief"></div>
+        </div>
+
+        <div class="revenue-analysis-breakdown">
+          <div class="card">
+            <h2>サービス別売上（今月）</h2>
+            <ul id="revenue-by-service" class="revenue-breakdown-list"></ul>
+          </div>
+          <div class="card">
+            <h2>依頼元別売上（今月）</h2>
+            <ul id="revenue-by-source" class="revenue-breakdown-list"></ul>
+          </div>
         </div>
       </section>
 
@@ -2546,26 +2573,31 @@
                 </label>
               </div>
             </div>
-            <div class="form-row form-row-2">
-              <div class="form-group">
-                <label for="profit-expense-revenue">関連売上</label>
-                <select id="profit-expense-revenue"><option value="">未選択</option></select>
-              </div>
-              <div class="form-group">
-                <label for="profit-expense-work-order">関連作業予定</label>
-                <select id="profit-expense-work-order"><option value="">未選択</option></select>
-              </div>
+            <div class="form-group">
+              <label for="profit-expense-memo">メモ</label>
+              <input type="text" id="profit-expense-memo" placeholder="任意メモ">
             </div>
-            <div class="form-row form-row-2">
-              <div class="form-group">
-                <label for="profit-expense-lead">関連営業先</label>
-                <select id="profit-expense-lead"><option value="">未選択</option></select>
+            <details class="expense-advanced-settings">
+              <summary>詳細設定（紐づけ）</summary>
+              <div class="expense-advanced-body">
+                <div class="form-row form-row-2">
+                  <div class="form-group">
+                    <label for="profit-expense-revenue">関連売上</label>
+                    <select id="profit-expense-revenue"><option value="">未選択</option></select>
+                  </div>
+                  <div class="form-group">
+                    <label for="profit-expense-work-order">関連作業予定</label>
+                    <select id="profit-expense-work-order"><option value="">未選択</option></select>
+                  </div>
+                </div>
+                <div class="form-row form-row-2">
+                  <div class="form-group">
+                    <label for="profit-expense-lead">関連営業先</label>
+                    <select id="profit-expense-lead"><option value="">未選択</option></select>
+                  </div>
+                </div>
               </div>
-              <div class="form-group">
-                <label for="profit-expense-memo">メモ</label>
-                <input type="text" id="profit-expense-memo" placeholder="任意メモ">
-              </div>
-            </div>
+            </details>
             <div class="form-actions">
               <button type="submit" class="btn btn-primary">保存</button>
               <button type="button" class="btn btn-secondary" id="profit-expense-clear">クリア</button>
@@ -3456,30 +3488,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.10.4"></script>
-  <script src="js/messages.js?v=4.10.4"></script>
-  <script src="js/demand-brain.js?v=4.10.4"></script>
-  <script src="js/demand-radar.js?v=4.10.4"></script>
-  <script src="js/sales-brain.js?v=4.10.4"></script>
-  <script src="js/management-brain.js?v=4.10.4"></script>
-  <script src="js/payment-brain.js?v=4.10.4"></script>
-  <script src="js/revenue-brain.js?v=4.10.4"></script>
-  <script src="js/revenue-summary-brain.js?v=4.10.4"></script>
-  <script src="js/reception-brain.js?v=4.10.4"></script>
-  <script src="js/map-brain.js?v=4.10.4"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.10.4"></script>
-  <script src="js/external-check-brain.js?v=4.10.4"></script>
-  <script src="js/action-brain.js?v=4.10.4"></script>
-  <script src="js/work-order-brain.js?v=4.10.4"></script>
-  <script src="js/follow-up-brain.js?v=4.10.4"></script>
-  <script src="js/work-completion-brain.js?v=4.10.4"></script>
-  <script src="js/profit-brain.js?v=4.10.4"></script>
-  <script src="js/analytics-brain.js?v=4.10.4"></script>
-  <script src="js/monthly-results-brain.js?v=4.10.4"></script>
-  <script src="js/documents-brain.js?v=4.10.4"></script>
-  <script src="js/executive-brain.js?v=4.10.4"></script>
-  <script src="js/card-ocr.js?v=4.10.4"></script>
-  <script src="js/data-backup.js?v=4.10.4"></script>
-  <script src="js/app.js?v=4.10.4"></script>
+  <script src="js/storage.js?v=4.10.5"></script>
+  <script src="js/messages.js?v=4.10.5"></script>
+  <script src="js/demand-brain.js?v=4.10.5"></script>
+  <script src="js/demand-radar.js?v=4.10.5"></script>
+  <script src="js/sales-brain.js?v=4.10.5"></script>
+  <script src="js/management-brain.js?v=4.10.5"></script>
+  <script src="js/payment-brain.js?v=4.10.5"></script>
+  <script src="js/revenue-brain.js?v=4.10.5"></script>
+  <script src="js/revenue-summary-brain.js?v=4.10.5"></script>
+  <script src="js/reception-brain.js?v=4.10.5"></script>
+  <script src="js/map-brain.js?v=4.10.5"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.10.5"></script>
+  <script src="js/external-check-brain.js?v=4.10.5"></script>
+  <script src="js/action-brain.js?v=4.10.5"></script>
+  <script src="js/work-order-brain.js?v=4.10.5"></script>
+  <script src="js/follow-up-brain.js?v=4.10.5"></script>
+  <script src="js/work-completion-brain.js?v=4.10.5"></script>
+  <script src="js/profit-brain.js?v=4.10.5"></script>
+  <script src="js/analytics-brain.js?v=4.10.5"></script>
+  <script src="js/monthly-results-brain.js?v=4.10.5"></script>
+  <script src="js/documents-brain.js?v=4.10.5"></script>
+  <script src="js/executive-brain.js?v=4.10.5"></script>
+  <script src="js/card-ocr.js?v=4.10.5"></script>
+  <script src="js/data-backup.js?v=4.10.5"></script>
+  <script src="js/app.js?v=4.10.5"></script>
 </body>
 </html>

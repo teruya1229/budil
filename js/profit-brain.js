@@ -921,13 +921,28 @@ const ProfitBrain = {
       };
     } else if (hasReconciliationGap) {
       statusKey = 'reconciliation_gap';
-      nextAction = '整合チェックを確認してください。';
-      primaryAction = {
-        id: 'reconciliation',
-        label: '整合チェックを見る',
-        view: 'revenue',
-        scrollSelector: '#revenue-reconciliation-check'
-      };
+      let gapDiff = 0;
+      if (typeof MonthlyResultsBrain !== 'undefined') {
+        const gapRow = MonthlyResultsBrain.buildReconciliationRow(monthKey, monthlyResults, revenues);
+        gapDiff = Number(gapRow.diff) || 0;
+      }
+      if (gapDiff > 0) {
+        nextAction = '月次実績との差額を売上明細に追加できます。';
+        primaryAction = {
+          id: 'reconciliation_add',
+          label: '差額を確認する',
+          view: 'revenue',
+          scrollSelector: '#revenue-monthly-reconciliation'
+        };
+      } else {
+        nextAction = '売上明細が月次実績より多いです。月次実績を確認してください。';
+        primaryAction = {
+          id: 'reconciliation_edit',
+          label: '月次実績を編集',
+          view: 'monthly-results',
+          scrollSelector: '#monthly-results-form-card'
+        };
+      }
     } else if (!hasMonthlyResult) {
       statusKey = 'no_monthly';
       nextAction = '月次実績を入力してください。';

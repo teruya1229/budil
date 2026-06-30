@@ -59,11 +59,11 @@ const css = load('css/style.css');
 
 console.log('== v4.10.1 data backup hardening ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.4'), 'header version should be v4.10.4');
-assert(indexHtml.includes('Budil v4.10.4'), 'sidebar version should be v4.10.4');
-assert(indexHtml.includes('js/app.js?v=4.10.4'), 'app.js cache buster should be v4.10.4');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.4'"), 'storage version should be v4.10.4');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.4'"), 'data-backup version should be v4.10.4');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.5'), 'header version should be v4.10.5');
+assert(indexHtml.includes('Budil v4.10.5'), 'sidebar version should be v4.10.5');
+assert(indexHtml.includes('js/app.js?v=4.10.5'), 'app.js cache buster should be v4.10.5');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.5'"), 'storage version should be v4.10.5');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.5'"), 'data-backup version should be v4.10.5');
 
 const appSourceFiles = collectAppSourceFiles();
 const clearHits = findLocalStorageClearInAppSources(appSourceFiles);
@@ -101,11 +101,12 @@ assert(!indexHtml.includes('\u652f\u51fa\u767b\u9332'), 'index should not use ol
 assert(indexHtml.includes('id="exec-home-priority-action"'), 'v4.9.4 priority action should remain');
 assert(indexHtml.includes('id="exec-home-monthly-closing-check"'), 'v4.9.3 monthly closing should remain');
 assert(indexHtml.includes('id="exec-home-expense-breakdown"'), 'v4.9.2 expense breakdown should remain');
-assert(indexHtml.includes('exec-home-ops-flow'), 'v4.10.1 executive home hierarchy should remain');
+assert(indexHtml.includes('exec-home-daily-core'), 'v4.10.5 executive home daily core should remain');
+assert(indexHtml.includes('id="view-revenue-analysis"'), 'v4.10.5 revenue analysis view should exist');
 assert(indexHtml.includes('revenue-flow-diagnostics'), 'sales flow diagnostics should remain');
 assert(indexHtml.includes('profit-operations-diagnostics'), 'profit operations should remain');
 assert(appJs.includes('renderExecutivePriorityAction'), 'priority action renderer should remain');
-assert(appJs.includes("renderMonthlyClosingCheck('exec-home-monthly-closing-check', { compact: true })"),
+assert(appJs.includes("renderMonthlyClosingCheck('exec-home-monthly-closing-check', { compact: true"),
   'exec monthly closing compact mode should remain');
 assert(appJs.includes('getRevenueConfirmationWorkOrderIds'), 'v4.8.31 sales operations should remain');
 

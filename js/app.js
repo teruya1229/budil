@@ -246,9 +246,10 @@
   const ACTION_NAV_TARGETS = {
     'calendar-import-save': { targetView: 'revenue', targetSelector: '#revenue-upcoming-schedule' },
     'revenue-confirm': { targetView: 'dashboard', targetSelector: '#executive-home' },
-    'revenue-save': { targetView: 'revenue', targetSelector: '#revenue-aggregation-card' },
+    'revenue-save': { targetView: 'revenue', targetSelector: '#revenue-list-section' },
     'expense-save': { targetView: 'profit', targetSelector: '#profit-summary' },
-    'monthly-results-save': { targetView: 'revenue', targetSelector: '#revenue-monthly-closing-check' }
+    'monthly-results-save': { targetView: 'revenue', targetSelector: '#revenue-monthly-reconciliation' },
+    'monthly-adjustment-save': { targetView: 'revenue', targetSelector: '#revenue-monthly-reconciliation' }
   };
 
   function showActionResult(message, options) {
@@ -525,6 +526,7 @@
   const NAV_VIEW_ALIASES = {
     reception: 'calendar-registration',
     'work-order': 'calendar-registration',
+    'revenue-analysis': 'revenue',
     radar: 'strategy-memo',
     pickup: 'strategy-memo',
     demand: 'strategy-memo'
@@ -589,6 +591,7 @@
     if (view === 'analytics') renderAnalyticsView();
     if (view === 'area') renderAreaView();
     if (view === 'revenue') renderRevenueView();
+    if (view === 'revenue-analysis') renderRevenueAnalysisView();
     if (view === 'receivables') renderReceivablesView();
     if (view === 'documents') renderDocumentsView();
     if (view === 'data') renderDataManagement();
@@ -1505,7 +1508,7 @@
     updateExecutiveSectionBadges(ctx);
 
     renderExecutivePriorityAction();
-    renderOperationsStartCheck();
+    renderExecutiveNextAction();
 
     const conclusionEl = document.getElementById('exec-home-conclusion');
     if (conclusionEl) {
@@ -1543,7 +1546,8 @@
     const warningsEl = document.getElementById('exec-home-warnings');
     if (warningsEl) warningsEl.innerHTML = renderExecutiveWarningsHtml(ctx.warnings);
 
-    renderMonthlyClosingCheck('exec-home-monthly-closing-check', { compact: true });
+    renderOperationsStartCheck();
+    renderMonthlyClosingCheck('exec-home-monthly-closing-check', { compact: true, suppressAction: true });
     renderDataConsistencyCheck('exec-home-data-consistency-check', { compact: true });
 
     const profitCtx = getProfitContext();
@@ -1760,18 +1764,77 @@
       </table>`;
   }
 
-  function renderCurrentMonthReconciliationBrief(monthKey, monthlyOverlay) {
+  function renderMonthlyReconciliationActionCard(monthKey, monthlyOverlay) {
     if (!monthlyOverlay || !monthlyOverlay.usesMonthlyResult) return '';
-    const diffLine = monthlyOverlay.status === '差額あり'
-      ? `<p class="reconciliation-brief-warn">※この月は月次実績と売上明細が一致していません。</p>`
-      : '';
+    const diff = Number(monthlyOverlay.diff) || 0;
+    const key = monthKey || '';
+    if (monthlyOverlay.status !== '差額あり') {
+      return `
+        <div class="reconciliation-brief reconciliation-brief-ok">
+          <p class="reconciliation-brief-line">月次実績と売上明細は一致しています。</p>
+        </div>`;
+    }
+    if (diff > 0) {
+      const amountLabel = RevenueBrain.formatYen(diff);
+      return `
+        <div class="reconciliation-action-card" data-month-key="${esc(key)}">
+          <p class="reconciliation-action-title"><strong>差額あり：${esc(amountLabel)}</strong></p>
+          <p class="reconciliation-action-lead">月次実績を正として、差額分を売上明細に追加できます。</p>
+          <div class="reconciliation-action-buttons">
+            <button type="button" class="btn btn-sm btn-primary btn-monthly-reconciliation-add">＋${esc(amountLabel)}を売上明細に追加</button>
+            <button type="button" class="btn btn-sm btn-secondary btn-monthly-reconciliation-edit">月次実績を編集</button>
+            <button type="button" class="btn btn-sm btn-secondary btn-monthly-reconciliation-detail">詳細を見る</button>
+          </div>
+        </div>`;
+    }
+    const excess = Math.abs(diff);
     return `
-      <div class="reconciliation-brief">
-        <p class="reconciliation-brief-line"><strong>今月実績：${esc(RevenueBrain.formatYen(monthlyOverlay.monthlySales))}（月次実績ベース）</strong></p>
-        <p class="reconciliation-brief-line">明細売上合計：${esc(RevenueBrain.formatYen(monthlyOverlay.detailTotal))}</p>
-        <p class="reconciliation-brief-line">差額：${esc(RevenueBrain.formatYen(monthlyOverlay.diff))}</p>
-        ${diffLine}
+      <div class="reconciliation-action-card reconciliation-action-card-negative" data-month-key="${esc(key)}">
+        <p class="reconciliation-action-title">売上明細の方が ${esc(RevenueBrain.formatYen(excess))} 多いです。</p>
+        <div class="reconciliation-action-buttons">
+          <button type="button" class="btn btn-sm btn-secondary btn-monthly-reconciliation-edit">月次実績を編集</button>
+          <button type="button" class="btn btn-sm btn-secondary btn-monthly-reconciliation-detail">詳細を見る</button>
+        </div>
       </div>`;
+  }
+
+  function bindMonthlyReconciliationActionCard(root) {
+    if (!root) return;
+    root.querySelector('.btn-monthly-reconciliation-add')?.addEventListener('click', () => {
+      const monthKey = root.dataset.monthKey || RevenueBrain.currentMonthKey(TODAY());
+      applyMonthlyReconciliationAdjustment(monthKey);
+    });
+    root.querySelector('.btn-monthly-reconciliation-edit')?.addEventListener('click', () => {
+      navigateToView('monthly-results', '#monthly-results-form-card');
+    });
+    root.querySelector('.btn-monthly-reconciliation-detail')?.addEventListener('click', () => {
+      navigateToView('revenue-analysis', '#revenue-reconciliation-check');
+    });
+  }
+
+  function applyMonthlyReconciliationAdjustment(monthKey) {
+    if (typeof MonthlyResultsBrain === 'undefined') return;
+    const key = MonthlyResultsBrain.normalizeMonth(monthKey);
+    const monthlyResults = Storage.getMonthlyResults();
+    const revenues = Storage.getRevenueRecords();
+    const row = MonthlyResultsBrain.buildReconciliationRow(key, monthlyResults, revenues);
+    if (row.status !== '差額あり' || Number(row.diff) <= 0) {
+      alert('追加できる差額がありません。');
+      return;
+    }
+    const amountLabel = RevenueBrain.formatYen(row.diff);
+    if (!window.confirm(`月次実績との差額 ${amountLabel} を売上明細に1件追加します。よろしいですか？`)) return;
+    const payload = MonthlyResultsBrain.buildMonthlyAdjustmentPayload(key, row.diff);
+    if (!payload) {
+      alert('差額の追加に失敗しました。');
+      return;
+    }
+    Storage.addRevenueRecord(payload);
+    navigateAfterAction('monthly-adjustment-save', '差額分を売上明細に追加しました。');
+  }
+
+  function renderCurrentMonthReconciliationBrief(monthKey, monthlyOverlay) {
+    return renderMonthlyReconciliationActionCard(monthKey, monthlyOverlay);
   }
 
   function getRevenueContext() {
@@ -10001,6 +10064,32 @@
     navigateToView(action.view, action.scrollSelector || null);
   }
 
+  function renderExecutiveNextAction() {
+    const el = document.getElementById('exec-home-next-action');
+    if (!el || typeof ProfitBrain === 'undefined') return;
+    const today = TODAY();
+    const profitCtx = getProfitContext();
+    const check = ProfitBrain.buildMonthlyClosingCheck({
+      today,
+      profitCtx,
+      workOrders: Storage.getWorkOrders(),
+      revenues: Storage.getRevenueRecords(),
+      monthlyResults: Storage.getMonthlyResults(),
+      expenses: Storage.getExpenseRecords()
+    });
+    const action = check.primaryAction;
+    const actionBtn = action
+      ? `<button type="button" class="btn btn-sm btn-primary exec-next-action-btn">${esc(action.label)}</button>`
+      : '';
+    el.innerHTML = `
+      <p class="exec-next-action-message">${esc(check.nextAction)}</p>
+      ${actionBtn}`;
+    const btn = el.querySelector('.exec-next-action-btn');
+    if (btn && action) {
+      btn.addEventListener('click', () => handleMonthlyClosingAction(action));
+    }
+  }
+
   function renderOperationsStartCheck() {
     const el = document.getElementById('exec-home-operations-start-check');
     if (!el || typeof ProfitBrain === 'undefined') return;
@@ -15043,7 +15132,6 @@
     el.innerHTML = `
       <div class="revenue-flow-diagnostics">
         <h3 class="revenue-flow-diagnostics-title">売上フロー診断</h3>
-        <p class="revenue-flow-diagnostics-note">読み取り専用です。データの修正・削除・自動同期は行いません。</p>
         <ul class="revenue-flow-diagnostics-stats">
           <li><span>月次実績：</span><strong>${esc(monthlyLabel)}</strong></li>
           <li><span>売上明細：</span><strong>${diagnostics.confirmedRevenueCount}件</strong></li>
@@ -15052,18 +15140,22 @@
           <li><span>売上確定待ち：</span><strong>${diagnostics.revenueConfirmationQueueCount}件</strong></li>
           <li><span>整合チェック：</span><strong>${esc(diagnostics.reconciliationLabel)}</strong></li>
         </ul>
-        <dl class="revenue-flow-diagnostics-defs">
-          <div><dt>月次実績</dt><dd>月単位の確定経営数字です。売上明細とは別管理です。</dd></div>
-          <div><dt>売上明細</dt><dd>作業後に売上確定した明細です。</dd></div>
-          <div><dt>作業予定</dt><dd>予定取り込みなどで保存された予定です。</dd></div>
-          <div><dt>売上予定</dt><dd>未来の未確定予定です。確定売上・月次実績とは合算しません。</dd></div>
-          <div><dt>売上確定待ち</dt><dd>作業日当日以降で、まだ売上確定していない予定です。</dd></div>
-          <div><dt>整合チェック</dt><dd>月次実績と売上明細の差額を確認します。自動同期はしません。</dd></div>
-        </dl>
+        <details class="revenue-flow-diagnostics-details">
+          <summary>この表示について</summary>
+          <p class="revenue-flow-diagnostics-note">読み取り専用です。データの修正・削除・自動同期は行いません。</p>
+          <dl class="revenue-flow-diagnostics-defs">
+            <div><dt>月次実績</dt><dd>月単位の確定経営数字です。売上明細とは別管理です。</dd></div>
+            <div><dt>売上明細</dt><dd>作業後に売上確定した明細です。</dd></div>
+            <div><dt>作業予定</dt><dd>予定取り込みなどで保存された予定です。</dd></div>
+            <div><dt>売上予定</dt><dd>未来の未確定予定です。確定売上・月次実績とは合算しません。</dd></div>
+            <div><dt>売上確定待ち</dt><dd>作業日当日以降で、まだ売上確定していない予定です。</dd></div>
+            <div><dt>整合チェック</dt><dd>月次実績と売上明細の差額を確認します。自動同期はしません。</dd></div>
+          </dl>
+          <p class="revenue-flow-diagnostics-flow">${esc(diagnostics.flowNote)}</p>
+        </details>
         <p class="revenue-flow-diagnostics-status ${statusClass}">状態：${esc(diagnostics.statusMessage)}</p>
         <p class="revenue-flow-diagnostics-next">次にやること：${esc(diagnostics.nextAction)}</p>
         ${actionBtn}
-        <p class="revenue-flow-diagnostics-flow">${esc(diagnostics.flowNote)}</p>
       </div>`;
     const btn = el.querySelector('.revenue-flow-diagnostics-action');
     if (btn && action) {
@@ -15139,8 +15231,8 @@
       </div>
       ${monthlyBreakdown}
 
-      <details class="revenue-agg-collapse" id="revenue-reconciliation-check" open>
-        <summary>売上明細と月次実績の整合チェック</summary>
+      <details class="revenue-agg-collapse" id="revenue-reconciliation-check">
+        <summary>売上明細と月次実績の整合チェック（詳細）</summary>
         <div class="revenue-agg-collapse-body">${reconciliationHtml}</div>
       </details>
 
@@ -15245,6 +15337,8 @@
       reconciliationEl.innerHTML = monthlyOverlay && monthlyOverlay.usesMonthlyResult
         ? renderCurrentMonthReconciliationBrief(summary.monthKey, monthlyOverlay)
         : '';
+      const actionCard = reconciliationEl.querySelector('.reconciliation-action-card');
+      if (actionCard) bindMonthlyReconciliationActionCard(actionCard);
     }
 
     if (summaryEl) {
@@ -15276,8 +15370,19 @@
     if (targetEl) targetEl.value = settings.monthlyTarget || '';
     if (outcomeEl) outcomeEl.innerHTML = '';
     renderManagementComment('revenue-management-comment');
-    renderRevenueBreakdown('revenue-by-service', summary.byService);
-    renderRevenueBreakdown('revenue-by-source', summary.bySource);
+  }
+
+  function renderRevenueAnalysisView() {
+    try {
+      safeRenderSection('revenue-flow-diagnostics', () => renderRevenueFlowDiagnostics(), '売上フロー診断');
+      safeRenderSection('revenue-aggregation-panel', () => renderRevenueAggregationPanel(), '売上集計');
+      safeRenderSection(null, () => renderRevenueAreaBrief(), '売上エリア');
+      const { summary } = getRevenueContext();
+      renderRevenueBreakdown('revenue-by-service', summary.byService);
+      renderRevenueBreakdown('revenue-by-source', summary.bySource);
+    } catch (err) {
+      console.error('[Budil] render error: 売上分析', err);
+    }
   }
 
   function renderRevenueView() {
@@ -15287,10 +15392,7 @@
       fillRevenueLeadSelect(leadEl ? leadEl.value : '');
       toggleRevenueLeadOptions();
       safeRenderSection('revenue-summary', () => renderRevenueSummaryPanel(), '売上サマリー');
-      safeRenderSection('revenue-monthly-closing-check', () => renderMonthlyClosingCheck('revenue-monthly-closing-check'), '月次締めチェック');
-      safeRenderSection('revenue-flow-diagnostics', () => renderRevenueFlowDiagnostics(), '売上フロー診断');
-      safeRenderSection('revenue-aggregation-panel', () => renderRevenueAggregationPanel(), '売上集計');
-      safeRenderSection(null, () => renderRevenueAreaBrief(), '売上エリア');
+      safeRenderSection('revenue-monthly-closing-check', () => renderMonthlyClosingCheck('revenue-monthly-closing-check', { compact: true }), '月次締めチェック');
       safeRenderSection('revenue-tbody', () => renderRevenueList(), '売上一覧');
     } catch (err) {
       console.error('[Budil] render error: 売上番頭', err);

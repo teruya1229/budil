@@ -113,6 +113,44 @@ const MonthlyResultsBrain = {
     return '差額あり';
   },
 
+  monthEndDate(monthKey) {
+    const key = this.normalizeMonth(monthKey);
+    if (!key) return '';
+    const [y, m] = key.split('-').map(Number);
+    const last = new Date(y, m, 0);
+    const day = String(last.getDate()).padStart(2, '0');
+    return `${y}-${String(m).padStart(2, '0')}-${day}`;
+  },
+
+  MONTHLY_ADJUSTMENT_CUSTOMER: '月次調整',
+  MONTHLY_ADJUSTMENT_SERVICE: '月次実績差額調整',
+  MONTHLY_ADJUSTMENT_SOURCE: '月次実績',
+  MONTHLY_ADJUSTMENT_MEMO: '月次実績と売上明細の差額を調整',
+
+  isMonthlyAdjustmentRecord(record) {
+    const r = record && typeof record === 'object' ? record : {};
+    return String(r.customerName || '').trim() === this.MONTHLY_ADJUSTMENT_CUSTOMER
+      && String(r.service || '').trim() === this.MONTHLY_ADJUSTMENT_SERVICE;
+  },
+
+  buildMonthlyAdjustmentPayload(monthKey, diffAmount) {
+    const amount = Math.round(Number(diffAmount) || 0);
+    if (amount <= 0) return null;
+    const key = this.normalizeMonth(monthKey);
+    if (!key) return null;
+    return {
+      workDate: this.monthEndDate(key),
+      customerName: this.MONTHLY_ADJUSTMENT_CUSTOMER,
+      service: this.MONTHLY_ADJUSTMENT_SERVICE,
+      source: this.MONTHLY_ADJUSTMENT_SOURCE,
+      amount,
+      status: '確定',
+      paymentMethod: 'other',
+      paymentStatus: 'uncollected',
+      memo: this.MONTHLY_ADJUSTMENT_MEMO
+    };
+  },
+
   buildReconciliationRow(monthKey, monthlyResults, revenueRecords) {
     const key = this.normalizeMonth(monthKey);
     const monthly = this.findForMonth(monthlyResults, key);
