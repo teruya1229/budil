@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.10.5">
+  <link rel="stylesheet" href="css/style.css?v=4.10.6">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.10.5</small>
+          <small>AI経営脳みそ v4.10.6</small>
         </div>
       </div>
       <nav class="nav">
@@ -44,10 +44,10 @@
 
         <details class="nav-group" open>
           <summary class="nav-group-title"><span class="nav-group-icon">📞</span><span class="nav-group-label">受付・カレンダー</span></summary>
-          <p class="nav-group-hint">今日以降の予定取り込み、カレンダー登録、エリア</p>
+          <p class="nav-group-hint">予定取り込み、受付・予定確認、エリア</p>
           <div class="nav-group-items">
             <button class="nav-item nav-item-main" data-view="calendar-registration">
-              <span class="nav-icon">📅</span><span class="nav-label">カレンダー登録</span>
+              <span class="nav-icon">📅</span><span class="nav-label">受付・予定確認</span>
             </button>
             <button class="nav-item nav-item-main" data-view="calendar-candidate">
               <span class="nav-icon">📋</span><span class="nav-label">予定取り込み</span>
@@ -154,7 +154,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.10.5</small>
+        <small>Budil v4.10.6</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -176,7 +176,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の優先 → 今月の数字 → 次にやること</p>
             </div>
-            <span class="exec-home-version">v4.10.5</span>
+            <span class="exec-home-version">v4.10.6</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
 
@@ -307,7 +307,7 @@
         <div class="card card-wide card-daily-action-tasks">
           <div class="daily-flow-strip">
             <span class="daily-flow-label">毎日の流れ</span>
-            <button type="button" class="btn btn-sm btn-secondary daily-flow-btn" data-daily-flow="calendar">カレンダー登録</button>
+            <button type="button" class="btn btn-sm btn-secondary daily-flow-btn" data-daily-flow="calendar">受付・予定確認</button>
             <span class="daily-flow-arrow">→</span>
             <span class="daily-flow-current">毎日やること</span>
             <span class="daily-flow-arrow">→</span>
@@ -573,7 +573,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.5</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.6</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -1616,15 +1616,20 @@
         </div>
       </section>
 
-      <!-- カレンダー登録（受付入力 + 作業予定） -->
+      <!-- 受付・予定確認（Googleカレンダー正本フロー） -->
       <section id="view-calendar-registration" class="view">
         <header class="view-header">
-          <h1>カレンダー登録</h1>
-          <p class="view-subtitle">受付内容を登録し、日程が決まったら作業予定としてカレンダー登録します。</p>
+          <h1>受付・予定確認</h1>
+          <p class="view-subtitle">受付内容を整理し、Googleカレンダー登録後の予定をBudilで確認します。</p>
         </header>
+
+        <div class="card card-wide card-calendar-source-notice">
+          <p class="calendar-source-flow-note">正本フロー：AI受付補助で整理 → Googleカレンダーに登録 → 予定取り込みで読み込み → 作業予定・売上予定を確認 → 作業後に売上確定</p>
+        </div>
 
         <div class="card card-wide card-reception-section">
           <h2>受付入力</h2>
+          <p class="calendar-source-hint">受付内容の整理補助と記録用です。日程確定後はGoogleカレンダーへ登録してください。</p>
         </div>
 
         <div class="card card-wide card-reception-comment">
@@ -1716,11 +1721,6 @@
           <div id="reception-saved-list" class="reception-saved-list"></div>
         </div>
 
-        <div class="card card-wide card-work-order-section">
-          <h2>作業予定登録</h2>
-          <p class="data-mgmt-desc">受付一覧の「この受付から作業予定を作る」から日付・時間を追加して保存できます。</p>
-        </div>
-
         <div class="card card-wide card-work-order-completion-notice">
           <p class="work-completion-notice">作業予定は売上集計に含まれません。確定売上として登録されたものだけ集計されます。</p>
         </div>
@@ -1730,23 +1730,24 @@
           <div id="work-order-pending-completion-list" class="work-order-schedule-list"></div>
         </div>
 
-        <div class="card card-wide card-work-order-comment">
-          <h2>売上見込み</h2>
-          <div id="work-order-forecast" class="work-order-forecast"></div>
+        <div class="card card-wide card-revenue-schedule-link">
+          <p class="calendar-source-revenue-link">売上予定・見込み利益は売上管理で確認できます。</p>
+          <button type="button" class="btn btn-sm btn-secondary nav-item" data-view="revenue">売上管理を見る</button>
         </div>
 
-        <div class="card card-wide">
-          <h2>今日の作業予定</h2>
-          <div id="work-order-today-list" class="work-order-schedule-list"></div>
-        </div>
-
-        <div class="card card-wide">
+        <div class="card card-wide card-work-order-week">
           <h2>今週の作業予定</h2>
+          <p class="calendar-source-hint">Googleカレンダーから読み込んだ予定をここで確認します。</p>
           <div id="work-order-week-list" class="work-order-schedule-list"></div>
+          <details class="work-order-today-collapse">
+            <summary>今日の作業予定だけ見る</summary>
+            <div id="work-order-today-list" class="work-order-schedule-list"></div>
+          </details>
         </div>
 
-        <div class="card card-wide">
-          <h2>作業予定登録</h2>
+        <details class="card card-wide work-order-manual-entry" id="work-order-manual-entry">
+          <summary>緊急手入力：カレンダーにない予定を追加する</summary>
+          <p class="work-order-manual-note">通常はGoogleカレンダーから読み込んでください。手入力は緊急時のみ使います。</p>
           <form id="work-order-form">
             <input type="hidden" id="work-order-edit-id">
             <div class="form-row form-row-2">
@@ -1836,24 +1837,24 @@
               <button type="button" id="btn-work-order-calendar" class="btn btn-secondary btn-sm">Googleカレンダーに追加</button>
             </div>
           </form>
-        </div>
+        </details>
 
-        <div class="card card-wide">
-          <h3>受付から作業予定化</h3>
-          <p class="data-mgmt-desc">関連受付付きの作業予定一覧です。</p>
+        <details class="card card-wide work-order-from-intake-collapse">
+          <summary>受付から作成した作業予定</summary>
+          <p class="data-mgmt-desc">関連受付付きの作業予定一覧です。通常はGoogleカレンダー経由の予定をご利用ください。</p>
           <div id="work-order-from-intake-list" class="work-order-intake-list"></div>
-        </div>
+        </details>
       </section>
 
-      <!-- 近未来の予定取り込み -->
+      <!-- 予定取り込み（Googleカレンダー正本の主入口） -->
       <section id="view-calendar-candidate" class="view">
         <header class="view-header">
-          <h1>近未来の予定取り込み</h1>
-          <p class="view-subtitle">Googleカレンダー等の予定をコピーして貼り付けると、今日以降の予定を作業予定として保存します。予定取り込みだけでは確定売上には入りません。</p>
+          <h1>予定取り込み</h1>
+          <p class="view-subtitle">Googleカレンダーから出力した予定をBudilに読み込みます。作業予定として保存され、確定売上にはまだ入りません。</p>
         </header>
 
         <div class="card card-wide card-calendar-candidate">
-          <p class="calendar-candidate-notice"><strong>これは売上登録ではありません。</strong> 今日以降の予定を作業予定として保存します。作業日後は「毎日やること」の売上確定待ちから確定してください。</p>
+          <p class="calendar-candidate-notice calendar-source-primary-notice"><strong>正本フロー：</strong> Googleカレンダー → JSON出力 → Budil取り込み → 作業予定確認 → 作業後売上確定</p>
 
           <div class="calendar-past-recovery-panel hidden" aria-hidden="true">
             <label class="calendar-past-recovery-toggle">
@@ -1884,41 +1885,45 @@
           </div>
 
           <h2>カレンダーJSONを取り込む</h2>
-          <p class="pickup-paste-hint calendar-json-import-hint">ローカルPCで <strong>calendar-sync-worker</strong> の <code>run-budil-calendar-export.bat</code> を実行して作成した <code>output\budil-calendar-events.json</code> を選択してください。JSONには個人情報が含まれる可能性があるため、GitHubへ追加しないでください。予定取り込みだけでは確定売上明細には入りません。保存後、売上予定に表示されます。</p>
+          <p class="pickup-paste-hint calendar-json-import-hint">ローカルPCで <strong>calendar-sync-worker</strong> の <code>run-budil-calendar-export.bat</code> を実行して作成した <code>output\budil-calendar-events.json</code> を選択してください。</p>
           <input type="file" id="calendar-candidate-json-input" accept=".json,application/json" hidden>
-          <div class="calendar-candidate-actions">
-            <button type="button" id="btn-calendar-candidate-json-import" class="btn btn-sm btn-secondary">カレンダーJSONを取り込む</button>
+          <div class="calendar-candidate-actions calendar-candidate-primary-actions">
+            <button type="button" id="btn-calendar-candidate-json-import" class="btn btn-sm btn-primary">カレンダーJSONを取り込む</button>
           </div>
 
-          <h2>カレンダー予定の貼り付け</h2>
+          <div id="calendar-candidate-import-result" class="calendar-candidate-import-result hidden" aria-live="polite"></div>
+
+          <h2>取り込み済み予定一覧</h2>
+          <div id="calendar-candidate-saved-list" class="calendar-candidate-saved-list"></div>
+
+          <details class="calendar-candidate-paste-collapse">
+            <summary>貼り付けで取り込む（サブ）</summary>
+            <div class="calendar-candidate-paste-body">
           <div id="calendar-candidate-prompt-preview" class="calendar-candidate-prompt-preview hidden"></div>
           <div class="calendar-candidate-actions">
             <button type="button" id="btn-calendar-candidate-copy-prompt" class="btn btn-sm btn-secondary">取り込み用フォーマットをコピー</button>
           </div>
 
-          <p class="pickup-paste-hint">Googleカレンダー等からコピーした予定を貼り付けてください（【カレンダー予定】形式推奨）。件名・金額・時間 などの表記ゆれにも対応しています。Budilはカレンダーに直接接続しません。今日以降・金額ありの予定を作業予定として保存します（確定売上にはまだ入りません）。</p>
           <textarea id="calendar-candidate-paste" class="calendar-candidate-paste" rows="10" placeholder="【カレンダー予定】&#10;日付：2026-07-03&#10;開始時間：09:00&#10;..."></textarea>
           <div class="calendar-candidate-actions">
             <button type="button" id="btn-calendar-candidate-parse" class="btn btn-sm btn-secondary">取り込み候補を確認</button>
             <button type="button" id="btn-calendar-candidate-save-all" class="btn btn-sm btn-primary" disabled>すべて作業予定として保存</button>
           </div>
 
-          <div id="calendar-candidate-import-result" class="calendar-candidate-import-result hidden" aria-live="polite"></div>
-
           <div id="calendar-candidate-preview" class="calendar-candidate-preview hidden">
             <h3>取り込み候補プレビュー</h3>
             <div id="calendar-candidate-errors" class="calendar-candidate-errors"></div>
             <div id="calendar-candidate-preview-list" class="calendar-candidate-preview-list"></div>
           </div>
-
-          <h2>取り込み済み予定一覧</h2>
-          <p class="calendar-candidate-list-note">取り込み済みの作業予定は確定売上集計には含まれません。作業日後は売上確定待ちから売上確定してください。</p>
-          <div id="calendar-candidate-saved-list" class="calendar-candidate-saved-list"></div>
+            </div>
+          </details>
 
           <details class="calendar-candidate-collapse">
             <summary>注意事項</summary>
             <div class="calendar-candidate-collapse-body">
               <ul class="calendar-candidate-notes">
+                <li>JSONには個人情報が含まれる可能性があるため、GitHubへ追加しないでください。</li>
+                <li>予定取り込みだけでは確定売上明細には入りません。保存後、売上予定に表示されます。</li>
                 <li>カレンダー予定は予定変更・キャンセル・金額変更が起きやすいため、取り込み時点では売上確定しません。</li>
                 <li>取り込んだ予定は作業予定として保存されます。作業日後は「毎日やること」の売上確定待ちから売上化してください。</li>
                 <li>予定金額は見込みであり、売上集計には混ぜません。</li>
@@ -2534,12 +2539,15 @@
           <h2>経営サマリー（今月）</h2>
           <div id="profit-monthly-closing-check" class="monthly-closing-check-block" aria-live="polite"></div>
           <div id="profit-operations-diagnostics" class="profit-operations-diagnostics-block" aria-live="polite"></div>
-          <div id="profit-expense-breakdown" class="profit-expense-breakdown-block" aria-live="polite"></div>
+          <details class="profit-expense-breakdown-collapse">
+            <summary>経費内訳（詳細）</summary>
+            <div id="profit-expense-breakdown" class="profit-expense-breakdown-block" aria-live="polite"></div>
+          </details>
           <div id="profit-summary" class="profit-summary-grid"></div>
         </div>
 
-        <div class="card card-wide">
-          <h2>経費入力</h2>
+        <details class="card card-wide profit-expense-form-collapse">
+          <summary>経費入力</summary>
           <form id="profit-expense-form" class="profit-expense-form">
             <input type="hidden" id="profit-expense-edit-id" value="">
             <div class="form-row form-row-2">
@@ -2603,7 +2611,7 @@
               <button type="button" class="btn btn-secondary" id="profit-expense-clear">クリア</button>
             </div>
           </form>
-        </div>
+        </details>
 
         <div class="card card-wide">
           <h2>支出一覧</h2>
@@ -3045,14 +3053,17 @@
         <div class="card card-wide backup-status-card">
           <h2>バックアップ状況</h2>
           <p id="data-last-backup" class="backup-last-date">—</p>
-          <p class="backup-recommend">バックアップすると、売上明細・月次実績・作業予定・経費入力・設定などをJSONファイルに保存できます。機種変更や誤操作対策として、定期的に保存してください。</p>
-          <p class="backup-protected-note">バックアップには、売上明細・月次実績・作業予定・経費入力・設定が含まれます。</p>
-          <ul class="backup-scope-list">
-            <li>売上明細・月次実績</li>
-            <li>作業予定・経費入力</li>
-            <li>営業先・活動履歴・毎日やること</li>
-            <li>設定・請求書・見積書・その他のBudilデータ</li>
-          </ul>
+          <p class="backup-recommend">定期的にバックアップを保存してください（機種変更・誤操作対策）。</p>
+          <details class="backup-scope-collapse">
+            <summary>含まれるデータを確認する</summary>
+            <p class="backup-protected-note">バックアップには、売上明細・月次実績・作業予定・経費入力・設定が含まれます。</p>
+            <ul class="backup-scope-list">
+              <li>売上明細・月次実績</li>
+              <li>作業予定・経費入力</li>
+              <li>営業先・活動履歴・毎日やること</li>
+              <li>設定・請求書・見積書・その他のBudilデータ</li>
+            </ul>
+          </details>
         </div>
 
         <div class="card card-wide card-data-consistency">
@@ -3488,30 +3499,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.10.5"></script>
-  <script src="js/messages.js?v=4.10.5"></script>
-  <script src="js/demand-brain.js?v=4.10.5"></script>
-  <script src="js/demand-radar.js?v=4.10.5"></script>
-  <script src="js/sales-brain.js?v=4.10.5"></script>
-  <script src="js/management-brain.js?v=4.10.5"></script>
-  <script src="js/payment-brain.js?v=4.10.5"></script>
-  <script src="js/revenue-brain.js?v=4.10.5"></script>
-  <script src="js/revenue-summary-brain.js?v=4.10.5"></script>
-  <script src="js/reception-brain.js?v=4.10.5"></script>
-  <script src="js/map-brain.js?v=4.10.5"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.10.5"></script>
-  <script src="js/external-check-brain.js?v=4.10.5"></script>
-  <script src="js/action-brain.js?v=4.10.5"></script>
-  <script src="js/work-order-brain.js?v=4.10.5"></script>
-  <script src="js/follow-up-brain.js?v=4.10.5"></script>
-  <script src="js/work-completion-brain.js?v=4.10.5"></script>
-  <script src="js/profit-brain.js?v=4.10.5"></script>
-  <script src="js/analytics-brain.js?v=4.10.5"></script>
-  <script src="js/monthly-results-brain.js?v=4.10.5"></script>
-  <script src="js/documents-brain.js?v=4.10.5"></script>
-  <script src="js/executive-brain.js?v=4.10.5"></script>
-  <script src="js/card-ocr.js?v=4.10.5"></script>
-  <script src="js/data-backup.js?v=4.10.5"></script>
-  <script src="js/app.js?v=4.10.5"></script>
+  <script src="js/storage.js?v=4.10.6"></script>
+  <script src="js/messages.js?v=4.10.6"></script>
+  <script src="js/demand-brain.js?v=4.10.6"></script>
+  <script src="js/demand-radar.js?v=4.10.6"></script>
+  <script src="js/sales-brain.js?v=4.10.6"></script>
+  <script src="js/management-brain.js?v=4.10.6"></script>
+  <script src="js/payment-brain.js?v=4.10.6"></script>
+  <script src="js/revenue-brain.js?v=4.10.6"></script>
+  <script src="js/revenue-summary-brain.js?v=4.10.6"></script>
+  <script src="js/reception-brain.js?v=4.10.6"></script>
+  <script src="js/map-brain.js?v=4.10.6"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.10.6"></script>
+  <script src="js/external-check-brain.js?v=4.10.6"></script>
+  <script src="js/action-brain.js?v=4.10.6"></script>
+  <script src="js/work-order-brain.js?v=4.10.6"></script>
+  <script src="js/follow-up-brain.js?v=4.10.6"></script>
+  <script src="js/work-completion-brain.js?v=4.10.6"></script>
+  <script src="js/profit-brain.js?v=4.10.6"></script>
+  <script src="js/analytics-brain.js?v=4.10.6"></script>
+  <script src="js/monthly-results-brain.js?v=4.10.6"></script>
+  <script src="js/documents-brain.js?v=4.10.6"></script>
+  <script src="js/executive-brain.js?v=4.10.6"></script>
+  <script src="js/card-ocr.js?v=4.10.6"></script>
+  <script src="js/data-backup.js?v=4.10.6"></script>
+  <script src="js/app.js?v=4.10.6"></script>
 </body>
 </html>

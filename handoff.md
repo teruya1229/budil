@@ -16,8 +16,8 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.10.5 |
-| 最新commit | 81c31e3 |
+| 最新バージョン | v4.10.6 |
+| 最新commit | （v4.10.6 反映後に更新） |
 | ブランチ | `main` push 済み |
 
 ## Firebase / Functions 下書き（作業ツリー外・保留）
@@ -46,6 +46,16 @@ output/budil-calendar-events.json
 
 - Firebase / Functions API 案（`hub/functions`）は **一旦保留**。将来候補としてコードは残置
 - v4.10.1 の JSON ファイル取り込み・貼り付け取り込みは維持
+
+## v4.10.6で入ったもの
+
+- Googleカレンダー正本フローに合わせた受付・予定確認画面の整理
+- 作業予定手入力の折りたたみ化、受付一覧簡潔化、売上見込みカードの画面分離
+- 予定取り込みのJSON主入口化、貼り付けサブ化
+- 暗色UIへのカード寄せ、重複CTA・説明の整理
+- verify `scripts/verify-v4106-calendar-source-flow-simplification.mjs`
+- cache buster を v4.10.6 に更新
+- v4.10.5 売上分析分離・差額補正以降の既存機能は維持
 
 ## v4.10.5で入ったもの
 

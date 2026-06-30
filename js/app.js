@@ -520,8 +520,8 @@
   // ── ナビゲーション ──
   const STRATEGY_MEMO_VIEWS = ['strategy-memo', 'radar', 'pickup', 'demand'];
   const DAILY_TASKS_UI_LABEL = '毎日やること';
-  const EMPTY_DAILY_TASKS_COPY = '毎日やることはまだありません。カレンダー登録・改善リスト・経営ホームから追加できます。';
-  const EMPTY_SCHEDULE_COPY = '直近予定はありません。カレンダー登録から予定を追加できます。';
+  const EMPTY_DAILY_TASKS_COPY = '毎日やることはまだありません。予定取り込み・改善リスト・経営ホームから追加できます。';
+  const EMPTY_SCHEDULE_COPY = '直近予定はありません。予定取り込みから読み込めます。';
   const CALENDAR_REGISTRATION_VIEWS = ['calendar-registration', 'reception', 'work-order'];
   const NAV_VIEW_ALIASES = {
     reception: 'calendar-registration',
@@ -896,7 +896,7 @@
   function renderExecutiveWorkOrdersHtml(section) {
     const sec = section || { items: [] };
     if (!sec.items.length) {
-      return '<p class="placeholder-text">今日の予定はありません。<br>カレンダー登録から追加できます。</p>';
+      return '<p class="placeholder-text">今日の予定はありません。<br>予定取り込みから読み込めます。</p>';
     }
     return sec.items.map(wo => `
       <div class="exec-work-item" data-work-order-id="${esc(wo.id)}">
@@ -907,11 +907,16 @@
         <p class="exec-work-meta">${esc(wo.serviceText || '—')} / ${esc(wo.area)} / 見込み${WorkOrderBrain.formatYen(wo.estimateAmount)}</p>
         ${wo.warnings.length ? `<p class="exec-work-warn">${wo.warnings.map(w => esc(w)).join(' · ')}</p>` : ''}
         <div class="exec-work-actions">
-          ${renderMapActionsHtml(wo.address, { area: wo.area, showNoAddress: true })}
-          ${wo.calendarReady ? `<a class="btn btn-sm btn-secondary" href="${esc(wo.calendarUrl)}" target="_blank" rel="noopener noreferrer">Googleカレンダー</a>` : ''}
-          <button type="button" class="btn btn-sm btn-secondary" data-exec-wo-complete="${esc(wo.id)}">作業完了</button>
           <button type="button" class="btn btn-sm btn-primary" data-exec-wo-completion="${esc(wo.id)}">作業後確定</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-exec-wo-revenue="${esc(wo.id)}">売上確定へ</button>
+          <details class="exec-work-detail-actions">
+            <summary>詳細操作</summary>
+            <div class="exec-work-actions-secondary">
+              ${renderMapActionsHtml(wo.address, { area: wo.area, showNoAddress: true })}
+              ${wo.calendarReady ? `<a class="btn btn-sm btn-secondary" href="${esc(wo.calendarUrl)}" target="_blank" rel="noopener noreferrer">Googleカレンダー</a>` : ''}
+              <button type="button" class="btn btn-sm btn-secondary" data-exec-wo-complete="${esc(wo.id)}">作業完了</button>
+              <button type="button" class="btn btn-sm btn-secondary" data-exec-wo-revenue="${esc(wo.id)}">売上確定へ</button>
+            </div>
+          </details>
         </div>
       </div>`).join('');
   }
@@ -928,9 +933,14 @@
         <p class="exec-work-meta">${esc(intake.serviceText || '—')} / 希望：${esc(intake.preferredDatesText || '—')} / ${esc(intake.area)}</p>
         <p class="exec-work-meta">次の一手：${esc(intake.nextAction)}</p>
         <div class="exec-work-actions">
-          <button type="button" class="btn btn-sm btn-primary" data-exec-intake-lead="${esc(intake.id)}">営業先作成</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-exec-intake-wo="${esc(intake.id)}">この受付から作業予定を作る</button>
           <button type="button" class="btn btn-sm btn-secondary" data-exec-intake-task="${esc(intake.id)}">毎日やること追加</button>
+          <details class="exec-reception-detail-actions">
+            <summary>詳細操作</summary>
+            <div class="exec-work-actions-secondary">
+              <button type="button" class="btn btn-sm btn-secondary" data-exec-intake-lead="${esc(intake.id)}">営業先作成</button>
+              <button type="button" class="btn btn-sm btn-secondary" data-exec-intake-wo="${esc(intake.id)}">この受付から作業予定を作る</button>
+            </div>
+          </details>
         </div>
       </div>`).join('');
   }
@@ -1522,7 +1532,7 @@
       const priorities = ctx.topPriorities || [];
       prioritiesEl.innerHTML = priorities.length
         ? priorities.map((p, i) => renderExecutiveTopPriorityCard(p, i)).join('')
-        : '<p class="placeholder-text">今日の最優先はまだありません。カレンダー登録・改善リスト・経営ホームから追加できます。</p>';
+        : '<p class="placeholder-text">今日の最優先はまだありません。予定取り込み・改善リスト・経営ホームから追加できます。</p>';
     }
 
     const upcomingEl = document.getElementById('exec-home-upcoming-schedule');
@@ -2698,7 +2708,7 @@
     const upcoming = (summary.upcoming || []).slice(0, limit);
     const monthAmount = RevenueBrain.formatYen(summary.monthTotal || 0);
     if (!summary.monthCount && !upcoming.length) {
-      return `<p class="placeholder-text upcoming-revenue-schedule-empty">${esc(opts.emptyText || '今日以降の売上予定はありません。予定取り込みまたはカレンダー登録から追加できます。')}</p>`;
+      return `<p class="placeholder-text upcoming-revenue-schedule-empty">${esc(opts.emptyText || '今日以降の売上予定はありません。予定取り込みから読み込めます。')}</p>`;
     }
     const head = `<p class="upcoming-revenue-schedule-head">今月の売上予定：<strong>${summary.monthCount || 0}件 / ${esc(monthAmount)}</strong></p>`;
     const note = `<p class="upcoming-revenue-schedule-note">${esc(summary.label || '売上予定（未確定）')}：${esc(monthAmount)}</p>`;
@@ -2730,7 +2740,7 @@
     const actions = opts.showScheduleImportBtn
       ? `<button type="button" class="btn btn-sm btn-secondary upcoming-go-schedule-import">予定取り込みを見る</button>`
       : (opts.compact
-        ? `<button type="button" class="btn btn-sm btn-secondary daily-go-calendar">カレンダー登録を見る</button>`
+        ? `<button type="button" class="btn btn-sm btn-secondary daily-go-calendar">受付・予定確認を見る</button>`
         : '');
     return `${head}${note}${scope}${hint}${flow}${nearest}${list}${more}${actions}`;
   }
@@ -2900,7 +2910,7 @@
     const amountLabel = item.amount ? WorkOrderBrain.formatYen(item.amount) : '—';
     const calendarBtn = item.type === 'past-recovery'
       ? `<button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-past-recovery>過去売上復元を見る</button>`
-      : `<button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-calendar>カレンダー登録を見る</button>`;
+      : `<button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-calendar>受付・予定確認を見る</button>`;
     return `<div class="daily-revenue-queue-card daily-revenue-queue-${esc(item.type)}">
       <div class="daily-revenue-queue-meta">
         <span class="daily-revenue-queue-date">${esc(formatRevenueQueueDate(item.scheduledDate))}</span>
@@ -2963,7 +2973,7 @@
     const more = queue.hiddenCount
       ? `<p class="daily-revenue-queue-more">ほか${queue.hiddenCount}件あります</p>
          <div class="daily-revenue-queue-more-actions">
-           <button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-calendar>カレンダー登録を見る</button>
+           <button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-calendar>受付・予定確認を見る</button>
          </div>`
       : '';
     el.innerHTML = `<div class="daily-revenue-queue-cards">${cards}</div>${more}`;
@@ -3571,7 +3581,7 @@
     { title: '営業先を管理', desc: '次の一手・保留・活動履歴を整理', action: 'sales' },
     { title: '毎日やることを整理', desc: '優先タスクを毎朝確認', action: 'task' },
     { title: '集客施策メモ', desc: 'クロクロ調査結果を集客施策メモに取り込み', action: 'pickup' },
-    { title: 'カレンダー登録', desc: '受付内容を登録し、日程が決まったらカレンダー登録として保存', action: 'reception' },
+    { title: '受付・予定確認', desc: '受付内容を整理し、Googleカレンダー登録後の予定を確認', action: 'reception' },
     { title: '直近予定を確認', desc: '今日/今週の予定から毎日やること・売上登録へ', action: 'work-order' },
     { title: '作業後フォローをつなぐ', desc: 'お礼・口コミ依頼・リピート提案を文面生成', action: 'follow-up' },
     { title: 'エリアで移動を判断', desc: 'エリア別サマリーとGoogleマップ導線', action: 'area' },
@@ -8118,7 +8128,7 @@
       .map(w => WorkOrderBrain.normalizeWorkOrder(w))
       .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
     if (!list.length) {
-      el.innerHTML = '<p class="placeholder-text">取り込み済みの作業予定はありません。上の貼り付け欄から今日以降の予定を取り込んでください。</p>';
+      el.innerHTML = '<p class="placeholder-text">取り込み済みの作業予定はありません。上のカレンダーJSON取り込みから今日以降の予定を読み込んでください。</p>';
       return;
     }
     el.innerHTML = `<p class="calendar-candidate-not-sale-list">作業予定として保存済みです。確定売上集計には含まれません。作業日後は売上確定待ちから売上化できます。</p>
@@ -8137,7 +8147,7 @@
             ${st === '候補' || st === '要確認' ? `<button type="button" class="btn btn-sm btn-primary" data-cal-promote="${esc(wo.id)}">作業予定に追加</button>` : ''}
             <button type="button" class="btn btn-sm btn-secondary" data-cal-task="${esc(wo.id)}">毎日やることに追加</button>
             ${st !== 'スキップ' ? `<button type="button" class="btn btn-sm btn-secondary" data-cal-review="${esc(wo.id)}">要確認にする</button>` : ''}
-            ${st !== 'スキップ' ? `<button type="button" class="btn btn-sm btn-secondary" data-cal-skip="${esc(wo.id)}">スキップ</button>` : ''}
+            ${st !== 'スキップ' ? `<button type="button" class="btn btn-sm btn-secondary" data-cal-skip="${esc(wo.id)}">このまま保持</button>` : ''}
           </div>
         </div>`;
       }).join('')}`;
@@ -9295,26 +9305,37 @@
     const isCancelled = wo.status === 'cancelled';
     const canConfirm = !hasRevenue && !isCancelled && typeof WorkCompletionBrain !== 'undefined'
       && WorkCompletionBrain.isOperationalWorkOrder(wo);
+    const primary = [
+      canConfirm ? `<button type="button" class="btn btn-sm btn-primary" data-wo-completion="${esc(wo.id)}">作業後確定</button>` : '',
+      hasRevenue ? `<button type="button" class="btn btn-sm btn-primary" data-wo-open-revenue="${esc(wo.id)}">売上を開く</button>` : ''
+    ].filter(Boolean).join('');
+    const secondary = [
+      mapUrl ? `<a href="${esc(mapUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary">Googleマップで開く</a>` : '',
+      cal.ready ? `<a href="${esc(cal.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary" data-wo-calendar="${esc(wo.id)}">Googleカレンダーに追加</a>` : '',
+      canConfirm ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-completion-open="${esc(wo.id)}">売上確定へ</button>` : '',
+      `<button type="button" class="btn btn-sm btn-secondary" data-wo-add-task="${esc(wo.id)}">毎日やることに追加</button>`,
+      canConfirm ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-needs-review="${esc(wo.id)}">要確認</button>` : '',
+      hasRevenue ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-goto-follow="${esc(wo.id)}">フォローへ</button>` : '',
+      completed && !hasRevenue ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-fill-revenue="${esc(wo.id)}">売上フォームへ反映</button>` : '',
+      `<button type="button" class="btn btn-sm btn-secondary" data-wo-edit="${esc(wo.id)}">編集</button>`,
+      canConfirm ? `<button type="button" class="btn btn-sm btn-secondary btn-danger-outline" data-wo-cancel-open="${esc(wo.id)}">キャンセル</button>` : ''
+    ].filter(Boolean).join('');
     return `
-      ${mapUrl ? `<a href="${esc(mapUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary">Googleマップで開く</a>` : ''}
-      ${cal.ready ? `<a href="${esc(cal.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary" data-wo-calendar="${esc(wo.id)}">Googleカレンダーに追加</a>` : ''}
-      <button type="button" class="btn btn-sm btn-secondary" data-wo-add-task="${esc(wo.id)}">毎日やることに追加</button>
-      ${canConfirm ? `<button type="button" class="btn btn-sm btn-primary" data-wo-completion="${esc(wo.id)}">作業後確定</button>` : ''}
-      ${canConfirm ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-completion-open="${esc(wo.id)}">売上確定へ</button>` : ''}
-      ${canConfirm ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-needs-review="${esc(wo.id)}">要確認</button>` : ''}
-      ${canConfirm ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-cancel-open="${esc(wo.id)}">キャンセル</button>` : ''}
-      ${hasRevenue ? `<button type="button" class="btn btn-sm btn-primary" data-wo-open-revenue="${esc(wo.id)}">売上を開く</button>` : ''}
-      ${hasRevenue ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-goto-follow="${esc(wo.id)}">フォローへ</button>` : ''}
-      ${completed && !hasRevenue ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-fill-revenue="${esc(wo.id)}">売上フォームへ反映</button>` : ''}
-      <button type="button" class="btn btn-sm btn-secondary" data-wo-edit="${esc(wo.id)}">編集</button>`;
+      <div class="work-order-item-actions-primary">${primary || '<span class="work-order-item-no-primary">—</span>'}</div>
+      <details class="work-order-item-actions-details">
+        <summary>詳細操作</summary>
+        <div class="work-order-item-actions-secondary">${secondary}</div>
+      </details>`;
   }
 
-  function renderWorkOrderItemCard(workOrder) {
+  function renderWorkOrderItemCard(workOrder, options) {
+    const opts = options || {};
     const wo = WorkOrderBrain.normalizeWorkOrder(workOrder);
     const area = WorkOrderBrain.getWorkOrderArea(wo);
     const timeLabel = wo.startTime && wo.endTime ? `${wo.startTime}〜${wo.endTime}` : (wo.startTime || '時間未設定');
+    const todayClass = opts.isToday ? ' is-today' : '';
     return `
-      <div class="work-order-item" data-work-order-id="${esc(wo.id)}">
+      <div class="work-order-item${todayClass}" data-work-order-id="${esc(wo.id)}">
         <div class="work-order-item-header">
           <strong>${esc(timeLabel)}</strong>
           <span class="work-order-status-badge work-order-status-${esc(wo.status)}">${esc(WorkOrderBrain.formatStatus(wo.status))}</span>
@@ -9481,7 +9502,7 @@
     el.innerHTML = groups.map(g => `
       <div class="work-order-day-group">
         <p class="work-order-day-label">${esc(g.date === today ? '今日 ' + g.date : g.date)}</p>
-        ${g.items.map(wo => renderWorkOrderItemCard(wo)).join('')}
+        ${g.items.map(wo => renderWorkOrderItemCard(wo, { isToday: g.date === today })).join('')}
       </div>`).join('');
     bindWorkOrderItemEvents(el);
   }
@@ -9502,9 +9523,11 @@
     try {
       safeRenderSection(null, () => renderWorkOrderCalendarBrief(), '過去売上復元');
       safeRenderSection('work-order-pending-completion-list', () => renderWorkOrderPendingCompletionList(), '作業後確定待ち');
-      safeRenderSection('work-order-forecast', () => renderWorkOrderForecast(), '売上見込み');
-      safeRenderSection('work-order-today-list', () => renderWorkOrderTodayList(), '今日の作業予定');
+      if (document.getElementById('work-order-forecast')) {
+        safeRenderSection('work-order-forecast', () => renderWorkOrderForecast(), '売上見込み');
+      }
       safeRenderSection('work-order-week-list', () => renderWorkOrderWeekList(), '今週の作業予定');
+      safeRenderSection('work-order-today-list', () => renderWorkOrderTodayList(), '今日の作業予定');
       safeRenderSection('work-order-from-intake-list', () => renderWorkOrderFromIntakeList(), '受付から作業予定化');
       fillWorkOrderSelects();
       updateWorkOrderCalendarHint();
@@ -10064,6 +10087,12 @@
     navigateToView(action.view, action.scrollSelector || null);
   }
 
+  function getExecutivePriorityActionLabel() {
+    const el = document.getElementById('exec-home-priority-action');
+    const btn = el && el.querySelector('.exec-home-priority-action-btn');
+    return btn ? btn.textContent.trim() : '';
+  }
+
   function renderExecutiveNextAction() {
     const el = document.getElementById('exec-home-next-action');
     if (!el || typeof ProfitBrain === 'undefined') return;
@@ -10078,7 +10107,9 @@
       expenses: Storage.getExpenseRecords()
     });
     const action = check.primaryAction;
-    const actionBtn = action
+    const priorityLabel = getExecutivePriorityActionLabel();
+    const duplicateCta = action && priorityLabel && action.label === priorityLabel;
+    const actionBtn = action && !duplicateCta
       ? `<button type="button" class="btn btn-sm btn-primary exec-next-action-btn">${esc(action.label)}</button>`
       : '';
     el.innerHTML = `
@@ -10315,7 +10346,8 @@
       : (diagnostics.statusKey === 'deficit' || diagnostics.statusKey === 'reconciliation_gap' ? 'is-warn' : 'is-info');
     const action = diagnostics.primaryAction;
     const suppressAction = isCompact || opts.suppressAction;
-    const actionBtn = !suppressAction && action
+    const hideRevenueCta = opts.suppressRevenueLink && action && action.label === '売上予定を見る';
+    const actionBtn = !suppressAction && action && !hideRevenueCta
       ? `<div class="revenue-flow-diagnostics-action-wrap"><button type="button" class="btn btn-sm btn-primary profit-operations-diagnostics-action">${esc(action.label)}</button></div>`
       : '';
     const titleBlock = isCompact ? '' : '<h3 class="revenue-flow-diagnostics-title">利益状態</h3>';
@@ -10652,7 +10684,7 @@
       if (dateEl && !dateEl.value) dateEl.value = TODAY();
       const ctx = getProfitContext();
       renderMonthlyClosingCheck('profit-monthly-closing-check');
-      renderProfitOperationsDiagnostics(ctx);
+      renderProfitOperationsDiagnostics(ctx, { suppressRevenueLink: true });
       renderProfitExpenseBreakdown(ctx);
       renderProfitSummary(ctx);
       renderProfitExpenseList(ctx);
@@ -12124,7 +12156,7 @@
     const { workOrders, today } = getMapContext();
     const active = WorkOrderBrain.filterActive(workOrders);
     if (!active.length) {
-      el.innerHTML = '<p class="placeholder-text">作業予定はまだありません。<br>カレンダー登録から作成できます。</p>';
+      el.innerHTML = '<p class="placeholder-text">作業予定はまだありません。<br>予定取り込みから読み込めます。</p>';
       return;
     }
     const weekEnd = WorkOrderBrain.addDays(today, 6);
@@ -12340,10 +12372,12 @@
 
   function renderReceptionActionBlock(intake, options) {
     const state = getReceptionWorkflowState(intake);
+    const action = state && state.primaryAction;
+    const hidePrimary = action === 'openWorkOrder' || action === 'createWorkOrder';
     return `
       <div class="reception-action-block">
-        ${renderReceptionPrimaryAction(intake.id, state, options)}
-        ${renderReceptionStateLabels(state)}
+        ${hidePrimary ? '' : renderReceptionPrimaryAction(intake.id, state, options)}
+        ${hidePrimary ? '' : renderReceptionStateLabels(state)}
         ${renderReceptionDetailActions(intake, state)}
       </div>`;
   }
@@ -12465,29 +12499,32 @@
       const revLabel = intake.relatedRevenueId ? 'あり' : (intake.status === 'revenue_candidate' ? '候補' : '—');
       const area = MapBrain.getIntakeArea(intake);
       const addr = (intake.address || '').trim();
-      const woIds = [
-        ...(intake.relatedWorkOrderId ? [intake.relatedWorkOrderId] : []),
-        ...(Array.isArray(intake.relatedWorkOrderIds) ? intake.relatedWorkOrderIds : [])
-      ].filter(Boolean);
       const workflow = getReceptionWorkflowState(intake);
       const hasWorkOrder = workflow.hasWorkOrder;
+      const handling = (intake.handlingStatus || intake.handling || '—').trim() || '—';
+      const serviceSummary = (intake.serviceText || '—').slice(0, 48) + ((intake.serviceText || '').length > 48 ? '…' : '');
       return `
-      <div class="reception-saved-item" data-intake-id="${esc(intake.id)}">
+      <div class="reception-saved-item reception-saved-item-compact" data-intake-id="${esc(intake.id)}">
         <div class="reception-saved-header">
           <span class="reception-saved-date">${esc(formatReceptionDate(intake.createdAt))}</span>
           <span class="reception-status-badge reception-status-${esc(intake.status)}">${esc(formatReceptionStatus(intake.status))}</span>
           ${hasWorkOrder ? '<span class="reception-work-order-badge">作業予定あり</span>' : ''}
         </div>
-        <p class="reception-saved-title"><strong>${esc(intake.customerName || '（名前なし）')}</strong> / ${esc(intake.source || '—')}</p>
-        <p class="reception-saved-meta">電話：${esc(intake.phone || '—')}</p>
-        <p class="reception-saved-meta">住所：${esc(addr || '—')}</p>
-        <p class="reception-saved-meta">エリア：${esc(area)} ${renderAreaDistanceBadge(area, addr)}</p>
-        <p class="reception-saved-meta">作業：${esc(intake.serviceText || '—')}</p>
-        <p class="reception-saved-meta">希望日：${esc(intake.preferredDatesText || '—')}</p>
-        <p class="reception-saved-meta">概算金額：${intake.estimateAmount ? esc(RevenueBrain.formatYen(intake.estimateAmount)) : '—'}</p>
-        ${intake.memo ? `<p class="reception-saved-meta reception-saved-memo">受付メモ：${esc(intake.memo)}</p>` : ''}
-        <p class="reception-saved-meta">関連営業先：${esc(leadLabel)} / 売上：${esc(revLabel)}</p>
-        <div class="reception-saved-map">${renderMapActionsHtml(addr, { area, showNoAddress: true })}</div>
+        <p class="reception-saved-title"><strong>${esc(intake.customerName || '（名前なし）')}</strong></p>
+        <p class="reception-saved-meta reception-saved-summary">${esc(serviceSummary)} / 対応：${esc(handling)}</p>
+        <details class="reception-item-details">
+          <summary>詳細を見る</summary>
+          <p class="reception-saved-meta">依頼元：${esc(intake.source || '—')}</p>
+          <p class="reception-saved-meta">電話：${esc(intake.phone || '—')}</p>
+          <p class="reception-saved-meta">住所：${esc(addr || '—')}</p>
+          <p class="reception-saved-meta">エリア：${esc(area)} ${renderAreaDistanceBadge(area, addr)}</p>
+          <p class="reception-saved-meta">希望日：${esc(intake.preferredDatesText || '—')}</p>
+          <p class="reception-saved-meta">概算金額：${intake.estimateAmount ? esc(RevenueBrain.formatYen(intake.estimateAmount)) : '—'}</p>
+          ${intake.memo ? `<p class="reception-saved-meta reception-saved-memo">受付メモ：${esc(intake.memo)}</p>` : ''}
+          <p class="reception-saved-meta">関連営業先：${esc(leadLabel)} / 売上：${esc(revLabel)}</p>
+          <p class="reception-calendar-note">日程確定後はGoogleカレンダーに登録し、予定取り込みから読み込んでください。</p>
+          <div class="reception-saved-map">${renderMapActionsHtml(addr, { area, showNoAddress: true })}</div>
+        </details>
         ${renderReceptionActionBlock(intake)}
         <div class="reception-saved-actions reception-legacy-actions hidden">
           <button type="button" class="btn btn-sm btn-primary" data-reception-create-lead="${esc(intake.id)}">営業先を作成</button>
