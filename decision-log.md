@@ -13,6 +13,14 @@
 
 ### YYYY-MM-DD 判断タイトル
 
+### 2026-06-30 Budil v4.10.5 売上分析ナビ修正
+
+判断：
+
+- `NAV_VIEW_ALIASES` はサイドバー親カテゴリの強調用に残し、`revenue-analysis` は売上グループとしてハイライトする
+- 画面DOMの解決（`resolveViewElement`）は `data-view` をそのまま `view-*` に対応させ、`revenue-analysis` → `view-revenue-analysis` を開く
+- 売上管理（`revenue`）と売上分析（`revenue-analysis`）の画面分離は v4.10.5 の意図どおり維持する
+
 ### 2026-06-30 Budil v4.10.5 PC向けシンプル化・分析分離
 
 判断：

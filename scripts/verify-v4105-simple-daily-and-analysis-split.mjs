@@ -71,6 +71,31 @@ assert(monthlyBrain.includes("status: '確定'"), 'adjustment record should be �
 assert(appJs.includes('renderRevenueAnalysisView'), 'app should render analysis view separately');
 assert(appJs.includes("view === 'revenue-analysis'"), 'switchView should handle revenue-analysis');
 
+const resolveViewElementBlock = appJs.slice(
+  appJs.indexOf('function resolveViewElement'),
+  appJs.indexOf('function setNavActive')
+);
+assert(
+  !resolveViewElementBlock.includes('NAV_VIEW_ALIASES'),
+  'resolveViewElement must not use NAV_VIEW_ALIASES for DOM resolution'
+);
+assert(
+  resolveViewElementBlock.includes('return view'),
+  'resolveViewElement should map view names directly to view-* DOM ids'
+);
+assert(
+  appJs.includes("data-view=\"revenue-analysis\"") || indexHtml.includes('data-view="revenue-analysis"'),
+  'revenue-analysis navigation entry should exist'
+);
+assert(
+  indexHtml.includes('売上分析を見る') && indexHtml.includes('data-view="revenue-analysis"'),
+  'revenue header should link to revenue-analysis view'
+);
+assert(
+  appJs.includes("'revenue-analysis': 'revenue'"),
+  'NAV_VIEW_ALIASES may still group revenue-analysis under revenue for nav highlight'
+);
+
 assert(!appJs.includes('売上明細を追加するか、月次実績を確認してください'), 'old passive gap message should be removed');
 
 assert(indexHtml.includes('revenue-lead-row') && indexHtml.includes('hidden'), 'v4.10.4 revenue lead UI hidden');

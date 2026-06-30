@@ -17,7 +17,7 @@
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
 | 最新バージョン | v4.10.5 |
-| 最新commit | 6ebbe82 |
+| 最新commit | （売上分析ナビ修正後に更新） |
 | ブランチ | `main` push 済み |
 
 ## Firebase / Functions 下書き（作業ツリー外・保留）
@@ -46,6 +46,14 @@ output/budil-calendar-events.json
 
 - Firebase / Functions API 案（`hub/functions`）は **一旦保留**。将来候補としてコードは残置
 - v4.10.1 の JSON ファイル取り込み・貼り付け取り込みは維持
+
+## v4.10.5で入ったもの
+
+- PC向けシンプル化・売上分析画面分離・月次差額補正ボタン
+- 売上分析ナビ修正: `resolveViewElement` をナビ強調用エイリアスから分離し、`revenue-analysis` で `view-revenue-analysis` を開く
+- verify `scripts/verify-v4105-simple-daily-and-analysis-split.mjs`（ナビ解決チェック含む）
+- cache buster を v4.10.5 に更新
+- v4.10.4 操作後導線・売上/営業切り離し以降の既存機能は維持
 
 ## v4.10.3で入ったもの
 

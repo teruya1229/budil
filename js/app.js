@@ -538,7 +538,7 @@
   }
 
   function resolveViewElement(view) {
-    return NAV_VIEW_ALIASES[view] || view;
+    return view;
   }
 
   function setNavActive(viewName) {
