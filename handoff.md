@@ -17,7 +17,8 @@
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
 | 最新バージョン | v4.10.11 |
-| 最新commit | v4.10.11 リリース報告参照（push後に更新） |
+| v4.10.11 本体修正commit | `591ca87` |
+| handoff 正本更新 | message: `docs: update handoff for v4.10.11` |
 | ブランチ | `main` push 済み |
 
 ## Firebase / Functions 下書き（作業ツリー外・保留）
