@@ -16,9 +16,9 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.10.14 |
-| v4.10.14 本体修正commit | `84d20c8` |
-| handoff 正本更新 | message: `docs: update handoff for v4.10.14` |
+| 最新バージョン | v4.10.15 |
+| v4.10.15 本体修正commit | （push後に記載） |
+| handoff 正本更新 | message: `docs: update handoff for v4.10.15` |
 | ブランチ | `main` push 済み |
 
 ## Firebase / Functions 下書き（作業ツリー外・保留）
@@ -48,13 +48,13 @@ output/budil-calendar-events.json
 - Firebase / Functions API 案（`hub/functions`）は **一旦保留**。将来候補としてコードは残置
 - v4.10.1 の JSON ファイル取り込み・貼り付け取り込みは維持
 
-## v4.10.14で入ったもの
+## v4.10.15で入ったもの
 
-- 利益管理の見込み表示を予定／確定／合計の3段に整理（母数ズレ解消）
-- `ProfitBrain.getPeriodProfitSummary` で予定・確定・合計を分離計算
-- 見込み利益は予定データのみ、確定利益は確定売上明細のみ
-- verify `scripts/verify-v41014-profit-forecast-breakdown.mjs`
-- cache buster を v4.10.14 に更新
+- 集客レポート貼り付け入口を「集客チェック」（旧アクセス分析）1か所に統合
+- 自由文章レポート・比較期間・SC・画像404・「今すぐやる」を解析し、改善リストと確認履歴へ接続
+- 旧サイト確認記録の貼り付け入口は前面から外し、履歴・詳細側へ退避（既存データ維持）
+- verify `scripts/verify-v41015-marketing-check-unified-entry.mjs`
+- cache buster を v4.10.15 に更新
 
 ## v4.10.13で入ったもの
 

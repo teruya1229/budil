@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.10.14">
+  <link rel="stylesheet" href="css/style.css?v=4.10.15">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.10.14</small>
+          <small>AI経営脳みそ v4.10.15</small>
         </div>
       </div>
       <nav class="nav">
@@ -91,13 +91,10 @@
 
         <details class="nav-group" open>
           <summary class="nav-group-title"><span class="nav-group-icon">📈</span><span class="nav-group-label">集客管理</span></summary>
-          <p class="nav-group-hint">アクセス分析、サイト確認記録、集客施策メモ</p>
+          <p class="nav-group-hint">集客チェック、集客施策メモ</p>
           <div class="nav-group-items">
             <button class="nav-item nav-item-main" data-view="analytics">
-              <span class="nav-icon">📈</span><span class="nav-label">アクセス分析</span>
-            </button>
-            <button class="nav-item nav-item-main" data-view="external-check">
-              <span class="nav-icon">🔍</span><span class="nav-label">サイト確認記録</span>
+              <span class="nav-icon">📈</span><span class="nav-label">集客チェック</span>
             </button>
             <button class="nav-item nav-item-main" data-view="strategy-memo">
               <span class="nav-icon">📝</span><span class="nav-label">集客施策メモ</span>
@@ -154,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.10.14</small>
+        <small>Budil v4.10.15</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -176,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の優先 → 今月の数字 → 次にやること</p>
             </div>
-            <span class="exec-home-version">v4.10.14</span>
+            <span class="exec-home-version">v4.10.15</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
 
@@ -267,8 +264,7 @@
               <div class="exec-collapse-body">
                 <div class="exec-home-block exec-tower-block-marketing">
                   <div id="exec-home-marketing-links" class="exec-home-marketing-links">
-                    <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="analytics">アクセス分析</button>
-                    <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="external-check">サイト確認記録</button>
+                    <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="analytics">集客チェック</button>
                     <button type="button" class="btn btn-sm btn-secondary" data-exec-quick="strategy-memo">集客施策メモ</button>
                   </div>
                 </div>
@@ -287,7 +283,7 @@
               </div>
             </details>
             <details class="exec-collapse exec-tower-span-full" id="exec-collapse-analytics">
-              <summary>需要・アクセス分析<span id="exec-analytics-badge" class="exec-section-badge"></span></summary>
+              <summary>需要・集客チェック<span id="exec-analytics-badge" class="exec-section-badge"></span></summary>
               <div class="exec-collapse-body">
                 <div id="exec-home-analytics-demand" class="exec-home-analytics-demand"></div>
               </div>
@@ -586,7 +582,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.14</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.15</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -1950,29 +1946,34 @@
         </div>
       </section>
 
-      <!-- サイト確認記録 -->
+      <!-- サイト確認記録（履歴・詳細のみ。貼り付け入口は集客チェックへ統合） -->
       <section id="view-external-check" class="view">
         <header class="view-header">
-          <h1>サイト確認記録</h1>
-          <p class="view-subtitle">LP・Googleビジネス・検索状況など、外部で確認した内容を記録します。</p>
+          <h1>確認履歴（旧サイト確認記録）</h1>
+          <p class="view-subtitle">集客レポートの貼り付けは「集客チェック」画面で行います。ここでは過去の確認履歴を参照できます。</p>
         </header>
 
         <div class="card card-wide card-external-check-unified">
+          <p class="external-check-notice"><strong>貼り付け入口は集客チェックに統合しました。</strong> 新しいレポートは集客チェック画面から取り込んでください。</p>
+
           <details class="external-check-help-collapse">
             <summary>サイト確認記録の説明</summary>
             <p class="external-check-notice"><strong>これは売上確定ではありません。</strong> 外部から確認した内容を記録する場所です。予定・GBP反応は参考情報として扱います。</p>
           </details>
 
-          <h2>確認結果の保存</h2>
-          <textarea id="external-check-paste" class="external-check-paste" rows="10" placeholder="【Budil貼り付け用】&#10;種別：外部チェックレポート&#10;確認日：2026-06-19&#10;..."></textarea>
-          <div class="external-check-actions">
-            <button type="button" id="btn-external-check-save" class="btn btn-sm btn-primary">保存</button>
-            <button type="button" id="btn-external-check-clear" class="btn btn-sm btn-secondary">クリア</button>
-          </div>
-          <div id="external-check-parse-warnings" class="external-check-parse-warnings"></div>
+          <details class="external-check-legacy-paste-collapse">
+            <summary>旧形式の直接保存（通常は使いません）</summary>
+            <h2>確認結果の保存</h2>
+            <textarea id="external-check-paste" class="external-check-paste" rows="10" placeholder="【Budil貼り付け用】&#10;種別：外部チェックレポート&#10;確認日：2026-06-19&#10;..."></textarea>
+            <div class="external-check-actions">
+              <button type="button" id="btn-external-check-save" class="btn btn-sm btn-primary">保存</button>
+              <button type="button" id="btn-external-check-clear" class="btn btn-sm btn-secondary">クリア</button>
+            </div>
+            <div id="external-check-parse-warnings" class="external-check-parse-warnings"></div>
+          </details>
 
           <h2 class="external-check-section-heading">改善リスト</h2>
-          <p class="external-check-actions-note">サイト確認記録から追加した改善項目です。売上確定ではありません。</p>
+          <p class="external-check-actions-note">集客チェックから追加した改善項目です。売上確定ではありません。</p>
           <div id="external-check-action-candidates" class="external-check-action-candidates-list"></div>
 
           <details class="external-check-history-collapse">
@@ -2772,11 +2773,11 @@
         </div>
       </section>
 
-      <!-- アナリティクス -->
+      <!-- 集客チェック（旧アクセス分析） -->
       <section id="view-analytics" class="view">
         <header class="view-header">
-          <h1>アクセス分析</h1>
-          <p class="view-subtitle">GA4・Search Consoleの手入力データとサイト確認記録から、自然需要とLP改善の優先順位を読む</p>
+          <h1>集客チェック</h1>
+          <p class="view-subtitle">GA4・Search Console・GBP・広告・画像404・分析済みレポートを1か所に貼り付け、解析・改善リスト・確認履歴までつなげます</p>
         </header>
 
         <div class="card card-wide card-analytics-policy">
@@ -2784,8 +2785,8 @@
         </div>
 
         <div class="card card-wide card-browser-bantou">
-          <h2>外部レポート取り込み</h2>
-          <p class="browser-bantou-lead">GA4/Search Console/GBPなどのアクセス分析結果を貼り付けて、複数ページをまとめて取り込みます。</p>
+          <h2>集客レポート貼り付け</h2>
+          <p class="browser-bantou-lead">GA4 / Search Console / GBP / 広告 / 画像404 / ChatGPT分析済みレポート / Cursor・ブラウザ番頭の確認結果をここに貼り付けます。</p>
 
           <div class="browser-bantou-section">
             <h3>アクセス確認用の文をコピー</h3>
@@ -2794,8 +2795,8 @@
           </div>
 
           <div class="browser-bantou-section">
-            <h3>アクセスレポートを貼り付け</h3>
-            <textarea id="browser-bantou-paste" class="browser-bantou-paste" rows="12" placeholder="GA4・Search Consoleなどのアクセスレポートをここに貼り付け"></textarea>
+            <h3>集客レポートを貼り付け</h3>
+            <textarea id="browser-bantou-paste" class="browser-bantou-paste" rows="12" placeholder="GA4・Search Console・分析済みレポートなどをここに貼り付け"></textarea>
             <div class="browser-bantou-actions">
               <button type="button" class="btn btn-primary btn-sm" id="btn-browser-bantou-parse">レポートを解析</button>
               <button type="button" class="btn btn-primary btn-sm" id="btn-browser-bantou-save" disabled>解析結果をまとめて保存</button>
@@ -2805,12 +2806,14 @@
           </div>
 
           <div id="browser-bantou-errors" class="browser-bantou-errors hidden"></div>
+          <div id="browser-bantou-parse-diagnostics" class="browser-bantou-parse-diagnostics hidden"></div>
 
           <div id="browser-bantou-preview" class="browser-bantou-preview hidden">
             <h3>レポート解析プレビュー</h3>
             <div id="browser-bantou-preview-kpi" class="browser-bantou-preview-kpi"></div>
             <div id="browser-bantou-preview-summary" class="browser-bantou-preview-summary"></div>
             <div id="browser-bantou-preview-pages" class="browser-bantou-preview-pages"></div>
+            <div id="browser-bantou-preview-immediate" class="browser-bantou-preview-immediate"></div>
             <div id="browser-bantou-preview-tasks" class="browser-bantou-preview-tasks"></div>
             <div id="browser-bantou-preview-demand" class="browser-bantou-preview-demand"></div>
           </div>
@@ -2818,6 +2821,14 @@
           <details class="browser-bantou-sample-details">
             <summary>サンプル出力表示</summary>
             <pre id="browser-bantou-sample-text" class="browser-bantou-sample-text"></pre>
+          </details>
+        </div>
+
+        <div class="card card-wide card-marketing-check-history">
+          <details class="marketing-check-history-collapse" open>
+            <summary>確認履歴</summary>
+            <p class="marketing-check-history-note">集客チェックで保存したレポートと、旧サイト確認記録の履歴を表示します。</p>
+            <div id="analytics-check-history" class="external-check-history-list"></div>
           </details>
         </div>
 
@@ -3542,30 +3553,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.10.14"></script>
-  <script src="js/messages.js?v=4.10.14"></script>
-  <script src="js/demand-brain.js?v=4.10.14"></script>
-  <script src="js/demand-radar.js?v=4.10.14"></script>
-  <script src="js/sales-brain.js?v=4.10.14"></script>
-  <script src="js/management-brain.js?v=4.10.14"></script>
-  <script src="js/payment-brain.js?v=4.10.14"></script>
-  <script src="js/revenue-brain.js?v=4.10.14"></script>
-  <script src="js/revenue-summary-brain.js?v=4.10.14"></script>
-  <script src="js/reception-brain.js?v=4.10.14"></script>
-  <script src="js/map-brain.js?v=4.10.14"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.10.14"></script>
-  <script src="js/external-check-brain.js?v=4.10.14"></script>
-  <script src="js/action-brain.js?v=4.10.14"></script>
-  <script src="js/work-order-brain.js?v=4.10.14"></script>
-  <script src="js/follow-up-brain.js?v=4.10.14"></script>
-  <script src="js/work-completion-brain.js?v=4.10.14"></script>
-  <script src="js/profit-brain.js?v=4.10.14"></script>
-  <script src="js/analytics-brain.js?v=4.10.14"></script>
-  <script src="js/monthly-results-brain.js?v=4.10.14"></script>
-  <script src="js/documents-brain.js?v=4.10.14"></script>
-  <script src="js/executive-brain.js?v=4.10.14"></script>
-  <script src="js/card-ocr.js?v=4.10.14"></script>
-  <script src="js/data-backup.js?v=4.10.14"></script>
-  <script src="js/app.js?v=4.10.14"></script>
+  <script src="js/storage.js?v=4.10.15"></script>
+  <script src="js/messages.js?v=4.10.15"></script>
+  <script src="js/demand-brain.js?v=4.10.15"></script>
+  <script src="js/demand-radar.js?v=4.10.15"></script>
+  <script src="js/sales-brain.js?v=4.10.15"></script>
+  <script src="js/management-brain.js?v=4.10.15"></script>
+  <script src="js/payment-brain.js?v=4.10.15"></script>
+  <script src="js/revenue-brain.js?v=4.10.15"></script>
+  <script src="js/revenue-summary-brain.js?v=4.10.15"></script>
+  <script src="js/reception-brain.js?v=4.10.15"></script>
+  <script src="js/map-brain.js?v=4.10.15"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.10.15"></script>
+  <script src="js/external-check-brain.js?v=4.10.15"></script>
+  <script src="js/action-brain.js?v=4.10.15"></script>
+  <script src="js/work-order-brain.js?v=4.10.15"></script>
+  <script src="js/follow-up-brain.js?v=4.10.15"></script>
+  <script src="js/work-completion-brain.js?v=4.10.15"></script>
+  <script src="js/profit-brain.js?v=4.10.15"></script>
+  <script src="js/analytics-brain.js?v=4.10.15"></script>
+  <script src="js/monthly-results-brain.js?v=4.10.15"></script>
+  <script src="js/documents-brain.js?v=4.10.15"></script>
+  <script src="js/executive-brain.js?v=4.10.15"></script>
+  <script src="js/card-ocr.js?v=4.10.15"></script>
+  <script src="js/data-backup.js?v=4.10.15"></script>
+  <script src="js/app.js?v=4.10.15"></script>
 </body>
 </html>

@@ -1046,7 +1046,7 @@
       ${lines.length ? `<div class="exec-analytics-lines">${lines.map(l => `<p>${esc(l)}</p>`).join('')}</div>` : ''}
       ${(s.demandLines || []).length ? `<ul class="exec-demand-lines">${s.demandLines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
       <div class="exec-work-actions">
-        <button type="button" class="btn btn-sm btn-secondary exec-home-analytics-link">アクセス分析</button>
+        <button type="button" class="btn btn-sm btn-secondary exec-home-analytics-link">集客チェック</button>
         <button type="button" class="btn btn-sm btn-secondary exec-home-pickup-link">集客施策メモ</button>
         <button type="button" class="btn btn-sm btn-secondary" id="btn-exec-browser-prompt">アクセス確認用の文をコピー</button>
       </div>`;
@@ -1465,7 +1465,7 @@
           <ol class="exec-start-guide-full" start="4">
             <li>日程を入れてカレンダー登録 → 作業後に売上確定</li>
             <li>フォロー・口コミ依頼を確認</li>
-            <li>アクセス分析で改善点を見る</li>
+            <li>集客チェックで改善点を見る</li>
           </ol>
         </details>
       </div>`;
@@ -2566,8 +2566,8 @@
     const reason = String(task.reason || '');
     const target = String(task.targetName || '');
     const key = String(task.pickupDedupeKey || '');
-    if (/外部確認|外部チェック|external-check|サイト確認/i.test(reason + target + key)) return 'サイト確認記録';
-    if (/アナリティクス|アクセス分析|外部確認\/アナリティクス|ブラウザー番頭/i.test(reason + target)) return 'アクセス分析';
+    if (/外部確認|外部チェック|external-check|サイト確認|集客チェック|marketing-check/i.test(reason + target + key)) return '集客チェック';
+    if (/アナリティクス|アクセス分析|外部確認\/アナリティクス|ブラウザー番頭/i.test(reason + target)) return '集客チェック';
     if (/経営レポート|経営メモ|経営ホーム|次の一手/i.test(reason + target)) return '経営ホーム';
     if (task.intakeId) return '受付';
     if (task.workOrderId || key.startsWith('work-order|')) return 'カレンダー登録';
@@ -3024,7 +3024,7 @@
       .map(c => ActionBrain.normalizeCandidate(c))
       .filter(c => c.status === ActionBrain.STATUS_TODO);
     if (!candidates.length) {
-      el.innerHTML = '<p class="placeholder-text">改善リストはまだありません。<br>アクセス分析・サイト確認記録・経営ホームから追加できます。</p>';
+      el.innerHTML = '<p class="placeholder-text">改善リストはまだありません。<br>集客チェック・経営ホームから追加できます。</p>';
       return;
     }
     const visible = candidates.slice(0, 3);
@@ -8582,8 +8582,8 @@
     if (!todo.length) {
       el.innerHTML = `
         <h2>改善リスト</h2>
-        <p class="placeholder-text">改善リストはまだありません。<br>アクセス分析・サイト確認記録・経営ホームの提案から追加できます。</p>
-        <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-action-candidates">サイト確認記録を見る</button>
+        <p class="placeholder-text">改善リストはまだありません。<br>集客チェック・経営ホームの提案から追加できます。</p>
+        <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-action-candidates">集客チェックを見る</button>
       `;
     } else {
       el.innerHTML = `
@@ -8591,7 +8591,7 @@
           <h2>改善リスト <span class="external-check-count-badge">${todo.length}件未対応</span></h2>
           <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-action-candidates">改善リストを見る</button>
         </div>
-        <p class="action-candidates-source-note">由来：サイト確認記録（売上確定ではありません）</p>
+        <p class="action-candidates-source-note">由来：集客チェック（売上確定ではありません）</p>
         <ul class="action-candidates-dash-list">
           ${top.map(c => `
             <li class="action-candidate-dash-item">
@@ -8610,8 +8610,7 @@
     const btn = document.getElementById('btn-dash-go-action-candidates');
     if (btn) {
       btn.addEventListener('click', () => {
-        navigateToView('external-check');
-        scrollToElement('.card-external-check-unified');
+        navigateToView('analytics', '.card-marketing-check-history');
       });
     }
     bindActionCandidateButtons(el);
@@ -8625,7 +8624,7 @@
       .filter(c => c.source === ActionBrain.SOURCE_EXTERNAL_CHECK);
 
     if (!candidates.length) {
-      el.innerHTML = '<p class="placeholder-text">改善リストはまだありません。<br>アクセス分析・サイト確認記録・経営ホームの提案から追加できます。</p>';
+      el.innerHTML = '<p class="placeholder-text">改善リストはまだありません。<br>集客チェック・経営ホームの提案から追加できます。</p>';
       return;
     }
 
@@ -8741,14 +8740,39 @@
 
   function addExternalCheckActionCandidate(reportId, title) {
     if (!reportId || !title) return;
-    const result = Storage.addActionCandidate(ActionBrain.createFromExternalCheck(reportId, title));
+    const cleanTitle = String(title || '').trim();
+    const existing = Storage.getActionCandidates().find(c =>
+      c.title === cleanTitle && c.status === ActionBrain.STATUS_TODO
+    );
+    if (existing) {
+      showAppToast('この項目は既に改善リストに追加済みです');
+      return;
+    }
+    const result = Storage.addActionCandidate(ActionBrain.createFromExternalCheck(reportId, cleanTitle));
     if (result.duplicate) {
       showAppToast('この項目は既に改善リストに追加済みです');
       return;
     }
     refreshActionCandidateViews();
     showImprovementListAddedNotice(document.getElementById('analytics-kpi-snapshot')
+      || document.querySelector('.card-browser-bantou')
       || document.querySelector('.card-external-check-latest'));
+  }
+
+  function addMarketingCheckActionCandidates(reportId, titles) {
+    let added = 0;
+    (titles || []).forEach(title => {
+      const cleanTitle = String(title || '').trim();
+      if (!cleanTitle) return;
+      const exists = Storage.getActionCandidates().some(c =>
+        c.title === cleanTitle && c.status === ActionBrain.STATUS_TODO
+      );
+      if (exists) return;
+      const result = Storage.addActionCandidate(ActionBrain.createFromExternalCheck(reportId, cleanTitle));
+      if (!result.duplicate) added++;
+    });
+    if (added) refreshActionCandidateViews();
+    return added;
   }
 
   function addExternalCheckToDailyTask(reportId, title) {
@@ -8911,7 +8935,7 @@
           <p class="external-check-dash-summary-line">保存済み：0件</p>
         </div>
         <p class="placeholder-text">【Budil貼り付け用】レポートはまだ保存されていません。</p>
-        <button type="button" class="btn btn-sm btn-primary" id="btn-dash-go-external-check">サイト確認記録を見る</button>
+        <button type="button" class="btn btn-sm btn-primary" id="btn-dash-go-external-check">集客チェックを見る</button>
       `;
     } else {
       const unconfirmedCount = countDashExternalCheckUnconfirmed(latest);
@@ -8925,7 +8949,7 @@
           <p class="external-check-dash-summary-line">未確認：${unconfirmedCount}件</p>
           <p class="external-check-dash-summary-line">改善リスト：${improvementCount}件</p>
         </div>
-        <button type="button" class="btn btn-sm btn-primary" id="btn-dash-go-external-check">サイト確認記録を見る</button>
+        <button type="button" class="btn btn-sm btn-primary" id="btn-dash-go-external-check">集客チェックを見る</button>
         <details class="external-check-dash-details">
           <summary>外部確認の詳細を開く</summary>
           <div class="external-check-dash-details-body">
@@ -8937,7 +8961,7 @@
       if (detailsBody) bindActionCandidateButtons(detailsBody);
     }
     const btn = document.getElementById('btn-dash-go-external-check');
-    if (btn) btn.addEventListener('click', () => navigateToView('external-check'));
+    if (btn) btn.addEventListener('click', () => navigateToView('analytics', '.card-marketing-check-history'));
   }
 
   function renderExternalCheckLatest() {
@@ -8948,8 +8972,8 @@
     bindActionCandidateButtons(el);
   }
 
-  function renderExternalCheckHistory() {
-    const el = document.getElementById('external-check-history');
+  function renderExternalCheckHistory(targetId) {
+    const el = document.getElementById(targetId || 'external-check-history');
     if (!el || typeof ExternalCheckBrain === 'undefined') return;
     const reports = Storage.getExternalCheckReports();
     if (!reports.length) {
@@ -11558,8 +11582,37 @@
     lastBrowserBantouPreview = preview;
     renderBrowserBantouPreview(preview);
     const saveBtn = document.getElementById('btn-browser-bantou-save');
-    if (saveBtn) saveBtn.disabled = (!preview.pages.length && !snapshotHasKpiData(preview.snapshot)) || preview.errors.length > 0;
+    if (saveBtn) saveBtn.disabled = !preview.canSave;
     return preview;
+  }
+
+  function renderBrowserBantouParseDiagnostics(preview) {
+    const el = document.getElementById('browser-bantou-parse-diagnostics');
+    if (!el) return;
+    const diag = preview && preview.parseDiagnostics;
+    if (!diag) {
+      el.innerHTML = '';
+      el.classList.add('hidden');
+      return;
+    }
+    el.classList.remove('hidden');
+    const unconfirmed = (diag.unconfirmed || []).length
+      ? `<p><strong>未確認の数値：</strong>${esc(diag.unconfirmed.join(' / '))}</p>`
+      : '<p><strong>未確認の数値：</strong>主要項目は抽出できました</p>';
+    const actions = diag.extractedActionCount
+      ? `<p><strong>改善候補：</strong>${diag.extractedActionCount}件抽出できました</p>`
+      : '<p><strong>改善候補：</strong>「今すぐやる」からはまだ抽出できていません</p>';
+    const next = (diag.nextSteps || []).length
+      ? `<ul class="browser-bantou-next-steps">${diag.nextSteps.map(s => `<li>${esc(s)}</li>`).join('')}</ul>`
+      : '';
+    el.innerHTML = `
+      <div class="browser-bantou-parse-diagnostics-body">
+        <p><strong>生レポート保存：</strong>${diag.canSaveRaw ? '可能です（解析が不完全でも保存できます）' : '貼り付け本文がありません'}</p>
+        ${actions}
+        ${unconfirmed}
+        ${next ? `<p><strong>次に確認すること：</strong></p>${next}` : ''}
+      </div>
+    `;
   }
 
   function renderBrowserBantouKpiPreview(preview) {
@@ -11624,6 +11677,36 @@
 
     if (previewPanel) previewPanel.classList.remove('hidden');
     renderBrowserBantouKpiPreview(preview);
+    renderBrowserBantouParseDiagnostics(preview);
+
+    const immediateActions = preview.immediateActions || [];
+    const immediateEl = document.getElementById('browser-bantou-preview-immediate');
+    if (immediateEl) {
+      immediateEl.innerHTML = immediateActions.length ? `
+        <h4>今すぐやる（改善リスト候補）</h4>
+        <ul class="browser-bantou-candidate-list">${immediateActions.map((t, i) => `
+          <li><span>${esc(t)}</span>
+            <button type="button" class="btn btn-sm btn-primary" data-immediate-action="${i}">改善リストに追加</button>
+          </li>`).join('')}</ul>
+        <button type="button" class="btn btn-sm btn-secondary" id="btn-browser-bantou-add-all-immediate">候補をすべて改善リストへ</button>`
+        : '';
+      immediateEl.querySelectorAll('[data-immediate-action]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const title = immediateActions[Number(btn.dataset.immediateAction)];
+          if (!title) return;
+          const reportId = preview.pendingReportId || 'marketing-check-preview';
+          addExternalCheckActionCandidate(reportId, title);
+        });
+      });
+      const allImmediateBtn = document.getElementById('btn-browser-bantou-add-all-immediate');
+      if (allImmediateBtn) {
+        allImmediateBtn.addEventListener('click', () => {
+          const reportId = preview.pendingReportId || 'marketing-check-preview';
+          const added = addMarketingCheckActionCandidates(reportId, immediateActions);
+          showAppToast(added ? `${added}件を改善リストに追加しました` : '追加できる新しい候補はありませんでした');
+        });
+      }
+    }
 
     const summaryEl = document.getElementById('browser-bantou-preview-summary');
     if (summaryEl) {
@@ -11687,11 +11770,12 @@
 
   function saveBrowserBantouImport() {
     const preview = lastBrowserBantouPreview;
-    if (!preview || (!preview.pages.length && !snapshotHasKpiData(preview.snapshot))) {
-      alert('先にレポートを解析してください。');
+    const text = document.getElementById('browser-bantou-paste')?.value || '';
+    if (!preview || (!preview.canSave && !text.trim())) {
+      alert('先にレポートを解析するか、貼り付け本文を入力してください。');
       return;
     }
-    if (preview.errors.length) {
+    if (preview.errors.length && !preview.canSave) {
       alert('解析エラーがあるため保存できません。');
       return;
     }
@@ -11703,7 +11787,6 @@
       const ok = confirm('同じ貼り付け内容のKPIスナップショットが既にあります。上書きせず新規保存しますか？');
       if (!ok) return;
     }
-    const text = document.getElementById('browser-bantou-paste')?.value || '';
     preview.pages.forEach(page => {
       Storage.addAnalyticsRecord({
         ...page,
@@ -11717,15 +11800,29 @@
         createdActionCandidateIds: []
       });
     }
+    const historyReport = AnalyticsBrain.createMarketingCheckHistoryReport(
+      { ...preview, rawText: text },
+      text
+    );
+    const savedHistory = Storage.addExternalCheckReport(historyReport);
+    const immediateTitles = preview.immediateActions || preview.todayTasks || [];
+    const addedActions = addMarketingCheckActionCandidates(savedHistory.id, immediateTitles);
     lastBrowserBantouPreview = null;
     const saveBtn = document.getElementById('btn-browser-bantou-save');
     if (saveBtn) saveBtn.disabled = true;
     renderAnalyticsView();
+    renderExternalCheckView();
     renderDashboard();
     const parts = [];
     if (preview.pages.length) parts.push(`${preview.pages.length}件のアナリティクスデータ`);
     if (savedSnapshot) parts.push('KPIスナップショット1件');
+    parts.push('確認履歴1件');
+    if (addedActions) parts.push(`改善リスト${addedActions}件`);
     alert(`${parts.join(' / ')}を保存しました。`);
+    if (addedActions) {
+      showImprovementListAddedNotice(document.getElementById('analytics-kpi-snapshot')
+        || document.querySelector('.card-browser-bantou'));
+    }
   }
 
   function addBrowserBantouTask(index) {
@@ -12009,6 +12106,7 @@
       renderAnalyticsActionsList(ctx);
       renderAnalyticsPickupBridge(ctx);
       renderBrowserBantouPrompt();
+      renderExternalCheckHistory('analytics-check-history');
     } catch (err) {
       console.error('[Budil] renderAnalyticsView', err);
     }

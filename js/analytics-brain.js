@@ -515,6 +515,280 @@ LINEクリック：0
     return items;
   },
 
+  MARKETING_SECTION_HEADINGS: [
+    '結論', '数値比較', 'Search Console', 'LP別確認', '画像404の影響',
+    '原因候補ランキング', '今すぐやる', '後でいい', 'やらない方がいい', '広告について', '最終判断'
+  ],
+
+  PERIOD_BLOCK_METRIC_MAP: [
+    ['lpSessions', ['LP表示回数', '表示回数', 'アクセス数']],
+    ['users', ['ユーザー数', 'ユーザー']],
+    ['newUsers', ['新規ユーザー', '新規ユーザー数']],
+    ['sessions', ['セッション数', 'セッション']],
+    ['events', ['イベント数']],
+    ['avgStay', ['平均滞在時間']],
+    ['organic', ['Google organic流入', 'organic流入', '自然検索', 'organic']],
+    ['cpc', ['Google cpc流入', 'cpc流入', '広告流入', 'cpc']],
+    ['direct', ['direct流入', 'direct', '直接流入']]
+  ],
+
+  isMarketingCheckText(text) {
+    const src = String(text || '');
+    return /##\s*(結論|数値比較|今すぐやる)|\d{1,2}\/\d{1,2}[〜～\-]\d{1,2}\/\d{1,2}/.test(src)
+      || /LP表示回数|Google organic|Search Console表示|画像404|今すぐやる/.test(src);
+  },
+
+  extractMarketingSection(text, heading) {
+    const escaped = String(heading || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const src = String(text || '');
+    const patterns = [
+      new RegExp(`##\\s*${escaped}\\s*\\n([\\s\\S]*?)(?=\\n##\\s|$)`, 'i'),
+      new RegExp(`【${escaped}】\\s*\\n?([\\s\\S]*?)(?=\\n【|\\n##\\s|$)`, 'i')
+    ];
+    for (const re of patterns) {
+      const m = src.match(re);
+      if (m && m[1].trim()) return m[1].trim();
+    }
+    return '';
+  },
+
+  parseMarketingSectionItems(body) {
+    const raw = String(body || '').trim();
+    if (!raw) return [];
+    const items = [];
+    raw.split('\n').forEach(line => {
+      const trimmed = line.trim().replace(/^[・•\-\*]\s*/, '').replace(/^\d+[\.\)、．]\s*/, '').trim();
+      if (trimmed && trimmed !== this.KPI_UNCONFIRMED) items.push(trimmed);
+    });
+    return items;
+  },
+
+  matchPeriodMetricKey(label) {
+    const key = String(label || '').trim();
+    for (const [metricKey, labels] of this.PERIOD_BLOCK_METRIC_MAP) {
+      if (labels.some(l => key === l || key.includes(l))) return metricKey;
+    }
+    return '';
+  },
+
+  extractPeriodBlockMetrics(block) {
+    const metrics = {};
+    String(block || '').split('\n').forEach(line => {
+      const cleaned = line.trim().replace(/^[・•\-\*]\s*/, '');
+      const field = this.extractLabelValue(cleaned);
+      if (!field) return;
+      const metricKey = this.matchPeriodMetricKey(field.key);
+      if (!metricKey) return;
+      if (metricKey === 'avgStay') metrics[metricKey] = field.value;
+      else metrics[metricKey] = this.normalizeMetricNumber(field.value);
+    });
+    return metrics;
+  },
+
+  parseComparisonPeriods(text) {
+    const periods = [];
+    const src = String(text || '');
+    const re = /(\d{1,2}\/\d{1,2})[〜～\-](\d{1,2}\/\d{1,2})[：:]\s*\n([\s\S]*?)(?=\n\d{1,2}\/\d{1,2}[〜～\-]|\n##\s|\n【|$)/g;
+    let m;
+    while ((m = re.exec(src)) !== null) {
+      periods.push({
+        label: `${m[1]}〜${m[2]}`,
+        metrics: this.extractPeriodBlockMetrics(m[3])
+      });
+    }
+    return periods;
+  },
+
+  parseSearchConsoleFromMarketing(text) {
+    const section = this.extractMarketingSection(text, 'Search Console') || String(text || '');
+    return {
+      impressions: this.extractMetricByLabels(section, [
+        'Search Console表示回数', 'SC表示回数', 'Search Console 表示回数', '表示回数'
+      ]),
+      clicks: this.extractMetricByLabels(section, [
+        'クリック数', 'SCクリック数', 'Search Console クリック数', 'Search Console クリック数'
+      ]),
+      ctr: this.extractMetricByLabels(section, ['CTR', '検索CTR', 'Search Console CTR']),
+      avgPosition: this.extractMetricByLabels(section, ['平均掲載順位', '平均順位'])
+    };
+  },
+
+  parseImage404ByLp(text) {
+    const section = this.extractMarketingSection(text, '画像404の影響') || String(text || '');
+    const items = [];
+    section.split('\n').forEach(line => {
+      const trimmed = line.trim().replace(/^[・•\-\*]\s*/, '');
+      if (!trimmed || !/画像404|404/.test(trimmed)) return;
+      const m = trimmed.match(/(.+?)[：:]\s*(?:画像404[^\d]*)?(\d+)\s*件/);
+      if (m) items.push({ pageName: m[1].trim(), count: Number(m[2]) });
+    });
+    return items.filter(i => i.pageName && Number.isFinite(i.count));
+  },
+
+  extractImmediateActions(text) {
+    const body = this.extractMarketingSection(text, '今すぐやる');
+    if (body) return this.parseMarketingSectionItems(body);
+    const alt = this.parseNumberedSection(text, '今すぐやる');
+    return alt.length ? alt : [];
+  },
+
+  parseMarketingCheckOverlay(text) {
+    const src = String(text || '').trim();
+    if (!src || !this.isMarketingCheckText(src)) return null;
+
+    const sections = {};
+    this.MARKETING_SECTION_HEADINGS.forEach(heading => {
+      const body = this.extractMarketingSection(src, heading);
+      if (body) sections[heading] = body;
+    });
+
+    const periods = this.parseComparisonPeriods(src);
+    const currentMetrics = periods.length ? periods[periods.length - 1].metrics : {};
+    const compareMetrics = periods.length > 1 ? periods[periods.length - 2].metrics : {};
+
+    return {
+      sections,
+      periods,
+      currentMetrics,
+      compareMetrics,
+      searchConsole: this.parseSearchConsoleFromMarketing(src),
+      image404: this.parseImage404ByLp(src),
+      immediateActions: this.extractImmediateActions(src)
+    };
+  },
+
+  applyMarketingCheckToSnapshot(snapshot, marketingCheck) {
+    const mk = marketingCheck || {};
+    const metrics = snapshot.metrics || {};
+    const trafficSources = snapshot.trafficSources || {};
+    const cm = mk.currentMetrics || {};
+    const comp = mk.compareMetrics || {};
+
+    if (cm.users != null) metrics.users = cm.users;
+    if (cm.newUsers != null) metrics.newUsers = cm.newUsers;
+    if (cm.sessions != null) metrics.sessions = cm.sessions;
+    if (cm.lpSessions != null) {
+      metrics.sessions = cm.lpSessions;
+      metrics.accessCount = cm.lpSessions;
+    }
+    if (cm.events != null) metrics.eventCount = cm.events;
+    if (cm.organic != null) {
+      trafficSources.organic = cm.organic;
+      metrics.searchTraffic = cm.organic;
+    }
+    if (cm.cpc != null) trafficSources.paid = cm.cpc;
+    if (cm.direct != null) trafficSources.direct = cm.direct;
+    if (comp.users != null) metrics.compareUsers = comp.users;
+    if (comp.lpSessions != null) metrics.compareLpSessions = comp.lpSessions;
+    if (comp.events != null) metrics.compareEvents = comp.events;
+
+    const sc = mk.searchConsole || {};
+    if (sc.impressions != null) metrics.searchImpressions = sc.impressions;
+    if (sc.clicks != null) metrics.searchClicks = sc.clicks;
+    if (sc.ctr != null) metrics.searchCtr = sc.ctr;
+    if (sc.avgPosition != null) metrics.searchAvgPosition = sc.avgPosition;
+
+    const pages = Array.isArray(snapshot.pages) ? snapshot.pages.slice() : [];
+    (mk.image404 || []).forEach(item => {
+      if (!pages.some(p => p.pageName === item.pageName)) {
+        pages.push({
+          pageName: item.pageName,
+          url: '',
+          views: null,
+          clicks: null,
+          image404Count: item.count
+        });
+      }
+    });
+
+    const actionTitles = [];
+    const addAction = title => {
+      const clean = String(title || '').trim();
+      if (clean && !actionTitles.includes(clean)) actionTitles.push(clean);
+    };
+    (snapshot.actionCandidates || []).forEach(addAction);
+    (mk.immediateActions || []).forEach(addAction);
+
+    snapshot.metrics = metrics;
+    snapshot.trafficSources = trafficSources;
+    snapshot.pages = pages;
+    snapshot.actionCandidates = actionTitles;
+    snapshot.marketingCheck = mk;
+    snapshot.hasData = this.hasKnownSnapshotMetric(metrics) || pages.length > 0 || actionTitles.length > 0;
+    return snapshot;
+  },
+
+  listUnconfirmedSnapshotMetrics(snapshot) {
+    const m = (snapshot && snapshot.metrics) || {};
+    const labels = [
+      ['アクセス数', m.accessCount],
+      ['ユーザー数', m.users],
+      ['イベント数', m.eventCount],
+      ['検索流入(organic)', m.searchTraffic],
+      ['cpc流入', (snapshot.trafficSources || {}).paid],
+      ['direct流入', (snapshot.trafficSources || {}).direct],
+      ['SC表示回数', m.searchImpressions],
+      ['SCクリック数', m.searchClicks],
+      ['検索CTR', m.searchCtr],
+      ['平均掲載順位', m.searchAvgPosition]
+    ];
+    return labels.filter(([, value]) => value === null || value === undefined || value === '')
+      .map(([label]) => label);
+  },
+
+  buildParseDiagnostics(parsed) {
+    const snapshot = parsed && parsed.snapshot ? parsed.snapshot : this.buildSnapshotFromReport(parsed || {});
+    const immediateActions = (parsed && parsed.marketingCheck && parsed.marketingCheck.immediateActions)
+      || (parsed && parsed.todayTasks)
+      || [];
+    const unconfirmed = this.listUnconfirmedSnapshotMetrics(snapshot);
+    const nextSteps = [];
+    if (unconfirmed.includes('アクセス数')) nextSteps.push('GA4の対象期間・LP表示回数を確認してください');
+    if (unconfirmed.some(l => /SC|検索/.test(l))) nextSteps.push('Search Consoleの表示回数・クリック数を確認してください');
+    if (unconfirmed.some(l => /organic|cpc|direct/.test(l))) nextSteps.push('流入元（organic/cpc/direct）をGA4で確認してください');
+    if (!immediateActions.length) nextSteps.push('「今すぐやる」見出し付きで改善候補を書くと改善リストへ追加しやすくなります');
+    if (!nextSteps.length) nextSteps.push('保存後、改善リストと確認履歴を確認してください');
+    return {
+      canSaveRaw: !!(parsed && String(parsed.rawText || '').trim()),
+      extractedActionCount: immediateActions.length,
+      unconfirmed,
+      nextSteps
+    };
+  },
+
+  createMarketingCheckHistoryReport(parsed, rawText) {
+    const mk = (parsed && parsed.marketingCheck) || {};
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const createdAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const summary = typeof ExternalCheckBrain !== 'undefined'
+      ? ExternalCheckBrain.emptySummary()
+      : { date: '未確認', targets: '未確認' };
+    summary.date = (parsed && parsed.date) || now.toISOString().slice(0, 10);
+    summary.targets = '集客チェック';
+    const actions = mk.immediateActions || (parsed && parsed.todayTasks) || [];
+    if (actions.length) {
+      summary.todayActions = actions;
+      summary.analyticsCandidates = actions;
+    }
+    if (mk.sections && mk.sections['結論']) {
+      summary.cautions = [String(mk.sections['結論']).split('\n')[0].slice(0, 200)];
+    }
+    if ((mk.image404 || []).length) {
+      summary.noiseCandidates = mk.image404.map(i => `${i.pageName}：画像404 ${i.count}件`);
+    }
+    return {
+      id: 'extchk-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      createdAt,
+      source: 'marketing-check',
+      rawText: String(rawText || ''),
+      summary,
+      warnings: (parsed && parsed.warnings) || [],
+      marketingCheck: mk,
+      notRevenueNote: '集客チェック由来の記録です。売上確定ではありません'
+    };
+  },
+
   parseBrowserBantouPages(text) {
     const src = String(text || '');
     const pages = [];
@@ -646,14 +920,36 @@ LINEクリック：0
 
     let pages = this.parseBrowserBantouPages(src);
     let sourceFormat = pages.length ? 'structured' : 'loose';
+    const marketingCheck = this.parseMarketingCheckOverlay(src);
     if (!pages.length) {
       pages = this.parseLooseBrowserPages(src);
       if (pages.length) warnings.push('崩れたテキスト形式のため、拾えた項目のみ取り込みます');
-      else warnings.push('ページデータを認識できませんでした。形式を確認してください');
+      else if (!marketingCheck) warnings.push('ページデータを認識できませんでした。形式を確認してください');
+      else warnings.push('ページブロックは未認識ですが、集客チェック形式として解析しました');
     }
 
-    const todayTasks = this.parseNumberedSection(src, '今日やること候補');
+    let todayTasks = this.parseNumberedSection(src, '今日やること候補');
     const demandCandidates = this.parseNumberedSection(src, '需要番頭に送る候補');
+
+    if (marketingCheck) {
+      sourceFormat = pages.length ? sourceFormat : 'marketing-check';
+      if (marketingCheck.immediateActions.length) {
+        todayTasks = [...new Set([...todayTasks, ...marketingCheck.immediateActions])];
+      }
+      if (!pages.length && marketingCheck.image404.length) {
+        pages = marketingCheck.image404.map(item => ({
+          pageName: item.pageName,
+          url: '',
+          views: 0,
+          memo: `画像404: ${item.count}件`
+        }));
+      }
+      if (marketingCheck.sections['結論'] && !overallComment) {
+        overallComment = String(marketingCheck.sections['結論']).split('\n')[0].trim();
+      }
+      const adSection = marketingCheck.sections['広告について'] || marketingCheck.sections['最終判断'] || '';
+      if (adSection && !adDecision) adDecision = adSection.split('\n')[0].trim();
+    }
 
     pages.forEach((p, i) => {
       if (!(p.pageName || '').trim()) warnings.push(`ページ${i + 1}: ページ名がありません`);
@@ -661,35 +957,37 @@ LINEクリック：0
 
     return {
       date, overallComment, adDecision, pages, todayTasks, demandCandidates,
-      warnings, errors, sourceFormat
+      warnings, errors, sourceFormat, marketingCheck, rawText: src
     };
   },
 
   KPI_UNCONFIRMED: '未確認',
 
   SNAPSHOT_METRIC_LABELS: {
-    accessCount: ['対象期間アクセス', 'アクセス数', '総アクセス', 'ページビュー', 'PV'],
+    accessCount: ['対象期間アクセス', 'アクセス数', '総アクセス', 'ページビュー', 'PV', 'LP表示回数', '表示回数'],
     users: ['ユーザー数', 'ユーザー', 'アクティブユーザー'],
     newUsers: ['新規ユーザー', '新規ユーザー数'],
-    sessions: ['セッション数', 'セッション'],
-    searchTraffic: ['検索流入', '自然検索', 'Organic Search', 'オーガニック検索'],
+    sessions: ['セッション数', 'セッション', 'LP表示回数'],
+    eventCount: ['イベント数'],
+    searchTraffic: ['検索流入', '自然検索', 'Organic Search', 'オーガニック検索', 'Google organic流入', 'organic流入', 'organic'],
     inquiryClicks: ['問い合わせ導線クリック', '問い合わせクリック', '導線クリック', 'CTAクリック合計'],
     ctaClicks: ['CTAクリック'],
     lineClicks: ['LINEクリック', 'LINEタップ'],
     phoneTaps: ['電話タップ', '電話クリック'],
-    formClicks: ['フォームクリック', 'フォーム送信クリック', '予約クリック'],
-    searchImpressions: ['検索表示回数', 'Search Console 表示回数', 'SC表示回数', '合計表示回数'],
-    searchClicks: ['検索クリック数', 'Search Console クリック数', 'SCクリック数', '合計クリック数'],
-    searchCtr: ['検索CTR', 'Search Console CTR', '平均CTR'],
+    formClicks: ['フォームクリック', 'フォーム送信クリック', '予約クリック', 'フォームクリック'],
+    searchImpressions: ['検索表示回数', 'Search Console 表示回数', 'SC表示回数', '合計表示回数', 'Search Console表示回数'],
+    searchClicks: ['検索クリック数', 'Search Console クリック数', 'SCクリック数', '合計クリック数', 'クリック数'],
+    searchCtr: ['検索CTR', 'Search Console CTR', '平均CTR', 'CTR'],
+    searchAvgPosition: ['平均掲載順位', '平均順位'],
     gbpViews: ['Googleビジネス表示', 'GBP表示', 'Googleビジネスプロフィール表示'],
     gbpClicks: ['Googleビジネスクリック', 'GBPクリック', 'Googleビジネスウェブサイトクリック'],
     gbpPhone: ['Googleビジネス電話', 'GBP電話', 'GBP電話タップ', 'Googleビジネス電話タップ']
   },
 
   SNAPSHOT_TRAFFIC_LABELS: {
-    organic: ['Organic Search', '自然検索', 'オーガニック検索'],
-    paid: ['Paid Search', '広告流入', '有料検索'],
-    direct: ['Direct', '直接流入', 'ダイレクト'],
+    organic: ['Organic Search', '自然検索', 'オーガニック検索', 'Google organic流入', 'organic流入', 'organic'],
+    paid: ['Paid Search', '広告流入', '有料検索', 'Google cpc流入', 'cpc流入', 'cpc'],
+    direct: ['Direct', '直接流入', 'ダイレクト', 'direct流入', 'direct'],
     referral: ['Referral', '参照元', 'リファラル'],
     social: ['Organic Social', 'SNS流入', 'ソーシャル']
   },
@@ -948,7 +1246,7 @@ LINEクリック：0
       warnings.push('アクセス数はページ別表示回数の合計から算出しています');
     }
     const insights = this.buildSnapshotInsights({ metrics, pages: topPages, gbp, searchConsole, rawText });
-    return {
+    let snapshot = {
       source: 'paste-import',
       periodLabel: period.periodLabel,
       periodStart: period.periodStart,
@@ -964,6 +1262,8 @@ LINEクリック：0
       actionCandidates: this.buildSnapshotActionCandidates({ metrics, pages: topPages, gbp, searchConsole, rawText }),
       hasData: this.hasKnownSnapshotMetric(metrics) || pages.length > 0
     };
+    if (r.marketingCheck) snapshot = this.applyMarketingCheckToSnapshot(snapshot, r.marketingCheck);
+    return snapshot;
   },
 
   buildSnapshotInsights(snapshot) {
@@ -1111,9 +1411,15 @@ LINEクリック：0
     const records = (report.pages || []).map(p => this.normalizeImportedAnalyticsRecord(p, meta));
     const snapshot = this.buildSnapshotFromReport(report);
     const validation = this.validateImportedRecords(records, existingRecords);
-    const errors = snapshot.hasData
+    const hasMarketingData = !!(report.marketingCheck && (
+      report.marketingCheck.immediateActions.length
+      || Object.keys(report.marketingCheck.currentMetrics || {}).length
+      || (report.marketingCheck.image404 || []).length
+    ));
+    const errors = (snapshot.hasData || hasMarketingData)
       ? validation.errors.filter(e => e !== '保存できるページがありません')
       : validation.errors;
+    const diagnostics = this.buildParseDiagnostics({ ...report, snapshot });
     return {
       date: report.date,
       overallComment: report.overallComment || '',
@@ -1123,10 +1429,14 @@ LINEクリック：0
       snapshot,
       todayTasks: report.todayTasks || [],
       demandCandidates: report.demandCandidates || [],
+      marketingCheck: report.marketingCheck || null,
+      immediateActions: (report.marketingCheck && report.marketingCheck.immediateActions) || [],
       warnings: [...(report.warnings || []), ...validation.warnings],
       errors: [...(report.errors || []), ...errors],
       duplicates: validation.duplicates,
-      sourceFormat: report.sourceFormat || 'structured'
+      sourceFormat: report.sourceFormat || 'structured',
+      parseDiagnostics: diagnostics,
+      canSave: records.length > 0 || snapshot.hasData || diagnostics.canSaveRaw
     };
   },
 
@@ -1511,7 +1821,7 @@ LINEクリック：
     };
   },
 
-  POLICY_TEXT: '広告・集客支援は広告費を使った後の判断用です。現段階では、まず自然に見られているページ・検索需要を読み、LP・記事・SNS・導線を改善してから広告を乗せる方針です。外部確認レポートのGA4/Search Console/GBP結果を貼り付けて取り込めます。'
+  POLICY_TEXT: '広告・集客支援は広告費を使った後の判断用です。現段階では、まず自然に見られているページ・検索需要を読み、LP・記事・SNS・導線を改善してから広告を乗せる方針です。集客チェック画面にGA4/Search Console/GBP/広告/画像404/分析済みレポートを貼り付けて取り込めます。'
 };
 
 function eventsLow(record) {

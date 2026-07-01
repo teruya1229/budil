@@ -10939,7 +10939,34 @@ body.sales-page {
 }
 
 /* v4.10.11 直近予定整合 */
-/* v4.10.14 粗利率を利益計算に反映 */
+/* v4.10.15 集客チェック貼り付け入口統合 */
+.browser-bantou-parse-diagnostics {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #f8fbff;
+  font-size: 0.92rem;
+}
+
+.browser-bantou-parse-diagnostics.hidden {
+  display: none;
+}
+
+.browser-bantou-next-steps {
+  margin: 8px 0 0 18px;
+  padding: 0;
+}
+
+.marketing-check-history-note {
+  margin: 0 0 12px;
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.external-check-legacy-paste-collapse {
+  margin: 12px 0;
+}
 .calendar-week-scope-note {
   color: #94a3b8;
   font-size: 0.85rem;

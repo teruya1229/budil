@@ -20,7 +20,6 @@ const ExecutiveBrain = {
     { id: 'revenue', label: '売上管理', view: 'revenue', tier: 'primary' },
     { id: 'analytics', label: '集客管理', view: 'analytics', tier: 'primary' },
     { id: 'monthly-results', label: '月次実績入力', view: 'monthly-results', tier: 'secondary' },
-    { id: 'external-check', label: 'サイト確認記録', view: 'external-check', tier: 'secondary' },
     { id: 'morning-report', label: '朝レポート', action: 'morning-report', tier: 'secondary' }
   ],
 
