@@ -10066,8 +10066,9 @@
       <div class="profit-summary-item"><span>経費入力</span><strong>今月${expenseCount}件</strong></div>
       <div class="profit-summary-item"><span>作業予定見込み売上</span><strong>${esc(ProfitBrain.formatYen(s.workOrderEstimate))}</strong></div>
       <div class="profit-summary-item"><span>見込み利益</span><strong>${esc(ProfitBrain.formatYen(s.forecastProfit))}</strong></div>
+      <div class="profit-summary-item"><span>仲介料・控除（粗利率）</span><strong>${esc(ProfitBrain.formatYen(s.marginDeductionTotal || 0))}</strong></div>
       <div class="profit-summary-item"><span>広告費</span><strong>${esc(ProfitBrain.formatYen(s.adExpense))}</strong></div>
-      <div class="profit-summary-item"><span>手数料</span><strong>${esc(ProfitBrain.formatYen(s.feeExpense))}</strong></div>
+      <div class="profit-summary-item"><span>仲介料・手数料</span><strong>${esc(ProfitBrain.formatYen(s.feeExpense))}</strong></div>
       <div class="profit-summary-item"><span>外注費</span><strong>${esc(ProfitBrain.formatYen(s.outsourceExpense))}</strong></div>
       <div class="profit-summary-item"><span>未紐付け支出</span><strong>${s.usesMonthlyResult ? '—' : `${s.unlinkedCount}件（${esc(ProfitBrain.formatYen(s.unlinkedTotal))}）`}</strong></div>
       ${monthlyBrief}`;
@@ -10472,7 +10473,7 @@
       <td>${esc(ProfitBrain.formatYen(r.expenseTotal))}</td>
       <td>${esc(ProfitBrain.formatYen(r.grossProfit))}</td>
       <td>${esc(ProfitBrain.formatRate(r.grossRate))}</td>
-      <td>${r.label ? `<span class="profit-label profit-label-${esc({ '粗利良好': 'good', '原価注意': 'caution', '赤字注意': 'deficit', '支出未紐付け': 'unlinked' }[r.label] || 'default')}">${esc(r.label)}</span>` : '—'}</td>
+      <td>${r.label ? `<span class="profit-label profit-label-${esc({ '粗利良好': 'good', '原価注意': 'caution', '赤字注意': 'deficit', '支出未紐付け': 'unlinked', '粗利率未設定': 'unset' }[r.label] || 'default')}">${esc(r.label)}</span>` : '—'}</td>
     </tr>`).join('')}</tbody></table>`;
   }
 

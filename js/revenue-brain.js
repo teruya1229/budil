@@ -126,6 +126,32 @@ const RevenueBrain = {
     return (records || []).map(r => this.normalizeRevenueRecord(r));
   },
 
+  resolveGrossMarginRate(record) {
+    const item = record && typeof record === 'object' ? record : {};
+    const raw = item.grossMarginRate;
+    if (raw !== '' && raw != null && !Number.isNaN(Number(raw))) {
+      const rate = Number(raw);
+      if (rate >= 0 && rate <= 100) return rate;
+    }
+    const fromSource = this.getDefaultGrossProfitRateBySource(item.source);
+    return fromSource != null ? fromSource : null;
+  },
+
+  computeMarginProfit(amount, rate) {
+    const amt = Number(amount) || 0;
+    const r = Number(rate);
+    if (!Number.isFinite(r) || r < 0 || amt <= 0) return 0;
+    return Math.round(amt * Math.min(r, 100) / 100);
+  },
+
+  computeDeductionAmount(amount, rate) {
+    const amt = Number(amount) || 0;
+    if (amt <= 0 || rate == null) return 0;
+    const r = Number(rate);
+    if (!Number.isFinite(r) || r < 0) return 0;
+    return Math.max(0, amt - this.computeMarginProfit(amt, r));
+  },
+
   getRevenueRecordsByLeadId(leadId, records) {
     if (!leadId) return [];
     return this.normalizeRevenueRecords(records).filter(r => r.leadId === leadId);

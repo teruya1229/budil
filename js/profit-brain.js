@@ -185,11 +185,71 @@ const ProfitBrain = {
 
   getRevenueProfitLabel(row) {
     if (!row) return '';
-    if (row.expenseTotal <= 0 && row.revenueAmount > 0) return '支出未紐付け';
+    if (row.marginUnset) return '粗利率未設定';
+    if (row.expenseTotal <= 0 && row.revenueAmount > 0 && row.marginRate == null) return '支出未紐付け';
     if (row.grossProfit < 0) return '赤字注意';
     if (row.grossRate < 40) return '原価注意';
     if (row.grossRate >= 65) return '粗利良好';
     return '';
+  },
+
+  computeRevenueRowProfit(revenue, expenseTotal) {
+    const revenueAmount = Number(revenue && revenue.amount || 0);
+    const exp = Number(expenseTotal) || 0;
+    const rate = typeof RevenueBrain !== 'undefined'
+      ? RevenueBrain.resolveGrossMarginRate(revenue)
+      : null;
+    if (rate != null) {
+      const marginProfit = RevenueBrain.computeMarginProfit(revenueAmount, rate);
+      const deductionAmount = Math.max(0, revenueAmount - marginProfit);
+      const grossProfit = marginProfit - exp;
+      const grossRate = revenueAmount > 0 ? (marginProfit / revenueAmount) * 100 : 0;
+      return {
+        marginProfit,
+        deductionAmount,
+        grossProfit,
+        grossRate,
+        marginRate: rate,
+        marginUnset: false
+      };
+    }
+    const grossProfit = revenueAmount - exp;
+    return {
+      marginProfit: revenueAmount,
+      deductionAmount: 0,
+      grossProfit,
+      grossRate: revenueAmount > 0 ? (grossProfit / revenueAmount) * 100 : 0,
+      marginRate: null,
+      marginUnset: revenueAmount > 0 && exp <= 0
+    };
+  },
+
+  computeWorkOrderForecastProfit(workOrder, expenseTotal) {
+    const estimate = Number(workOrder && workOrder.estimateAmount || 0);
+    const exp = Number(expenseTotal) || 0;
+    const rate = typeof RevenueBrain !== 'undefined'
+      ? RevenueBrain.resolveGrossMarginRate({
+        source: workOrder && workOrder.source,
+        grossMarginRate: workOrder && workOrder.grossMarginRate
+      })
+      : null;
+    let marginProfit;
+    let forecastProfit;
+    if (rate != null) {
+      marginProfit = RevenueBrain.computeMarginProfit(estimate, rate);
+      forecastProfit = marginProfit - exp;
+    } else {
+      marginProfit = estimate;
+      forecastProfit = estimate - exp;
+    }
+    if (estimate > 0) forecastProfit = Math.min(forecastProfit, marginProfit);
+    return {
+      marginProfit,
+      deductionAmount: rate != null ? Math.max(0, estimate - marginProfit) : 0,
+      forecastProfit,
+      marginRate: rate,
+      marginUnset: estimate > 0 && rate == null && exp <= 0
+    };
   },
 
   getRevenueProfitRows(revenues, expenses, leads, workOrders) {
@@ -200,9 +260,8 @@ const ProfitBrain = {
       const linked = this.getExpensesForRevenue(r.id, expenses, workOrders);
       const revenueAmount = Number(r.amount || 0);
       const expenseTotal = this.sumAmount(linked);
-      const grossProfit = revenueAmount - expenseTotal;
-      const grossRate = revenueAmount > 0 ? (grossProfit / revenueAmount) * 100 : 0;
-      return {
+      const profit = this.computeRevenueRowProfit(r, expenseTotal);
+      const row = {
         revenueId: r.id,
         workDate: r.workDate || '',
         customerName: r.customerName || '',
@@ -210,11 +269,16 @@ const ProfitBrain = {
         source: r.source || '',
         revenueAmount,
         expenseTotal,
-        grossProfit,
-        grossRate,
-        label: this.getRevenueProfitLabel({ revenueAmount, expenseTotal, grossProfit, grossRate }),
+        marginProfit: profit.marginProfit,
+        deductionAmount: profit.deductionAmount,
+        grossProfit: profit.grossProfit,
+        grossRate: profit.grossRate,
+        marginRate: profit.marginRate,
+        marginUnset: profit.marginUnset,
         leadId: r.leadId || ''
       };
+      row.label = this.getRevenueProfitLabel(row);
+      return row;
     });
   },
 
@@ -245,7 +309,8 @@ const ProfitBrain = {
         const linked = this.getExpensesForWorkOrder(w.id, expenses);
         const estimate = Number(w.estimateAmount || 0);
         const expenseTotal = this.sumAmount(linked);
-        const forecastProfit = estimate - expenseTotal;
+        const woProfit = this.computeWorkOrderForecastProfit(w, expenseTotal);
+        const forecastProfit = woProfit.forecastProfit;
         const area = this.getWorkOrderArea(w, leads);
         const distanceClass = typeof MapBrain !== 'undefined'
           ? MapBrain.classifyAreaDistance(area, w.address || '')
@@ -268,6 +333,10 @@ const ProfitBrain = {
           serviceText: w.serviceText || '',
           estimate,
           expenseTotal,
+          marginProfit: woProfit.marginProfit,
+          deductionAmount: woProfit.deductionAmount,
+          marginRate: woProfit.marginRate,
+          marginUnset: woProfit.marginUnset,
           forecastProfit,
           area,
           distanceClass,
@@ -292,8 +361,14 @@ const ProfitBrain = {
     const monthExpenses = this.filterMonthExpenses(expenses, monthKey);
     const monthRevenue = this.sumAmount(monthRevenues);
     const monthExpense = this.sumAmount(monthExpenses);
-    const monthGrossProfit = monthRevenue - monthExpense;
-    const monthGrossRate = monthRevenue > 0 ? (monthGrossProfit / monthRevenue) * 100 : 0;
+    const monthProfitDetails = monthRevenues.map(r => {
+      const linked = this.getExpensesForRevenue(r.id, expenses, workOrders);
+      return this.computeRevenueRowProfit(r, this.sumAmount(linked));
+    });
+    const monthMarginGross = monthProfitDetails.reduce((n, d) => n + d.marginProfit, 0);
+    const marginDeductionTotal = monthProfitDetails.reduce((n, d) => n + d.deductionAmount, 0);
+    const monthGrossProfit = monthMarginGross - monthExpense;
+    const monthGrossRate = monthRevenue > 0 ? (monthMarginGross / monthRevenue) * 100 : 0;
 
     const adExpense = this.sumAmount(monthExpenses.filter(e => e.category === '広告費'));
     const feeExpense = this.sumAmount(monthExpenses.filter(e => e.category === '手数料'));
@@ -309,7 +384,18 @@ const ProfitBrain = {
       && w.scheduledDate && w.scheduledDate.startsWith(monthKey)
     );
     const workOrderEstimate = monthWorkOrders.reduce((n, w) => n + Number(w.estimateAmount || 0), 0);
-    const forecastProfit = monthGrossProfit + workOrderEstimate;
+    const workOrderForecastProfit = monthWorkOrders.reduce((n, w) => {
+      const exp = this.sumAmount(this.getExpensesForWorkOrder(w.id, expenses));
+      return n + this.computeWorkOrderForecastProfit(w, exp).forecastProfit;
+    }, 0);
+    let forecastProfit = monthGrossProfit + workOrderForecastProfit;
+    const maxForecastProfit = monthMarginGross + monthWorkOrders.reduce((n, w) => {
+      const exp = this.sumAmount(this.getExpensesForWorkOrder(w.id, expenses));
+      return n + this.computeWorkOrderForecastProfit(w, exp).marginProfit;
+    }, 0) - monthExpense;
+    if (Number.isFinite(maxForecastProfit)) {
+      forecastProfit = Math.min(forecastProfit, maxForecastProfit);
+    }
 
     return {
       monthKey,
@@ -317,7 +403,10 @@ const ProfitBrain = {
       monthExpense,
       monthGrossProfit,
       monthGrossRate,
+      monthMarginGross,
+      marginDeductionTotal,
       workOrderEstimate,
+      workOrderForecastProfit,
       forecastProfit,
       adExpense,
       feeExpense,
@@ -354,9 +443,10 @@ const ProfitBrain = {
       const g = ensure(service);
       const est = Number(w.estimateAmount || 0);
       const exp = this.sumAmount(this.getExpensesForWorkOrder(w.id, expenses));
+      const woProfit = this.computeWorkOrderForecastProfit(w, exp);
       g.revenueTotal += est;
       g.expenseTotal += exp;
-      g.grossProfit += est - exp;
+      g.grossProfit += woProfit.forecastProfit;
     });
 
     return Object.values(groups).map(g => {
@@ -496,7 +586,8 @@ const ProfitBrain = {
       if (monthly) {
         summary = MonthlyResultsBrain.buildProfitSummaryFromMonthly(monthly, {
           expenses: ctx.expenses,
-          workOrderEstimate: baseSummary.workOrderEstimate
+          workOrderEstimate: baseSummary.workOrderEstimate,
+          workOrderForecastProfit: baseSummary.workOrderForecastProfit
         });
       }
     }

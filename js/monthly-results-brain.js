@@ -193,6 +193,7 @@ const MonthlyResultsBrain = {
     const n = this.normalizeRecord(monthlyRecord);
     const monthKey = n.month;
     const workOrderEstimate = Number(opts && opts.workOrderEstimate) || 0;
+    const workOrderForecastProfit = Number(opts && opts.workOrderForecastProfit) || 0;
     const adExpense = this.getAdExpenseFromDetail(opts && opts.expenses, monthKey);
     const monthExpense = this.totalExpenseFromRecord(n);
     const monthGrossRate = n.sales > 0 ? (n.profit / n.sales) * 100 : 0;
@@ -203,7 +204,8 @@ const MonthlyResultsBrain = {
       monthGrossProfit: n.profit,
       monthGrossRate,
       workOrderEstimate,
-      forecastProfit: n.profit + workOrderEstimate,
+      workOrderForecastProfit,
+      forecastProfit: n.profit + workOrderForecastProfit,
       adExpense,
       feeExpense: n.brokerFee,
       outsourceExpense: n.outsourcingCost,

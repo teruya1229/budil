@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.12 — Google Calendar source-of-truth flow simplification verification.
+ * Budil v4.10.13 — Google Calendar source-of-truth flow simplification verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -12,7 +12,7 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-console.log('== v4.10.12 calendar source flow simplification ==');
+console.log('== v4.10.13 calendar source flow simplification ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -21,7 +21,7 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.12'), 'index.html should show v4.10.12');
+assert(indexHtml.includes('v4.10.13'), 'index.html should show v4.10.13');
 assert(indexHtml.includes('受付・予定確認'), 'calendar registration view should be renamed');
 assert(
   indexHtml.includes('Googleカレンダー登録後の予定をBudilで確認'),
@@ -100,10 +100,10 @@ assert(!appJs.includes('unlinked-revenue'), 'v4.10.4 unlinked revenue prompts sh
 assert(indexHtml.includes('btn-calendar-candidate-json-import'), 'v4.10.1 JSON import should remain');
 assert(!appJs.includes('localStorage.clear()'), 'localStorage.clear must not be used');
 
-assert(statusMd.includes('v4.10.12'), 'status.md should document v4.10.12');
-assert(handoffMd.includes('v4.10.12'), 'handoff.md should document v4.10.12');
-assert(decisionLog.includes('v4.10.12'), 'decision-log.md should record v4.10.12');
+assert(statusMd.includes('v4.10.13'), 'status.md should document v4.10.13');
+assert(handoffMd.includes('v4.10.13'), 'handoff.md should document v4.10.13');
+assert(decisionLog.includes('v4.10.13'), 'decision-log.md should record v4.10.13');
 
 execSync('node scripts/verify-v4105-simple-daily-and-analysis-split.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('All v4.10.12 calendar source flow simplification checks passed.');
+console.log('All v4.10.13 calendar source flow simplification checks passed.');

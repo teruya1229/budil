@@ -6354,6 +6354,7 @@ body {
 .profit-label-caution { background: #fef3c7; color: #92400e; }
 .profit-label-deficit { background: #fee2e2; color: #991b1b; }
 .profit-label-unlinked { background: #f1f5f9; color: #475569; }
+.profit-label-unset { background: #fef3c7; color: #92400e; }
 
 .mgmt-profit-list {
   margin: 0;
@@ -10904,7 +10905,7 @@ body.sales-page {
 }
 
 /* v4.10.11 直近予定整合 */
-/* v4.10.12 売上明細 二重計上ガード */
+/* v4.10.13 粗利率を利益計算に反映 */
 .calendar-week-scope-note {
   color: #94a3b8;
   font-size: 0.85rem;
