@@ -24,7 +24,7 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.17'), 'index.html should show v4.10.17');
+assert(indexHtml.includes('v4.10.18'), 'index.html should show v4.10.18');
 assert(indexHtml.includes('id="view-revenue-analysis"'), 'revenue analysis view should exist');
 assert(indexHtml.includes('売上分析'), 'nav or header should link to 売上分析');
 
@@ -110,9 +110,9 @@ assert(indexHtml.includes('btn-calendar-candidate-json-import'), 'v4.10.1 JSON i
 assert(css.includes('reconciliation-action-card'), 'styles for reconciliation action card');
 assert(css.includes('expense-advanced-settings'), 'styles for expense advanced settings');
 
-assert(statusMd.includes('v4.10.17'), 'status.md should document v4.10.17');
-assert(handoffMd.includes('v4.10.17'), 'handoff.md should document v4.10.17');
-assert(decisionLog.includes('v4.10.17'), 'decision-log.md should record v4.10.17');
+assert(statusMd.includes('v4.10.18'), 'status.md should document v4.10.18');
+assert(handoffMd.includes('v4.10.18'), 'handoff.md should document v4.10.18');
+assert(decisionLog.includes('v4.10.18'), 'decision-log.md should record v4.10.18');
 
 execSync('node scripts/verify-v4104-action-flow-simplification.mjs', { cwd: root, stdio: 'inherit' });
 

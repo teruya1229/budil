@@ -24,7 +24,7 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.17'), 'index.html should show v4.10.17');
+assert(indexHtml.includes('v4.10.18'), 'index.html should show v4.10.18');
 assert(!indexHtml.includes('<option value="完了">完了</option>'), 'revenue status select should not include 完了');
 assert(
   revenueBrain.includes('displayRevenueStatus') && revenueBrain.includes("status === '完了'"),
@@ -92,9 +92,9 @@ assert(
 assert(indexHtml.includes('btn-calendar-candidate-json-import'), 'v4.10.1 JSON import button should remain');
 assert(indexHtml.includes('btn-calendar-candidate-parse'), 'paste import button should remain');
 
-assert(statusMd.includes('v4.10.17'), 'status.md should document v4.10.17');
-assert(handoffMd.includes('v4.10.17'), 'handoff.md should document v4.10.17');
-assert(decisionLog.includes('v4.10.17'), 'decision-log.md should record v4.10.17');
+assert(statusMd.includes('v4.10.18'), 'status.md should document v4.10.18');
+assert(handoffMd.includes('v4.10.18'), 'handoff.md should document v4.10.18');
+assert(decisionLog.includes('v4.10.18'), 'decision-log.md should record v4.10.18');
 
 assert(
   css.includes('@media (max-width: 390px)') || css.includes('overflow-x: hidden') || css.includes('overflow-x: clip'),

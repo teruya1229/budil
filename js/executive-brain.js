@@ -15,10 +15,12 @@ const ExecutiveBrain = {
   ],
 
   QUICK_LINKS: [
+    { id: 'schedule-import', label: '予定取り込み', action: 'schedule-import', tier: 'primary' },
+    { id: 'revenue-queue', label: '売上確定待ち', action: 'revenue-queue', tier: 'primary' },
     { id: 'tasks', label: '毎日やること', action: 'tasks', tier: 'primary' },
-    { id: 'reception', label: 'カレンダー登録', view: 'reception', tier: 'primary' },
-    { id: 'revenue', label: '売上管理', view: 'revenue', tier: 'primary' },
-    { id: 'analytics', label: '集客管理', view: 'analytics', tier: 'primary' },
+    { id: 'revenue', label: '売上管理', action: 'revenue-view', tier: 'primary' },
+    { id: 'reception', label: 'カレンダー登録', view: 'reception', tier: 'secondary' },
+    { id: 'analytics', label: '集客管理', view: 'analytics', tier: 'secondary' },
     { id: 'monthly-results', label: '月次実績入力', view: 'monthly-results', tier: 'secondary' },
     { id: 'morning-report', label: '朝レポート', action: 'morning-report', tier: 'secondary' }
   ],

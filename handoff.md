@@ -16,9 +16,9 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.10.17 |
-| v4.10.17 本体修正commit | df6786878ed0b934cc3da455e799292b6a4a34e4 |
-| handoff 正本更新 | message: `docs: update handoff for v4.10.17` |
+| 最新バージョン | v4.10.18 |
+| v4.10.18 本体修正commit | （commit後に記入） |
+| handoff 正本更新 | message: `docs: update handoff for v4.10.18` |
 | ブランチ | `main` push 済み |
 
 ## Firebase / Functions 下書き（作業ツリー外・保留）
@@ -47,6 +47,13 @@ output/budil-calendar-events.json
 
 - Firebase / Functions API 案（`hub/functions`）は **一旦保留**。将来候補としてコードは残置
 - v4.10.1 の JSON ファイル取り込み・貼り付け取り込みは維持
+
+## v4.10.18で入ったもの
+
+- はじめてガイドの主3ステップを予定取り込み・売上確定待ち・毎日やること中心に整理
+- 初回導線・経営ホームクイック導線から売上手入力主ボタンを外し、例外操作 details へ退避（機能維持）
+- verify `scripts/verify-v41018-calendar-first-onboarding.mjs`
+- cache buster を v4.10.18 に更新
 
 ## v4.10.17で入ったもの
 

@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.17 — final operational polish verification.
+ * Budil v4.10.18 — final operational polish verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -12,7 +12,7 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-console.log('== v4.10.17 final operational polish ==');
+console.log('== v4.10.18 final operational polish ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -22,8 +22,8 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.17'), 'index.html should show v4.10.17');
-assert(indexHtml.includes('js/app.js?v=4.10.17'), 'app.js cache buster should be v4.10.17');
+assert(indexHtml.includes('v4.10.18'), 'index.html should show v4.10.18');
+assert(indexHtml.includes('js/app.js?v=4.10.18'), 'app.js cache buster should be v4.10.18');
 
 const forbiddenUiTerms = ['売上登録', '作業後確定待ち', '作業後売上確定'];
 for (const term of forbiddenUiTerms) {
@@ -53,13 +53,13 @@ assert(indexHtml.includes('id="view-revenue-analysis"'), 'v4.10.5 revenue analys
 assert(appJs.includes('renderRevenueConfirmationQueueBlock'), 'v4.10.8 revenue queue block maintained');
 assert(appJs.includes('sortByScheduledDateTimeAsc'), 'v4.10.7 date sort should remain');
 
-assert(css.includes('v4.10.17'), 'css should include v4.10.17 polish styles');
+assert(css.includes('v4.10.18'), 'css should include v4.10.18 polish styles');
 assert(css.includes('calendar-candidate-saved-more'), 'css should style imported schedule detail actions');
 
-assert(statusMd.includes('v4.10.17'), 'status.md should document v4.10.17');
-assert(handoffMd.includes('v4.10.17'), 'handoff.md should document v4.10.17');
-assert(decisionLog.includes('v4.10.17'), 'decision-log.md should record v4.10.17');
+assert(statusMd.includes('v4.10.18'), 'status.md should document v4.10.18');
+assert(handoffMd.includes('v4.10.18'), 'handoff.md should document v4.10.18');
+assert(decisionLog.includes('v4.10.18'), 'decision-log.md should record v4.10.18');
 
 execSync('node scripts/verify-v4108-operational-consistency.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('All v4.10.17 final operational polish checks passed.');
+console.log('All v4.10.18 final operational polish checks passed.');

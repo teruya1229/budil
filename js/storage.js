@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.10.17',
+  BUDIL_VERSION: 'v4.10.18',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -2394,11 +2394,16 @@ const Storage = {
     const doneCount = manual.filter(t => t.status === 'done').length
       + states.filter(t => t.status === 'done').length;
     const settings = this.getSettings();
+    const workOrders = this.getWorkOrders().filter(w => !this.isDemoOrTestFlag(w));
+    const today = new Date().toISOString().slice(0, 10);
     return {
       businessProfile: !!(profile && profile.businessName),
       monthlyTarget: monthlyTarget > 0,
       leads: leads.length > 0,
       revenue: revenues.length > 0,
+      calendarImport: workOrders.length > 0,
+      revenueQueue: revenues.length > 0
+        || workOrders.some(wo => (wo.scheduledDate || '') <= today),
       pickups: pickups.length >= 3,
       reception: intakes.length > 0,
       dailyTasks: manual.length + states.length > 0,

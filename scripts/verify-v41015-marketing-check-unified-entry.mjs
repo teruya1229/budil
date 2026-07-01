@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.17 — marketing check unified paste entry verification.
+ * Budil v4.10.18 — marketing check unified paste entry verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -120,7 +120,7 @@ for (const file of ['app.js', 'analytics-brain.js', 'external-check-brain.js', '
   execSync(`node --check "${join(root, 'js', file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.17 marketing check unified entry ==');
+console.log('== v4.10.18 marketing check unified entry ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -131,10 +131,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.17'), 'index.html should show v4.10.17');
-assert(indexHtml.includes('js/app.js?v=4.10.17'), 'app.js cache buster should be v4.10.17');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.17'"), 'storage.js version should be v4.10.17');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.17'"), 'data-backup version should be v4.10.17');
+assert(indexHtml.includes('v4.10.18'), 'index.html should show v4.10.18');
+assert(indexHtml.includes('js/app.js?v=4.10.18'), 'app.js cache buster should be v4.10.18');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.18'"), 'storage.js version should be v4.10.18');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.18'"), 'data-backup version should be v4.10.18');
 
 assert(indexHtml.includes('集客チェック'), 'index.html should use 集客チェック label');
 assert(indexHtml.includes('id="browser-bantou-paste"'), 'main paste textarea should exist');
@@ -277,8 +277,8 @@ console.log('== v4.10.13 profit rate calculation regression ==');
 console.log('== v4.10.12 duplicate guard regression ==');
 assert(storageJs.includes('findActionCandidateByDedupe'), 'duplicate guard helper should remain');
 
-assert(statusMd.includes('v4.10.17'), 'status.md should document v4.10.17');
-assert(handoffMd.includes('v4.10.17'), 'handoff.md should document v4.10.17');
-assert(decisionLog.includes('v4.10.17'), 'decision-log.md should record v4.10.17');
+assert(statusMd.includes('v4.10.18'), 'status.md should document v4.10.18');
+assert(handoffMd.includes('v4.10.18'), 'handoff.md should document v4.10.18');
+assert(decisionLog.includes('v4.10.18'), 'decision-log.md should record v4.10.18');
 
-console.log('All v4.10.17 marketing check unified entry checks passed.');
+console.log('All v4.10.18 marketing check unified entry checks passed.');

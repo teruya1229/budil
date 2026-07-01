@@ -1132,7 +1132,13 @@
     const map = {
       reception: goToReception,
       'work-order': goToWorkOrder,
-      revenue: goToAddRevenue,
+      'schedule-import': () => navigateToView('calendar-candidate'),
+      'revenue-queue': () => {
+        navigateToView('dashboard');
+        setTimeout(() => scrollToElement('#daily-section-revenue-queue'), 120);
+      },
+      'revenue-view': () => navigateToView('revenue'),
+      revenue: () => navigateToView('revenue'),
       tasks: () => scrollToElement('.card-daily-action-tasks'),
       profit: goToProfit,
       'follow-up': goToFollowUp,
@@ -1441,7 +1447,7 @@
     const collapse = document.getElementById('exec-home-start-collapse');
     if (!el) return;
     const status = Storage.getOnboardingStatus();
-    const doneCount = ONBOARDING_STEPS.filter(s => status[s.key]).length;
+    const doneCount = ONBOARDING_PRIMARY_STEPS.filter(s => status[s.key]).length;
     const showGuide = isEmpty || doneCount < 3;
     if (!showGuide) {
       el.innerHTML = '';
@@ -1911,7 +1917,7 @@
     }
     if (!lines.length) {
       if (!opts.brief) {
-        el.innerHTML = '<p class="placeholder-text">データが揃うと、今月の状況と優先アクションをここに表示します。まずは営業先と売上明細を1件ずつ追加してみましょう。</p>';
+        el.innerHTML = '<p class="placeholder-text">データが揃うと、今月の状況と優先アクションをここに表示します。まずは予定取り込みと売上確定待ちを確認してみましょう。</p>';
       } else {
         el.innerHTML = '';
       }
@@ -3596,16 +3602,23 @@
     }
   }
 
-  const ONBOARDING_STEPS = [
+  const ONBOARDING_PRIMARY_STEPS = [
+    { key: 'calendarImport', label: 'Googleカレンダー予定を取り込む', btn: '予定取り込み', action: 'calendar-import' },
+    { key: 'revenueQueue', label: '売上確定待ちを確認する', btn: '売上確定待ち', action: 'revenue-queue' },
+    { key: 'dailyTasks', label: '毎日やることを確認する', btn: '毎日やること', action: 'daily-tasks' }
+  ];
+
+  const ONBOARDING_MORE_STEPS = [
     { key: 'businessProfile', label: '事業プロフィールを設定', btn: '設定する', action: 'profile' },
     { key: 'monthlyTarget', label: '月間売上目標を設定', btn: '設定する', action: 'target' },
     { key: 'leads', label: '営業先を1件登録', btn: '登録する', action: 'lead' },
-    { key: 'revenue', label: '売上明細を1件追加', btn: '追加する', action: 'revenue' },
     { key: 'pickups', label: 'クロクロ需要を3件取り込み', btn: '開く', action: 'pickup' },
     { key: 'reception', label: 'AI番頭受付を1件取り込む', btn: '開く', action: 'reception' },
     { key: 'taskCompleted', label: '毎日やることを1件済ませる', btn: '開く', action: 'task' },
     { key: 'reportGenerated', label: '経営レポートをコピー', btn: 'コピーする', action: 'report' }
   ];
+
+  const ONBOARDING_STEPS = ONBOARDING_PRIMARY_STEPS.concat(ONBOARDING_MORE_STEPS);
 
   const PRODUCT_OVERVIEW_ITEMS = [
     { title: '売上を見える化', desc: '月間目標・達成率・売上明細を確認', action: 'revenue' },
@@ -3629,6 +3642,17 @@
     if (action === 'target') return goToRevenueTarget();
     if (action === 'lead') return goToAddLead();
     if (action === 'revenue') return goToAddRevenue();
+    if (action === 'calendar-import') return navigateToView('calendar-candidate');
+    if (action === 'revenue-queue') {
+      navigateToView('dashboard');
+      setTimeout(() => scrollToElement('#daily-section-revenue-queue'), 120);
+      return;
+    }
+    if (action === 'daily-tasks') {
+      navigateToView('dashboard');
+      setTimeout(() => scrollToElement('.card-daily-action-tasks'), 120);
+      return;
+    }
     if (action === 'pickup') return goToDemandPickup();
     if (action === 'reception') return goToReception();
     if (action === 'task') return goToAddDailyTask();
@@ -3681,8 +3705,8 @@
         <span class="onboarding-progress">${doneCount}/${ONBOARDING_STEPS.length} 済み</span>
       </div>
       <p class="onboarding-lead">${mode === 'detail'
-        ? 'Budilを初めて使う方・デモを見る方向けのセットアップ手順です。'
-        : 'まずはこの順番で進めると、Budilの流れがつかめます。'}</p>
+        ? 'Budilを初めて使う方・デモを見る方向けのセットアップ手順です。売上はGoogleカレンダー予定から取り込んで進めます。'
+        : 'まずは予定取り込み → 売上確定待ち → 毎日やることの順で進めると、Budilの流れがつかめます。'}</p>
       ${profileHint}
       <div class="onboarding-demo-hint">
         <strong>初めて見る方へ：</strong>まずデモデータを作成すると、Budil全体の流れを確認できます。
@@ -3690,11 +3714,13 @@
           <summary>おすすめ確認順を見る</summary>
           <ol class="onboarding-demo-order">
             <li>経営ホーム</li>
-            <li>カレンダー登録</li>
-            <li>売上明細を手入力</li>
+            <li>予定取り込み</li>
+            <li>売上確定待ち</li>
+            <li>毎日やること</li>
+            <li>売上管理・売上一覧</li>
             <li>フォロー</li>
             <li>利益管理</li>
-            <li>アナリティクス</li>
+            <li>集客チェック</li>
             <li>経営レポート</li>
             <li>データ診断</li>
           </ol>
@@ -3702,7 +3728,7 @@
       </div>
       <p class="onboarding-sales-link"><a href="sales.html" class="view-header-link">Budilについて · 1ヶ月無料体験の案内</a></p>
       <h3 class="onboarding-subtitle">まずやること（3ステップ）</h3>
-      <ol class="onboarding-steps">${ONBOARDING_STEPS.slice(0, 3).map((step, i) => {
+      <ol class="onboarding-steps">${ONBOARDING_PRIMARY_STEPS.map((step, i) => {
         const done = status[step.key];
         return `<li class="onboarding-step ${done ? 'onboarding-step-done' : ''}">
           <span class="onboarding-step-num">${i + 1}</span>
@@ -3713,7 +3739,7 @@
       }).join('')}</ol>
       ${mode !== 'detail' ? `<details class="onboarding-more-steps">
         <summary>残りのステップを見る</summary>
-        <ol class="onboarding-steps" start="4">${ONBOARDING_STEPS.slice(3).map((step, i) => {
+        <ol class="onboarding-steps" start="4">${ONBOARDING_MORE_STEPS.map((step, i) => {
           const done = status[step.key];
           return `<li class="onboarding-step ${done ? 'onboarding-step-done' : ''}">
             <span class="onboarding-step-num">${i + 4}</span>
@@ -3722,7 +3748,7 @@
             ${done ? '' : `<button type="button" class="btn btn-sm btn-secondary" data-onboarding-action="${esc(step.action)}">${esc(step.btn)}</button>`}
           </li>`;
         }).join('')}</ol>
-      </details>` : `<ol class="onboarding-steps" start="4">${ONBOARDING_STEPS.slice(3).map((step, i) => {
+      </details>` : `<ol class="onboarding-steps" start="4">${ONBOARDING_MORE_STEPS.map((step, i) => {
         const done = status[step.key];
         return `<li class="onboarding-step ${done ? 'onboarding-step-done' : ''}">
           <span class="onboarding-step-num">${i + 4}</span>
@@ -3731,12 +3757,17 @@
           ${done ? '' : `<button type="button" class="btn btn-sm btn-secondary" data-onboarding-action="${esc(step.action)}">${esc(step.btn)}</button>`}
         </li>`;
       }).join('')}</ol>`}
+      <details class="onboarding-exception-actions">
+        <summary>例外操作</summary>
+        <p class="onboarding-exception-note">予定にない売上だけ手入力してください。通常は予定取り込み → 売上確定待ち → 売上確定の流れです。</p>
+        <button type="button" class="btn btn-sm btn-secondary" data-onboarding-action="revenue">売上明細を手入力</button>
+      </details>
       <div class="onboarding-workflow-hint">
         <h3 class="onboarding-subtitle">カレンダー〜売上の流れ</h3>
         <ul class="onboarding-workflow-list">
-          <li>カレンダー登録でAI番頭の結果を取り込み、日程を入れてカレンダー登録</li>
-          <li>売上確定後はフォローでお礼LINE・口コミ依頼・リピート提案</li>
-          <li>作業後に売上確定</li>
+          <li>Googleカレンダー予定を取り込み、作業予定として保存</li>
+          <li>作業日後は売上確定待ちから売上確定</li>
+          <li>確定後は売上一覧・入金予定で確認</li>
         </ul>
       </div>
       ${mode === 'detail' ? `
@@ -3853,12 +3884,13 @@
         <p class="demo-data-guide-text">デモデータを作成しました。<br>初めて見る方は、まず<strong>経営ホーム</strong>で全体像を確認してください。おすすめの確認順は下のとおりです。</p>
         <ol class="demo-data-guide-order">
           <li>経営ホーム</li>
-          <li>カレンダー登録</li>
-          <li>売上管理</li>
-          <li>売上明細を手入力</li>
+          <li>予定取り込み</li>
+          <li>売上確定待ち</li>
+          <li>毎日やること</li>
+          <li>売上管理・売上一覧</li>
           <li>フォロー</li>
           <li>利益管理</li>
-          <li>アナリティクス</li>
+          <li>集客チェック</li>
           <li>経営レポート</li>
           <li>データ診断</li>
         </ol>
@@ -4157,12 +4189,20 @@
   }
 
   function initStartGuide() {
-    const leadBtn = document.getElementById('btn-start-add-lead');
+    const importBtn = document.getElementById('btn-start-schedule-import');
+    const queueBtn = document.getElementById('btn-start-revenue-queue');
+    const dailyBtn = document.getElementById('btn-start-daily-tasks');
     const revBtn = document.getElementById('btn-start-add-revenue');
-    const taskBtn = document.getElementById('btn-start-add-task');
-    if (leadBtn) leadBtn.addEventListener('click', goToAddLead);
+    if (importBtn) importBtn.addEventListener('click', () => navigateToView('calendar-candidate'));
+    if (queueBtn) queueBtn.addEventListener('click', () => {
+      navigateToView('dashboard');
+      setTimeout(() => scrollToElement('#daily-section-revenue-queue'), 120);
+    });
+    if (dailyBtn) dailyBtn.addEventListener('click', () => {
+      navigateToView('dashboard');
+      setTimeout(() => scrollToElement('.card-daily-action-tasks'), 120);
+    });
     if (revBtn) revBtn.addEventListener('click', goToAddRevenue);
-    if (taskBtn) taskBtn.addEventListener('click', goToAddDailyTask);
   }
 
   let lastDiagnosticResult = null;
@@ -4578,8 +4618,8 @@
         'まだレポートに使えるデータが少ないです。',
         'まずは以下を保存すると、週次レポートが作れます。',
         '',
-        '1. 売上明細を1件追加',
-        '2. クロクロ需要を3件取り込み',
+        '1. Googleカレンダー予定を取り込む',
+        '2. 売上確定待ちを確認する',
         '3. 毎日やることを1件済ませる',
         '4. 投稿・広告の成果メモを1件入力'
       ].join('\n');

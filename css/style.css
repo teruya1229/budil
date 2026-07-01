@@ -5093,6 +5093,22 @@ body {
   margin-top: 0.75rem;
 }
 
+.onboarding-exception-actions,
+.start-guide-exception {
+  margin-top: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.onboarding-exception-note,
+.start-guide-exception-note {
+  margin: 0.35rem 0 0.55rem;
+  font-size: 0.84rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+
 .card-business-profile {
   border-color: #bfdbfe;
 }
@@ -10940,6 +10956,13 @@ body.sales-page {
 
 /* v4.10.11 直近予定整合 */
 /* v4.10.17 売上入口主従整理 */
+/* v4.10.18 はじめてガイド calendar-first */
+.onboarding-exception-actions > summary,
+.start-guide-exception > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #94a3b8;
+}
 .revenue-flow-hint {
   margin: 0 0 0.85rem;
   padding: 0.55rem 0.75rem;
