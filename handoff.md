@@ -17,7 +17,7 @@
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
 | 最新バージョン | v4.10.16 |
-| v4.10.16 本体修正commit | （push後に記載） |
+| v4.10.16 本体修正commit | e67474f962354ad7d185415143c84d1c811e2f96 |
 | handoff 正本更新 | message: `docs: update handoff for v4.10.16` |
 | ブランチ | `main` push 済み |
 
