@@ -595,6 +595,75 @@ const CalendarCandidateBrain = {
     return matches;
   },
 
+  buildRevenueDuplicateCandidateFromForm(formData) {
+    const d = formData && typeof formData === 'object' ? formData : {};
+    return {
+      scheduledDate: String(d.workDate || d.scheduledDate || '').slice(0, 10),
+      customerName: String(d.customerName || '').trim(),
+      serviceText: String(d.service || d.serviceText || '').trim(),
+      source: String(d.source || '').trim(),
+      estimateAmount: Number(d.amount != null ? d.amount : d.estimateAmount) || 0,
+      id: String(d.sourceWorkOrderId || d.id || '').trim()
+    };
+  },
+
+  findRevenueDuplicateMatches(formData, revenues, options) {
+    const opts = options || {};
+    const excludeId = String(opts.excludeId || '').trim();
+    const candidate = this.buildRevenueDuplicateCandidateFromForm(formData);
+    const raw = this.detectRevenueDuplicate(candidate, revenues || []);
+    if (!excludeId) return raw;
+    return raw.filter(m => m.revenue && String(m.revenue.id || '') !== excludeId);
+  },
+
+  isDatesNearForLink(a, b, maxDays) {
+    const da = String(a || '').slice(0, 10);
+    const db = String(b || '').slice(0, 10);
+    if (!da || !db) return false;
+    if (da === db) return true;
+    const limit = maxDays != null ? Number(maxDays) : 3;
+    const t1 = new Date(da + 'T12:00:00').getTime();
+    const t2 = new Date(db + 'T12:00:00').getTime();
+    if (!Number.isFinite(t1) || !Number.isFinite(t2)) return false;
+    return Math.abs(t1 - t2) / 86400000 <= limit;
+  },
+
+  normalizeCustomerForLink(name) {
+    const raw = String(name || '').trim().replace(/\s*(様|御中)$/, '');
+    return this.normalizeDedupeText(raw ? raw + '様' : raw);
+  },
+
+  findRevenueLinkCandidatesForDocument(doc, revenues) {
+    const d = doc && typeof doc === 'object' ? doc : {};
+    if (d.type && d.type !== 'invoice') return [];
+    const issueDate = String(d.issueDate || '').slice(0, 10);
+    const customerKey = this.normalizeCustomerForLink(d.customerName);
+    const amount = Number(d.total || 0);
+    if (!customerKey || !amount) return [];
+
+    const matches = [];
+    (revenues || []).forEach(record => {
+      if (!record || record.status === 'キャンセル') return;
+      const recAmount = Number(record.amount || 0);
+      if (recAmount !== amount) return;
+      const recCustomer = this.normalizeCustomerForLink(record.customerName);
+      if (!recCustomer || recCustomer !== customerKey) return;
+      const workDate = String(record.workDate || '').slice(0, 10);
+      if (!this.isDatesNearForLink(workDate, issueDate, 3)) return;
+      matches.push(record);
+    });
+    return matches;
+  },
+
+  revenueHasStrongDuplicateLink(record) {
+    if (!record) return false;
+    return !!(
+      String(record.sourceWorkOrderId || '').trim()
+      || String(record.linkedDocumentId || '').trim()
+      || String(record.calendarDedupeKey || '').trim()
+    );
+  },
+
   classifyPastRecoveryCandidate(candidate, revenues, options) {
     const c = this.resolvePastRecoveryCandidate(candidate);
     const reasons = [];

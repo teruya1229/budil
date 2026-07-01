@@ -1,6 +1,6 @@
 # Budil handoff
 
-最終更新: 2026-06-30
+最終更新: 2026-07-01
 
 ## 正本
 
@@ -16,9 +16,9 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.10.11 |
-| v4.10.11 本体修正commit | `591ca87` |
-| handoff 正本更新 | message: `docs: update handoff for v4.10.11` |
+| 最新バージョン | v4.10.12 |
+| v4.10.12 本体修正commit | （push後に記載） |
+| handoff 正本更新 | message: `docs: update handoff for v4.10.12` |
 | ブランチ | `main` push 済み |
 
 ## Firebase / Functions 下書き（作業ツリー外・保留）
@@ -47,6 +47,14 @@ output/budil-calendar-events.json
 
 - Firebase / Functions API 案（`hub/functions`）は **一旦保留**。将来候補としてコードは残置
 - v4.10.1 の JSON ファイル取り込み・貼り付け取り込みは維持
+
+## v4.10.12で入ったもの
+
+- 売上明細手入力・毎日クイック入力の重複疑い確認（同日・同名・同額。作業予定/カレンダー/請求書linked は強警告）
+- 請求書「売上明細に反映」で既存売上候補を先に検索。1件なら紐付け確認、複数なら売上一覧で確認を案内
+- `CalendarCandidateBrain.findRevenueDuplicateMatches` / `findRevenueLinkCandidatesForDocument` を追加
+- verify `scripts/verify-v41012-revenue-duplicate-guards.mjs`
+- cache buster を v4.10.12 に更新
 
 ## v4.10.11で入ったもの
 

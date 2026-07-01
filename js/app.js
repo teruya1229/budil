@@ -3157,7 +3157,7 @@
       alert('お客様名・作業内容・金額は必須です');
       return;
     }
-    Storage.addRevenueRecord({
+    const payload = {
       workDate: workDate || TODAY(),
       customerName,
       service: serviceText,
@@ -3170,7 +3170,9 @@
       paymentDate: workDate || TODAY(),
       paymentConcern: false,
       memo
-    });
+    };
+    if (!confirmRevenueSaveWithDuplicateCheck(payload, '')) return;
+    Storage.addRevenueRecord(payload);
     document.getElementById('daily-revenue-quick-form').reset();
     document.getElementById('daily-revenue-date').value = TODAY();
     showDailyRevenueSavedNotice();
@@ -14440,6 +14442,76 @@
     createInvoiceFromRevenue(revenueId);
   }
 
+  function confirmRevenueSaveWithDuplicateCheck(data, excludeRevId) {
+    if (typeof CalendarCandidateBrain === 'undefined') return true;
+    const matches = CalendarCandidateBrain.findRevenueDuplicateMatches(
+      data,
+      Storage.getRevenueRecords(),
+      { excludeId: excludeRevId }
+    );
+    if (!matches.length) return true;
+    const hasStrong = matches.some(m => CalendarCandidateBrain.revenueHasStrongDuplicateLink(m.revenue));
+    const lines = matches.slice(0, 3).map(m => {
+      const r = m.revenue;
+      const tags = [];
+      if (r.sourceWorkOrderId) tags.push('作業予定由来');
+      if (r.calendarDedupeKey) tags.push('カレンダー由来');
+      if (r.linkedDocumentId) tags.push('請求書linked');
+      const tagStr = tags.length ? `（${tags.join('・')}）` : '';
+      return `・${r.workDate || '—'} ${r.customerName || '—'} ${RevenueBrain.formatYen(r.amount)} ${tagStr}\n  ${m.reason || '重複疑い'}`;
+    });
+    const intro = hasStrong
+      ? '既存の売上明細と重複の可能性が高いです（作業予定・カレンダー・請求書紐付けあり）。'
+      : '同日・同名・同額に近い売上明細があります。';
+    return window.confirm(
+      `${intro}\n\n${lines.join('\n')}\n\nそれでも新規として保存しますか？`
+    );
+  }
+
+  function tryLinkDocumentToExistingRevenue(docId, doc, prefill) {
+    if (typeof CalendarCandidateBrain === 'undefined') return false;
+    const allCandidates = CalendarCandidateBrain.findRevenueLinkCandidatesForDocument(
+      doc,
+      Storage.getRevenueRecords()
+    );
+    const candidates = allCandidates.filter(r => {
+      const linkedDocId = String(r.linkedDocumentId || '').trim();
+      return !linkedDocId || linkedDocId === docId;
+    });
+    if (!candidates.length) return false;
+    if (candidates.length > 1) {
+      alert(
+        `既存の売上候補が${candidates.length}件あります。売上一覧で内容を確認してから、既存売上に請求書を紐付けてください。\n新規の売上明細は作成しません。`
+      );
+      navigateToView('revenue', '#revenue-list-section');
+      return true;
+    }
+    const rev = RevenueBrain.normalizeRevenueRecord(candidates[0]);
+    const label = `${rev.workDate || '—'} ${rev.customerName || '—'} ${RevenueBrain.formatYen(rev.amount)}`;
+    if (!window.confirm(
+      `既存の売上明細が1件見つかりました。\n${label}\n\n新規作成せず、この売上と請求書を紐付けますか？`
+    )) {
+      return true;
+    }
+    PaymentBrain.linkRevenueAndDocument(rev.id, docId, Storage);
+    if (prefill) {
+      PaymentBrain.syncLinkedPayment({
+        sourceType: 'document',
+        sourceId: docId,
+        paymentPatch: prefill,
+        storage: Storage
+      });
+    }
+    renderReceivablesView();
+    renderRevenueView();
+    renderDocumentsView();
+    renderDashboard();
+    showAppToast('既存売上と請求書を紐付けました');
+    navigateToView('revenue');
+    openRevenueEdit(rev.id);
+    return true;
+  }
+
   function reflectDocumentToRevenueForm(docId) {
     const doc = Storage.getDocumentById(docId);
     const linked = getDocumentLinkedRevenueState(doc);
@@ -14455,6 +14527,7 @@
     }
     const prefill = DocumentsBrain.toRevenuePrefill(doc);
     if (!prefill) return;
+    if (tryLinkDocumentToExistingRevenue(docId, doc, prefill)) return;
     navigateToView('revenue');
     resetRevenueForm();
     pendingLinkedDocumentId = docId;
@@ -15518,6 +15591,7 @@
     if (id) {
       Storage.updateRevenueRecord(id, data);
     } else {
+      if (!confirmRevenueSaveWithDuplicateCheck(data, '')) return;
       newRecord = Storage.addRevenueRecord(data);
     }
     const revId = id || (newRecord && newRecord.id);
