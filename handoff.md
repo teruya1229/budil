@@ -16,9 +16,9 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.10.18 |
-| v4.10.18 本体修正commit | f06401d |
-| handoff 正本更新 | message: `docs: update handoff for v4.10.18` |
+| 最新バージョン | v4.10.19 |
+| v4.10.19 本体修正commit | （commit後に記入） |
+| handoff 正本更新 | message: `docs: update handoff for v4.10.19` |
 | ブランチ | `main` push 済み |
 
 ## Firebase / Functions 下書き（作業ツリー外・保留）
@@ -47,6 +47,15 @@ output/budil-calendar-events.json
 
 - Firebase / Functions API 案（`hub/functions`）は **一旦保留**。将来候補としてコードは残置
 - v4.10.1 の JSON ファイル取り込み・貼り付け取り込みは維持
+
+## v4.10.19で入ったもの
+
+- 入金予定 view のサブタイトルを「主入口」として明示
+- 売上明細・請求書の入金管理を補助扱いとして注記（機能維持）
+- 作業後確定モーダルの支払い状態を現場記録として注記（機能維持）
+- 売上管理フロー注記に「入金確認：入金予定」を追加
+- verify `scripts/verify-v41019-payment-entry-hierarchy.mjs`
+- cache buster を v4.10.19 に更新
 
 ## v4.10.18で入ったもの
 

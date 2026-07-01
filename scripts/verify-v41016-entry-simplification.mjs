@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.18 — entry simplification verification.
+ * Budil v4.10.19 — entry simplification verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -16,7 +16,7 @@ for (const file of ['app.js', 'storage.js', 'data-backup.js']) {
   execSync(`node --check "${join(root, 'js', file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.18 entry simplification ==');
+console.log('== v4.10.19 entry simplification ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -27,10 +27,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.18'), 'index.html should show v4.10.18');
-assert(indexHtml.includes('js/app.js?v=4.10.18'), 'app.js cache buster should be v4.10.18');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.18'"), 'storage.js version should be v4.10.18');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.18'"), 'data-backup version should be v4.10.18');
+assert(indexHtml.includes('v4.10.19'), 'index.html should show v4.10.19');
+assert(indexHtml.includes('js/app.js?v=4.10.19'), 'app.js cache buster should be v4.10.19');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.19'"), 'storage.js version should be v4.10.19');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.19'"), 'data-backup version should be v4.10.19');
 
 const dailyCardStart = indexHtml.indexOf('class="card card-wide card-daily-action-tasks"');
 const dailyCardEnd = indexHtml.indexOf('card-external-check-collapse');
@@ -108,8 +108,8 @@ execSync('node scripts/verify-v41013-profit-rate-calculation.mjs', { cwd: root, 
 console.log('== regression: v4.10.12 revenue duplicate guards ==');
 execSync('node scripts/verify-v41012-revenue-duplicate-guards.mjs', { cwd: root, stdio: 'inherit' });
 
-assert(statusMd.includes('v4.10.18'), 'status.md should document v4.10.18');
-assert(handoffMd.includes('v4.10.18'), 'handoff.md should document v4.10.18');
-assert(decisionLog.includes('v4.10.18'), 'decision-log.md should record v4.10.18');
+assert(statusMd.includes('v4.10.19'), 'status.md should document v4.10.19');
+assert(handoffMd.includes('v4.10.19'), 'handoff.md should document v4.10.19');
+assert(decisionLog.includes('v4.10.19'), 'decision-log.md should record v4.10.19');
 
-console.log('All v4.10.18 entry simplification checks passed.');
+console.log('All v4.10.19 entry simplification checks passed.');

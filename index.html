@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.10.18">
+  <link rel="stylesheet" href="css/style.css?v=4.10.19">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.10.18</small>
+          <small>AI経営脳みそ v4.10.19</small>
         </div>
       </div>
       <nav class="nav">
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.10.18</small>
+        <small>Budil v4.10.19</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の優先 → 今月の数字 → 次にやること</p>
             </div>
-            <span class="exec-home-version">v4.10.18</span>
+            <span class="exec-home-version">v4.10.19</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
 
@@ -595,7 +595,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.18</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.19</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -2054,7 +2054,7 @@
           <button type="button" class="btn btn-sm btn-secondary view-header-link nav-item" data-view="revenue-analysis">売上分析を見る</button>
         </header>
 
-        <p class="revenue-flow-hint">通常：作業予定から売上確定 ／ 例外：売上明細を手入力 ／ 書類：請求書は既存売上と紐付け ／ 調整：月次差額は月次調整</p>
+        <p class="revenue-flow-hint">通常：作業予定から売上確定 ／ 例外：売上明細を手入力 ／ 書類：請求書は既存売上と紐付け ／ 調整：月次差額は月次調整 ／ 入金確認：入金予定</p>
 
         <div id="revenue-unlinked-banner" class="revenue-unlinked-banner hidden" role="alert" hidden aria-hidden="true"></div>
 
@@ -2201,7 +2201,8 @@
                 </div>
               </div>
               <details class="revenue-payment-details" id="revenue-payment-details">
-                <summary>入金管理</summary>
+                <summary>入金管理（補助）</summary>
+                <p class="field-hint revenue-payment-assist-note">入金確認・入金済み操作は「入金予定」が主入口です。こちらは補助編集用です。</p>
                 <div class="revenue-payment-details-body">
                   <div class="form-row form-row-2">
                     <div class="form-group">
@@ -2320,7 +2321,7 @@
       <section id="view-receivables" class="view">
         <header class="view-header">
           <h1>入金予定</h1>
-          <p class="view-subtitle">回収状況です。売上集計とは別管理です。</p>
+          <p class="view-subtitle">入金確認・入金済み処理の主入口です。売上と請求書の入金をここで管理します。売上集計とは別管理です。</p>
         </header>
 
         <div class="card card-wide receivables-summary-card">
@@ -2460,7 +2461,8 @@
             </div>
             <p id="doc-payment-status-display" class="doc-payment-status-display"></p>
             <details class="doc-payment-details" id="doc-payment-details">
-              <summary>入金管理</summary>
+              <summary>入金管理（書類・補助）</summary>
+              <p class="field-hint doc-payment-assist-note">請求書は書類です。売上と紐付け（linked）がある場合、入金予定では1件として管理されます。入金確認の主入口は「入金予定」です。</p>
               <div class="doc-payment-details-body">
                 <div class="form-row form-row-2">
                   <div class="form-group">
@@ -3492,11 +3494,12 @@
         </div>
         <div class="form-row form-row-2">
           <div class="form-group">
-            <label for="work-completion-payment-status">支払い状態 *</label>
+            <label for="work-completion-payment-status">支払い状態（現場記録）</label>
             <select id="work-completion-payment-status" required>
               <option value="未入金">入金待ち</option>
               <option value="入金済み">入金済み</option>
             </select>
+            <small class="field-hint">現場での支払い状態を記録します。入金確認の主入口は「入金予定」です。</small>
           </div>
           <div class="form-group">
             <label for="work-completion-payment-date">入金日</label>
@@ -3570,30 +3573,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.10.18"></script>
-  <script src="js/messages.js?v=4.10.18"></script>
-  <script src="js/demand-brain.js?v=4.10.18"></script>
-  <script src="js/demand-radar.js?v=4.10.18"></script>
-  <script src="js/sales-brain.js?v=4.10.18"></script>
-  <script src="js/management-brain.js?v=4.10.18"></script>
-  <script src="js/payment-brain.js?v=4.10.18"></script>
-  <script src="js/revenue-brain.js?v=4.10.18"></script>
-  <script src="js/revenue-summary-brain.js?v=4.10.18"></script>
-  <script src="js/reception-brain.js?v=4.10.18"></script>
-  <script src="js/map-brain.js?v=4.10.18"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.10.18"></script>
-  <script src="js/external-check-brain.js?v=4.10.18"></script>
-  <script src="js/action-brain.js?v=4.10.18"></script>
-  <script src="js/work-order-brain.js?v=4.10.18"></script>
-  <script src="js/follow-up-brain.js?v=4.10.18"></script>
-  <script src="js/work-completion-brain.js?v=4.10.18"></script>
-  <script src="js/profit-brain.js?v=4.10.18"></script>
-  <script src="js/analytics-brain.js?v=4.10.18"></script>
-  <script src="js/monthly-results-brain.js?v=4.10.18"></script>
-  <script src="js/documents-brain.js?v=4.10.18"></script>
-  <script src="js/executive-brain.js?v=4.10.18"></script>
-  <script src="js/card-ocr.js?v=4.10.18"></script>
-  <script src="js/data-backup.js?v=4.10.18"></script>
-  <script src="js/app.js?v=4.10.18"></script>
+  <script src="js/storage.js?v=4.10.19"></script>
+  <script src="js/messages.js?v=4.10.19"></script>
+  <script src="js/demand-brain.js?v=4.10.19"></script>
+  <script src="js/demand-radar.js?v=4.10.19"></script>
+  <script src="js/sales-brain.js?v=4.10.19"></script>
+  <script src="js/management-brain.js?v=4.10.19"></script>
+  <script src="js/payment-brain.js?v=4.10.19"></script>
+  <script src="js/revenue-brain.js?v=4.10.19"></script>
+  <script src="js/revenue-summary-brain.js?v=4.10.19"></script>
+  <script src="js/reception-brain.js?v=4.10.19"></script>
+  <script src="js/map-brain.js?v=4.10.19"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.10.19"></script>
+  <script src="js/external-check-brain.js?v=4.10.19"></script>
+  <script src="js/action-brain.js?v=4.10.19"></script>
+  <script src="js/work-order-brain.js?v=4.10.19"></script>
+  <script src="js/follow-up-brain.js?v=4.10.19"></script>
+  <script src="js/work-completion-brain.js?v=4.10.19"></script>
+  <script src="js/profit-brain.js?v=4.10.19"></script>
+  <script src="js/analytics-brain.js?v=4.10.19"></script>
+  <script src="js/monthly-results-brain.js?v=4.10.19"></script>
+  <script src="js/documents-brain.js?v=4.10.19"></script>
+  <script src="js/executive-brain.js?v=4.10.19"></script>
+  <script src="js/card-ocr.js?v=4.10.19"></script>
+  <script src="js/data-backup.js?v=4.10.19"></script>
+  <script src="js/app.js?v=4.10.19"></script>
 </body>
 </html>

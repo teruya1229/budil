@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.18 — calendar import vs upcoming schedule consistency verification.
+ * Budil v4.10.19 — calendar import vs upcoming schedule consistency verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -38,7 +38,7 @@ function createSandbox() {
   return ctx;
 }
 
-console.log('== v4.10.18 calendar schedule consistency ==');
+console.log('== v4.10.19 calendar schedule consistency ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -49,10 +49,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.18'), 'index.html should show v4.10.18');
-assert(indexHtml.includes('js/app.js?v=4.10.18'), 'app.js cache buster should be v4.10.18');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.18'"), 'storage.js version should be v4.10.18');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.18'"), 'data-backup version should be v4.10.18');
+assert(indexHtml.includes('v4.10.19'), 'index.html should show v4.10.19');
+assert(indexHtml.includes('js/app.js?v=4.10.19'), 'app.js cache buster should be v4.10.19');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.19'"), 'storage.js version should be v4.10.19');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.19'"), 'data-backup version should be v4.10.19');
 
 assert(revenueSummaryBrain.includes('getScheduleEstimateAmount'), 'brain should resolve schedule amounts');
 assert(revenueSummaryBrain.includes('isCalendarUpcomingScheduleWorkOrder'), 'brain should treat calendar candidates as upcoming');
@@ -154,10 +154,10 @@ const workOrders = [
   assert(s.upcoming.some((item) => item.customerName === 'コープ案件'), 'upcoming list should include Coop');
 }
 
-assert(statusMd.includes('v4.10.18'), 'status.md should document v4.10.18');
-assert(handoffMd.includes('v4.10.18'), 'handoff.md should document v4.10.18');
-assert(decisionLog.includes('v4.10.18'), 'decision-log.md should record v4.10.18');
+assert(statusMd.includes('v4.10.19'), 'status.md should document v4.10.19');
+assert(handoffMd.includes('v4.10.19'), 'handoff.md should document v4.10.19');
+assert(decisionLog.includes('v4.10.19'), 'decision-log.md should record v4.10.19');
 
 execSync('node scripts/verify-v41010-final-hard-polish.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('All v4.10.18 calendar schedule consistency checks passed.');
+console.log('All v4.10.19 calendar schedule consistency checks passed.');
