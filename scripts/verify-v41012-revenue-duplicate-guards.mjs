@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.19 — revenue duplicate guard verification.
+ * Budil v4.10.20 — revenue duplicate guard verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -42,7 +42,7 @@ for (const file of ['app.js', 'calendar-candidate-brain.js', 'storage.js']) {
   execSync(`node --check "${join(root, 'js', file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.19 revenue duplicate guards ==');
+console.log('== v4.10.20 revenue duplicate guards ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -53,10 +53,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.19'), 'index.html should show v4.10.19');
-assert(indexHtml.includes('js/app.js?v=4.10.19'), 'app.js cache buster should be v4.10.19');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.19'"), 'storage.js version should be v4.10.19');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.19'"), 'data-backup version should be v4.10.19');
+assert(indexHtml.includes('v4.10.20'), 'index.html should show v4.10.20');
+assert(indexHtml.includes('js/app.js?v=4.10.20'), 'app.js cache buster should be v4.10.20');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.20'"), 'storage.js version should be v4.10.20');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.20'"), 'data-backup version should be v4.10.20');
 
 assert(calendarBrain.includes('findRevenueDuplicateMatches'), 'calendar brain should expose duplicate match helper');
 assert(calendarBrain.includes('findRevenueLinkCandidatesForDocument'), 'calendar brain should find invoice link candidates');
@@ -153,7 +153,7 @@ console.log('== past recovery duplicate guard preserved ==');
   assert(report === 'duplicate_suspected', 'past recovery duplicate classification must remain');
 }
 
-console.log('== v4.10.19 calendar schedule consistency (regression) ==');
+console.log('== v4.10.20 calendar schedule consistency (regression) ==');
 {
   const ctx = createSandbox();
   runInContext(load('js/work-completion-brain.js'), ctx, { filename: 'work-completion-brain.js' });
@@ -180,8 +180,8 @@ console.log('== v4.10.19 calendar schedule consistency (regression) ==');
   assert(summary.displayCount >= 1, 'calendar upcoming schedule regression should include tentative calendar item');
 }
 
-assert(statusMd.includes('v4.10.19'), 'status.md should document v4.10.19');
-assert(handoffMd.includes('v4.10.19'), 'handoff.md should document v4.10.19');
-assert(decisionLog.includes('v4.10.19'), 'decision-log.md should record v4.10.19');
+assert(statusMd.includes('v4.10.20'), 'status.md should document v4.10.20');
+assert(handoffMd.includes('v4.10.20'), 'handoff.md should document v4.10.20');
+assert(decisionLog.includes('v4.10.20'), 'decision-log.md should record v4.10.20');
 
-console.log('All v4.10.19 revenue duplicate guard checks passed.');
+console.log('All v4.10.20 revenue duplicate guard checks passed.');

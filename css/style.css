@@ -10958,6 +10958,7 @@ body.sales-page {
 /* v4.10.17 売上入口主従整理 */
 /* v4.10.18 はじめてガイド calendar-first */
 /* v4.10.19 入金入口整理 */
+/* v4.10.20 月次実績階層整理 */
 .onboarding-exception-actions > summary,
 .start-guide-exception > summary {
   cursor: pointer;

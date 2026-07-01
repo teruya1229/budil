@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.19 — final hard polish verification.
+ * Budil v4.10.20 — final hard polish verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -12,7 +12,7 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-console.log('== v4.10.19 final hard polish ==');
+console.log('== v4.10.20 final hard polish ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -24,9 +24,9 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.19'), 'index.html should show v4.10.19');
-assert(indexHtml.includes('js/app.js?v=4.10.19'), 'app.js cache buster should be v4.10.19');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.19'"), 'storage.js version should be v4.10.19');
+assert(indexHtml.includes('v4.10.20'), 'index.html should show v4.10.20');
+assert(indexHtml.includes('js/app.js?v=4.10.20'), 'app.js cache buster should be v4.10.20');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.20'"), 'storage.js version should be v4.10.20');
 
 const forbiddenUiTerms = [
   '売上登録',
@@ -66,7 +66,7 @@ assert(appJs.includes('calendar-candidate-saved-more'), 'v4.10.9 import button l
 
 assert(!css.includes('.product-overview-card {\n  background: #fff'), 'product overview cards must not use white background');
 assert(css.includes('card-product-overview-collapse'), 'css should style collapsed product overview');
-assert(css.includes('v4.10.19'), 'css should include v4.10.19 polish marker');
+assert(css.includes('v4.10.20'), 'css should include v4.10.20 polish marker');
 
 assert(revenueSummaryBrain.includes('displayCount'), 'upcoming summary should expose displayCount');
 assert(revenueSummaryBrain.includes('displayTotal'), 'upcoming summary should expose displayTotal');
@@ -77,10 +77,10 @@ assert(!appJs.includes('localStorage.clear()'), 'localStorage.clear must not be 
 assert(indexHtml.includes('btn-calendar-candidate-json-import'), 'v4.10.1 JSON import maintained');
 assert(indexHtml.includes('id="view-revenue-analysis"'), 'v4.10.5 revenue analysis maintained');
 
-assert(statusMd.includes('v4.10.19'), 'status.md should document v4.10.19');
-assert(handoffMd.includes('v4.10.19'), 'handoff.md should document v4.10.19');
-assert(decisionLog.includes('v4.10.19'), 'decision-log.md should record v4.10.19');
+assert(statusMd.includes('v4.10.20'), 'status.md should document v4.10.20');
+assert(handoffMd.includes('v4.10.20'), 'handoff.md should document v4.10.20');
+assert(decisionLog.includes('v4.10.20'), 'decision-log.md should record v4.10.20');
 
 execSync('node scripts/verify-v4109-final-operational-polish.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('All v4.10.19 final hard polish checks passed.');
+console.log('All v4.10.20 final hard polish checks passed.');

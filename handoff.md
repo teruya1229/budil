@@ -16,9 +16,9 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.10.19 |
-| v4.10.19 本体修正commit | eccad70 |
-| handoff 正本更新 | message: `docs: update handoff for v4.10.19` |
+| 最新バージョン | v4.10.20 |
+| v4.10.20 本体修正commit | （commit後に記入） |
+| handoff 正本更新 | message: `docs: update handoff for v4.10.20` |
 | ブランチ | `main` push 済み |
 
 ## Firebase / Functions 下書き（作業ツリー外・保留）
@@ -47,6 +47,16 @@ output/budil-calendar-events.json
 
 - Firebase / Functions API 案（`hub/functions`）は **一旦保留**。将来候補としてコードは残置
 - v4.10.1 の JSON ファイル取り込み・貼り付け取り込みは維持
+
+## v4.10.20で入ったもの
+
+- nav ラベル `月次実績入力` → `月次実績・照合`
+- nav グループ hint を過去月照合用と明示
+- `view-monthly-results` タイトル・subtitle を過去月合計・照合用として整理
+- 月次実績フォームカードに `monthly-results-purpose-note` 追加
+- 差額追加の月次調整扱い（`<details>` ・confirm 2段・重複警告）を維持確認
+- verify `scripts/verify-v41020-monthly-results-hierarchy.mjs`
+- cache buster を v4.10.20 に更新
 
 ## v4.10.19で入ったもの
 

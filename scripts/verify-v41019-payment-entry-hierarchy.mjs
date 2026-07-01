@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.19 — payment entry hierarchy verification.
+ * Budil v4.10.20 — payment entry hierarchy verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -18,7 +18,7 @@ for (const file of ['app.js', 'storage.js', 'data-backup.js']) {
 execSync(`node --check "${join(root, 'js', 'payment-brain.js')}"`, { stdio: 'inherit' });
 execSync(`node --check "${join(root, 'js', 'documents-brain.js')}"`, { stdio: 'inherit' });
 
-console.log('== v4.10.19 payment entry hierarchy ==');
+console.log('== v4.10.20 payment entry hierarchy ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -30,10 +30,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.19'), 'index.html should show v4.10.19');
-assert(indexHtml.includes('js/app.js?v=4.10.19'), 'app.js cache buster should be v4.10.19');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.19'"), 'storage.js version should be v4.10.19');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.19'"), 'data-backup version should be v4.10.19');
+assert(indexHtml.includes('v4.10.20'), 'index.html should show v4.10.20');
+assert(indexHtml.includes('js/app.js?v=4.10.20'), 'app.js cache buster should be v4.10.20');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.20'"), 'storage.js version should be v4.10.20');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.20'"), 'data-backup version should be v4.10.20');
 
 const receivablesStart = indexHtml.indexOf('id="view-receivables"');
 const receivablesEnd = indexHtml.indexOf('id="view-follow-up"');
@@ -96,7 +96,7 @@ assert(appJs.includes('confirmRevenueSaveWithDuplicateCheck'), 'duplicate guard 
 assert(appJs.includes('isWorkOrderRevenueLocked'), 'actualRevenueId lock should remain');
 assert(!appJs.includes('localStorage.clear()'), 'localStorage.clear must not be used');
 
-assert(css.includes('v4.10.19'), 'css should include v4.10.19 marker');
+assert(css.includes('v4.10.20'), 'css should include v4.10.20 marker');
 
 const forbiddenUiTerms = [
   '売上登録',
@@ -116,8 +116,8 @@ for (const term of forbiddenUiTerms) {
 console.log('== regression: v4.10.18 calendar-first onboarding ==');
 execSync('node scripts/verify-v41018-calendar-first-onboarding.mjs', { cwd: root, stdio: 'inherit' });
 
-assert(statusMd.includes('v4.10.19'), 'status.md should document v4.10.19');
-assert(handoffMd.includes('v4.10.19'), 'handoff.md should document v4.10.19');
-assert(decisionLog.includes('v4.10.19'), 'decision-log.md should record v4.10.19');
+assert(statusMd.includes('v4.10.20'), 'status.md should document v4.10.20');
+assert(handoffMd.includes('v4.10.20'), 'handoff.md should document v4.10.20');
+assert(decisionLog.includes('v4.10.20'), 'decision-log.md should record v4.10.20');
 
-console.log('All v4.10.19 payment entry hierarchy checks passed.');
+console.log('All v4.10.20 payment entry hierarchy checks passed.');

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.10.19">
+  <link rel="stylesheet" href="css/style.css?v=4.10.20">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.10.19</small>
+          <small>AI経営脳みそ v4.10.20</small>
         </div>
       </div>
       <nav class="nav">
@@ -60,7 +60,7 @@
 
         <details class="nav-group" open>
           <summary class="nav-group-title"><span class="nav-group-icon">💰</span><span class="nav-group-label">売上・利益</span></summary>
-          <p class="nav-group-hint">売上確定、入金予定、月次実績入力、経費入力、フォロー</p>
+          <p class="nav-group-hint">売上確定、入金予定、月次実績・照合（過去月用）、経費入力、フォロー</p>
           <div class="nav-group-items">
             <button class="nav-item nav-item-main" data-view="revenue">
               <span class="nav-icon">💰</span><span class="nav-label">売上管理</span>
@@ -75,7 +75,7 @@
               <span class="nav-icon">📊</span><span class="nav-label">売上一覧</span>
             </button>
             <button class="nav-item nav-item-main" data-view="monthly-results">
-              <span class="nav-icon">📅</span><span class="nav-label">月次実績入力</span>
+              <span class="nav-icon">📅</span><span class="nav-label">月次実績・照合</span>
             </button>
             <button class="nav-item nav-item-main" data-view="profit">
               <span class="nav-icon">📈</span><span class="nav-label">利益管理</span>
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.10.19</small>
+        <small>Budil v4.10.20</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の優先 → 今月の数字 → 次にやること</p>
             </div>
-            <span class="exec-home-version">v4.10.19</span>
+            <span class="exec-home-version">v4.10.20</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
 
@@ -595,7 +595,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.19</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.20</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -2699,8 +2699,8 @@
       <!-- 月次実績入力 -->
       <section id="view-monthly-results" class="view">
         <header class="view-header">
-          <h1>月次実績入力</h1>
-          <p class="view-subtitle">月単位の確定経営数字を入力します。売上明細とは別管理です。</p>
+          <h1>月次実績・照合</h1>
+          <p class="view-subtitle">過去月の売上合計を照合・入力する補助画面です。通常の売上入力は売上確定待ち→売上確定の流れで行います。売上明細とは別管理です。</p>
         </header>
 
         <div class="card card-wide card-monthly-results-summary">
@@ -2710,6 +2710,7 @@
 
         <div class="card card-wide" id="monthly-results-form-card">
           <h2 id="monthly-results-form-title">月次実績入力</h2>
+          <p class="field-hint monthly-results-purpose-note">過去月合計・照合用です。通常の売上は「予定取り込み→売上確定待ち→売上確定」の流れで管理します。</p>
           <form id="monthly-results-form" class="monthly-results-form">
             <input type="hidden" id="monthly-results-edit-id" value="">
             <div class="form-row form-row-2">
@@ -3573,30 +3574,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.10.19"></script>
-  <script src="js/messages.js?v=4.10.19"></script>
-  <script src="js/demand-brain.js?v=4.10.19"></script>
-  <script src="js/demand-radar.js?v=4.10.19"></script>
-  <script src="js/sales-brain.js?v=4.10.19"></script>
-  <script src="js/management-brain.js?v=4.10.19"></script>
-  <script src="js/payment-brain.js?v=4.10.19"></script>
-  <script src="js/revenue-brain.js?v=4.10.19"></script>
-  <script src="js/revenue-summary-brain.js?v=4.10.19"></script>
-  <script src="js/reception-brain.js?v=4.10.19"></script>
-  <script src="js/map-brain.js?v=4.10.19"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.10.19"></script>
-  <script src="js/external-check-brain.js?v=4.10.19"></script>
-  <script src="js/action-brain.js?v=4.10.19"></script>
-  <script src="js/work-order-brain.js?v=4.10.19"></script>
-  <script src="js/follow-up-brain.js?v=4.10.19"></script>
-  <script src="js/work-completion-brain.js?v=4.10.19"></script>
-  <script src="js/profit-brain.js?v=4.10.19"></script>
-  <script src="js/analytics-brain.js?v=4.10.19"></script>
-  <script src="js/monthly-results-brain.js?v=4.10.19"></script>
-  <script src="js/documents-brain.js?v=4.10.19"></script>
-  <script src="js/executive-brain.js?v=4.10.19"></script>
-  <script src="js/card-ocr.js?v=4.10.19"></script>
-  <script src="js/data-backup.js?v=4.10.19"></script>
-  <script src="js/app.js?v=4.10.19"></script>
+  <script src="js/storage.js?v=4.10.20"></script>
+  <script src="js/messages.js?v=4.10.20"></script>
+  <script src="js/demand-brain.js?v=4.10.20"></script>
+  <script src="js/demand-radar.js?v=4.10.20"></script>
+  <script src="js/sales-brain.js?v=4.10.20"></script>
+  <script src="js/management-brain.js?v=4.10.20"></script>
+  <script src="js/payment-brain.js?v=4.10.20"></script>
+  <script src="js/revenue-brain.js?v=4.10.20"></script>
+  <script src="js/revenue-summary-brain.js?v=4.10.20"></script>
+  <script src="js/reception-brain.js?v=4.10.20"></script>
+  <script src="js/map-brain.js?v=4.10.20"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.10.20"></script>
+  <script src="js/external-check-brain.js?v=4.10.20"></script>
+  <script src="js/action-brain.js?v=4.10.20"></script>
+  <script src="js/work-order-brain.js?v=4.10.20"></script>
+  <script src="js/follow-up-brain.js?v=4.10.20"></script>
+  <script src="js/work-completion-brain.js?v=4.10.20"></script>
+  <script src="js/profit-brain.js?v=4.10.20"></script>
+  <script src="js/analytics-brain.js?v=4.10.20"></script>
+  <script src="js/monthly-results-brain.js?v=4.10.20"></script>
+  <script src="js/documents-brain.js?v=4.10.20"></script>
+  <script src="js/executive-brain.js?v=4.10.20"></script>
+  <script src="js/card-ocr.js?v=4.10.20"></script>
+  <script src="js/data-backup.js?v=4.10.20"></script>
+  <script src="js/app.js?v=4.10.20"></script>
 </body>
 </html>
