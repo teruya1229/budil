@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Budil v4.10.20 — final operational polish verification.
  */
 import { readFileSync } from 'node:fs';
@@ -22,8 +22,8 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.20'), 'index.html should show v4.10.20');
-assert(indexHtml.includes('js/app.js?v=4.10.20'), 'app.js cache buster should be v4.10.20');
+assert(indexHtml.includes('v4.10.21'), 'index.html should show v4.10.21');
+assert(indexHtml.includes('js/app.js?v=4.10.21'), 'app.js cache buster should be v4.10.21');
 
 const forbiddenUiTerms = ['売上登録', '作業後確定待ち', '作業後売上確定'];
 for (const term of forbiddenUiTerms) {

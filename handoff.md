@@ -16,9 +16,9 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.10.20 |
-| v4.10.20 本体修正commit | bca8307 |
-| handoff 正本更新 | message: `docs: update handoff for v4.10.20` |
+| 最新バージョン | v4.10.21 |
+| v4.10.21 本体修正commit | （本commit後更新） |
+| handoff 正本更新 | message: `docs: update handoff for v4.10.21` |
 | ブランチ | `main` push 済み |
 
 ## Firebase / Functions 下書き（作業ツリー外・保留）
@@ -47,6 +47,18 @@ output/budil-calendar-events.json
 
 - Firebase / Functions API 案（`hub/functions`）は **一旦保留**。将来候補としてコードは残置
 - v4.10.1 の JSON ファイル取り込み・貼り付け取り込みは維持
+
+## v4.10.21で入ったもの
+
+- 請求書・見積書 view の subtitle を「売上の正本は売上明細」と明示
+- `documents-purpose-note` を追加（書類は補助、通常は作業予定から売上確定、入金確認は入金予定）
+- プレビューボタン「売上明細に反映」→「既存売上に紐付け・補助作成」（linked時は「linked売上を開く」維持）
+- 入金予定リンク切れボタン「売上明細に反映」→「既存売上に紐付け・補助作成」
+- 売上フォームタイトル「売上明細を手入力（請求書から反映）」→「売上明細を手入力（請求書から補助入力）」
+- トースト文言・alert文言を新規作成/紐付けが区別できる表現に整理
+- v4.10.12 重複ガード・v4.10.19 入金整理・v4.10.20 月次整理は維持
+- verify `scripts/verify-v41021-invoice-revenue-linking-hierarchy.mjs`
+- cache buster を v4.10.21 に更新
 
 ## v4.10.20で入ったもの
 

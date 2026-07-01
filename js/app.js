@@ -14596,7 +14596,7 @@
     if (item.linkedBroken === 'revenue' && item.primaryKind === 'document') {
       return `
         <button type="button" class="btn btn-sm btn-secondary" data-unlink-document-link="${esc(item.primaryId)}">リンク解除</button>
-        <button type="button" class="btn btn-sm btn-secondary" data-reflect-doc-revenue="${esc(item.primaryId)}">売上明細に反映</button>`;
+        <button type="button" class="btn btn-sm btn-secondary" data-reflect-doc-revenue="${esc(item.primaryId)}">既存売上に紐付け・補助作成</button>`;
     }
     return '';
   }
@@ -14704,7 +14704,7 @@
       return;
     }
     if (linked.state === 'missing') {
-      alert('linked売上が見つかりません。入金予定一覧またはデータ診断からリンク解除してから売上明細に反映してください。');
+      alert('linked売上が見つかりません。入金予定一覧またはデータ診断からリンク解除してから、既存売上への紐付けまたは補助作成を行ってください。');
       return;
     }
     const prefill = DocumentsBrain.toRevenuePrefill(doc);
@@ -14730,8 +14730,8 @@
     document.getElementById('revenue-status').value = prefill.status;
     writeRevenuePaymentFieldsToForm(prefill);
     document.getElementById('revenue-memo').value = prefill.memo;
-    document.getElementById('revenue-form-title').textContent = '売上明細を手入力（請求書から反映）';
-    showAppToast('売上明細フォームに反映しました。保存すると請求書とリンクされます。');
+    document.getElementById('revenue-form-title').textContent = '売上明細を手入力（請求書から補助入力）';
+    showAppToast('売上明細フォームに補助入力しました。既存売上があれば紐付けを優先してください。保存すると請求書とリンクされます。');
     document.getElementById('revenue-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -16310,7 +16310,7 @@
       revenueBtn.classList.toggle('hidden', normalized.type !== 'invoice');
       if (normalized.type === 'invoice') {
         const linked = getDocumentLinkedRevenueState(normalized);
-        revenueBtn.textContent = linked.state === 'linked' ? 'linked売上を開く' : '売上明細に反映';
+        revenueBtn.textContent = linked.state === 'linked' ? 'linked売上を開く' : '既存売上に紐付け・補助作成';
       }
     }
     document.getElementById('documents-preview-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });

@@ -10959,6 +10959,7 @@ body.sales-page {
 /* v4.10.18 はじめてガイド calendar-first */
 /* v4.10.19 入金入口整理 */
 /* v4.10.20 月次実績階層整理 */
+/* v4.10.21 請求書・見積書・売上明細 文言・導線整理 */
 .onboarding-exception-actions > summary,
 .start-guide-exception > summary {
   cursor: pointer;
@@ -11100,4 +11101,14 @@ body.sales-page {
   flex-wrap: wrap;
   gap: 0.35rem;
   margin-top: 0.35rem;
+}
+
+.documents-purpose-note {
+  margin: 0 0 0.85rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.45);
+  font-size: 0.84rem;
+  color: #94a3b8;
+  line-height: 1.5;
 }
