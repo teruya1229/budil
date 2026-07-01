@@ -1,9 +1,9 @@
-/**
+﻿/**
  * Budil - localStorage 管理
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.10.21',
+  BUDIL_VERSION: 'v4.10.22',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -2070,7 +2070,7 @@ const Storage = {
         if (wcDiag.orphanConfirmed) add('caution', `売上確定済みだが作業予定に未紐付け ${wcDiag.orphanConfirmed}件`);
         if (wcDiag.unpaid) add('caution', `入金待ちの確定売上 ${wcDiag.unpaid}件`);
         if (wcDiag.cancelNoMemo) add('caution', `キャンセル状態だが理由なし ${wcDiag.cancelNoMemo}件`);
-        if (wcDiag.pendingConfirmCount) add('caution', `作業後確定待ち ${wcDiag.pendingConfirmCount}件`);
+        if (wcDiag.pendingConfirmCount) add('caution', `売上確定待ち ${wcDiag.pendingConfirmCount}件`);
       }
       if (typeof CalendarCandidateBrain !== 'undefined') {
         const calDiag = CalendarCandidateBrain.getDiagnosticsCounts(workOrders);
@@ -2789,7 +2789,7 @@ const Storage = {
       endTime: '15:00',
       status: 'confirmed',
       estimateAmount: 18000,
-      memo: 'デモ：候補から作業予定に反映済み・作業後確定待ち',
+      memo: 'デモ：候補から作業予定に反映済み・売上確定待ち',
       candidateMeta: {
         importSource: 'calendar-paste',
         sourceType: 'work-order-candidate',
@@ -2807,7 +2807,7 @@ const Storage = {
       : today;
     this.addWorkOrder({
       ...flag,
-      customerName: 'デモ：作業後確定待ち・比嘉様',
+      customerName: 'デモ：売上確定待ち・比嘉様',
       phone: '090-2222-3333',
       address: '沖縄県宜野湾市',
       area: '宜野湾市',
@@ -2818,7 +2818,7 @@ const Storage = {
       endTime: '16:00',
       status: 'confirmed',
       estimateAmount: 8500,
-      memo: 'デモ：予定日過ぎ・作業後確定待ち'
+      memo: 'デモ：予定日過ぎ・売上確定待ち'
     });
 
     this.addWorkOrder({

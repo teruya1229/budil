@@ -561,7 +561,7 @@ const ExecutiveBrain = {
     }
     if (typeof WorkCompletionBrain !== 'undefined') {
       const completionLines = WorkCompletionBrain.buildMorningReport(c.completionSummary);
-      if (completionLines.length) sections.push({ title: '作業後確定', lines: completionLines.slice(1) });
+      if (completionLines.length) sections.push({ title: '売上確定待ち確認', lines: completionLines.slice(1) });
     }
     const rp = c.revenueProfitSection || {};
     sections.push({

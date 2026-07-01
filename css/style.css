@@ -1,4 +1,4 @@
-/* Budil MVP v0.1 - Styles */
+﻿/* Budil MVP v0.1 - Styles */
 
 :root {
   --bg: #0f1419;
@@ -11112,3 +11112,5 @@ body.sales-page {
   color: #94a3b8;
   line-height: 1.5;
 }
+
+/* v4.10.22 主導線・主従整理最終監査 */

@@ -49,10 +49,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.21'), 'index.html should show v4.10.21');
-assert(indexHtml.includes('js/app.js?v=4.10.21'), 'app.js cache buster should be v4.10.21');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.21'"), 'storage.js version should be v4.10.21');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.21'"), 'data-backup version should be v4.10.21');
+assert(indexHtml.includes('v4.10.22'), 'index.html should show v4.10.22');
+assert(indexHtml.includes('js/app.js?v=4.10.22'), 'app.js cache buster should be v4.10.22');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.22'"), 'storage.js version should be v4.10.22');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.22'"), 'data-backup version should be v4.10.22');
 
 assert(revenueSummaryBrain.includes('getScheduleEstimateAmount'), 'brain should resolve schedule amounts');
 assert(revenueSummaryBrain.includes('isCalendarUpcomingScheduleWorkOrder'), 'brain should treat calendar candidates as upcoming');
