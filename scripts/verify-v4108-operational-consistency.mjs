@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.13 — operational flow and label consistency verification.
+ * Budil v4.10.14 — operational flow and label consistency verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -12,7 +12,7 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-console.log('== v4.10.13 operational consistency ==');
+console.log('== v4.10.14 operational consistency ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -22,8 +22,8 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.13'), 'index.html should show v4.10.13');
-assert(indexHtml.includes('js/app.js?v=4.10.13'), 'app.js cache buster should be v4.10.13');
+assert(indexHtml.includes('v4.10.14'), 'index.html should show v4.10.14');
+assert(indexHtml.includes('js/app.js?v=4.10.14'), 'app.js cache buster should be v4.10.14');
 
 assert(indexHtml.includes('id="exec-home-revenue-queue-list"'), 'executive home should show revenue queue');
 assert(indexHtml.includes('id="exec-home-upcoming-schedule-main"'), 'executive home should show upcoming schedule');
@@ -76,13 +76,13 @@ assert(indexHtml.includes('id="view-revenue-analysis"'), 'v4.10.5 revenue analys
 assert(appJs.includes('applyMonthlyReconciliationAdjustment'), 'v4.10.5 reconciliation maintained');
 assert(appJs.includes('navigateAfterAction'), 'v4.10.4 action navigation maintained');
 
-assert(css.includes('v4.10.13'), 'css should include v4.10.13 operational styles');
+assert(css.includes('v4.10.14'), 'css should include v4.10.14 operational styles');
 assert(css.includes('card-onboarding-guide-collapse'), 'css should style collapsed guides');
 
-assert(statusMd.includes('v4.10.13'), 'status.md should document v4.10.13');
-assert(handoffMd.includes('v4.10.13'), 'handoff.md should document v4.10.13');
-assert(decisionLog.includes('v4.10.13'), 'decision-log.md should record v4.10.13');
+assert(statusMd.includes('v4.10.14'), 'status.md should document v4.10.14');
+assert(handoffMd.includes('v4.10.14'), 'handoff.md should document v4.10.14');
+assert(decisionLog.includes('v4.10.14'), 'decision-log.md should record v4.10.14');
 
 execSync('node scripts/verify-v4107-date-sort-order.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('All v4.10.13 operational consistency checks passed.');
+console.log('All v4.10.14 operational consistency checks passed.');

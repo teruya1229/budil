@@ -225,7 +225,7 @@ const ProfitBrain = {
   },
 
   computeWorkOrderForecastProfit(workOrder, expenseTotal) {
-    const estimate = Number(workOrder && workOrder.estimateAmount || 0);
+    const estimate = this.getWorkOrderEstimateAmount(workOrder);
     const exp = Number(expenseTotal) || 0;
     const rate = typeof RevenueBrain !== 'undefined'
       ? RevenueBrain.resolveGrossMarginRate({
@@ -295,6 +295,41 @@ const ProfitBrain = {
     return '不明';
   },
 
+  getWorkOrderEstimateAmount(workOrder) {
+    if (typeof RevenueSummaryBrain !== 'undefined') {
+      return RevenueSummaryBrain.getScheduleEstimateAmount(
+        RevenueSummaryBrain.normalizeScheduleWorkOrder(workOrder)
+      );
+    }
+    const wo = workOrder && typeof workOrder === 'object' ? workOrder : {};
+    const top = Number(wo.estimateAmount || 0);
+    if (Number.isFinite(top) && top > 0) return top;
+    const meta = wo.candidateMeta;
+    if (meta && meta.estimatedAmount != null && meta.estimatedAmount !== '') {
+      const parsed = parseInt(String(meta.estimatedAmount).replace(/[^\d]/g, ''), 10);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  },
+
+  getMonthPlannedWorkOrders(workOrders, monthKey, today) {
+    const t = today || new Date().toISOString().slice(0, 10);
+    return (workOrders || []).filter(w => {
+      if (!w) return false;
+      const wo = typeof RevenueSummaryBrain !== 'undefined'
+        ? RevenueSummaryBrain.normalizeScheduleWorkOrder(w)
+        : w;
+      if (!wo.scheduledDate || !wo.scheduledDate.startsWith(monthKey)) return false;
+      if (typeof RevenueSummaryBrain !== 'undefined') {
+        return RevenueSummaryBrain.isUpcomingRevenueScheduleWorkOrder(wo, t);
+      }
+      const activeStatuses = typeof WorkOrderBrain !== 'undefined'
+        ? WorkOrderBrain.ACTIVE_STATUSES
+        : ['tentative', 'confirmed'];
+      return activeStatuses.includes(wo.status) && !wo.actualRevenueId;
+    });
+  },
+
   getWorkOrderForecastRows(workOrders, expenses, leads, today) {
     const activeStatuses = typeof WorkOrderBrain !== 'undefined'
       ? WorkOrderBrain.ACTIVE_STATUSES
@@ -307,7 +342,7 @@ const ProfitBrain = {
     return sorted
       .map(w => {
         const linked = this.getExpensesForWorkOrder(w.id, expenses);
-        const estimate = Number(w.estimateAmount || 0);
+        const estimate = this.getWorkOrderEstimateAmount(w);
         const expenseTotal = this.sumAmount(linked);
         const woProfit = this.computeWorkOrderForecastProfit(w, expenseTotal);
         const forecastProfit = woProfit.forecastProfit;
@@ -376,26 +411,18 @@ const ProfitBrain = {
     const unlinkedCount = monthExpenses.filter(e => this.isUnlinkedExpense(e)).length;
     const unlinkedTotal = this.sumAmount(monthExpenses.filter(e => this.isUnlinkedExpense(e)));
 
-    const activeStatuses = typeof WorkOrderBrain !== 'undefined'
-      ? WorkOrderBrain.ACTIVE_STATUSES
-      : ['tentative', 'confirmed'];
-    const monthWorkOrders = workOrders.filter(w =>
-      w && activeStatuses.includes(w.status) && !w.actualRevenueId
-      && w.scheduledDate && w.scheduledDate.startsWith(monthKey)
+    const monthPlannedWorkOrders = this.getMonthPlannedWorkOrders(workOrders, monthKey, today);
+    const plannedRevenueEstimate = monthPlannedWorkOrders.reduce(
+      (n, w) => n + this.getWorkOrderEstimateAmount(w), 0
     );
-    const workOrderEstimate = monthWorkOrders.reduce((n, w) => n + Number(w.estimateAmount || 0), 0);
-    const workOrderForecastProfit = monthWorkOrders.reduce((n, w) => {
+    const plannedForecastProfit = monthPlannedWorkOrders.reduce((n, w) => {
       const exp = this.sumAmount(this.getExpensesForWorkOrder(w.id, expenses));
       return n + this.computeWorkOrderForecastProfit(w, exp).forecastProfit;
     }, 0);
-    let forecastProfit = monthGrossProfit + workOrderForecastProfit;
-    const maxForecastProfit = monthMarginGross + monthWorkOrders.reduce((n, w) => {
-      const exp = this.sumAmount(this.getExpensesForWorkOrder(w.id, expenses));
-      return n + this.computeWorkOrderForecastProfit(w, exp).marginProfit;
-    }, 0) - monthExpense;
-    if (Number.isFinite(maxForecastProfit)) {
-      forecastProfit = Math.min(forecastProfit, maxForecastProfit);
-    }
+    const confirmedRevenue = monthRevenue;
+    const confirmedProfit = monthGrossProfit;
+    const totalRevenue = plannedRevenueEstimate + confirmedRevenue;
+    const totalProfit = plannedForecastProfit + confirmedProfit;
 
     return {
       monthKey,
@@ -405,9 +432,15 @@ const ProfitBrain = {
       monthGrossRate,
       monthMarginGross,
       marginDeductionTotal,
-      workOrderEstimate,
-      workOrderForecastProfit,
-      forecastProfit,
+      plannedRevenueEstimate,
+      plannedForecastProfit,
+      confirmedRevenue,
+      confirmedProfit,
+      totalRevenue,
+      totalProfit,
+      workOrderEstimate: plannedRevenueEstimate,
+      workOrderForecastProfit: plannedForecastProfit,
+      forecastProfit: plannedForecastProfit,
       adExpense,
       feeExpense,
       outsourceExpense,
@@ -722,7 +755,12 @@ const ProfitBrain = {
     lines.push(`支出：${this.formatYen(s.monthExpense)}`);
     lines.push(`概算粗利：${this.formatYen(s.monthGrossProfit)}`);
     lines.push(`粗利率：${this.formatRate(s.monthGrossRate)}`);
-    lines.push(`見込み利益：${this.formatYen(s.forecastProfit)}`);
+    lines.push(`予定売上見込み：${this.formatYen(s.plannedRevenueEstimate)}`);
+    lines.push(`見込み利益：${this.formatYen(s.plannedForecastProfit)}`);
+    lines.push(`確定売上：${this.formatYen(s.confirmedRevenue)}`);
+    lines.push(`確定利益：${this.formatYen(s.confirmedProfit)}`);
+    lines.push(`合計売上：${this.formatYen(s.totalRevenue)}`);
+    lines.push(`合計利益：${this.formatYen(s.totalProfit)}`);
     lines.push(`広告費：${this.formatYen(s.adExpense)} / 手数料：${this.formatYen(s.feeExpense)} / 外注費：${this.formatYen(s.outsourceExpense)}`);
     lines.push(`未紐付け支出：${s.unlinkedCount || 0}件`);
     const monthlyLines = this.buildMonthlyRevenueProfitLines(c.revenues, c.expenses);

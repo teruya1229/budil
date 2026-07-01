@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.13 — gross margin rate profit calculation verification.
+ * Budil v4.10.14 — gross margin rate profit calculation verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -41,7 +41,7 @@ for (const file of ['app.js', 'profit-brain.js', 'revenue-brain.js', 'storage.js
   execSync(`node --check "${join(root, 'js', file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.13 profit rate calculation ==');
+console.log('== v4.10.14 profit rate calculation ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -53,10 +53,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.13'), 'index.html should show v4.10.13');
-assert(indexHtml.includes('js/app.js?v=4.10.13'), 'app.js cache buster should be v4.10.13');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.13'"), 'storage.js version should be v4.10.13');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.13'"), 'data-backup version should be v4.10.13');
+assert(indexHtml.includes('v4.10.14'), 'index.html should show v4.10.14');
+assert(indexHtml.includes('js/app.js?v=4.10.14'), 'app.js cache buster should be v4.10.14');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.14'"), 'storage.js version should be v4.10.14');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.14'"), 'data-backup version should be v4.10.14');
 
 assert(revenueJs.includes('resolveGrossMarginRate'), 'revenue brain should resolve gross margin rate');
 assert(revenueJs.includes('computeMarginProfit'), 'revenue brain should compute margin profit');
@@ -186,8 +186,8 @@ console.log('== unset margin rate legacy compatibility ==');
 console.log('== v4.10.12 duplicate guard regression ==');
 execSync(`node "${join(root, 'scripts/verify-v41012-revenue-duplicate-guards.mjs')}"`, { stdio: 'inherit', cwd: root });
 
-assert(statusMd.includes('v4.10.13'), 'status.md should document v4.10.13');
-assert(handoffMd.includes('v4.10.13'), 'handoff.md should document v4.10.13');
-assert(decisionLog.includes('v4.10.13'), 'decision-log.md should record v4.10.13');
+assert(statusMd.includes('v4.10.14'), 'status.md should document v4.10.14');
+assert(handoffMd.includes('v4.10.14'), 'handoff.md should document v4.10.14');
+assert(decisionLog.includes('v4.10.14'), 'decision-log.md should record v4.10.14');
 
-console.log('All v4.10.13 profit rate calculation checks passed.');
+console.log('All v4.10.14 profit rate calculation checks passed.');

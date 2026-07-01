@@ -197,15 +197,27 @@ const MonthlyResultsBrain = {
     const adExpense = this.getAdExpenseFromDetail(opts && opts.expenses, monthKey);
     const monthExpense = this.totalExpenseFromRecord(n);
     const monthGrossRate = n.sales > 0 ? (n.profit / n.sales) * 100 : 0;
+    const confirmedRevenue = n.sales;
+    const confirmedProfit = n.profit;
+    const plannedRevenueEstimate = workOrderEstimate;
+    const plannedForecastProfit = workOrderForecastProfit;
+    const totalRevenue = plannedRevenueEstimate + confirmedRevenue;
+    const totalProfit = plannedForecastProfit + confirmedProfit;
     return {
       monthKey,
       monthRevenue: n.sales,
       monthExpense,
       monthGrossProfit: n.profit,
       monthGrossRate,
+      plannedRevenueEstimate,
+      plannedForecastProfit,
+      confirmedRevenue,
+      confirmedProfit,
+      totalRevenue,
+      totalProfit,
       workOrderEstimate,
       workOrderForecastProfit,
-      forecastProfit: n.profit + workOrderForecastProfit,
+      forecastProfit: plannedForecastProfit,
       adExpense,
       feeExpense: n.brokerFee,
       outsourceExpense: n.outsourcingCost,

@@ -72,10 +72,10 @@ const css = load('css/style.css');
 
 console.log('== v4.10.1 operations start check ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.13'), 'header version should be v4.10.13');
-assert(indexHtml.includes('Budil v4.10.13'), 'sidebar version should be v4.10.13');
-assert(indexHtml.includes('js/app.js?v=4.10.13'), 'app.js cache buster should be v4.10.13');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.13'"), 'storage version should be v4.10.13');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.14'), 'header version should be v4.10.14');
+assert(indexHtml.includes('Budil v4.10.14'), 'sidebar version should be v4.10.14');
+assert(indexHtml.includes('js/app.js?v=4.10.14'), 'app.js cache buster should be v4.10.14');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.14'"), 'storage version should be v4.10.14');
 
 assert(indexHtml.includes('id="exec-home-operations-start-check"'), 'operations start check container should exist');
 assert(indexHtml.includes('exec-home-operations-start-check-block'), 'operations start check block class should exist');
@@ -149,8 +149,8 @@ assert(!profitJs.includes('removeItem(') || !profitJs.match(/detectTestLikeWorkO
 assert(indexHtml.includes('calendar-candidate-paste'), 'future schedule import UI should remain');
 assert(indexHtml.includes('id="data-consistency-check"'), 'data consistency check should remain');
 assert(indexHtml.includes('btn-export-data'), 'backup export button should remain');
-assert(indexHtml.includes('exec-home-daily-core'), 'v4.10.13 executive home daily core should exist');
-assert(indexHtml.includes('exec-home-next-action'), 'v4.10.13 executive home next action should exist');
+assert(indexHtml.includes('exec-home-daily-core'), 'v4.10.14 executive home daily core should exist');
+assert(indexHtml.includes('exec-home-next-action'), 'v4.10.14 executive home next action should exist');
 assert(appJs.includes('renderDataConsistencyCheck'), 'data consistency rendering should remain');
 assert(appJs.includes('renderExecutivePriorityAction'), 'executive priority action should remain');
 

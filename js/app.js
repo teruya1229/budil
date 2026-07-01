@@ -10059,19 +10059,38 @@
           )
         })
         : ''}
+      <div class="profit-summary-grid">
       <div class="profit-summary-item profit-summary-highlight"><span>今月利益</span><strong>${esc(ProfitBrain.formatYen(s.monthGrossProfit))}</strong></div>
       <div class="profit-summary-item"><span>利益率</span><strong>${esc(ProfitBrain.formatRate(s.monthGrossRate))}</strong></div>
       <div class="profit-summary-item"><span>今月売上</span><strong>${esc(ProfitBrain.formatYen(s.monthRevenue))}</strong></div>
       <div class="profit-summary-item"><span>今月経費</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
       <div class="profit-summary-item"><span>経費入力</span><strong>今月${expenseCount}件</strong></div>
-      <div class="profit-summary-item"><span>作業予定見込み売上</span><strong>${esc(ProfitBrain.formatYen(s.workOrderEstimate))}</strong></div>
-      <div class="profit-summary-item"><span>見込み利益</span><strong>${esc(ProfitBrain.formatYen(s.forecastProfit))}</strong></div>
+      </div>
+      ${monthlyBrief}
+      <div class="profit-forecast-breakdown">
+        <p class="profit-breakdown-section-label">予定</p>
+        <div class="profit-breakdown-grid">
+          <div class="profit-summary-item"><span>予定売上見込み</span><strong>${esc(ProfitBrain.formatYen(s.plannedRevenueEstimate))}</strong></div>
+          <div class="profit-summary-item"><span>見込み利益</span><strong>${esc(ProfitBrain.formatYen(s.plannedForecastProfit))}</strong></div>
+        </div>
+        <p class="profit-breakdown-section-label">確定</p>
+        <div class="profit-breakdown-grid">
+          <div class="profit-summary-item"><span>確定売上</span><strong>${esc(ProfitBrain.formatYen(s.confirmedRevenue))}</strong></div>
+          <div class="profit-summary-item"><span>確定利益</span><strong>${esc(ProfitBrain.formatYen(s.confirmedProfit))}</strong></div>
+        </div>
+        <p class="profit-breakdown-section-label">合計</p>
+        <div class="profit-breakdown-grid">
+          <div class="profit-summary-item"><span>合計売上</span><strong>${esc(ProfitBrain.formatYen(s.totalRevenue))}</strong></div>
+          <div class="profit-summary-item profit-summary-total-profit"><span>合計利益</span><strong>${esc(ProfitBrain.formatYen(s.totalProfit))}</strong></div>
+        </div>
+      </div>
+      <div class="profit-summary-grid profit-summary-secondary">
       <div class="profit-summary-item"><span>仲介料・控除（粗利率）</span><strong>${esc(ProfitBrain.formatYen(s.marginDeductionTotal || 0))}</strong></div>
       <div class="profit-summary-item"><span>広告費</span><strong>${esc(ProfitBrain.formatYen(s.adExpense))}</strong></div>
       <div class="profit-summary-item"><span>仲介料・手数料</span><strong>${esc(ProfitBrain.formatYen(s.feeExpense))}</strong></div>
       <div class="profit-summary-item"><span>外注費</span><strong>${esc(ProfitBrain.formatYen(s.outsourceExpense))}</strong></div>
       <div class="profit-summary-item"><span>未紐付け支出</span><strong>${s.usesMonthlyResult ? '—' : `${s.unlinkedCount}件（${esc(ProfitBrain.formatYen(s.unlinkedTotal))}）`}</strong></div>
-      ${monthlyBrief}`;
+      </div>`;
   }
 
   function renderProfitExpenseBreakdown(ctx, options) {

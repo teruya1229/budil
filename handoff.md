@@ -16,9 +16,9 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.10.13 |
-| v4.10.13 本体修正commit | （push後に記載） |
-| handoff 正本更新 | message: `docs: update handoff for v4.10.13` |
+| 最新バージョン | v4.10.14 |
+| v4.10.14 本体修正commit | （push後に記載） |
+| handoff 正本更新 | message: `docs: update handoff for v4.10.14` |
 | ブランチ | `main` push 済み |
 
 ## Firebase / Functions 下書き（作業ツリー外・保留）
@@ -47,6 +47,14 @@ output/budil-calendar-events.json
 
 - Firebase / Functions API 案（`hub/functions`）は **一旦保留**。将来候補としてコードは残置
 - v4.10.1 の JSON ファイル取り込み・貼り付け取り込みは維持
+
+## v4.10.14で入ったもの
+
+- 利益管理の見込み表示を予定／確定／合計の3段に整理（母数ズレ解消）
+- `ProfitBrain.getPeriodProfitSummary` で予定・確定・合計を分離計算
+- 見込み利益は予定データのみ、確定利益は確定売上明細のみ
+- verify `scripts/verify-v41014-profit-forecast-breakdown.mjs`
+- cache buster を v4.10.14 に更新
 
 ## v4.10.13で入ったもの
 
