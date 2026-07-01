@@ -3053,7 +3053,7 @@
     });
     const listBtn = el.querySelector('.daily-go-improvement-list');
     if (listBtn) {
-      listBtn.addEventListener('click', () => navigateToView('external-check', '.card-external-check-unified'));
+      listBtn.addEventListener('click', () => navigateToView('dashboard', '#dash-action-candidates'));
     }
   }
 
@@ -3187,6 +3187,8 @@
       btn.addEventListener('click', () => {
         const flow = btn.dataset.dailyFlow;
         if (flow === 'calendar') goToReception();
+        else if (flow === 'schedule-import') navigateToView('calendar-candidate');
+        else if (flow === 'revenue-queue') scrollToElement('#daily-section-revenue-queue');
         else if (flow === 'revenue') goToAddRevenue();
         else if (flow === 'revenue-list') navigateToView('revenue', '#revenue-aggregation-card');
       });
@@ -8582,6 +8584,7 @@
     if (!todo.length) {
       el.innerHTML = `
         <h2>改善リスト</h2>
+        <p class="action-candidates-daily-note">実行の主入口は「毎日やること」です。ここは改善候補の一覧です。</p>
         <p class="placeholder-text">改善リストはまだありません。<br>集客チェック・経営ホームの提案から追加できます。</p>
         <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-action-candidates">集客チェックを見る</button>
       `;
@@ -8591,6 +8594,7 @@
           <h2>改善リスト <span class="external-check-count-badge">${todo.length}件未対応</span></h2>
           <button type="button" class="btn btn-sm btn-secondary" id="btn-dash-go-action-candidates">改善リストを見る</button>
         </div>
+        <p class="action-candidates-daily-note">実行の主入口は「毎日やること」です。ここは改善候補の一覧です。</p>
         <p class="action-candidates-source-note">由来：集客チェック（売上確定ではありません）</p>
         <ul class="action-candidates-dash-list">
           ${top.map(c => `
@@ -8610,7 +8614,11 @@
     const btn = document.getElementById('btn-dash-go-action-candidates');
     if (btn) {
       btn.addEventListener('click', () => {
-        navigateToView('analytics', '.card-marketing-check-history');
+        if (todo.length) {
+          scrollToElement('#dash-action-candidates');
+        } else {
+          navigateToView('analytics', '.card-browser-bantou');
+        }
       });
     }
     bindActionCandidateButtons(el);
@@ -8690,10 +8698,10 @@
         <button type="button" class="btn btn-sm btn-secondary" data-improvement-stay>この画面に残る</button>
       </div>`;
     el.querySelector('[data-improvement-go-daily]').addEventListener('click', () => {
-      navigateToView('dashboard', '.card-daily-action-tasks');
+      navigateToView('dashboard', '#daily-section-today-tasks');
     });
     el.querySelector('[data-improvement-go-list]').addEventListener('click', () => {
-      navigateToView('external-check', '.card-external-check-unified');
+      navigateToView('dashboard', '#dash-action-candidates');
     });
     el.querySelector('[data-improvement-stay]').addEventListener('click', () => {
       el.classList.add('hidden');
@@ -8795,6 +8803,7 @@
     });
     refreshActionCandidateViews();
     showAppToast('毎日やることに追加しました');
+    navigateToView('dashboard', '#daily-section-today-tasks');
   }
 
   function syncDailyTaskFromActionCandidate(candidate) {

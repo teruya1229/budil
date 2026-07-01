@@ -24,7 +24,7 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.15'), 'index.html should show v4.10.15');
+assert(indexHtml.includes('v4.10.16'), 'index.html should show v4.10.16');
 assert(indexHtml.includes('run-budil-calendar-export.bat'), 'calendar JSON hint should mention bat launcher');
 assert(indexHtml.includes('budil-calendar-events.json'), 'calendar JSON hint should mention output filename');
 assert(indexHtml.includes('btn-calendar-candidate-json-import'), 'v4.10.1 JSON import button should remain');
@@ -52,10 +52,10 @@ assert(workerGitignore.includes('output/'), 'worker output/ should be gitignored
 assert(workerGitignore.includes('.env'), 'worker .env should be gitignored');
 assert(workerGitignore.includes('credentials/'), 'worker credentials/ should be gitignored');
 
-assert(statusMd.includes('v4.10.15'), 'status.md should document v4.10.15');
+assert(statusMd.includes('v4.10.16'), 'status.md should document v4.10.16');
 assert(statusMd.includes('Firebase / Functions API 案は一旦保留'), 'status.md should note Firebase on hold');
 assert(handoffMd.includes('calendar-sync-worker'), 'handoff.md should document local worker path');
-assert(decisionLog.includes('v4.10.15'), 'decision-log.md should record v4.10.15 decision');
+assert(decisionLog.includes('v4.10.16'), 'decision-log.md should record v4.10.16 decision');
 assert(decisionLog.includes('hub/functions'), 'decision-log should keep hub/functions as future option');
 
 assert(

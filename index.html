@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.10.15">
+  <link rel="stylesheet" href="css/style.css?v=4.10.16">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.10.15</small>
+          <small>AI経営脳みそ v4.10.16</small>
         </div>
       </div>
       <nav class="nav">
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.10.15</small>
+        <small>Budil v4.10.16</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の優先 → 今月の数字 → 次にやること</p>
             </div>
-            <span class="exec-home-version">v4.10.15</span>
+            <span class="exec-home-version">v4.10.16</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
 
@@ -309,11 +309,11 @@
         <div class="card card-wide card-daily-action-tasks">
           <div class="daily-flow-strip">
             <span class="daily-flow-label">毎日の流れ</span>
-            <button type="button" class="btn btn-sm btn-secondary daily-flow-btn" data-daily-flow="calendar">受付・予定確認</button>
+            <button type="button" class="btn btn-sm btn-secondary daily-flow-btn" data-daily-flow="schedule-import">予定取り込み</button>
             <span class="daily-flow-arrow">→</span>
             <span class="daily-flow-current">毎日やること</span>
             <span class="daily-flow-arrow">→</span>
-            <button type="button" class="btn btn-sm btn-secondary daily-flow-btn" data-daily-flow="revenue">売上明細を手入力</button>
+            <button type="button" class="btn btn-sm btn-secondary daily-flow-btn" data-daily-flow="revenue-queue">売上確定待ち</button>
             <span class="daily-flow-arrow">→</span>
             <button type="button" class="btn btn-sm btn-secondary daily-flow-btn" data-daily-flow="revenue-list">売上一覧</button>
           </div>
@@ -322,6 +322,12 @@
             <summary>この画面の流れ</summary>
             <p class="daily-tasks-lead">予定取り込み → 売上予定（未確定）→ 作業日後に売上確定待ち → 売上確定 → 確定売上明細 → 月次実績・整合チェック、の順で進めます。</p>
           </details>
+
+          <div id="daily-section-today-tasks" class="daily-section daily-section-today-tasks">
+            <h3 class="daily-section-title">今日のタスク</h3>
+            <p class="daily-section-lead">改善リストから追加したものも、ここで確認・完了できます。</p>
+            <div id="dash-daily-action-tasks" class="daily-action-tasks-list"></div>
+          </div>
 
           <div id="daily-section-revenue-queue" class="daily-section daily-section-revenue-queue">
             <h3 class="daily-section-title">売上確定待ち</h3>
@@ -502,11 +508,13 @@
                 <button type="button" id="btn-daily-task-edit-cancel" class="btn btn-secondary btn-sm">キャンセル</button>
               </div>
             </div>
-            <div id="dash-daily-action-tasks" class="daily-action-tasks-list"></div>
           </details>
         </div>
 
-        <div id="dash-external-check" class="card card-wide card-external-check"></div>
+        <details class="card card-wide card-external-check-collapse">
+          <summary>外部確認の記録（集客チェックで取り込み）</summary>
+          <div id="dash-external-check" class="card-external-check-inner"></div>
+        </details>
 
         <div id="dash-action-candidates" class="card card-wide card-action-candidates"></div>
 
@@ -582,7 +590,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.15</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.16</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -3553,30 +3561,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.10.15"></script>
-  <script src="js/messages.js?v=4.10.15"></script>
-  <script src="js/demand-brain.js?v=4.10.15"></script>
-  <script src="js/demand-radar.js?v=4.10.15"></script>
-  <script src="js/sales-brain.js?v=4.10.15"></script>
-  <script src="js/management-brain.js?v=4.10.15"></script>
-  <script src="js/payment-brain.js?v=4.10.15"></script>
-  <script src="js/revenue-brain.js?v=4.10.15"></script>
-  <script src="js/revenue-summary-brain.js?v=4.10.15"></script>
-  <script src="js/reception-brain.js?v=4.10.15"></script>
-  <script src="js/map-brain.js?v=4.10.15"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.10.15"></script>
-  <script src="js/external-check-brain.js?v=4.10.15"></script>
-  <script src="js/action-brain.js?v=4.10.15"></script>
-  <script src="js/work-order-brain.js?v=4.10.15"></script>
-  <script src="js/follow-up-brain.js?v=4.10.15"></script>
-  <script src="js/work-completion-brain.js?v=4.10.15"></script>
-  <script src="js/profit-brain.js?v=4.10.15"></script>
-  <script src="js/analytics-brain.js?v=4.10.15"></script>
-  <script src="js/monthly-results-brain.js?v=4.10.15"></script>
-  <script src="js/documents-brain.js?v=4.10.15"></script>
-  <script src="js/executive-brain.js?v=4.10.15"></script>
-  <script src="js/card-ocr.js?v=4.10.15"></script>
-  <script src="js/data-backup.js?v=4.10.15"></script>
-  <script src="js/app.js?v=4.10.15"></script>
+  <script src="js/storage.js?v=4.10.16"></script>
+  <script src="js/messages.js?v=4.10.16"></script>
+  <script src="js/demand-brain.js?v=4.10.16"></script>
+  <script src="js/demand-radar.js?v=4.10.16"></script>
+  <script src="js/sales-brain.js?v=4.10.16"></script>
+  <script src="js/management-brain.js?v=4.10.16"></script>
+  <script src="js/payment-brain.js?v=4.10.16"></script>
+  <script src="js/revenue-brain.js?v=4.10.16"></script>
+  <script src="js/revenue-summary-brain.js?v=4.10.16"></script>
+  <script src="js/reception-brain.js?v=4.10.16"></script>
+  <script src="js/map-brain.js?v=4.10.16"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.10.16"></script>
+  <script src="js/external-check-brain.js?v=4.10.16"></script>
+  <script src="js/action-brain.js?v=4.10.16"></script>
+  <script src="js/work-order-brain.js?v=4.10.16"></script>
+  <script src="js/follow-up-brain.js?v=4.10.16"></script>
+  <script src="js/work-completion-brain.js?v=4.10.16"></script>
+  <script src="js/profit-brain.js?v=4.10.16"></script>
+  <script src="js/analytics-brain.js?v=4.10.16"></script>
+  <script src="js/monthly-results-brain.js?v=4.10.16"></script>
+  <script src="js/documents-brain.js?v=4.10.16"></script>
+  <script src="js/executive-brain.js?v=4.10.16"></script>
+  <script src="js/card-ocr.js?v=4.10.16"></script>
+  <script src="js/data-backup.js?v=4.10.16"></script>
+  <script src="js/app.js?v=4.10.16"></script>
 </body>
 </html>

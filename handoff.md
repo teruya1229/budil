@@ -16,9 +16,9 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.10.15 |
-| v4.10.15 本体修正commit | （push後に記載） |
-| handoff 正本更新 | message: `docs: update handoff for v4.10.15` |
+| 最新バージョン | v4.10.16 |
+| v4.10.16 本体修正commit | （push後に記載） |
+| handoff 正本更新 | message: `docs: update handoff for v4.10.16` |
 | ブランチ | `main` push 済み |
 
 ## Firebase / Functions 下書き（作業ツリー外・保留）
@@ -47,6 +47,15 @@ output/budil-calendar-events.json
 
 - Firebase / Functions API 案（`hub/functions`）は **一旦保留**。将来候補としてコードは残置
 - v4.10.1 の JSON ファイル取り込み・貼り付け取り込みは維持
+
+## v4.10.16で入ったもの
+
+- 毎日やることの「今日のタスク」を前面表示。タスク追加・完了履歴は details 初期 closed
+- ダッシュボード外部確認カードを details 初期 closed へ退避（集客チェック貼り付け入口は1つ維持）
+- 毎日の流れストリップを calendar-first 主導線に整理（手入力は例外 details 側に維持）
+- 改善リスト導線を旧 external-check からダッシュボード改善リストカードへ修正
+- verify `scripts/verify-v41016-entry-simplification.mjs`
+- cache buster を v4.10.16 に更新
 
 ## v4.10.15で入ったもの
 

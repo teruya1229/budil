@@ -10939,6 +10939,29 @@ body.sales-page {
 }
 
 /* v4.10.11 直近予定整合 */
+/* v4.10.16 入口整理（毎日やること・ダッシュボード） */
+.daily-section-today-tasks {
+  border-left: 3px solid rgba(52, 211, 153, 0.45);
+  padding-left: 0.65rem;
+}
+
+.card-external-check-collapse summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #94a3b8;
+  padding: 0.75rem 1rem;
+}
+
+.card-external-check-inner {
+  padding: 0 1rem 1rem;
+}
+
+.action-candidates-daily-note {
+  margin: 0 0 0.65rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
 /* v4.10.15 集客チェック貼り付け入口統合 */
 .browser-bantou-parse-diagnostics {
   margin-top: 12px;
