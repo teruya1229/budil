@@ -1789,15 +1789,15 @@
     if (diff > 0) {
       const amountLabel = RevenueBrain.formatYen(diff);
       return `
-        <div class="reconciliation-action-card" data-month-key="${esc(key)}">
-          <p class="reconciliation-action-title"><strong>差額あり：${esc(amountLabel)}</strong></p>
-          <p class="reconciliation-action-lead">月次実績を正として、差額分を売上明細に追加できます。</p>
+        <details class="reconciliation-action-card reconciliation-adjustment-details" data-month-key="${esc(key)}">
+          <summary class="reconciliation-action-title"><strong>差額あり：${esc(amountLabel)}</strong>（月次調整）</summary>
+          <p class="reconciliation-action-lead">通常の作業売上ではありません。月次実績と売上明細の差額を調整明細として追加する操作です。既存明細に重複がないか先に確認してください。</p>
           <div class="reconciliation-action-buttons">
-            <button type="button" class="btn btn-sm btn-primary btn-monthly-reconciliation-add">＋${esc(amountLabel)}を売上明細に追加</button>
+            <button type="button" class="btn btn-sm btn-secondary btn-monthly-reconciliation-add">月次調整明細を追加（${esc(amountLabel)}）</button>
             <button type="button" class="btn btn-sm btn-secondary btn-monthly-reconciliation-edit">月次実績を編集</button>
             <button type="button" class="btn btn-sm btn-secondary btn-monthly-reconciliation-detail">詳細を見る</button>
           </div>
-        </div>`;
+        </details>`;
     }
     const excess = Math.abs(diff);
     return `
@@ -1835,14 +1835,24 @@
       return;
     }
     const amountLabel = RevenueBrain.formatYen(row.diff);
-    if (!window.confirm(`月次実績との差額 ${amountLabel} を売上明細に1件追加します。よろしいですか？`)) return;
+    const dupes = MonthlyResultsBrain.findMonthlyAdjustmentDuplicates(key, row.diff, revenues);
+    if (dupes.length) {
+      const lines = dupes.slice(0, 2).map(r => `・${r.workDate} ${RevenueBrain.formatYen(r.amount)}`).join('\n');
+      if (!window.confirm(
+        `同月・同額の月次調整明細が既にあります。\n${lines}\n\nそれでも追加しますか？`
+      )) return;
+    }
+    if (!window.confirm(
+      `月次調整明細として ${amountLabel} を1件追加します。\n\nこれは通常の作業売上ではなく、月次実績と売上明細の差額調整です。既存の売上明細と重複していないか確認済みですか？`
+    )) return;
     const payload = MonthlyResultsBrain.buildMonthlyAdjustmentPayload(key, row.diff);
     if (!payload) {
       alert('差額の追加に失敗しました。');
       return;
     }
+    if (!confirmRevenueSaveWithDuplicateCheck(payload, '')) return;
     Storage.addRevenueRecord(payload);
-    navigateAfterAction('monthly-adjustment-save', '差額分を売上明細に追加しました。');
+    navigateAfterAction('monthly-adjustment-save', '月次調整明細を追加しました。');
   }
 
   function renderCurrentMonthReconciliationBrief(monthKey, monthlyOverlay) {
@@ -3139,7 +3149,7 @@
         <button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-stay>この画面に残る</button>
       </div>`;
     el.querySelector('[data-daily-revenue-go-list]').addEventListener('click', () => {
-      navigateToView('revenue', '#revenue-aggregation-card');
+      navigateToView('revenue', '#revenue-list-section');
     });
     el.querySelector('[data-daily-revenue-stay]').addEventListener('click', () => {
       el.classList.add('hidden');
@@ -4013,7 +4023,11 @@
 
   function goToAddRevenue() {
     navigateToView('revenue');
-    setTimeout(() => scrollToElement('#revenue-form'), 120);
+    setTimeout(() => {
+      const details = document.getElementById('revenue-manual-input-details');
+      if (details) details.open = true;
+      scrollToElement('#revenue-form');
+    }, 120);
   }
 
   function goToAddDailyTask() {
@@ -9279,6 +9293,7 @@
     if (!confirm(`確定売上として登録します。${diffMsg}\n\nこの操作は売上集計に反映されます。よろしいですか？`)) return;
 
     const revenuePayload = WorkCompletionBrain.createRevenuePayloadFromWorkOrder(wo, input);
+    if (!confirmRevenueSaveWithDuplicateCheck(revenuePayload, '')) return;
     const newRecord = Storage.addRevenueRecord(revenuePayload);
     const woPatch = WorkCompletionBrain.markWorkOrderCompleted(wo, newRecord, input);
     Storage.updateWorkOrder(workOrderId, woPatch);
@@ -15777,6 +15792,8 @@
     document.getElementById('btn-revenue-open-lead').addEventListener('click', openSelectedRevenueLead);
     document.getElementById('btn-revenue-new').addEventListener('click', () => {
       resetRevenueForm();
+      const details = document.getElementById('revenue-manual-input-details');
+      if (details) details.open = true;
       document.getElementById('revenue-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     document.getElementById('btn-save-revenue-target').addEventListener('click', () => {

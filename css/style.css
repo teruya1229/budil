@@ -10939,6 +10939,57 @@ body.sales-page {
 }
 
 /* v4.10.11 直近予定整合 */
+/* v4.10.17 売上入口主従整理 */
+.revenue-flow-hint {
+  margin: 0 0 0.85rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.45);
+  font-size: 0.84rem;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.card-revenue-manual-input > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #94a3b8;
+  padding: 0.75rem 1rem;
+}
+
+.revenue-manual-input-lead {
+  margin: 0 0 0.75rem;
+  padding: 0 1rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.revenue-manual-input-body {
+  padding: 0 1rem 1rem;
+}
+
+.revenue-manual-input-body h2 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.daily-section-revenue-exception > summary {
+  color: #94a3b8;
+}
+
+.daily-section-lead-exception {
+  font-size: 0.84rem;
+  color: #94a3b8;
+}
+
+.reconciliation-adjustment-details > summary {
+  cursor: pointer;
+}
+
+.reconciliation-adjustment-details .reconciliation-action-lead {
+  padding: 0 0.25rem;
+}
+
 /* v4.10.16 入口整理（毎日やること・ダッシュボード） */
 .daily-section-today-tasks {
   border-left: 3px solid rgba(52, 211, 153, 0.45);

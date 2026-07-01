@@ -133,6 +133,16 @@ const MonthlyResultsBrain = {
       && String(r.service || '').trim() === this.MONTHLY_ADJUSTMENT_SERVICE;
   },
 
+  findMonthlyAdjustmentDuplicates(monthKey, diffAmount, revenueRecords) {
+    const amount = Math.round(Number(diffAmount) || 0);
+    const key = this.normalizeMonth(monthKey);
+    if (!key || amount <= 0) return [];
+    return (revenueRecords || []).filter(r => {
+      if (!this.isMonthlyAdjustmentRecord(r)) return false;
+      return String(r.workDate || '').slice(0, 7) === key && Number(r.amount) === amount;
+    });
+  },
+
   buildMonthlyAdjustmentPayload(monthKey, diffAmount) {
     const amount = Math.round(Number(diffAmount) || 0);
     if (amount <= 0) return null;

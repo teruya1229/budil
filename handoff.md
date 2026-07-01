@@ -16,9 +16,9 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.10.16 |
-| v4.10.16 本体修正commit | e67474f962354ad7d185415143c84d1c811e2f96 |
-| handoff 正本更新 | message: `docs: update handoff for v4.10.16` |
+| 最新バージョン | v4.10.17 |
+| v4.10.17 本体修正commit | （push後に記載） |
+| handoff 正本更新 | message: `docs: update handoff for v4.10.17` |
 | ブランチ | `main` push 済み |
 
 ## Firebase / Functions 下書き（作業ツリー外・保留）
@@ -47,6 +47,15 @@ output/budil-calendar-events.json
 
 - Firebase / Functions API 案（`hub/functions`）は **一旦保留**。将来候補としてコードは残置
 - v4.10.1 の JSON ファイル取り込み・貼り付け取り込みは維持
+
+## v4.10.17で入ったもの
+
+- 売上管理の主導線を作業予定からの売上確定に整理。手入力は details 初期 closed の例外操作
+- 毎日クイック入力を例外操作として明示
+- 作業後確定モーダルに重複疑いチェックを追加（actualRevenueId ロック維持）
+- 月次差額追加を月次調整明細として明示し、同月・同額重複警告を追加
+- verify `scripts/verify-v41017-revenue-entry-hierarchy.mjs`
+- cache buster を v4.10.17 に更新
 
 ## v4.10.16で入ったもの
 
