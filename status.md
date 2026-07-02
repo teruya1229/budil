@@ -1,5 +1,16 @@
 ﻿# Budil status
 
+## v4.10.24 実装内容（利益ラベル整合性修正）
+
+- 表示バージョンを v4.10.24 に更新
+- ProfitBrain.getPeriodProfitSummary の `plannedForecastProfit` 計算を修正
+  - 作業予定に個別粗利率が設定されていない場合（marginUnset=true）、当月確定売上から算出した `monthGrossRate` をフォールバックとして適用
+  - これにより「見込み利益 = 予定売上見込みと同額」の誤表示が解消
+- app.js の利益管理画面「今月売上」ラベルを「今月の確定売上」に変更
+  - 値も `s.confirmedRevenue`（確定/完了のみ）を使用（月次実績ベース時は `s.monthRevenue` を維持）
+- 新規 verify-v41024-profit-label-consistency.mjs を追加（全確認項目合格）
+- 既存 verify v4.10.0〜v4.10.23 全件実行・合格確認
+
 ## v4.10.23 実装内容（確定売上定義統一）
 
 - 表示バージョンを v4.10.23 に更新（CSS/JSキャッシュバスターも揃え）

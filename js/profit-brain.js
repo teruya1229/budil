@@ -415,9 +415,16 @@ const ProfitBrain = {
     const plannedRevenueEstimate = monthPlannedWorkOrders.reduce(
       (n, w) => n + this.getWorkOrderEstimateAmount(w), 0
     );
+    // 見込み利益 = 作業予定の見込み利益合計
+    // 個別粗利率が未設定の場合は当月の確定売上から算出した粗利率をフォールバックとして適用
     const plannedForecastProfit = monthPlannedWorkOrders.reduce((n, w) => {
       const exp = this.sumAmount(this.getExpensesForWorkOrder(w.id, expenses));
-      return n + this.computeWorkOrderForecastProfit(w, exp).forecastProfit;
+      const woResult = this.computeWorkOrderForecastProfit(w, exp);
+      if (woResult.marginUnset && monthGrossRate > 0) {
+        const est = this.getWorkOrderEstimateAmount(w);
+        return n + Math.max(0, Math.round(est * monthGrossRate / 100) - exp);
+      }
+      return n + woResult.forecastProfit;
     }, 0);
 
     // 確定売上 = 確定ステータス（'確定','完了'）のレコードのみ

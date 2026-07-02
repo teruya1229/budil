@@ -16,8 +16,9 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.10.23 |
-| v4.10.23 確定売上定義統一commit | （このhandoff更新と同commit） |
+| 最新バージョン | v4.10.24 |
+| v4.10.24 利益ラベル整合性修正commit | （このhandoff更新と同commit） |
+| v4.10.23 確定売上定義統一commit | 9a6d161 |
 | v4.10.22 本体修正commit | ee8eec3 |
 | ブランチ | `main` push 済み |
 

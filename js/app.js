@@ -10121,6 +10121,10 @@
       : '';
     const flowNote = `<p class="profit-flow-note">利益は「売上 − 経費」で確認します。月次実績がある月は月次実績ベースの経営数字を優先表示します。日々の経費入力は支出明細として保存されます。</p>`;
     const aggBadge = `<p class="profit-aggregation-label">集計：<strong>${esc(s.usesMonthlyResult ? '月次実績ベース' : '明細ベース')}</strong></p>`;
+    const profitRevLabel = s.usesMonthlyResult ? '今月売上' : '今月の確定売上';
+    const profitRevValue = s.usesMonthlyResult
+      ? s.monthRevenue
+      : (s.confirmedRevenue != null ? s.confirmedRevenue : s.monthRevenue);
     let monthlyBrief = '';
     if (!s.usesMonthlyResult && typeof RevenueSummaryBrain !== 'undefined') {
       const monthly = RevenueSummaryBrain.buildMonthlySummary(
@@ -10153,7 +10157,7 @@
       <div class="profit-summary-grid">
       <div class="profit-summary-item profit-summary-highlight"><span>今月利益</span><strong>${esc(ProfitBrain.formatYen(s.monthGrossProfit))}</strong></div>
       <div class="profit-summary-item"><span>利益率</span><strong>${esc(ProfitBrain.formatRate(s.monthGrossRate))}</strong></div>
-      <div class="profit-summary-item"><span>今月売上</span><strong>${esc(ProfitBrain.formatYen(s.monthRevenue))}</strong></div>
+      <div class="profit-summary-item"><span>${profitRevLabel}</span><strong>${esc(ProfitBrain.formatYen(profitRevValue))}</strong></div>
       <div class="profit-summary-item"><span>今月経費</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
       <div class="profit-summary-item"><span>経費入力</span><strong>今月${expenseCount}件</strong></div>
       </div>

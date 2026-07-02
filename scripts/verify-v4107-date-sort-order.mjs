@@ -25,10 +25,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.23'), 'index.html should show v4.10.23');
-assert(indexHtml.includes('js/app.js?v=4.10.23'), 'app.js cache buster should be v4.10.23');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.23'"), 'storage version should be v4.10.23');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.23'"), 'data-backup version should be v4.10.23');
+assert(indexHtml.includes('v4.10.24'), 'index.html should show v4.10.24');
+assert(indexHtml.includes('js/app.js?v=4.10.24'), 'app.js cache buster should be v4.10.24');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.24'"), 'storage version should be v4.10.24');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.24'"), 'data-backup version should be v4.10.24');
 
 assert(workOrderBrain.includes('compareScheduledDateTimeAsc'), 'work-order brain should define compareScheduledDateTimeAsc');
 assert(workOrderBrain.includes('sortByScheduledDateTimeAsc'), 'work-order brain should define sortByScheduledDateTimeAsc');
