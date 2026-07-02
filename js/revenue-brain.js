@@ -472,8 +472,11 @@ const RevenueBrain = {
     const monthAll = this.filterMonthRecords(records, monthKey);
     const active = this.activeRecords(monthAll);
 
-    const planned = this.sumAmount(active);
-    const confirmed = this.sumAmount(active.filter(r => this.isConfirmedRevenueStatus(r.status)));
+    const confirmedList = active.filter(r => this.isConfirmedRevenueStatus(r.status));
+    const plannedList = active.filter(r => !this.isConfirmedRevenueStatus(r.status));
+    const confirmed = this.sumAmount(confirmedList);
+    const planned = this.sumAmount(plannedList);
+    const total = confirmed + planned;
     const completed = 0;
     const paid = active.reduce((sum, r) => {
       if (typeof PaymentBrain !== 'undefined') return sum + PaymentBrain.getPaidAmount(r);
@@ -488,8 +491,8 @@ const RevenueBrain = {
     const paymentConcernCount = active.filter(r => this.recordHasPaymentConcern(r)).length;
 
     const monthlyTarget = Number(settings && settings.monthlyTarget) || 0;
-    const remainingToTarget = Math.max(0, monthlyTarget - planned);
-    const achievementRate = monthlyTarget > 0 ? Math.round((planned / monthlyTarget) * 100) : 0;
+    const remainingToTarget = Math.max(0, monthlyTarget - total);
+    const achievementRate = monthlyTarget > 0 ? Math.round((total / monthlyTarget) * 100) : 0;
 
     const now = new Date();
     const parts = monthKey.split('-');
@@ -505,6 +508,7 @@ const RevenueBrain = {
       monthKey,
       planned,
       confirmed,
+      total,
       completed,
       paid,
       unpaid,
@@ -532,7 +536,7 @@ const RevenueBrain = {
       return { lines: [line], brief: line };
     }
 
-    lines.push(`今月の確定売上は${this.formatYen(summary.planned)}です。`);
+    lines.push(`今月の確定売上は${this.formatYen(summary.confirmed)}です。`);
 
     if (targetNotMet) {
       lines.push(`目標まであと${this.formatYen(summary.remainingToTarget)}です。確定売上と売上予定（未確定）を確認してください。`);
@@ -690,7 +694,8 @@ const RevenueBrain = {
     const highTicket = (summary.byService || [])
       .filter(s => ['エアコン完全分解', '法人案件'].includes(s.name))
       .reduce((sum, s) => sum + s.amount, 0);
-    if (summary.planned > 0 && highTicket / summary.planned < 0.2) {
+    const totalForRate = summary.total || (summary.confirmed + summary.planned) || 0;
+    if (totalForRate > 0 && highTicket / totalForRate < 0.2) {
       comments.push('高単価メニューの提案余地があります。');
     }
     if (summary.monthlyTarget && summary.achievementRate >= 80) {
@@ -703,7 +708,7 @@ const RevenueBrain = {
 
   buildSummaryText(summary, comment) {
     const lines = [
-      `確定売上：${this.formatYen(summary.planned)}`,
+      `確定売上：${this.formatYen(summary.confirmed)}`,
       `入金済み：${this.formatYen(summary.paid)}`,
       `入金待ち：${this.formatYen(summary.unpaid)}`,
       `月間目標：${this.formatYen(summary.monthlyTarget)}`,

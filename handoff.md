@@ -16,11 +16,20 @@
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
-| 最新バージョン | v4.10.22 |
-| .gitignore 安全ガードcommit | （このhandoff更新と同commit） |
+| 最新バージョン | v4.10.23 |
+| v4.10.23 確定売上定義統一commit | （このhandoff更新と同commit） |
 | v4.10.22 本体修正commit | ee8eec3 |
-| handoff 正本更新 | message: `docs: update handoff for v4.10.22` |
 | ブランチ | `main` push 済み |
+
+## v4.10.23 確定売上定義統一（2026-07-02）
+
+- RevenueBrain.summarize の `planned` を「予定売上見込み（明細内の未確定ステータス）」のみに変更
+- RevenueBrain.summarize に `total`（合計売上 = confirmed + planned）フィールドを追加
+- ProfitBrain.getPeriodProfitSummary の `confirmedRevenue` を確定ステータスのみに変更
+- ProfitBrain.getPeriodProfitSummary の `confirmedProfit` を確定売上の粗利から算出に変更
+- app.js: 「確定売上」ラベルには `summary.confirmed` を使用、合計は `summary.total`
+- RevenueSummaryBrain との整合性確認（変更なし、元から正しい定義）
+- 新規 verify-v41023-confirmed-revenue-definition.mjs 追加
 
 ## .gitignore 安全ガード（2026-07-02）
 

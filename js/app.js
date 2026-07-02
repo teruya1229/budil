@@ -1652,7 +1652,8 @@
       const monthlyNote = overlay && overlay.usesMonthlyResult
         ? ' <span class="revenue-monthly-badge">月次実績ベース</span>'
         : '';
-      revenueMorningEl.innerHTML = `<p>今月売上：${esc(RevenueBrain.formatYen(rev.summary.planned))}${monthlyNote} / 達成率 ${rev.summary.achievementRate}%</p>`;
+      const morningTotal = rev.summary.total != null ? rev.summary.total : (rev.summary.confirmed + rev.summary.planned);
+      revenueMorningEl.innerHTML = `<p>今月売上：${esc(RevenueBrain.formatYen(morningTotal))}${monthlyNote} / 達成率 ${rev.summary.achievementRate}%</p>`;
     }
 
     const followUpMorningEl = document.getElementById('mgmt-follow-up');
@@ -1737,6 +1738,7 @@
         ...base,
         planned: monthRevenue,
         confirmed: monthRevenue,
+        total: monthRevenue,
         completed: monthRevenue,
         achievementRate,
         remainingToTarget: Math.max(0, monthlyTarget - monthRevenue)
@@ -3463,9 +3465,10 @@
       ? renderCurrentMonthReconciliationBrief(summary.monthKey, overlay)
       : '';
     const plannedLabel = overlay && overlay.usesMonthlyResult ? '今月実績' : '確定売上';
+    const plannedDisplayValue = (overlay && overlay.usesMonthlyResult) ? summary.planned : summary.confirmed;
     const lines = [
       monthlyBrief,
-      `<p class="revenue-summary-line">${plannedLabel}：<strong>${esc(RevenueBrain.formatYen(summary.planned))}</strong>${overlay && overlay.usesMonthlyResult ? ' <span class="revenue-monthly-badge">月次実績ベース</span>' : ''}</p>`,
+      `<p class="revenue-summary-line">${plannedLabel}：<strong>${esc(RevenueBrain.formatYen(plannedDisplayValue))}</strong>${overlay && overlay.usesMonthlyResult ? ' <span class="revenue-monthly-badge">月次実績ベース</span>' : ''}</p>`,
       `<p class="revenue-summary-line">入金済み：${esc(RevenueBrain.formatYen(summary.paid))}</p>`,
       `<p class="revenue-summary-line">入金待ち：${esc(RevenueBrain.formatYen(summary.unpaid))}</p>`,
       `<p class="revenue-summary-line">月間目標：${esc(RevenueBrain.formatYen(summary.monthlyTarget))}</p>`,
@@ -4654,7 +4657,7 @@
     lines.push('');
 
     lines.push('■ 2. 売上状況');
-    lines.push(`今月売上：${RevenueBrain.formatYen(rev.planned)}`);
+    lines.push(`今月売上：${RevenueBrain.formatYen(rev.total != null ? rev.total : (rev.confirmed + rev.planned))}`);
     lines.push(`期間内売上：${RevenueBrain.formatYen(c.summary.periodRevenue)}`);
     lines.push(`目標：${RevenueBrain.formatYen(rev.monthlyTarget)}`);
     lines.push(`達成率：${rev.achievementRate}%`);
@@ -11502,7 +11505,7 @@
     if (!s.monthlyTarget) {
       return '<p class="analytics-kpi-goal-note">売上目標を設定すると、必要問い合わせ数の目安を表示できます。</p>';
     }
-    const registeredSales = Number(s.planned || 0);
+    const registeredSales = Number(s.total != null ? s.total : (s.confirmed || 0));
     const shortage = Math.max(0, Number(s.monthlyTarget || 0) - registeredSales);
     const activeCount = Number(s.recordCount || 0);
     const averageUnit = activeCount > 0 ? Math.max(1, Math.round(registeredSales / activeCount)) : 15000;
@@ -15665,8 +15668,9 @@
 
     if (summaryEl) {
       const plannedLabel = monthlyOverlay && monthlyOverlay.usesMonthlyResult ? '今月実績' : '確定売上';
+      const plannedPanelValue = (monthlyOverlay && monthlyOverlay.usesMonthlyResult) ? summary.planned : summary.confirmed;
       const baseItems = [
-        { label: plannedLabel, value: RevenueBrain.formatYen(summary.planned) + (monthlyOverlay && monthlyOverlay.usesMonthlyResult ? '（月次実績）' : '') },
+        { label: plannedLabel, value: RevenueBrain.formatYen(plannedPanelValue) + (monthlyOverlay && monthlyOverlay.usesMonthlyResult ? '（月次実績）' : '') },
         { label: '確定', value: RevenueBrain.formatYen(summary.confirmed) },
         { label: '入金済み', value: RevenueBrain.formatYen(summary.paid) },
         { label: '入金待ち', value: RevenueBrain.formatYen(summary.unpaid) },

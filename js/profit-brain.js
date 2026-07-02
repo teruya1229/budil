@@ -419,8 +419,26 @@ const ProfitBrain = {
       const exp = this.sumAmount(this.getExpensesForWorkOrder(w.id, expenses));
       return n + this.computeWorkOrderForecastProfit(w, exp).forecastProfit;
     }, 0);
-    const confirmedRevenue = monthRevenue;
-    const confirmedProfit = monthGrossProfit;
+
+    // 確定売上 = 確定ステータス（'確定','完了'）のレコードのみ
+    const confirmedMonthRevenues = monthRevenues.filter(r =>
+      typeof RevenueBrain !== 'undefined'
+        ? RevenueBrain.isConfirmedRevenueStatus(r.status)
+        : (r.status === '確定' || r.status === '完了')
+    );
+    const confirmedRevenue = this.sumAmount(confirmedMonthRevenues);
+
+    // 確定利益 = 確定売上の粗利率ベース粗利 - 確定売上に紐付いた経費
+    const confirmedProfitDetails = confirmedMonthRevenues.map(r => {
+      const linked = this.getExpensesForRevenue(r.id, expenses, workOrders);
+      return this.computeRevenueRowProfit(r, this.sumAmount(linked));
+    });
+    const confirmedMarginGross = confirmedProfitDetails.reduce((n, d) => n + d.marginProfit, 0);
+    const confirmedLinkedExpense = confirmedMonthRevenues.reduce((n, r) =>
+      n + this.sumAmount(this.getExpensesForRevenue(r.id, expenses, workOrders)), 0
+    );
+    const confirmedProfit = confirmedMarginGross - confirmedLinkedExpense;
+
     const totalRevenue = plannedRevenueEstimate + confirmedRevenue;
     const totalProfit = plannedForecastProfit + confirmedProfit;
 

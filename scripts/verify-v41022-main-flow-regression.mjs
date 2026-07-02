@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.22 主導線・主従整理リグレッションverify
+ * Budil v4.10.23 主導線・主従整理リグレッションverify
  *
  * 確認内容：
  * - v4.10.14〜v4.10.21 の主従整理が維持されていること
@@ -28,7 +28,7 @@ for (const file of ['app.js', 'storage.js', 'data-backup.js', 'executive-brain.j
   execSync(`node --check "${join(root, 'js', file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.22 main-flow-regression ==');
+console.log('== v4.10.23 main-flow-regression ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -38,10 +38,10 @@ const executiveBrain = load('js/executive-brain.js');
 const revenueBrain = load('js/revenue-brain.js');
 
 // ── バージョン確認 ────────────────────────────────────────────
-assert(indexHtml.includes('v4.10.22'), 'index.html should show v4.10.22');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.22'"), 'storage.js BUDIL_VERSION should be v4.10.22');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.22'"), 'data-backup APP_VERSION should be v4.10.22');
-console.log('  [OK] バージョン v4.10.22');
+assert(indexHtml.includes('v4.10.23'), 'index.html should show v4.10.23');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.23'"), 'storage.js BUDIL_VERSION should be v4.10.23');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.23'"), 'data-backup APP_VERSION should be v4.10.23');
+console.log('  [OK] バージョン v4.10.23');
 
 // ── NG文言チェック (通常UI) ────────────────────────────────────
 const ngWords = [
@@ -209,4 +209,4 @@ if (storageDiagLine) {
 }
 console.log('  [OK] storage.js診断メッセージ NG文言なし');
 
-console.log('\n✅ v4.10.22 main-flow-regression: ALL CHECKS PASSED');
+console.log('\n✅ v4.10.23 main-flow-regression: ALL CHECKS PASSED');

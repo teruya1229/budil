@@ -1,5 +1,22 @@
 ﻿# Budil status
 
+## v4.10.23 実装内容（確定売上定義統一）
+
+- 表示バージョンを v4.10.23 に更新（CSS/JSキャッシュバスターも揃え）
+- RevenueBrain.summarize の `planned` を「予定売上見込み（明細内の未確定ステータス）」のみに変更
+- RevenueBrain.summarize に `total`（合計売上 = confirmed + planned）フィールドを追加
+- RevenueBrain.summarize の `achievementRate` / `remainingToTarget` を `total`（合計売上）ベースに変更
+- RevenueBrain.buildManagementComment / buildSummaryText で「確定売上」は `summary.confirmed` を使用
+- ProfitBrain.getPeriodProfitSummary の `confirmedRevenue` を確定ステータス（'確定','完了'）のレコードのみに変更
+- ProfitBrain.getPeriodProfitSummary の `confirmedProfit` を確定売上の粗利率ベース粗利（紐付け経費引き）に変更
+- app.js: `applyMonthlyResultToRevenueSummary` に `total: monthRevenue` を追加
+- app.js: 「今月売上」表示を `summary.total`（合計売上）に統一
+- app.js: `renderRevenueSummaryHtml` で月次実績なし時は `summary.confirmed`（確定売上）を表示
+- app.js: 売上サマリーパネルで月次実績なし時は `summary.confirmed` を表示
+- RevenueSummaryBrain の `CONFIRMED_STATUSES` / `isConfirmedRevenueRecord` は変更なし（元から正しい定義）
+- 新規 verify-v41023-confirmed-revenue-definition.mjs を追加（全確認項目合格）
+- 既存 verify v4.10.0〜v4.10.22 全件実行・合格確認
+
 ## .gitignore 安全ガード追加（2026-07-02）
 
 - `.gitignore` に `auth/` と `js/hub-import.js` を追加

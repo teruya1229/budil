@@ -2,6 +2,33 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.10.23 確定売上定義統一（2026-07-02）
+
+**日付**: 2026-07-02
+
+**判断内容**:
+- RevenueBrain.summarize の `planned` を「active全件」から「予定ステータス（'予定'）のみ」に変更
+- RevenueBrain.summarize に `total`（合計売上 = confirmed + planned）を追加
+- `achievementRate` / `remainingToTarget` を `total`（合計売上）ベースに変更
+- ProfitBrain.getPeriodProfitSummary の `confirmedRevenue` を「active全件」から「確定ステータス（'確定','完了'）のみ」に変更
+- `confirmedProfit` を確定売上の粗利率ベース粗利（紐付け経費引き）で算出
+- app.js の「確定売上」ラベル表示箇所を `summary.confirmed` に統一（月次実績ベースは引き続き月次実績値）
+- RevenueSummaryBrain.confirmedRecords は元から `['確定', '完了']` のみ → 変更なし
+
+**理由**: 包括レビューで画面・brainモジュール間の「確定売上」定義の不一致が発覚。RevenueBrain.summarize の `planned` が active 全件（予定+確定混合）なのに UI で「確定売上」として表示されていた。また ProfitBrain の `confirmedRevenue` も active 全件だった。
+
+**判断基準**:
+- 確定売上 = status='確定' or '完了' のレコードのみ
+- 予定売上見込み = status='予定' など未確定のレコード（明細内）またはworkOrderベース
+- 合計売上 = 予定売上見込み + 確定売上
+- RevenueSummaryBrain の既存定義（`CONFIRMED_STATUSES: ['確定', '完了']`）を基準とした
+
+**影響範囲**: RevenueBrain.summarize, ProfitBrain.getPeriodProfitSummary, app.js（5箇所の表示）
+
+**次の課題**: なし（今回で定義統一完了）
+
+---
+
 ## 2026-07-02 .gitignore 安全ガード追加
 
 **日付**: 2026-07-02
