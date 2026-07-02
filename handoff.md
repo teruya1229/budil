@@ -1,6 +1,6 @@
 ﻿# Budil handoff
 
-最終更新: 2026-07-01
+最終更新: 2026-07-02
 
 ## 正本
 
@@ -17,9 +17,16 @@
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/ |
 | 最新バージョン | v4.10.22 |
+| .gitignore 安全ガードcommit | （このhandoff更新と同commit） |
 | v4.10.22 本体修正commit | ee8eec3 |
 | handoff 正本更新 | message: `docs: update handoff for v4.10.22` |
 | ブランチ | `main` push 済み |
+
+## .gitignore 安全ガード（2026-07-02）
+
+- `auth/` と `js/hub-import.js` を `.gitignore` に追加
+- アプリ本体・バージョン・UI は変更なし（v4.10.22 維持）
+- 次の課題候補：確定売上の定義不一致（RevenueBrain.summarize / ProfitBrain / RevenueSummaryBrain の集計ルール不一致）→ ChatGPT 判断後に実装
 
 ## Firebase / Functions 下書き（作業ツリー外・保留）
 
