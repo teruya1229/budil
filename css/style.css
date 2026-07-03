@@ -11141,20 +11141,24 @@ body.sales-page {
   border-top-color: var(--doc-panel-border);
 }
 
-#view-documents .doc-tax-settings-body .form-group label,
-#view-documents .doc-tax-settings-body .doc-checkbox-label {
+#view-documents .documents-form .form-group label {
+  color: #cbd5e1;
+}
+
+#view-documents .doc-tax-settings-details .doc-tax-settings-body .form-group label,
+#view-documents .doc-tax-settings-details .doc-tax-settings-body .doc-checkbox-label {
   color: var(--doc-panel-text);
   font-weight: 500;
 }
 
-#view-documents .doc-tax-settings-body .form-group input,
-#view-documents .doc-tax-settings-body .form-group select {
+#view-documents .doc-tax-settings-details .doc-tax-settings-body .form-group input,
+#view-documents .doc-tax-settings-details .doc-tax-settings-body .form-group select {
   background: var(--doc-panel-input-bg);
   color: var(--doc-panel-text);
   border-color: var(--doc-panel-border);
 }
 
-#view-documents .doc-tax-settings-body .doc-checkbox-label input[type="checkbox"] {
+#view-documents .doc-tax-settings-details .doc-tax-settings-body .doc-checkbox-label input[type="checkbox"] {
   accent-color: var(--primary);
 }
 
@@ -11176,10 +11180,6 @@ body.sales-page {
   color: #94a3b8;
   font-size: 0.8rem;
   margin-top: 0.25rem;
-}
-
-#view-documents .documents-form .form-group label {
-  color: #cbd5e1;
 }
 
 #view-documents .documents-form input,
