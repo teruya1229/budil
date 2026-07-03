@@ -49,8 +49,8 @@ assert(!css.includes('body {\n  color: #0f172a'), 'css must not change global bo
 // --- 税・端数設定エリアの文字色 ---
 console.log('== tax settings readability ==');
 assert(css.includes('--doc-panel-text: #0f172a'), 'light panel should use dark readable text');
-assert(css.includes('#view-documents .doc-tax-settings-body .form-group label'), 'tax settings labels should have explicit color');
-assert(css.includes('#view-documents .doc-tax-settings-body .doc-checkbox-label'), 'checkbox labels should have explicit color');
+assert(css.includes('#view-documents .doc-tax-settings-details .doc-tax-settings-body .form-group label'), 'tax settings labels should have explicit color');
+assert(css.includes('#view-documents .doc-tax-settings-details .doc-tax-settings-body .doc-checkbox-label'), 'checkbox labels should have explicit color');
 
 // --- input / textarea / select ---
 console.log('== form control colors ==');
