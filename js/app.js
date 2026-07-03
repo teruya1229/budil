@@ -225,7 +225,10 @@
     alert('営業管理情報を保存しました');
   }
 
-  const TODAY = () => new Date().toISOString().slice(0, 10);
+  const TODAY = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
 
   function showAppToast(message) {
     const el = document.getElementById('app-toast');
@@ -991,7 +994,7 @@
     return `
       ${monthlyNote}
       <div class="exec-home-revenue-grid${isCompact ? ' exec-home-revenue-grid-compact' : ''}">
-        <div><span>今月売上</span><strong>${esc(RevenueBrain.formatYen(s.monthRevenue))}</strong></div>
+        <div><span>${esc(s.monthRevenueLabel || '今月売上')}</span><strong>${esc(RevenueBrain.formatYen(s.monthRevenue))}</strong></div>
         ${isCompact ? '' : `<div><span>月間目標</span><strong>${esc(RevenueBrain.formatYen(s.monthlyTarget))}</strong></div>
         <div><span>達成率</span><strong>${s.achievementRate}%</strong></div>`}
         <div><span>今月経費</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>

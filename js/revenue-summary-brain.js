@@ -684,7 +684,7 @@ const RevenueSummaryBrain = {
     if (!WorkCompletionBrain.isOperationalWorkOrder(wo)) return false;
     if (wo.status === 'cancelled' || wo.status === 'archived') return false;
     if (wo.actualRevenueId) return false;
-    if (wo.scheduledDate && wo.scheduledDate > t) return false;
+    if (wo.scheduledDate && wo.scheduledDate >= t) return false;
     if (wo.status === 'completed') return true;
     if (wo.completion && wo.completion.needsReview) return true;
     return WorkCompletionBrain.isPastScheduledActive(wo, t);

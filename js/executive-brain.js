@@ -355,7 +355,13 @@ const ExecutiveBrain = {
     const ps = (ctx.profitCtx && ctx.profitCtx.summary) || {};
     const forecast = ctx.forecast || {};
     const usesMonthly = !!ps.usesMonthlyResult;
-    const monthRevenue = usesMonthly ? (ps.monthRevenue || 0) : (summary.planned || 0);
+    const scheduledEstimate = ps.plannedRevenueEstimate || 0;
+    const monthRevenue = usesMonthly
+      ? (ps.monthRevenue || 0)
+      : (ps.totalRevenue || summary.planned || 0);
+    const monthRevenueLabel = usesMonthly
+      ? '今月売上（月次実績）'
+      : (scheduledEstimate > 0 ? '今月の合計売上（予定含む）' : '今月の確定売上');
     const achievementRate = summary.monthlyTarget > 0
       ? Math.round((monthRevenue / summary.monthlyTarget) * 1000) / 10
       : (summary.achievementRate || 0);
@@ -389,6 +395,7 @@ const ExecutiveBrain = {
       : { pendingTotal: 0, thisMonthExpected: 0, nextMonthExpected: 0, overdueCount: 0, count: 0 };
     return {
       monthRevenue,
+      monthRevenueLabel,
       monthlyTarget: summary.monthlyTarget || 0,
       achievementRate,
       monthExpense: ps.monthExpense || 0,
