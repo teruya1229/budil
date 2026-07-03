@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.24 — 確定売上定義統一 verification.
+ * Budil v4.10.25 — 確定売上定義統一 verification.
  *
  * 確認内容:
  * - 確定売上に予定売上が混ざらないこと
@@ -32,7 +32,7 @@ for (const file of ['js/revenue-brain.js', 'js/profit-brain.js', 'js/revenue-sum
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.24 confirmed-revenue-definition ==');
+console.log('== v4.10.25 confirmed-revenue-definition ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -46,13 +46,13 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 // --- バージョン確認 ---
-assert(indexHtml.includes('v4.10.24'), 'index.html should show v4.10.24');
-assert(indexHtml.includes('js/app.js?v=4.10.24'), 'app.js cache buster should be v4.10.24');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.24'"), 'storage.js version should be v4.10.24');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.24'"), 'data-backup version should be v4.10.24');
-assert(statusMd.includes('v4.10.24'), 'status.md should document v4.10.24');
-assert(handoffMd.includes('v4.10.24'), 'handoff.md should document v4.10.24');
-assert(decisionLog.includes('v4.10.24'), 'decision-log.md should record v4.10.24');
+assert(indexHtml.includes('v4.10.25'), 'index.html should show v4.10.25');
+assert(indexHtml.includes('js/app.js?v=4.10.25'), 'app.js cache buster should be v4.10.25');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.25'"), 'storage.js version should be v4.10.25');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.25'"), 'data-backup version should be v4.10.25');
+assert(statusMd.includes('v4.10.25'), 'status.md should document v4.10.25');
+assert(handoffMd.includes('v4.10.25'), 'handoff.md should document v4.10.25');
+assert(decisionLog.includes('v4.10.25'), 'decision-log.md should record v4.10.25');
 
 // --- RevenueBrain.summarize の定義確認 ---
 console.log('== RevenueBrain.summarize definition check ==');
@@ -383,4 +383,4 @@ const cssJs = load('css/style.css');
 assert(!cssJs.includes('v4.10.24'), 'css/style.css should NOT have v4.10.24 marker (CSS should not be changed)');
 
 console.log('');
-console.log('All v4.10.24 confirmed-revenue-definition checks passed.');
+console.log('All v4.10.25 confirmed-revenue-definition checks passed.');

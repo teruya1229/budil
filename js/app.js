@@ -16014,6 +16014,17 @@
     sel.value = selected || 'draft';
   }
 
+  function updateDocItemsHeader(type, showUnit) {
+    const header = document.getElementById('doc-items-header');
+    if (!header) return;
+    const isInvoice = type === 'invoice';
+    header.classList.toggle('doc-items-header-invoice', isInvoice);
+    header.classList.toggle('doc-items-header-estimate', !isInvoice);
+    header.classList.toggle('doc-items-header-with-unit', showUnit === true);
+    const unitCol = header.querySelector('.doc-col-unit-only');
+    if (unitCol) unitCol.classList.toggle('hidden', !showUnit);
+  }
+
   function toggleDocFormFields(type) {
     const isInvoice = type === 'invoice';
     const dueGroup = document.querySelector('.doc-due-group');
@@ -16117,12 +16128,12 @@
     const row = document.createElement('div');
     row.className = 'doc-item-row' + (showUnit ? ' doc-item-row-with-unit' : '');
     row.innerHTML = `
-      ${showDate ? '<input type="date" class="doc-item-date" value="' + esc(item.date || '') + '">' : '<input type="hidden" class="doc-item-date" value="">'}
-      <input type="text" class="doc-item-name" placeholder="品目" value="${esc(item.name || '')}">
-      <input type="number" class="doc-item-unit" min="0" step="1" placeholder="単価" value="${item.unitPrice != null ? item.unitPrice : ''}">
-      <input type="number" class="doc-item-qty" min="0" step="1" placeholder="数量" value="${item.quantity != null ? item.quantity : 1}">
-      ${showUnit ? '<input type="text" class="doc-item-unit-label" placeholder="単位" value="' + esc(item.unit || '') + '">' : ''}
-      <input type="number" class="doc-item-amount" min="0" step="1" placeholder="価格" value="${item.amount != null ? item.amount : ''}">
+      ${showDate ? '<div class="doc-field doc-field-date"><span class="doc-field-label">日付</span><input type="date" class="doc-item-date" value="' + esc(item.date || '') + '"></div>' : '<input type="hidden" class="doc-item-date" value="">'}
+      <div class="doc-field doc-field-name"><span class="doc-field-label">内容</span><input type="text" class="doc-item-name" placeholder="品目" value="${esc(item.name || '')}"></div>
+      <div class="doc-field doc-field-unit"><span class="doc-field-label">単価</span><input type="number" class="doc-item-unit" min="0" step="1" placeholder="単価" value="${item.unitPrice != null ? item.unitPrice : ''}"></div>
+      <div class="doc-field doc-field-qty"><span class="doc-field-label">数量</span><input type="number" class="doc-item-qty" min="0" step="1" placeholder="数量" value="${item.quantity != null ? item.quantity : 1}"></div>
+      ${showUnit ? '<div class="doc-field doc-field-unit-label"><span class="doc-field-label">単位</span><input type="text" class="doc-item-unit-label" placeholder="単位" value="' + esc(item.unit || '') + '"></div>' : ''}
+      <div class="doc-field doc-field-amount"><span class="doc-field-label">金額</span><input type="number" class="doc-item-amount" min="0" step="1" placeholder="金額" value="${item.amount != null ? item.amount : ''}"></div>
       <button type="button" class="btn btn-secondary btn-sm btn-remove-item" title="行削除">×</button>`;
     row.querySelectorAll('.doc-item-unit, .doc-item-qty').forEach(el => {
       el.addEventListener('input', () => updateDocItemRowAmount(row));
@@ -16142,6 +16153,7 @@
     const editor = document.getElementById('doc-items-editor');
     if (!editor) return;
     const showUnit = document.getElementById('doc-show-unit')?.checked === true;
+    updateDocItemsHeader(type, showUnit);
     editor.innerHTML = '';
     const showDate = type === 'invoice';
     const list = (items && items.length) ? items : [{ name: '', unitPrice: 0, quantity: 1, amount: 0 }];

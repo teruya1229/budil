@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.10.22">
+  <link rel="stylesheet" href="css/style.css?v=4.10.25">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.10.24</small>
+          <small>AI経営脳みそ v4.10.25</small>
         </div>
       </div>
       <nav class="nav">
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.10.24</small>
+        <small>Budil v4.10.25</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の優先 → 今月の数字 → 次にやること</p>
             </div>
-            <span class="exec-home-version">v4.10.24</span>
+            <span class="exec-home-version">v4.10.25</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
 
@@ -595,7 +595,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.24</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.25</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -2495,14 +2495,25 @@
             </details>
             <div class="form-group">
               <label for="doc-title">件名</label>
-              <input type="text" id="doc-title" placeholder="例: エアコンクリーニング">
+              <input type="text" id="doc-title" class="doc-title-input" placeholder="例: エアコンクリーニング">
             </div>
-            <div class="form-group">
-              <label>税計算プレビュー</label>
-              <div id="doc-tax-preview" class="doc-tax-preview">—</div>
+            <div class="form-group doc-tax-preview-group">
+              <label for="doc-tax-preview" class="doc-tax-preview-label">税計算プレビュー（入力内容の確認）</label>
+              <div id="doc-tax-preview" class="doc-tax-preview" role="status" aria-live="polite">—</div>
+              <p class="doc-tax-preview-hint">明細・税設定を変更すると、ここに小計・税・合計が表示されます。</p>
             </div>
 
             <h3 class="doc-form-subtitle">明細</h3>
+            <p class="field-hint doc-items-hint">日付 / 内容 / 単価 / 数量 / 金額 の順で入力します。</p>
+            <div id="doc-items-header" class="doc-items-header doc-items-header-invoice" aria-hidden="true">
+              <span class="doc-col-date">日付</span>
+              <span class="doc-col-name">内容</span>
+              <span class="doc-col-unit">単価</span>
+              <span class="doc-col-qty">数量</span>
+              <span class="doc-col-unit-label doc-col-unit-only hidden">単位</span>
+              <span class="doc-col-amount">金額</span>
+              <span class="doc-col-actions"></span>
+            </div>
             <div id="doc-items-editor" class="doc-items-editor"></div>
             <button type="button" class="btn btn-secondary btn-sm" id="btn-doc-add-item">行を追加</button>
 
@@ -2565,6 +2576,7 @@
         </div>
 
         <div id="documents-preview-panel" class="card card-wide hidden">
+          <h2 class="doc-preview-heading">書類プレビュー<span class="doc-preview-heading-note">（確認用・印刷/PDFは下のボタン）</span></h2>
           <div class="doc-preview-toolbar no-print">
             <button type="button" class="btn btn-primary btn-sm" id="btn-doc-print">印刷 / PDF</button>
             <button type="button" class="btn btn-secondary btn-sm" id="btn-doc-edit-from-preview">編集</button>
@@ -3599,6 +3611,6 @@
   <script src="js/executive-brain.js?v=4.10.22"></script>
   <script src="js/card-ocr.js?v=4.10.22"></script>
   <script src="js/data-backup.js?v=4.10.22"></script>
-  <script src="js/app.js?v=4.10.24"></script>
+  <script src="js/app.js?v=4.10.25"></script>
 </body>
 </html>

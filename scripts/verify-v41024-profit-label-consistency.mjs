@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.24 — 利益ラベル整合性 verification.
+ * Budil v4.10.25 — 利益ラベル整合性 verification.
  *
  * 確認内容:
  * - 見込み利益 = 予定売上見込み × 粗利率 になっていること
@@ -27,7 +27,7 @@ for (const file of ['js/profit-brain.js', 'js/revenue-brain.js', 'js/revenue-sum
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.24 profit-label-consistency ==');
+console.log('== v4.10.25 profit-label-consistency ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -37,10 +37,10 @@ const storageJs = load('js/storage.js');
 const dataBackupJs = load('js/data-backup.js');
 
 // --- バージョン確認 ---
-assert(indexHtml.includes('v4.10.24'), 'index.html should show v4.10.24');
-assert(indexHtml.includes('js/app.js?v=4.10.24'), 'app.js cache buster should be v4.10.24');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.24'"), 'storage.js version should be v4.10.24');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.24'"), 'data-backup version should be v4.10.24');
+assert(indexHtml.includes('v4.10.25'), 'index.html should show v4.10.25');
+assert(indexHtml.includes('js/app.js?v=4.10.25'), 'app.js cache buster should be v4.10.25');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.25'"), 'storage.js version should be v4.10.25');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.25'"), 'data-backup version should be v4.10.25');
 
 // --- ProfitBrain の見込み利益フォールバック修正確認 ---
 console.log('== ProfitBrain plannedForecastProfit fallback check ==');
@@ -334,4 +334,4 @@ for (const term of forbiddenUiTerms) {
   assert(!appJs.includes(term), `app.js should not include NG term: ${term}`);
 }
 
-console.log('\nAll v4.10.24 profit-label-consistency checks passed.');
+console.log('\nAll v4.10.25 profit-label-consistency checks passed.');

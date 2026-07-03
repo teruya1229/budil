@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.10.24 — invoice/estimate revenue linking hierarchy verification.
+ * Budil v4.10.25 — invoice/estimate revenue linking hierarchy verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -17,7 +17,7 @@ for (const file of ['app.js', 'storage.js', 'data-backup.js']) {
 }
 execSync(`node --check "${join(root, 'js', 'documents-brain.js')}"`, { stdio: 'inherit' });
 
-console.log('== v4.10.24 invoice-revenue linking hierarchy ==');
+console.log('== v4.10.25 invoice-revenue linking hierarchy ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -29,10 +29,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.24'), 'index.html should show v4.10.24');
-assert(indexHtml.includes('js/app.js?v=4.10.24'), 'app.js cache buster should be v4.10.24');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.24'"), 'storage.js version should be v4.10.24');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.24'"), 'data-backup version should be v4.10.24');
+assert(indexHtml.includes('v4.10.25'), 'index.html should show v4.10.25');
+assert(indexHtml.includes('js/app.js?v=4.10.25'), 'app.js cache buster should be v4.10.25');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.25'"), 'storage.js version should be v4.10.25');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.25'"), 'data-backup version should be v4.10.25');
 
 // 請求書・見積書 view に目的注記があること
 assert(indexHtml.includes('documents-purpose-note'), 'documents-purpose-note should exist in index.html');
@@ -105,8 +105,8 @@ assert(css.includes('v4.10.22'), 'css should include v4.10.22 marker (CSS not ch
 console.log('== regression: v4.10.20 monthly results hierarchy ==');
 execSync('node scripts/verify-v41020-monthly-results-hierarchy.mjs', { cwd: root, stdio: 'inherit' });
 
-assert(statusMd.includes('v4.10.24'), 'status.md should document v4.10.24');
-assert(handoffMd.includes('v4.10.24'), 'handoff.md should document v4.10.24');
-assert(decisionLog.includes('v4.10.24'), 'decision-log.md should record v4.10.24');
+assert(statusMd.includes('v4.10.25'), 'status.md should document v4.10.25');
+assert(handoffMd.includes('v4.10.25'), 'handoff.md should document v4.10.25');
+assert(decisionLog.includes('v4.10.25'), 'decision-log.md should record v4.10.25');
 
-console.log('All v4.10.24 invoice-revenue linking hierarchy checks passed.');
+console.log('All v4.10.25 invoice-revenue linking hierarchy checks passed.');

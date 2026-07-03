@@ -11113,4 +11113,246 @@ body.sales-page {
   line-height: 1.5;
 }
 
+/* v4.10.25 請求書・見積書 視認性・入力しやすさ（#view-documents 限定） */
+#view-documents {
+  --doc-panel-bg: #f8fafc;
+  --doc-panel-text: #0f172a;
+  --doc-panel-muted: #334155;
+  --doc-panel-border: #cbd5e1;
+  --doc-panel-input-bg: #ffffff;
+  --doc-preview-frame: rgba(59, 130, 246, 0.35);
+}
+
+#view-documents .doc-tax-settings-details {
+  background: var(--doc-panel-bg);
+  border-color: var(--doc-panel-border);
+  color: var(--doc-panel-text);
+}
+
+#view-documents .doc-tax-settings-summary {
+  color: var(--doc-panel-text);
+}
+
+#view-documents .doc-tax-settings-summary::before {
+  color: var(--doc-panel-muted);
+}
+
+#view-documents .doc-tax-settings-body {
+  border-top-color: var(--doc-panel-border);
+}
+
+#view-documents .doc-tax-settings-body .form-group label,
+#view-documents .doc-tax-settings-body .doc-checkbox-label {
+  color: var(--doc-panel-text);
+  font-weight: 500;
+}
+
+#view-documents .doc-tax-settings-body .form-group input,
+#view-documents .doc-tax-settings-body .form-group select {
+  background: var(--doc-panel-input-bg);
+  color: var(--doc-panel-text);
+  border-color: var(--doc-panel-border);
+}
+
+#view-documents .doc-tax-settings-body .doc-checkbox-label input[type="checkbox"] {
+  accent-color: var(--primary);
+}
+
+#view-documents .doc-tax-preview {
+  background: var(--doc-panel-bg);
+  border-color: var(--doc-panel-border);
+  color: var(--doc-panel-text);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+#view-documents .doc-tax-preview-label {
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+#view-documents .doc-tax-preview-hint,
+#view-documents .doc-items-hint {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+#view-documents .documents-form .form-group label {
+  color: #cbd5e1;
+}
+
+#view-documents .documents-form input,
+#view-documents .documents-form textarea,
+#view-documents .documents-form select {
+  background: var(--bg-input);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+#view-documents .documents-form input::placeholder,
+#view-documents .documents-form textarea::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
+#view-documents .documents-form input:focus,
+#view-documents .documents-form textarea:focus,
+#view-documents .documents-form select:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+#view-documents .doc-payment-details summary {
+  color: #cbd5e1;
+}
+
+#view-documents .doc-title-input {
+  min-height: 2.75rem;
+  word-break: break-word;
+}
+
+#view-documents .doc-items-header {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr) 6rem 4rem 6rem 2.5rem;
+  gap: 0.35rem;
+  padding: 0 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+#view-documents .doc-items-header.doc-items-header-with-unit {
+  grid-template-columns: 7rem minmax(0, 1fr) 5.5rem 3.5rem 4rem 5.5rem 2.5rem;
+}
+
+#view-documents .doc-items-header.doc-items-header-estimate .doc-col-date {
+  display: none;
+}
+
+#view-documents .doc-items-header .doc-col-actions {
+  visibility: hidden;
+}
+
+#view-documents .doc-item-row {
+  grid-template-columns: 7rem minmax(0, 1fr) 6rem 4rem 6rem auto;
+  align-items: end;
+}
+
+#view-documents .doc-item-row-with-unit {
+  grid-template-columns: 7rem minmax(0, 1fr) 5.5rem 3.5rem 4rem 5.5rem auto;
+}
+
+#view-documents .doc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+#view-documents .doc-field-label {
+  display: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+#view-documents .doc-item-row input {
+  min-width: 0;
+  width: 100%;
+}
+
+#view-documents .doc-item-name {
+  word-break: break-word;
+}
+
+#view-documents .doc-preview-heading {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  color: #e2e8f0;
+}
+
+#view-documents .doc-preview-heading-note {
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: #94a3b8;
+  margin-left: 0.35rem;
+}
+
+#view-documents #documents-preview-panel {
+  border: 2px solid var(--doc-preview-frame);
+}
+
+#view-documents .documents-preview-body {
+  background: #e2e8f0;
+  border: 1px dashed #64748b;
+  padding: 1rem;
+}
+
+@media (max-width: 900px) {
+  #view-documents .doc-items-header {
+    display: none;
+  }
+
+  #view-documents .doc-item-row,
+  #view-documents .doc-item-row-with-unit {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.35);
+  }
+
+  #view-documents .doc-field-label {
+    display: block;
+  }
+
+  #view-documents .doc-field-date,
+  #view-documents .doc-field-name {
+    grid-column: 1 / -1;
+  }
+
+  #view-documents .doc-item-row .btn-remove-item {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+}
+
+@media (max-width: 640px) {
+  #view-documents .form-row,
+  #view-documents .form-row-2,
+  #view-documents .form-row-3 {
+    grid-template-columns: 1fr;
+  }
+
+  #view-documents .doc-tax-settings-checks {
+    flex-direction: column;
+  }
+
+  #view-documents .doc-item-row,
+  #view-documents .doc-item-row-with-unit {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 390px) {
+  #view-documents,
+  #view-documents .documents-form,
+  #view-documents .card {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  #view-documents .doc-toolbar,
+  #view-documents .doc-preview-toolbar,
+  #view-documents .form-actions {
+    flex-wrap: wrap;
+  }
+
+  #view-documents .documents-list-wrap {
+    max-width: 100%;
+  }
+}
+
 /* v4.10.22 主導線・主従整理最終監査 */
