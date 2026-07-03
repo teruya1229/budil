@@ -1,5 +1,18 @@
 ﻿# Budil status
 
+## v4.10.26 実装内容（今日判定・直近予定・今月数字 緊急修正）
+
+- 表示バージョンを v4.10.26 に更新（app.js キャッシュバスターも v4.10.26）
+- CSSキャッシュバスターは v4.10.25.1 を維持（v4.10.25 請求書・見積書UI修正のCSS変更なし）
+- TODAY() をローカル日付基準に修正（UTC toISOString による日付ずれ解消）
+- 今日の予定が売上確認待ちキューに落ちないよう isRevenueConfirmationQueueCandidate を >= 基準に修正
+- 同日複数予定が直近予定に両方表示されるよう修正
+- 金額パース（35,090円・22,000円（税込））の確認
+- 経営ホームの今月数字を予定込み売上見込み（totalRevenue）に反映
+- 「今月売上」曖昧ラベルを排除し monthRevenueLabel で明示
+- 新規 verify-v41026-today-calendar-home-revenue.mjs 追加（旧 verify-v41025-today-calendar-home-revenue.mjs を整理）
+- 既存 verify v4.10.0〜v4.10.25 全件実行・合格確認
+
 ## v4.10.25 実装内容（請求書・見積書 視認性・入力しやすさ修正）
 
 - 表示バージョンを v4.10.25 に更新（CSS/JSキャッシュバスターも揃え）

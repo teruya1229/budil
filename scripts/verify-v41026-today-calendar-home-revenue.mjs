@@ -1,8 +1,8 @@
 /**
- * Budil v4.10.25 緊急修正 — 今日判定・カレンダー予定・経営ホーム売上 verification.
+ * Budil v4.10.26 緊急修正 — 今日判定・カレンダー予定・経営ホーム売上 verification.
  *
  * 確認内容:
- * - v4.10.25 表示に更新されていること
+ * - v4.10.26 表示に更新されていること
  * - 今日キー生成がローカル日付基準であること（toISOString().slice(0,10) を今日判定に使っていないこと）
  * - 2026-07-03 08:16 JST の todayKey が "2026-07-03" になること
  * - 2026-07-03 の予定が「明日」扱いにならないこと
@@ -41,7 +41,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.25 today-calendar-home-revenue ==');
+console.log('== v4.10.26 today-calendar-home-revenue ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -53,9 +53,10 @@ const dataBackupJs = load('js/data-backup.js');
 
 // --- バージョン確認 ---
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.25'), 'index.html should show v4.10.25');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.25'"), 'storage.js version should be v4.10.25');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.25'"), 'data-backup version should be v4.10.25');
+assert(indexHtml.includes('v4.10.26'), 'index.html should show v4.10.26');
+assert(indexHtml.includes('js/app.js?v=4.10.26'), 'app.js cache buster should be v4.10.26');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.26'"), 'storage.js version should be v4.10.26');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.26'"), 'data-backup version should be v4.10.26');
 
 // --- TODAY() がローカル日付基準であること ---
 console.log('== TODAY() local date check ==');
@@ -466,6 +467,12 @@ assert(profitBrainJs.includes('plannedForecastProfit'), 'ProfitBrain should have
 assert(profitBrainJs.includes('confirmedRevenue'), 'ProfitBrain should have confirmedRevenue');
 assert(profitBrainJs.includes('totalRevenue'), 'ProfitBrain should have totalRevenue');
 
+// --- v4.10.25 請求書UI修正が維持されていること ---
+console.log('== v4.10.25 documents-ui regression ==');
+const css = load('css/style.css');
+assert(css.includes('v4.10.25 請求書・見積書'), 'css should still include v4.10.25 documents marker');
+assert(indexHtml.includes('css/style.css?v=4.10.25.1'), 'css cache buster should remain v4.10.25.1');
+
 // --- NG文言確認 ---
 console.log('== NG term check ==');
 const forbiddenUiTerms = [
@@ -485,9 +492,8 @@ for (const term of forbiddenUiTerms) {
 assert(!appJs.includes('localStorage.clear()'), 'localStorage.clear must not be used');
 console.log('  NG terms: none found OK');
 
-// --- CSS変更なし ---
-const css = load('css/style.css');
-assert(!css.includes('v4.10.25-rev'), 'css/style.css should NOT have v4.10.25-rev marker (CSS未変更)');
+// --- CSS変更なし（v4.10.26ではCSS未変更） ---
+assert(!css.includes('v4.10.26-rev'), 'css/style.css should NOT have v4.10.26-rev marker (CSS未変更)');
 console.log('  CSS unchanged OK');
 
-console.log('\nAll v4.10.25 today-calendar-home-revenue checks passed.');
+console.log('\nAll v4.10.26 today-calendar-home-revenue checks passed.');
