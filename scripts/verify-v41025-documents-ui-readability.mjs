@@ -30,7 +30,7 @@ const decisionLog = load('decision-log.md');
 // --- バージョン ---
 assert(indexHtml.includes('v4.10.25'), 'index.html should show v4.10.25');
 assert(indexHtml.includes('js/app.js?v=4.10.25'), 'app.js cache buster should be v4.10.25');
-assert(indexHtml.includes('css/style.css?v=4.10.25'), 'css cache buster should be v4.10.25');
+assert(indexHtml.includes('css/style.css?v=4.10.25.1'), 'css cache buster should be v4.10.25.1');
 assert(storageJs.includes("BUDIL_VERSION: 'v4.10.25'"), 'storage.js version should be v4.10.25');
 assert(dataBackupJs.includes("APP_VERSION: 'v4.10.25'"), 'data-backup version should be v4.10.25');
 assert(statusMd.includes('v4.10.25'), 'status.md should document v4.10.25');
