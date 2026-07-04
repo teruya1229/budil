@@ -2851,7 +2851,30 @@
       const wo = typeof WorkOrderBrain !== 'undefined'
         ? WorkOrderBrain.normalizeWorkOrder(raw)
         : raw;
-      if (typeof WorkCompletionBrain === 'undefined' || !WorkCompletionBrain.isOperationalWorkOrder(wo)) return;
+      if (typeof WorkCompletionBrain === 'undefined' || !WorkCompletionBrain.isOperationalWorkOrder(wo)) {
+        // v4.10.27: 候補ステータスのカレンダー予定でも今日・過去日付+金額ありなら確定待ちに含める
+        if (typeof CalendarCandidateBrain !== 'undefined'
+          && CalendarCandidateBrain.isCalendarCandidateWorkOrder(wo)
+          && CalendarCandidateBrain.isPendingCandidate(wo)
+          && !wo.actualRevenueId
+          && wo.scheduledDate && wo.scheduledDate <= today
+          && Number(wo.estimateAmount || 0) > 0
+          && wo.status !== 'cancelled' && wo.status !== 'archived') {
+          workOrderItems.push({
+            type: 'work-order',
+            id: wo.id,
+            scheduledDate: wo.scheduledDate || '',
+            startTime: wo.startTime || '',
+            endTime: wo.endTime || '',
+            createdAt: wo.createdAt || '',
+            customerName: wo.customerName || 'お客様',
+            serviceText: wo.serviceText || '',
+            amount: wo.estimateAmount,
+            statusLabel: '売上確定待ち'
+          });
+        }
+        return;
+      }
       if (wo.status === 'cancelled' || wo.status === 'archived') return;
       if (wo.actualRevenueId) return;
       if (wo.scheduledDate && wo.scheduledDate > today) return;

@@ -2,6 +2,28 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.10.27 カレンダー重複判定・売上確定待ち表示 緊急修正（2026-07-04）
+
+**日付**: 2026-07-04
+
+**判断内容**:
+- 「直受 海老澤智貴様 R1 / 2026-07-03 15:00〜17:30 / 22,000円」が売上確定待ち・直近予定に出ない問題を修正
+- 根本原因A: classifyFutureImportCandidate が「過去日付」を hard-exclude していたため、翌日インポートで保存不可になっていた
+- 根本原因B: collectRevenueConfirmationQueue が isPendingCandidate=true の作業予定を除外していた
+- 重複混在の可能性なし: 儀間祐太朗(07-02)と海老澤智貴様(07-03)は日付が違うため near-match の scheduledDate=== 条件で必ず false になる
+- buildCalendarDedupeKey に startTime/endTime を追加して同日・同金額・別時間の別予定を正確に区別
+
+**変更ファイル**:
+- js/calendar-candidate-brain.js（classifyFutureImportCandidate・isFutureImportSavable・buildCalendarDedupeKey）
+- js/app.js（collectRevenueConfirmationQueue）
+- index.html, js/storage.js, js/data-backup.js（バージョン更新）
+- scripts/verify-v41027-calendar-dedupe-revenue-queue.mjs（新規）
+
+**判断の根拠**:
+- CSS 変更なし、新機能追加なし、既存データ削除なし
+- 翌日インポートは合理的なユースケース（作業日翌日に売上確定のためインポート）
+- 候補ステータスでも日付・金額があれば売上確定待ちに出すべき（Google カレンダー正本ルールとの整合）
+
 ## v4.10.26 今日判定・直近予定・今月数字 緊急修正（2026-07-03）
 
 **日付**: 2026-07-03

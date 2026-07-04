@@ -1,5 +1,19 @@
 ﻿# Budil status
 
+## v4.10.27 実装内容（カレンダー重複判定・売上確定待ち表示 緊急修正）
+
+- 表示バージョンを v4.10.27 に更新（app.js キャッシュバスターも v4.10.27）
+- 【Bug A 修正】classifyFutureImportCandidate: 過去日付でも金額があれば eligible（保存可能）に変更
+  - 翌日にカレンダーJSONをインポートした場合も昨日・今日の作業予定が保存できるようになった
+  - 金額なし + 過去日付のみ excluded とする安全な絞り込みを維持
+- 【Bug B 修正】isFutureImportSavable: 過去日付 + 金額あり は一括保存可能に変更
+- 【Bug C 修正】collectRevenueConfirmationQueue: 候補ステータスのカレンダー予定でも今日・過去日付 + 金額あり なら売上確定待ちに表示
+- buildCalendarDedupeKey: startTime/endTime を追加して同日・同金額・別時間の別予定を正確に区別
+- 重複混在分析: 儀間祐太朗(07-02)と海老澤智貴様(07-03)は日付が違うためnear-matchは絶対にfalse（混在なし確認）
+- CSSキャッシュバスターは v4.10.25.1 を維持（CSS変更なし）
+- 新規 verify-v41027-calendar-dedupe-revenue-queue.mjs 追加
+- 既存 verify v4.10.0〜v4.10.26 全件実行
+
 ## v4.10.26 実装内容（今日判定・直近予定・今月数字 緊急修正）
 
 - 表示バージョンを v4.10.26 に更新（app.js キャッシュバスターも v4.10.26）

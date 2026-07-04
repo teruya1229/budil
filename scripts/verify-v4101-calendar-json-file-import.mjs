@@ -133,11 +133,11 @@ const profitJs = load('js/profit-brain.js');
 
 console.log('== v4.10.1 calendar JSON file import ==');
 
-assert(indexHtml.includes('AI経営脳みそ v4.10.26'), 'header version should be v4.10.26');
-assert(indexHtml.includes('Budil v4.10.26'), 'sidebar version should be v4.10.26');
-assert(indexHtml.includes('js/app.js?v=4.10.26'), 'app.js cache buster should be v4.10.26');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.26'"), 'storage version should be v4.10.26');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.26'"), 'data-backup version should be v4.10.26');
+assert(indexHtml.includes('AI経営脳みそ v4.10.27'), 'header version should be v4.10.27');
+assert(indexHtml.includes('Budil v4.10.27'), 'sidebar version should be v4.10.27');
+assert(indexHtml.includes('js/app.js?v=4.10.27'), 'app.js cache buster should be v4.10.27');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.27'"), 'storage version should be v4.10.27');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.27'"), 'data-backup version should be v4.10.27');
 
 assert(indexHtml.includes('id="btn-calendar-candidate-json-import"'), 'JSON import button should exist');
 assert(indexHtml.includes('id="calendar-candidate-json-input"'), 'JSON file input should exist');
@@ -193,8 +193,9 @@ const preview = runInContext(
 );
 assert(preview.items.length === 4, 'preview should include all items');
 const eligible = preview.items.filter(i => i.futureImport && i.futureImport.savable);
-assert(eligible.length === 1, 'only future dated amount item should be savable');
-assert(preview.items[1].futureImport.status === 'excluded', 'past date should be excluded');
+// v4.10.27: 過去日付でも金額があれば eligible（翌日インポート対応）
+assert(eligible.length === 2, 'future dated amount item AND past dated amount item should both be savable (v4.10.27)');
+assert(preview.items[1].futureImport.status === 'eligible', 'past date with amount should be eligible in v4.10.27');
 assert(preview.items[2].futureImport.status === 'excluded', 'no amount should be excluded');
 assert(preview.items[3].futureImport.status === 'excluded', 'cancelled should be excluded');
 

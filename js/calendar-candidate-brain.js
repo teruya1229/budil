@@ -498,13 +498,16 @@ const CalendarCandidateBrain = {
 
   buildCalendarDedupeKey(candidate) {
     const c = this.normalizeCandidate(candidate);
+    // v4.10.27: startTime/endTime を追加して同日・同金額・別時間の別予定を区別する
     return [
       'calendar-past-recovery',
       c.scheduledDate,
       this.normalizeDedupeText(c.customerName),
       Number(c.estimateAmount || 0),
       this.normalizeDedupeText(c.serviceText),
-      this.normalizeDedupeText(c.source)
+      this.normalizeDedupeText(c.source),
+      c.startTime || '',
+      c.endTime || ''
     ].join('|');
   },
 
@@ -863,7 +866,8 @@ const CalendarCandidateBrain = {
     const t = today || new Date().toISOString().slice(0, 10);
     const reasons = [];
     if (!c.scheduledDate) reasons.push('日付なし');
-    if (c.scheduledDate && c.scheduledDate < t) reasons.push('過去日付');
+    // v4.10.27: 過去日付は単独では hard-exclude しない（金額あり翌日インポート対応）
+    // 過去日付でも金額があれば eligible。金額なし・対象外ワードは引き続き excluded。
     if (!Number(c.estimateAmount || 0)) reasons.push('金額なし');
     if (this.hasFutureImportExcludedWord(c)) reasons.push('対象外ワードあり');
     if (reasons.length) {
@@ -884,7 +888,11 @@ const CalendarCandidateBrain = {
 
   isFutureImportSavable(item, force) {
     if (!item) return false;
-    if (item.isPastDate && !force) return false;
+    if (item.isPastDate && !force) {
+      // v4.10.27: 過去日付でも金額があれば保存可能（翌日インポート対応）
+      const amt = item.candidate ? Number(item.candidate.estimateAmount || 0) : 0;
+      if (!amt) return false;
+    }
     if (item.futureImport && item.futureImport.savable === false) return false;
     if (item.isDuplicate && !force) return false;
     return true;
