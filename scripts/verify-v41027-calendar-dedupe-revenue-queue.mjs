@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.35 緊急修正 — カレンダー重複判定・売上確定待ち表示 verification.
+ * Budil v4.10.36 緊急修正 — カレンダー重複判定・売上確定待ち表示 verification.
  *
  * 確認内容:
  * - v4.10.27 表示に更新されていること
@@ -56,10 +56,10 @@ const css = load('css/style.css');
 
 // --- バージョン確認 ---
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.35'), 'index.html should show v4.10.35');
-assert(indexHtml.includes('js/app.js?v=4.10.35'), 'app.js cache buster should be v4.10.35');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.35'"), 'storage.js version should be v4.10.35');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.35'"), 'data-backup version should be v4.10.35');
+assert(indexHtml.includes('v4.10.36'), 'index.html should show v4.10.36');
+assert(indexHtml.includes('js/app.js?v=4.10.36'), 'app.js cache buster should be v4.10.36');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.36'"), 'storage.js version should be v4.10.36');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.36'"), 'data-backup version should be v4.10.36');
 
 // --- v4.10.26 今日判定が維持されていること ---
 console.log('== TODAY() local date regression ==');
@@ -104,7 +104,7 @@ assert(
 // --- v4.10.25 請求書UI修正が維持されていること ---
 console.log('== v4.10.25 documents UI regression ==');
 assert(css.includes('v4.10.25 請求書・見積書'), 'css should still include v4.10.25 documents marker');
-assert(indexHtml.includes('css/style.css?v=4.10.35'), 'css cache buster should remain v4.10.25.1');
+assert(indexHtml.includes('css/style.css?v=4.10.36'), 'css cache buster should remain v4.10.25.1');
 
 // --- v4.10.26: isRevenueConfirmationQueueCandidate が >= を使っていること ---
 console.log('== isRevenueConfirmationQueueCandidate >= regression ==');

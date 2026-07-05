@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.35 緊急修正 — 今日の最優先から受付売上確定導線 verification.
+ * Budil v4.10.36 緊急修正 — 今日の最優先から受付売上確定導線 verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/app.js', 'js/reception-brain.js', 'js/revenue-brain.js',
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.35 today-priority-revenue-action ==');
+console.log('== v4.10.36 today-priority-revenue-action ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -41,10 +41,10 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.35'), 'index.html should show v4.10.35');
-assert(indexHtml.includes('js/app.js?v=4.10.35'), 'app.js cache buster should be v4.10.35');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.35'"), 'storage.js version should be v4.10.35');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.35'"), 'data-backup version should be v4.10.35');
+assert(indexHtml.includes('v4.10.36'), 'index.html should show v4.10.36');
+assert(indexHtml.includes('js/app.js?v=4.10.36'), 'app.js cache buster should be v4.10.36');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.36'"), 'storage.js version should be v4.10.36');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.36'"), 'data-backup version should be v4.10.36');
 
 console.log('== priority action button wiring ==');
 assert(appJs.includes('data-exec-priority-fill-revenue'), 'exec priority should expose fill-revenue button');
@@ -171,4 +171,4 @@ console.log('== duplicate warning without auto overwrite ==');
 console.log('== no auto work-order / calendar creation ==');
 assert(!appJs.match(/fillRevenueFromReceptionIntake[\s\S]{0,1200}Storage\.addWorkOrder/), 'exception fill must not auto-create work orders');
 
-console.log('\nAll v4.10.35 today-priority-revenue-action checks passed.');
+console.log('\nAll v4.10.36 today-priority-revenue-action checks passed.');
