@@ -593,6 +593,9 @@ const RevenueBrain = {
       return sum + this.computeRecordGrossShare({ ...w, amount: amt });
     }, 0);
     const totalGrossProfit = confirmedGrossProfit + scheduledGrossProfit;
+    const confirmedFeeAmount = confirmedRevenue - confirmedGrossProfit;
+    const scheduledFeeAmount = scheduledRevenue - scheduledGrossProfit;
+    const totalFeeAmount = confirmedFeeAmount + scheduledFeeAmount;
     const profitReviewRequiredRevenue = [
       ...confirmedList.filter(r => this.getSourceProfitRate(this.resolveRecordSourceText(r)).reviewRequired),
       ...plannedWorkOrders.filter(w => this.getSourceProfitRate(this.resolveRecordSourceText(w)).reviewRequired)
@@ -631,6 +634,9 @@ const RevenueBrain = {
       confirmedGrossProfit,
       scheduledGrossProfit,
       totalGrossProfit,
+      confirmedFeeAmount,
+      scheduledFeeAmount,
+      totalFeeAmount,
       totalProfit,
       plannedRevenue,
       monthExpense,

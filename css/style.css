@@ -11154,6 +11154,67 @@ body.sales-page {
   margin-bottom: 0.35rem;
 }
 
+/* v4.11.7 — profit page metrics layout */
+#view-profit .profit-metrics-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+#view-profit .profit-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.65rem;
+}
+
+#view-profit .profit-breakdown-grid-3 {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+
+#view-profit .profit-expense-overview {
+  margin-top: 0.65rem;
+}
+
+#view-profit .profit-expense-overview .profit-summary-grid {
+  margin-top: 0.25rem;
+}
+
+#view-profit .profit-monthly-brief {
+  margin-top: 0.65rem;
+  grid-column: auto;
+}
+
+#view-profit .profit-fee-formula {
+  margin: 0.35rem 0 0;
+  font-size: 0.88rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+@media (min-width: 720px) {
+  #view-profit .profit-breakdown-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  #view-profit .profit-breakdown-grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #view-profit .profit-expense-overview .profit-summary-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  #view-profit .profit-monthly-brief {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.25rem 1rem;
+  }
+
+  #view-profit .profit-monthly-brief-title {
+    grid-column: 1 / -1;
+  }
+}
+
 .work-order-item-actions-primary {
   display: flex;
   flex-wrap: wrap;

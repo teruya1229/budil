@@ -959,6 +959,11 @@
     const isCompact = !!opts.compact;
     const s = section || {};
     const agg = s.revenueAggregation || {};
+    const shared = s.sharedMonthlyMetrics || {};
+    const totalFee = shared.totalFeeAmount ?? (
+      (shared.confirmedRevenue || 0) - (shared.confirmedGrossProfit || 0)
+      + (shared.scheduledRevenue || shared.plannedAdditionalRevenue || 0) - (shared.scheduledGrossProfit || 0)
+    );
     const aggCompact = agg.compact || {};
     const thisMonthView = aggCompact.thisMonthView || {};
     const diffClass = aggCompact.monthDiff > 0 ? 'revenue-agg-diff-up' : (aggCompact.monthDiff < 0 ? 'revenue-agg-diff-down' : '');
@@ -1011,6 +1016,7 @@
         ${isCompact ? '' : `<div><span>月間目標</span><strong>${esc(RevenueBrain.formatYen(s.monthlyTarget))}</strong></div>
         <div><span>達成率</span><strong>${s.achievementRate}%</strong></div>`}
         <div><span>今月経費</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
+        ${isCompact && totalFee > 0 ? `<div><span>合計仲介料</span><strong>${esc(ProfitBrain.formatYen(totalFee))}</strong></div>` : ''}
         ${isCompact ? '' : `<div><span>今週予定売上</span><strong>${esc(WorkOrderBrain.formatYen(s.weekForecast))}</strong></div>
         <div><span>売上未登録</span><strong>${s.completedNoRevenue || 0}件</strong></div>`}
       </div>
@@ -1666,6 +1672,11 @@
     const profitMorningEl = document.getElementById('mgmt-profit');
     if (profitMorningEl) {
       const rp = ctx.revenueProfitSection || {};
+      const shared = rp.sharedMonthlyMetrics || {};
+      const totalFee = shared.totalFeeAmount ?? (
+        (shared.confirmedRevenue || 0) - (shared.confirmedGrossProfit || 0)
+        + (shared.scheduledRevenue || shared.plannedAdditionalRevenue || 0) - (shared.scheduledGrossProfit || 0)
+      );
       const monthlyNote = rp.usesMonthlyResult && rp.aggregationSourceNote
         ? `<p class="profit-monthly-source-note">${esc(rp.aggregationSourceNote)}</p>`
         : '';
@@ -1675,6 +1686,7 @@
         <ul class="mgmt-profit-list">
           <li>合計売上 ${esc(RevenueBrain.formatYen(rp.totalRevenue != null ? rp.totalRevenue : rp.monthRevenue))} / 目標 ${esc(RevenueBrain.formatYen(rp.monthlyTarget))}（${rp.achievementRate}%）</li>
           <li>合計利益 ${esc(ProfitBrain.formatYen(rp.totalProfit != null ? rp.totalProfit : rp.grossProfit))} / 確定利益 ${esc(ProfitBrain.formatYen(rp.confirmedProfit || 0))} / 予定利益 ${esc(ProfitBrain.formatYen(rp.scheduledProfit || 0))}</li>
+          <li>仲介料 ${esc(ProfitBrain.formatYen(totalFee))}</li>
           <li>今月経費 ${esc(ProfitBrain.formatYen(rp.monthExpense))}</li>
           ${rp.completedNoRevenue ? `<li>作業日経過・売上未確定 ${rp.completedNoRevenue}件</li>` : ''}
         </ul>`;
@@ -3862,6 +3874,9 @@
     const opts = options || {};
     const overlay = opts.monthlyOverlay;
     const m = opts.sharedMonthlyMetrics || {};
+    const confirmedFee = m.confirmedFeeAmount ?? ((m.confirmedRevenue ?? 0) - (m.confirmedGrossProfit ?? 0));
+    const scheduledFee = m.scheduledFeeAmount ?? ((m.scheduledRevenue ?? m.plannedAdditionalRevenue ?? 0) - (m.scheduledGrossProfit ?? 0));
+    const totalFee = m.totalFeeAmount ?? (confirmedFee + scheduledFee);
     const monthlyBrief = overlay && overlay.usesMonthlyResult
       ? renderCurrentMonthReconciliationBrief(summary.monthKey, overlay)
       : '';
@@ -3870,6 +3885,9 @@
       `<p class="revenue-summary-line">確定売上：<strong>${esc(RevenueBrain.formatYen(m.confirmedRevenue ?? summary.confirmed))}</strong></p>`,
       `<p class="revenue-summary-line">予定売上：${esc(RevenueBrain.formatYen(m.scheduledRevenue ?? m.plannedAdditionalRevenue ?? 0))}</p>`,
       `<p class="revenue-summary-line">合計売上：${esc(RevenueBrain.formatYen(m.totalRevenue ?? m.plannedRevenue ?? 0))}</p>`,
+      `<p class="revenue-summary-line">仲介料：${esc(RevenueBrain.formatYen(totalFee))}</p>`,
+      `<p class="revenue-summary-line">確定仲介料：${esc(RevenueBrain.formatYen(confirmedFee))}</p>`,
+      `<p class="revenue-summary-line">予定仲介料：${esc(RevenueBrain.formatYen(scheduledFee))}</p>`,
       `<p class="revenue-summary-line">入金済み：${esc(RevenueBrain.formatYen(m.paidAmount ?? summary.paid))}</p>`,
       `<p class="revenue-summary-line">入金待ち：${esc(RevenueBrain.formatYen(m.unpaidAmount ?? summary.unpaid))}</p>`,
       `<p class="revenue-summary-line">今月経費：${esc(RevenueBrain.formatYen(m.monthExpense ?? 0))}</p>`,
@@ -10828,6 +10846,9 @@
     const m = getSharedMonthlyMetrics({ monthKey: s.monthKey });
     const expenseCount = ProfitBrain.filterMonthExpenses(ctx.expenses || [], s.monthKey).length;
     const workflowMode = !!opts.workflowMode;
+    const confirmedFee = m.confirmedFeeAmount ?? (m.confirmedRevenue - m.confirmedGrossProfit);
+    const scheduledFee = m.scheduledFeeAmount ?? (m.scheduledRevenue - m.scheduledGrossProfit);
+    const totalFee = m.totalFeeAmount ?? (confirmedFee + scheduledFee);
     const monthlyNote = !workflowMode && s.usesMonthlyResult && s.aggregationSourceNote
       ? `<p class="profit-monthly-source-note">${esc(s.aggregationSourceNote)}</p>`
       : '';
@@ -10838,7 +10859,7 @@
       ? ''
       : `<p class="profit-aggregation-label">集計：<strong>${esc(s.usesMonthlyResult ? '月次実績ベース' : '明細ベース')}</strong></p>`;
     let monthlyBrief = '';
-    if (!workflowMode && !s.usesMonthlyResult && typeof RevenueSummaryBrain !== 'undefined') {
+    if (!s.usesMonthlyResult && typeof RevenueSummaryBrain !== 'undefined') {
       const monthly = RevenueSummaryBrain.buildMonthlySummary(
         RevenueSummaryBrain.confirmedRecords(Storage.getRevenueRecords())
       ).slice(0, 3);
@@ -10848,33 +10869,64 @@
         ).join('')}</div>`;
       }
     }
-    const baseItems = workflowMode
-      ? [
+    const renderMetricItem = (item) =>
+      `<div class="profit-summary-item ${item.extraClass || ''}"><span>${esc(item.label)}</span><strong>${esc(item.value)}</strong></div>`;
+    const renderMetricGrid = (items, extraClass) =>
+      `<div class="profit-breakdown-grid${extraClass ? ` ${extraClass}` : ''}">${items.map(renderMetricItem).join('')}</div>`;
+    const metricsLayout = workflowMode
+      ? `<div class="profit-metrics-layout">
+      <p class="profit-breakdown-section-label">合計</p>
+      ${renderMetricGrid([
         { label: '合計売上', value: RevenueBrain.formatYen(m.totalRevenue ?? m.plannedRevenue ?? 0), extraClass: 'profit-summary-highlight' },
         { label: '合計利益', value: RevenueBrain.formatYen(m.totalProfit ?? m.plannedProfit ?? 0), extraClass: 'profit-summary-total-profit' },
-        { label: '確定売上', value: RevenueBrain.formatYen(m.confirmedRevenue) },
-        { label: '予定売上', value: RevenueBrain.formatYen(m.scheduledRevenue ?? m.plannedAdditionalRevenue ?? 0) },
-        { label: '確定利益', value: RevenueBrain.formatYen(m.confirmedProfit) },
-        { label: '予定利益', value: RevenueBrain.formatYen(m.scheduledProfit ?? 0) },
+        { label: '仲介料', value: RevenueBrain.formatYen(totalFee) },
         { label: '今月経費', value: RevenueBrain.formatYen(m.monthExpense) }
-      ]
-      : [
+      ])}
+      <p class="profit-breakdown-section-label">確定</p>
+      ${renderMetricGrid([
         { label: '確定売上', value: RevenueBrain.formatYen(m.confirmedRevenue), extraClass: 'profit-summary-highlight' },
-        { label: '予定売上', value: RevenueBrain.formatYen(m.scheduledRevenue ?? m.plannedAdditionalRevenue ?? 0) },
-        { label: '合計売上', value: RevenueBrain.formatYen(m.totalRevenue ?? m.plannedRevenue ?? 0) },
-        { label: '今月経費', value: RevenueBrain.formatYen(m.monthExpense) },
         { label: '確定利益', value: RevenueBrain.formatYen(m.confirmedProfit) },
+        { label: '確定仲介料', value: RevenueBrain.formatYen(confirmedFee) }
+      ], 'profit-breakdown-grid-3')}
+      <p class="profit-breakdown-section-label">予定</p>
+      ${renderMetricGrid([
+        { label: '予定売上', value: RevenueBrain.formatYen(m.scheduledRevenue ?? m.plannedAdditionalRevenue ?? 0) },
         { label: '予定利益', value: RevenueBrain.formatYen(m.scheduledProfit ?? 0) },
-        { label: '合計利益', value: RevenueBrain.formatYen(m.totalProfit ?? m.plannedProfit ?? 0), extraClass: 'profit-summary-total-profit' }
-      ];
-    const secondaryGrid = workflowMode
+        { label: '予定仲介料', value: RevenueBrain.formatYen(scheduledFee) }
+      ], 'profit-breakdown-grid-3')}
+      </div>`
+      : `<div class="profit-metrics-layout">
+      <p class="profit-breakdown-section-label">合計</p>
+      ${renderMetricGrid([
+        { label: '合計売上', value: RevenueBrain.formatYen(m.totalRevenue ?? m.plannedRevenue ?? 0), extraClass: 'profit-summary-highlight' },
+        { label: '合計利益', value: RevenueBrain.formatYen(m.totalProfit ?? m.plannedProfit ?? 0), extraClass: 'profit-summary-total-profit' },
+        { label: '仲介料', value: RevenueBrain.formatYen(totalFee) },
+        { label: '今月経費', value: RevenueBrain.formatYen(m.monthExpense) }
+      ])}
+      <p class="profit-breakdown-section-label">確定</p>
+      ${renderMetricGrid([
+        { label: '確定売上', value: RevenueBrain.formatYen(m.confirmedRevenue), extraClass: 'profit-summary-highlight' },
+        { label: '確定利益', value: RevenueBrain.formatYen(m.confirmedProfit) },
+        { label: '確定仲介料', value: RevenueBrain.formatYen(confirmedFee) }
+      ], 'profit-breakdown-grid-3')}
+      <p class="profit-breakdown-section-label">予定</p>
+      ${renderMetricGrid([
+        { label: '予定売上', value: RevenueBrain.formatYen(m.scheduledRevenue ?? m.plannedAdditionalRevenue ?? 0) },
+        { label: '予定利益', value: RevenueBrain.formatYen(m.scheduledProfit ?? 0) },
+        { label: '予定仲介料', value: RevenueBrain.formatYen(scheduledFee) }
+      ], 'profit-breakdown-grid-3')}
+      </div>`;
+    const expenseOverview = s.usesMonthlyResult
       ? ''
-      : `<div class="profit-summary-grid profit-summary-secondary">
+      : `<div class="profit-expense-overview">
+      <p class="profit-breakdown-section-label">費用内訳</p>
+      <div class="profit-summary-grid profit-summary-secondary">
       <div class="profit-summary-item"><span>仲介料・控除（粗利率）</span><strong>${esc(ProfitBrain.formatYen(s.marginDeductionTotal || 0))}</strong></div>
       <div class="profit-summary-item"><span>広告費</span><strong>${esc(ProfitBrain.formatYen(s.adExpense))}</strong></div>
       <div class="profit-summary-item"><span>仲介料・手数料</span><strong>${esc(ProfitBrain.formatYen(s.feeExpense))}</strong></div>
       <div class="profit-summary-item"><span>外注費</span><strong>${esc(ProfitBrain.formatYen(s.outsourceExpense))}</strong></div>
       <div class="profit-summary-item"><span>未紐付け支出</span><strong>${s.usesMonthlyResult ? '—' : `${s.unlinkedCount}件（${esc(ProfitBrain.formatYen(s.unlinkedTotal))}）`}</strong></div>
+      </div>
       </div>`;
     const reconciliationBlock = workflowMode
       ? ''
@@ -10897,13 +10949,10 @@
       ${aggBadge}
       ${monthlyNote}
       ${reconciliationBlock}
-      <div class="profit-summary-grid">
-      ${baseItems.map(item => `
-      <div class="profit-summary-item ${item.extraClass || ''}"><span>${esc(item.label)}</span><strong>${esc(item.value)}</strong></div>`).join('')}
-      ${workflowMode ? '' : `<div class="profit-summary-item"><span>経費入力</span><strong>今月${expenseCount}件</strong></div>`}
-      </div>
+      ${metricsLayout}
       ${monthlyBrief}
-      ${secondaryGrid}`;
+      ${expenseOverview}
+      ${workflowMode ? '' : `<div class="profit-summary-grid"><div class="profit-summary-item"><span>経費入力</span><strong>今月${expenseCount}件</strong></div></div>`}`;
   }
 
   function renderProfitExpenseBreakdown(ctx, options) {
@@ -11207,6 +11256,11 @@
       workOrders: Storage.getWorkOrders(),
       expenses: ctx.expenses || Storage.getExpenseRecords()
     });
+    const sharedMetrics = getSharedMonthlyMetrics({ monthKey: diagnostics.monthKey });
+    const totalFee = sharedMetrics.totalFeeAmount ?? (
+      (sharedMetrics.confirmedRevenue - sharedMetrics.confirmedGrossProfit)
+      + (sharedMetrics.scheduledRevenue - sharedMetrics.scheduledGrossProfit)
+    );
     const monthExpenses = ProfitBrain.filterMonthExpenses(ctx.expenses || [], diagnostics.monthKey);
     const expenseCount = monthExpenses.length;
     const statusClass = diagnostics.statusKey === 'ok'
@@ -11236,6 +11290,9 @@
     const flowBlock = (isCompact || workflowMode)
       ? ''
       : `<p class="revenue-flow-diagnostics-flow">${esc(diagnostics.flowNote)}</p>`;
+    const feeFormulaBlock = workflowMode && !diagnostics.usesMonthlyResult
+      ? `<p class="profit-fee-formula">計算：${esc(RevenueBrain.formatYen(diagnostics.monthRevenue))} − ${esc(RevenueBrain.formatYen(totalFee))} − ${esc(RevenueBrain.formatYen(diagnostics.monthExpense))} = ${esc(ProfitBrain.formatYen(diagnostics.monthProfit))}</p>`
+      : '';
     el.innerHTML = `
       <div class="revenue-flow-diagnostics profit-operations-diagnostics${isCompact ? ' profit-operations-diagnostics-compact' : ''}${workflowMode ? ' profit-operations-diagnostics-workflow' : ''}">
         ${titleBlock}
@@ -11244,11 +11301,13 @@
           <li><span>合計利益：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthProfit))}</strong></li>
           <li><span>利益率：</span><strong>${esc(ProfitBrain.formatRate(diagnostics.monthProfitRate))}</strong></li>
           <li><span>合計売上：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthRevenue))}</strong></li>
+          ${workflowMode && !diagnostics.usesMonthlyResult ? `<li><span>仲介料：</span><strong>${esc(ProfitBrain.formatYen(totalFee))}</strong></li>` : ''}
           <li><span>今月経費：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthExpense))}</strong></li>
           <li><span>経費入力：</span><strong>今月${expenseCount}件</strong></li>
           ${(isCompact || workflowMode) ? '' : `<li><span>集計：</span><strong>${esc(diagnostics.aggregationLabel)}</strong></li>
           <li><span>整合チェック：</span><strong>${esc(diagnostics.reconciliationLabel)}</strong></li>`}
         </ul>
+        ${feeFormulaBlock}
         ${defsBlock}
         ${nextBlock}
         ${actionBtn}
@@ -16516,10 +16575,16 @@
 
     if (summaryEl) {
       const m = sharedMonthlyMetrics || getSharedMonthlyMetrics();
+      const confirmedFee = m.confirmedFeeAmount ?? (m.confirmedRevenue - m.confirmedGrossProfit);
+      const scheduledFee = m.scheduledFeeAmount ?? ((m.scheduledRevenue ?? m.plannedAdditionalRevenue ?? 0) - (m.scheduledGrossProfit ?? 0));
+      const totalFee = m.totalFeeAmount ?? (confirmedFee + scheduledFee);
       const baseItems = [
         { label: '確定売上', value: RevenueBrain.formatYen(m.confirmedRevenue) },
         { label: '予定売上', value: RevenueBrain.formatYen(m.scheduledRevenue ?? m.plannedAdditionalRevenue ?? 0) },
         { label: '合計売上', value: RevenueBrain.formatYen(m.totalRevenue ?? m.plannedRevenue ?? 0) },
+        { label: '仲介料', value: RevenueBrain.formatYen(totalFee) },
+        { label: '確定仲介料', value: RevenueBrain.formatYen(confirmedFee) },
+        { label: '予定仲介料', value: RevenueBrain.formatYen(scheduledFee) },
         { label: '入金済み', value: RevenueBrain.formatYen(m.paidAmount) },
         { label: '入金待ち', value: RevenueBrain.formatYen(m.unpaidAmount) },
         { label: '今月経費', value: RevenueBrain.formatYen(m.monthExpense) },

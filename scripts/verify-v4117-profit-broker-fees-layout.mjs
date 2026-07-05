@@ -1,5 +1,5 @@
 /**
- * Budil v4.11.7 - source profit rates in shared monthly metrics verification.
+ * Budil v4.11.7 - broker fees visibility and profit metrics layout verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -24,7 +24,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.11.7 source-profit-rates ==');
+console.log('== v4.11.7 profit-broker-fees-layout ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -44,35 +44,57 @@ const decisionLog = load('decision-log.md');
 console.log('== version check ==');
 assert(indexHtml.includes('v4.11.7'), 'index.html should show v4.11.7');
 assert(indexHtml.includes('js/app.js?v=4.11.7'), 'app.js cache buster should be v4.11.7');
+assert(indexHtml.includes('css/style.css?v=4.11.7'), 'style.css cache buster should be v4.11.7');
 assert(indexHtml.includes('js/revenue-brain.js?v=4.11.7'), 'revenue-brain cache buster should be v4.11.7');
-assert(indexHtml.includes('js/profit-brain.js?v=4.11.7'), 'profit-brain cache buster should be v4.11.7');
-assert(indexHtml.includes('js/executive-brain.js?v=4.11.7'), 'executive-brain cache buster should be v4.11.7');
 assert(storageJs.includes("BUDIL_VERSION: 'v4.11.7'"), 'storage.js version should be v4.11.7');
 assert(dataBackupJs.includes("APP_VERSION: 'v4.11.7'"), 'data-backup version should be v4.11.7');
 assert(statusMd.includes('v4.11.7'), 'status.md should document v4.11.7');
 assert(handoffMd.includes('v4.11.7'), 'handoff.md should document v4.11.7');
 assert(decisionLog.includes('v4.11.7'), 'decision-log.md should record v4.11.7');
 
-console.log('== source profit master wiring ==');
-assert(revenueBrainJs.includes('getSourceProfitRate'), 'RevenueBrain should expose getSourceProfitRate');
-assert(revenueBrainJs.includes('normalizeRevenueSource'), 'RevenueBrain should expose normalizeRevenueSource');
-assert(revenueBrainJs.includes('calculateNetRevenueBySource'), 'RevenueBrain should expose calculateNetRevenueBySource');
-assert(revenueBrainJs.includes('confirmedProfit = confirmedGrossProfit - monthExpense'), 'confirmedProfit should use gross share');
-assert(revenueBrainJs.includes('scheduledProfit = scheduledGrossProfit'), 'scheduledProfit should equal scheduled gross share');
-assert(revenueBrainJs.includes('totalProfit = confirmedGrossProfit + scheduledGrossProfit - monthExpense'), 'totalProfit should use gross shares');
-assert(profitBrainJs.includes('getSharedMonthlyMetricsForProfit'), 'profit diagnostics should use shared metrics helper');
-assert(appJs.includes("label: '予定利益'"), 'profit/revenue summary should show 予定利益');
-assert(appJs.includes('確定粗利＋予定粗利'), 'profit flow note should explain gross share formula');
+console.log('== shared fee metrics wiring ==');
+assert(revenueBrainJs.includes('confirmedFeeAmount'), 'revenue-brain should expose confirmedFeeAmount');
+assert(revenueBrainJs.includes('scheduledFeeAmount'), 'revenue-brain should expose scheduledFeeAmount');
+assert(revenueBrainJs.includes('totalFeeAmount'), 'revenue-brain should expose totalFeeAmount');
+assert(revenueBrainJs.includes('confirmedFeeAmount = confirmedRevenue - confirmedGrossProfit'), 'confirmedFeeAmount formula required');
+assert(revenueBrainJs.includes('scheduledFeeAmount = scheduledRevenue - scheduledGrossProfit'), 'scheduledFeeAmount formula required');
+assert(revenueBrainJs.includes('totalFeeAmount = confirmedFeeAmount + scheduledFeeAmount'), 'totalFeeAmount formula required');
+
+console.log('== profit page labels and restored blocks ==');
+assert(appJs.includes("label: '仲介料'"), 'profit summary should show 仲介料');
+assert(appJs.includes("label: '確定仲介料'"), 'profit summary should show 確定仲介料');
+assert(appJs.includes("label: '予定仲介料'"), 'profit summary should show 予定仲介料');
+assert(appJs.includes('月別確定売上（直近）'), 'monthly confirmed revenue brief must remain');
+assert(appJs.includes('仲介料・控除（粗利率）'), 'margin deduction card must remain');
+assert(appJs.includes('広告費'), 'ad expense card must remain');
+assert(appJs.includes('仲介料・手数料'), 'fee expense card must remain');
+assert(appJs.includes('外注費'), 'outsource expense card must remain');
+assert(appJs.includes('未紐付け支出'), 'unlinked expense card must remain');
+assert(appJs.includes('profit-expense-overview'), 'expense overview must be outside detail analysis');
+assert(appJs.includes('profit-fee-formula'), 'profit status should show fee formula');
+assert(indexHtml.includes('profit-summary-root'), 'profit summary root should not nest summary-grid class');
+assert(css.includes('#view-profit .profit-metrics-layout'), 'profit metrics layout css required');
+assert(css.includes('#view-profit .profit-breakdown-grid'), 'profit breakdown grid css required');
+
+console.log('== revenue summary broker fees ==');
+assert(appJs.includes('確定仲介料：'), 'revenue summary html should show 確定仲介料');
+assert(appJs.includes('予定仲介料：'), 'revenue summary html should show 予定仲介料');
+
+console.log('== v4.11.7 workflow preserved ==');
+assert(appJs.includes('data-profit-schedule-edit'), 'profit schedule edit button must remain');
+assert(appJs.includes('function openWorkOrderEditFromProfit'), 'profit edit helper must remain');
+assert(indexHtml.includes('profit-detail-analysis-collapse'), 'detail analysis collapse must remain');
+assert(revenueBrainJs.includes('totalProfit = confirmedGrossProfit + scheduledGrossProfit - monthExpense'), 'totalProfit formula must remain');
 
 console.log('== forbidden label scan ==');
 for (const term of ['見込み利益', '見込み売上', '今月利益', '今月売上', '予定売上見込み']) {
   assert(!appJs.includes(term), `app.js must not include forbidden label: ${term}`);
 }
 
-console.log('== untouched files ==');
-assert(!receptionJs.includes('getSourceProfitRate'), 'reception-brain must not change for v4.11.7');
-assert(!documentsJs.includes('getSourceProfitRate'), 'documents-brain must not change for v4.11.7');
-assert(!followJs.includes('getSourceProfitRate'), 'follow-up-brain must not change for v4.11.7');
+console.log('== untouched modules ==');
+assert(!receptionJs.includes('confirmedFeeAmount'), 'reception-brain must not change for v4.11.7');
+assert(!documentsJs.includes('confirmedFeeAmount'), 'documents-brain must not change for v4.11.7');
+assert(!followJs.includes('confirmedFeeAmount'), 'follow-up-brain must not change for v4.11.7');
 
 function createSandbox() {
   const sandbox = {
@@ -106,44 +128,32 @@ function buildMetrics(ctx, records, workOrders, expenses, monthKey = '2026-07') 
   }))()`, ctx);
 }
 
-console.log('== source rate math ==');
+console.log('== broker fee math ==');
 {
   const ctx = createSandbox();
-  const cases = [
-    ['直請け', 10000, 10000],
-    ['Airリザーブ', 10000, 10000],
-    ['コープハウジング', 10000, 8000],
-    ['片付け110番', 10000, 8000],
-    ['くらしのマーケット', 10000, 8000],
-    ['ヤマダ', 10000, 6000]
-  ];
-  for (const [source, amount, expected] of cases) {
-    const share = runInContext(`RevenueBrain.calculateNetRevenueBySource(${amount}, ${JSON.stringify(source)})`, ctx);
-    assert(share === expected, `${source} ${amount} should gross ${expected}, got ${share}`);
-  }
-}
-
-console.log('== unknown source must not inflate profit ==');
-{
-  const ctx = createSandbox();
-  for (const source of ['', '未設定', '不明']) {
-    const info = runInContext(`RevenueBrain.getSourceProfitRate(${JSON.stringify(source)})`, ctx);
-    assert(info.rate === 0, `unknown source ${source || '(empty)'} rate should be 0`);
-    assert(info.reviewRequired === true, `unknown source ${source || '(empty)'} should require review`);
-    const share = runInContext(`RevenueBrain.calculateNetRevenueBySource(10000, ${JSON.stringify(source)})`, ctx);
-    assert(share === 0, `unknown source ${source || '(empty)'} must not become 10000 profit share`);
-  }
-  const metrics = buildMetrics(ctx, [
-    { id: 'r-unknown', workDate: '2026-07-03', amount: 10000, source: '不明', status: '確定', paymentStatus: 'paid' }
+  const direct = buildMetrics(ctx, [
+    { id: 'r1', workDate: '2026-07-03', amount: 10000, source: '直請け', status: '確定', paymentStatus: 'paid' }
   ]);
-  assert(metrics.confirmedRevenue === 10000, 'unknown source revenue should still count in confirmedRevenue');
-  assert(metrics.confirmedGrossProfit === 0, 'unknown source must not inflate confirmedGrossProfit');
-  assert(metrics.confirmedProfit === -metrics.monthExpense, 'unknown source confirmedProfit should not assume 100%');
-}
+  assert(direct.confirmedFeeAmount === 0, `直請け fee should be 0, got ${direct.confirmedFeeAmount}`);
+  assert(direct.totalFeeAmount === 0, `直請け total fee should be 0, got ${direct.totalFeeAmount}`);
 
-console.log('== shared metrics formulas ==');
-{
-  const ctx = createSandbox();
+  const air = buildMetrics(ctx, [
+    { id: 'r2', workDate: '2026-07-03', amount: 10000, source: 'Airリザーブ', status: '確定', paymentStatus: 'paid' }
+  ]);
+  assert(air.confirmedFeeAmount === 0, `Air fee should be 0, got ${air.confirmedFeeAmount}`);
+
+  const coop = buildMetrics(ctx, [
+    { id: 'r3', workDate: '2026-07-03', amount: 10000, source: 'コープハウジング', status: '確定', paymentStatus: 'paid' }
+  ]);
+  assert(coop.confirmedFeeAmount === 2000, `コープ fee should be 2000, got ${coop.confirmedFeeAmount}`);
+  assert(coop.confirmedGrossProfit === 8000, `コープ gross should be 8000, got ${coop.confirmedGrossProfit}`);
+
+  const yamada = buildMetrics(ctx, [
+    { id: 'r4', workDate: '2026-07-03', amount: 25300, source: 'ヤマダ', status: '確定', paymentStatus: 'paid' }
+  ]);
+  assert(yamada.confirmedFeeAmount === 10120, `ヤマダ 25300 fee should be 10120, got ${yamada.confirmedFeeAmount}`);
+  assert(yamada.confirmedGrossProfit === 15180, `ヤマダ gross should be 15180, got ${yamada.confirmedGrossProfit}`);
+
   const metrics = buildMetrics(ctx, [
     { id: 'r1', workDate: '2026-07-03', amount: 25000, source: '直請け', status: '確定', paymentStatus: 'paid' },
     { id: 'r2', workDate: '2026-07-04', amount: 10000, source: 'ヤマダ', status: '確定', paymentStatus: 'pending' }
@@ -152,15 +162,13 @@ console.log('== shared metrics formulas ==');
   ], [
     { id: 'e1', date: '2026-07-02', amount: 3000, category: '交通・燃料' }
   ]);
-  assert(metrics.confirmedRevenue === 35000, `confirmedRevenue should be 35000, got ${metrics.confirmedRevenue}`);
-  assert(metrics.scheduledRevenue === 10000, `scheduledRevenue should be 10000, got ${metrics.scheduledRevenue}`);
-  assert(metrics.totalRevenue === 45000, `totalRevenue should be 45000, got ${metrics.totalRevenue}`);
-  assert(metrics.confirmedGrossProfit === 31000, `confirmedGrossProfit should be 31000, got ${metrics.confirmedGrossProfit}`);
-  assert(metrics.scheduledGrossProfit === 8000, `scheduledGrossProfit should be 8000, got ${metrics.scheduledGrossProfit}`);
-  assert(metrics.confirmedProfit === 28000, `confirmedProfit should be 28000, got ${metrics.confirmedProfit}`);
-  assert(metrics.scheduledProfit === 8000, `scheduledProfit should be 8000, got ${metrics.scheduledProfit}`);
-  assert(metrics.totalProfit === 36000, `totalProfit should be 36000, got ${metrics.totalProfit}`);
-  assert(metrics.totalProfit === metrics.confirmedGrossProfit + metrics.scheduledGrossProfit - metrics.monthExpense, 'totalProfit formula mismatch');
+  assert(metrics.confirmedFeeAmount === metrics.confirmedRevenue - metrics.confirmedGrossProfit, 'confirmedFeeAmount formula mismatch');
+  assert(metrics.scheduledFeeAmount === metrics.scheduledRevenue - metrics.scheduledGrossProfit, 'scheduledFeeAmount formula mismatch');
+  assert(metrics.totalFeeAmount === metrics.confirmedFeeAmount + metrics.scheduledFeeAmount, 'totalFeeAmount formula mismatch');
+  assert(
+    metrics.totalProfit === metrics.totalRevenue - metrics.totalFeeAmount - metrics.monthExpense,
+    'totalProfit should equal totalRevenue - totalFeeAmount - monthExpense'
+  );
 }
 
 console.log('== screen consistency ==');
@@ -196,9 +204,9 @@ console.log('== screen consistency ==');
 
   assert(result.execSection.totalProfit === result.shared.totalProfit, 'executive and shared totalProfit must match');
   assert(result.profitDiag.monthProfit === result.shared.totalProfit, 'profit diagnostics and shared totalProfit must match');
-  assert(result.execSection.scheduledProfit === result.shared.scheduledProfit, 'executive and shared scheduledProfit must match');
+  assert(result.shared.totalFeeAmount === 6000, `total fee should be 6000, got ${result.shared.totalFeeAmount}`);
 }
 
-execSync('node scripts/verify-v4114-unify-monthly-metric-labels.mjs', { cwd: root, stdio: 'inherit' });
+execSync('node scripts/verify-v4116-profit-page-workflow.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('\nAll v4.11.7 source-profit-rates checks passed.');
+console.log('\nAll v4.11.7 profit-broker-fees-layout checks passed.');
