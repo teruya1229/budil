@@ -2,6 +2,24 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.10.39 売上確定済み受付を今日の最優先から除外 緊急修正（2026-07-05）
+
+**日付**: 2026-07-05
+
+**判断内容**:
+- v4.10.38 で受付と既存売上の表示同期を入れたが、海老澤智貴様のように強一致済みの受付が「今日の最優先」に残り「この受付から売上確定する」が出る問題を修正
+- 売上確定済み扱い（relatedRevenueId / resolvedRevenue / 強一致 / 重複一致）の受付は未完了タスク・最優先から除外
+- 既存の毎日やることタスクは localStorage を書き換えず、完了済み details に「売上確定済み」として表示のみ移す
+- 売上レコードの date フィールドでも強一致解決できるようフォールバック追加
+
+**変更ファイル**:
+- js/reception-brain.js（isIntakeRevenueResolved、priority / revenuePending）
+- js/revenue-brain.js（duplicateMatch 解決、date フォールバック）
+- js/executive-brain.js（pending / topPriorities 除外）
+- js/app.js（collectDailyPriorityItems、ボタンガード、完了済み表示）
+- index.html, js/storage.js, js/data-backup.js（バージョン更新）
+- scripts/verify-v41039-priority-excludes-resolved-reception.mjs（新規）
+
 ## v4.10.38 受付＝一人のお客様 状態同期（2026-07-05）
 
 **日付**: 2026-07-05

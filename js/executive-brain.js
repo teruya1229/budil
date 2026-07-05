@@ -168,12 +168,12 @@ const ExecutiveBrain = {
       .map(i => ReceptionBrain.normalizeIntake(i))
       .filter(i => !skip.has(i.status))
       .filter(i => {
-        const state = ReceptionBrain.getWorkflowState(i, {
+        const intakeCtx = {
           leads: ctx.leads || [],
           workOrders: ctx.workOrders || [],
           revenues: ctx.revenues || []
-        });
-        if (state.hasRevenue) return false;
+        };
+        if (ReceptionBrain.isIntakeRevenueResolved(i, intakeCtx)) return false;
         return i.status === 'new'
           || i.status === 'lead_created'
           || i.status === 'task_created'
@@ -222,13 +222,18 @@ const ExecutiveBrain = {
     });
 
     (c.pendingReceptions || []).slice(0, 3).forEach(intake => {
+      const intakeCtx = {
+        leads: c.leads,
+        workOrders: c.workOrders,
+        revenues: c.revenues || (c.revCtx && c.revCtx.records) || [],
+        followTargets: c.followTargets || []
+      };
+      if (typeof ReceptionBrain !== 'undefined'
+        && ReceptionBrain.isIntakeRevenueResolved(intake, intakeCtx)) {
+        return;
+      }
       const summary = typeof ReceptionBrain !== 'undefined'
-        ? ReceptionBrain.buildIntakePrioritySummary(intake, {
-          leads: c.leads,
-          workOrders: c.workOrders,
-          revenues: c.revenues || (c.revCtx && c.revCtx.records) || [],
-          followTargets: c.followTargets || []
-        })
+        ? ReceptionBrain.buildIntakePrioritySummary(intake, intakeCtx)
         : null;
       const needsLead = !intake.relatedLeadId;
       add({

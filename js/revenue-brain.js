@@ -807,7 +807,8 @@ const RevenueBrain = {
     (revenues || []).forEach(record => {
       if (!record || record.status === 'キャンセル') return;
       if (Number(record.amount || 0) !== amount) return;
-      if (String(record.workDate || '').slice(0, 10) !== workDate) return;
+      const recWorkDate = String(record.workDate || record.date || '').slice(0, 10);
+      if (recWorkDate !== workDate) return;
       if (!this.isCustomerNameStrongMatch(normalized.customerName, record.customerName)) return;
       if (!this.isServiceOrSourceNearForIntake(normalized, record)) return;
       if (!best) best = record;
@@ -856,6 +857,15 @@ const RevenueBrain = {
     const strong = this.findStrongRevenueMatchForIntake(normalized, revenues);
     if (strong) {
       return { revenue: strong, resolvedRevenue: strong, linkSource: 'strongMatch' };
+    }
+
+    if (typeof CalendarCandidateBrain !== 'undefined' && typeof ReceptionBrain !== 'undefined') {
+      const form = this.buildExceptionRevenueFormFromIntake(normalized);
+      const dupes = CalendarCandidateBrain.findRevenueDuplicateMatches(form, revenues);
+      const matched = dupes.length ? dupes[0].revenue : null;
+      if (matched) {
+        return { revenue: matched, resolvedRevenue: matched, linkSource: 'duplicateMatch' };
+      }
     }
 
     return { revenue: null, resolvedRevenue: null, linkSource: null };

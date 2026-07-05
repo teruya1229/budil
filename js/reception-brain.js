@@ -374,6 +374,11 @@ const ReceptionBrain = {
     return s;
   },
 
+  isIntakeRevenueResolved(intake, context) {
+    const state = this.getWorkflowState(intake, context);
+    return !!(state.hasRevenue || state.resolvedRevenue);
+  },
+
   buildIntakePrioritySummary(intake, context) {
     const normalized = this.normalizeIntake(intake);
     const ctx = context || {};
@@ -405,7 +410,7 @@ const ReceptionBrain = {
     }
 
     const detailReason = parts.length ? parts.join(' / ') : '売上未確定の受付。内容を確認して売上確定';
-    if (state.primaryAction === 'fillRevenue' && !state.hasRevenue) {
+    if (state.primaryAction === 'fillRevenue' && !this.isIntakeRevenueResolved(normalized, ctx)) {
       return {
         title: `${name}の受付内容を確認・売上確定`,
         reason: detailReason,
@@ -550,8 +555,8 @@ const ReceptionBrain = {
     const newCount = active.filter(i => i.status === 'new').length;
     const noLeadCount = active.filter(i => !i.relatedLeadId).length;
     const revenuePending = active.filter(i => {
-      const state = this.getWorkflowState(i, { revenues, workOrders, leads });
-      return !state.hasRevenue
+      const ctx = { revenues, workOrders, leads };
+      return !this.isIntakeRevenueResolved(i, ctx)
         && i.estimateAmount > 0
         && i.status !== 'revenue_candidate';
     }).length;

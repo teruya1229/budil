@@ -1,5 +1,15 @@
 ﻿# Budil status
 
+## v4.10.39 実装内容（売上確定済み受付を今日の最優先から除外 緊急修正）
+
+- 表示バージョンを v4.10.39 に更新
+- `isIntakeRevenueResolved` で relatedRevenueId / resolvedRevenue / 強一致 / 重複一致の受付を売上確定済み扱いに統一（表示のみ、localStorage 書き換えなし）
+- 今日の最優先・毎日やること・pending受付から resolved 受付を除外
+- 売上確定済み受付に「この受付から売上確定する」ボタンを出さない（二重作成導線を遮断）
+- 既存の毎日やることタスクは完了済み details 側に「売上確定済み」として表示（データ削除・localStorage 変更なし）
+- 売上レコードの `date` フィールドでも強一致解決できるようフォールバック追加
+- 新規 verify-v41039-priority-excludes-resolved-reception.mjs 追加
+
 ## v4.10.38 実装内容（受付＝一人のお客様 状態同期）
 
 - 表示バージョンを v4.10.38 に更新

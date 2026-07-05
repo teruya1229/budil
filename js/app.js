@@ -882,7 +882,7 @@
       : `<button type="button" class="btn btn-sm btn-primary" data-exec-priority-add-task="${esc(p.id)}">毎日やることに追加</button>`;
     const intakeRevenueBtn = p.viewRevenueAction && p.revenueId
       ? `<button type="button" class="btn btn-sm btn-secondary" data-exec-priority-view-revenue="${esc(p.revenueId)}" title="既存売上を確認">関連売上を見る</button>`
-      : (p.fillRevenueAction && p.intakeId
+      : (p.fillRevenueAction && p.intakeId && !isReceptionIntakeRevenueResolved(p.intakeId)
         ? `<button type="button" class="btn btn-sm btn-secondary" data-exec-priority-fill-revenue="${esc(p.intakeId)}" title="カレンダー未反映の受付から売上確定">この受付から売上確定する</button>`
         : '');
     return `
@@ -1328,9 +1328,9 @@
         btn.classList.add('hidden');
       });
       // v4.10.28: 売上未確定の受付には例外補助導線ボタンを追加する
-      const revenueExceptionBtn = state.primaryAction === 'fillRevenue' && !state.hasRevenue
+      const revenueExceptionBtn = state.primaryAction === 'fillRevenue' && !isReceptionIntakeRevenueResolved(intake)
         ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(intake.id)}">この受付から売上確定する</button>`
-        : (state.hasRevenue
+        : (isReceptionIntakeRevenueResolved(intake)
           ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-revenue="${esc(intake.id)}">関連売上を見る</button>`
           : '');
       actions.insertAdjacentHTML('afterbegin', `
@@ -2843,11 +2843,15 @@
     (ctx.topPriorities || []).slice(0, 3).forEach(p => {
       if (p.workOrderId && revenueConfirmWoIds.has(p.workOrderId)) return;
       if (p.sourceKey === 'profit') return;
+      if (p.intakeId && isReceptionIntakeRevenueResolved(p.intakeId)) return;
+      const fillRevenueAction = p.fillRevenueAction
+        && p.intakeId
+        && !isReceptionIntakeRevenueResolved(p.intakeId);
       push(p.title, p.reason, 'priority', {
         priorityId: p.id,
         taskId: p.taskId,
         intakeId: p.intakeId,
-        fillRevenueAction: p.fillRevenueAction,
+        fillRevenueAction,
         viewRevenueAction: p.viewRevenueAction,
         revenueId: p.revenueId
       });
@@ -2868,6 +2872,8 @@
     ).slice(0, 2);
     urgentTasks.forEach(t => {
       if (isDailyTaskLinkedToRevenueQueueWorkOrder(t, revenueConfirmWoIds)) return;
+      const resolvedIntakeId = getResolvedReceptionDailyTaskIntakeId(t);
+      if (resolvedIntakeId && isReceptionIntakeRevenueResolved(resolvedIntakeId)) return;
       push(t.title, t.reason || t.targetName || '緊急確認', 'task', { taskId: t.id });
     });
 
@@ -3091,12 +3097,12 @@
           <span class="daily-priority-reason">${esc(it.reason)}</span>
           ${it.viewRevenueAction && it.revenueId
             ? `<button type="button" class="btn btn-sm btn-secondary" data-daily-priority-view-revenue="${esc(it.revenueId)}">関連売上を見る</button>`
-            : (it.fillRevenueAction && it.intakeId
+            : (it.fillRevenueAction && it.intakeId && !isReceptionIntakeRevenueResolved(it.intakeId)
               ? `<button type="button" class="btn btn-sm btn-secondary" data-daily-priority-fill-revenue="${esc(it.intakeId)}">この受付から売上確定する</button>`
               : '')}
         </li>`).join('')}
       </ul>
-      ${hidden.length ? `<details class="daily-priority-more"><summary>ほか${hidden.length}件</summary><ul class="daily-priority-items">${hidden.map(it => `<li class="daily-priority-item"><strong>${esc(it.title)}</strong> — ${esc(it.reason)}${it.viewRevenueAction && it.revenueId ? ` <button type="button" class="btn btn-sm btn-secondary" data-daily-priority-view-revenue="${esc(it.revenueId)}">関連売上を見る</button>` : (it.fillRevenueAction && it.intakeId ? ` <button type="button" class="btn btn-sm btn-secondary" data-daily-priority-fill-revenue="${esc(it.intakeId)}">この受付から売上確定する</button>` : '')}</li>`).join('')}</ul></details>` : ''}`;
+      ${hidden.length ? `<details class="daily-priority-more"><summary>ほか${hidden.length}件</summary><ul class="daily-priority-items">${hidden.map(it => `<li class="daily-priority-item"><strong>${esc(it.title)}</strong> — ${esc(it.reason)}${it.viewRevenueAction && it.revenueId ? ` <button type="button" class="btn btn-sm btn-secondary" data-daily-priority-view-revenue="${esc(it.revenueId)}">関連売上を見る</button>` : (it.fillRevenueAction && it.intakeId && !isReceptionIntakeRevenueResolved(it.intakeId) ? ` <button type="button" class="btn btn-sm btn-secondary" data-daily-priority-fill-revenue="${esc(it.intakeId)}">この受付から売上確定する</button>` : '')}</li>`).join('')}</ul></details>` : ''}`;
     el.querySelectorAll('[data-daily-priority-fill-revenue]').forEach(btn => {
       if (btn.dataset.bound) return;
       btn.dataset.bound = '1';
@@ -3317,9 +3323,17 @@
     const allTasks = getDailyActionTasksWithState();
     const sorted = sortDailyTasksForDisplay(allTasks);
     const priorityKeys = new Set(collectDailyPriorityItems().map(it => it.title));
-    const active = sorted.filter(t =>
-      t.status !== 'done' && !isDailyTaskSnoozedAway(t, today) && !priorityKeys.has(t.title)
-    );
+    const active = sorted.filter(t => {
+      if (t.status === 'done' || isDailyTaskSnoozedAway(t, today) || priorityKeys.has(t.title)) return false;
+      const resolvedIntakeId = getResolvedReceptionDailyTaskIntakeId(t);
+      if (resolvedIntakeId && isReceptionIntakeRevenueResolved(resolvedIntakeId)) return false;
+      return true;
+    });
+    const resolvedIntakeTasks = sorted.filter(t => {
+      if (t.status === 'done' || isDailyTaskSnoozedAway(t, today)) return false;
+      const resolvedIntakeId = getResolvedReceptionDailyTaskIntakeId(t);
+      return !!(resolvedIntakeId && isReceptionIntakeRevenueResolved(resolvedIntakeId));
+    });
     const snoozedAway = sorted.filter(t => isDailyTaskSnoozedAway(t, today));
     const snoozedToday = sorted.filter(t => t.status === 'snoozed' && !isDailyTaskSnoozedAway(t, today));
     const done = sorted.filter(t => t.status === 'done');
@@ -3347,9 +3361,15 @@
         snoozedAway.forEach(t => parts.push(renderDailyActionTaskCard(t, { showActions: false, compact: true })));
         parts.push('</div></details>');
       }
-      if (done.length) {
-        parts.push('<details class="daily-tasks-done-collapse"><summary>完了済み（' + done.length + '件）</summary>');
+      if (done.length || resolvedIntakeTasks.length) {
+        parts.push('<details class="daily-tasks-done-collapse"><summary>完了済み（' + (done.length + resolvedIntakeTasks.length) + '件）</summary>');
         parts.push('<div class="daily-task-done-section">');
+        resolvedIntakeTasks.slice(0, 5).forEach(t => {
+          parts.push(`<div class="daily-task-card daily-task-v2 daily-task-done daily-task-resolved-intake">
+            <p class="daily-task-title"><strong>${esc(t.title)}</strong></p>
+            <p class="daily-task-meta">売上確定済み（受付と既存売上が一致）</p>
+          </div>`);
+        });
         done.slice(0, 5).forEach(t => parts.push(renderDailyActionTaskCard(t, {
           showActions: false,
           compact: true,
@@ -12620,6 +12640,35 @@
     });
   }
 
+  function isReceptionIntakeRevenueResolved(intakeOrId) {
+    if (typeof ReceptionBrain === 'undefined') return false;
+    const intake = typeof intakeOrId === 'string'
+      ? Storage.getReceptionIntakes().find(i => i && i.id === intakeOrId)
+      : intakeOrId;
+    if (!intake) return false;
+    return ReceptionBrain.isIntakeRevenueResolved(intake, {
+      leads: Storage.getLeads(),
+      workOrders: Storage.getWorkOrders(),
+      revenues: Storage.getRevenueRecords()
+    });
+  }
+
+  function getResolvedReceptionDailyTaskIntakeId(task) {
+    if (!task) return '';
+    if (task.intakeId) return task.intakeId;
+    const key = String(task.pickupDedupeKey || '');
+    if (key.startsWith('intake|')) {
+      const parts = key.split('|');
+      return parts[2] || '';
+    }
+    if (key.startsWith('exec-priority|') && key.includes('|intake|')) {
+      const parts = key.split('|');
+      const idx = parts.indexOf('intake');
+      if (idx >= 0 && parts[idx + 1]) return parts[idx + 1];
+    }
+    return '';
+  }
+
   function renderReceptionStateLabels(state) {
     const labels = state && state.labels ? state.labels : [];
     return `<div class="reception-state-labels">${labels.map(label =>
@@ -12629,6 +12678,9 @@
 
   function renderReceptionPrimaryAction(intakeId, state, options) {
     const opts = options || {};
+    if (state && (state.hasRevenue || state.resolvedRevenue)) {
+      return `<button type="button" class="btn btn-sm btn-secondary reception-primary-action" data-reception-open-revenue="${esc(intakeId)}">関連売上を見る</button>`;
+    }
     const action = state && state.primaryAction || 'case';
     const label = state && state.primaryLabel || '案件化する';
     const attr = {
@@ -12650,7 +12702,7 @@
     const workAction = state.hasWorkOrder
       ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-work-order="${esc(id)}">作業予定を開く</button>`
       : `<button type="button" class="btn btn-sm btn-secondary" data-reception-create-work-order="${esc(id)}">この受付から作業予定を作る</button>`;
-    const revenueAction = state.hasRevenue
+    const revenueAction = isReceptionIntakeRevenueResolved(intake)
       ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-revenue="${esc(id)}">関連売上を見る</button>`
       : `<button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(id)}">この受付から売上確定する</button>`;
     return `
@@ -12794,12 +12846,12 @@
     el.innerHTML = intakes.map(intake => {
       const lead = intake.relatedLeadId ? leads.find(l => l.id === intake.relatedLeadId) : null;
       const leadLabel = lead ? lead.company : (intake.relatedLeadId ? '（削除済み）' : '—');
+      const workflow = getReceptionWorkflowState(intake);
       const revLabel = workflow.hasRevenue
         ? (intake.relatedRevenueId ? 'あり' : '一致')
         : (intake.status === 'revenue_candidate' ? '候補' : '—');
       const area = MapBrain.getIntakeArea(intake);
       const addr = (intake.address || '').trim();
-      const workflow = getReceptionWorkflowState(intake);
       const hasWorkOrder = workflow.hasWorkOrder;
       const handling = (intake.handlingStatus || intake.handling || '—').trim() || '—';
       const serviceSummary = (intake.serviceText || '—').slice(0, 48) + ((intake.serviceText || '').length > 48 ? '…' : '');
@@ -13105,7 +13157,7 @@
     const intake = Storage.getReceptionIntakes().find(i => i.id === intakeId);
     if (!intake) return;
     const state = getReceptionWorkflowState(intake);
-    if (state.hasRevenue && state.revenue) {
+    if (isReceptionIntakeRevenueResolved(intake) && state.revenue) {
       openRevenueFromReceptionIntake(intakeId);
       return;
     }
