@@ -58,6 +58,7 @@ const ExecutiveBrain = {
       workOrders,
       intakes,
       leads: raw.leads || [],
+      revenues: raw.revenues || [],
       documents: raw.documents || [],
       pendingReceptions,
       receptionSummary,
@@ -206,22 +207,27 @@ const ExecutiveBrain = {
     });
 
     (c.pendingReceptions || []).slice(0, 3).forEach(intake => {
+      const summary = typeof ReceptionBrain !== 'undefined'
+        ? ReceptionBrain.buildIntakePrioritySummary(intake, {
+          leads: c.leads,
+          workOrders: c.workOrders,
+          revenues: c.revenues || (c.revCtx && c.revCtx.records) || []
+        })
+        : null;
       const needsLead = !intake.relatedLeadId;
-      const needsSchedule = intake.status === 'new' || /日程|希望日/.test(
-        [intake.preferredDatesText, intake.handlingStatus].join('')
-      );
       add({
         id: 'intake-' + intake.id,
         rank: 2,
-        title: needsLead
-          ? `受付対応：${intake.customerName || 'お客様'}（営業先未作成）`
-          : `受付対応：${intake.customerName || 'お客様'}`,
-        reason: needsSchedule
-          ? `新規受付。${intake.serviceText || '作業内容'}の日程調整が必要`
-          : `新規受付。${intake.source || '依頼元'}からの問い合わせ`,
-        source: 'カレンダー登録',
+        title: summary ? summary.title : (
+          needsLead
+            ? `受付対応：${intake.customerName || 'お客様'}（営業先未作成）`
+            : `受付対応：${intake.customerName || 'お客様'}`
+        ),
+        reason: summary ? summary.reason : `新規受付。${intake.source || '依頼元'}からの問い合わせ`,
+        source: summary && summary.fillRevenueAction ? '受付' : 'カレンダー登録',
         sourceKey: 'reception',
         intakeId: intake.id,
+        fillRevenueAction: !!(summary && summary.fillRevenueAction),
         dedupeKey: ['exec-priority', today, 'intake', intake.id].join('|'),
         taskDedupeKey: ['intake', today, intake.id, intake.customerName].join('|')
       });

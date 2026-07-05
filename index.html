@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.10.28</small>
+          <small>AI経営脳みそ v4.10.29</small>
         </div>
       </div>
       <nav class="nav">
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.10.28</small>
+        <small>Budil v4.10.29</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の優先 → 今月の数字 → 次にやること</p>
             </div>
-            <span class="exec-home-version">v4.10.28</span>
+            <span class="exec-home-version">v4.10.29</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
 
@@ -595,7 +595,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.28</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.29</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -2147,6 +2147,7 @@
           <p class="revenue-manual-input-lead">通常は作業予定から売上確定します。予定にない売上だけ、ここから手入力してください。</p>
           <div class="revenue-manual-input-body">
             <h2 id="revenue-form-title">売上明細を手入力</h2>
+            <p id="revenue-form-intake-note" class="field-hint hidden"></p>
             <form id="revenue-form">
               <input type="hidden" id="revenue-edit-id">
               <div class="form-row form-row-2">
@@ -2275,7 +2276,7 @@
                 </div>
               </div>
               <div class="revenue-form-actions">
-                <button type="submit" class="btn btn-primary btn-sm">保存</button>
+                <button type="submit" class="btn btn-primary btn-sm" id="btn-revenue-submit">保存</button>
                 <button type="button" id="btn-revenue-cancel" class="btn btn-secondary btn-sm hidden">キャンセル</button>
               </div>
             </form>
@@ -3611,6 +3612,6 @@
   <script src="js/executive-brain.js?v=4.10.22"></script>
   <script src="js/card-ocr.js?v=4.10.22"></script>
   <script src="js/data-backup.js?v=4.10.22"></script>
-  <script src="js/app.js?v=4.10.28"></script>
+  <script src="js/app.js?v=4.10.29"></script>
 </body>
 </html>

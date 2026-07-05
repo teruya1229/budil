@@ -880,8 +880,8 @@
     const taskBtn = p.taskId
       ? `<button type="button" class="btn btn-sm btn-primary" data-exec-priority-done="${esc(p.taskId)}">完了</button>`
       : `<button type="button" class="btn btn-sm btn-primary" data-exec-priority-add-task="${esc(p.id)}">毎日やることに追加</button>`;
-    const intakeRevenueBtn = p.intakeId
-      ? `<button type="button" class="btn btn-sm btn-secondary" data-exec-priority-fill-revenue="${esc(p.intakeId)}" title="カレンダー未反映の例外導線">売上確定へ（例外）</button>`
+    const intakeRevenueBtn = p.fillRevenueAction && p.intakeId
+      ? `<button type="button" class="btn btn-sm btn-secondary" data-exec-priority-fill-revenue="${esc(p.intakeId)}" title="カレンダー未反映の受付から売上確定">この受付から売上確定する</button>`
       : '';
     return `
       <div class="exec-priority-item" data-priority-id="${esc(p.id)}">
@@ -1326,8 +1326,8 @@
         btn.classList.add('hidden');
       });
       // v4.10.28: 売上未確定の受付には例外補助導線ボタンを追加する
-      const revenueExceptionBtn = !state.hasRevenue
-        ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(intake.id)}">売上確定へ（例外）</button>`
+      const revenueExceptionBtn = state.primaryAction === 'fillRevenue' && !state.hasRevenue
+        ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(intake.id)}">この受付から売上確定する</button>`
         : '';
       actions.insertAdjacentHTML('afterbegin', `
         <span class="exec-reception-actions-v484">
@@ -1367,7 +1367,7 @@
     root.querySelectorAll('[data-exec-priority-fill-revenue]').forEach(btn => {
       if (btn.dataset.bound) return;
       btn.dataset.bound = '1';
-      btn.addEventListener('click', () => openRevenueFromReceptionIntake(btn.dataset.execPriorityFillRevenue));
+      btn.addEventListener('click', () => fillRevenueFromReceptionIntake(btn.dataset.execPriorityFillRevenue));
     });
     root.querySelectorAll('[data-exec-priority-not-needed]').forEach(btn => {
       if (btn.dataset.bound) return;
@@ -2831,7 +2831,12 @@
     (ctx.topPriorities || []).slice(0, 3).forEach(p => {
       if (p.workOrderId && revenueConfirmWoIds.has(p.workOrderId)) return;
       if (p.sourceKey === 'profit') return;
-      push(p.title, p.reason, 'priority', { priorityId: p.id, taskId: p.taskId });
+      push(p.title, p.reason, 'priority', {
+        priorityId: p.id,
+        taskId: p.taskId,
+        intakeId: p.intakeId,
+        fillRevenueAction: p.fillRevenueAction
+      });
     });
 
     if (typeof ActionBrain !== 'undefined') {
@@ -3070,9 +3075,17 @@
         ${visible.map(it => `<li class="daily-priority-item daily-priority-${esc(it.kind)}">
           <strong>${esc(it.title)}</strong>
           <span class="daily-priority-reason">${esc(it.reason)}</span>
+          ${it.fillRevenueAction && it.intakeId
+            ? `<button type="button" class="btn btn-sm btn-secondary" data-daily-priority-fill-revenue="${esc(it.intakeId)}">この受付から売上確定する</button>`
+            : ''}
         </li>`).join('')}
       </ul>
-      ${hidden.length ? `<details class="daily-priority-more"><summary>ほか${hidden.length}件</summary><ul class="daily-priority-items">${hidden.map(it => `<li class="daily-priority-item"><strong>${esc(it.title)}</strong> — ${esc(it.reason)}</li>`).join('')}</ul></details>` : ''}`;
+      ${hidden.length ? `<details class="daily-priority-more"><summary>ほか${hidden.length}件</summary><ul class="daily-priority-items">${hidden.map(it => `<li class="daily-priority-item"><strong>${esc(it.title)}</strong> — ${esc(it.reason)}${it.fillRevenueAction && it.intakeId ? ` <button type="button" class="btn btn-sm btn-secondary" data-daily-priority-fill-revenue="${esc(it.intakeId)}">この受付から売上確定する</button>` : ''}</li>`).join('')}</ul></details>` : ''}`;
+    el.querySelectorAll('[data-daily-priority-fill-revenue]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => fillRevenueFromReceptionIntake(btn.dataset.dailyPriorityFillRevenue));
+    });
   }
 
   function renderDailyImprovementSection() {
@@ -12615,7 +12628,7 @@
       : `<button type="button" class="btn btn-sm btn-secondary" data-reception-create-work-order="${esc(id)}">この受付から作業予定を作る</button>`;
     const revenueAction = state.hasRevenue
       ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-revenue="${esc(id)}">売上を開く</button>`
-      : `<button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(id)}">売上確定へ（例外）</button>`;
+      : `<button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(id)}">この受付から売上確定する</button>`;
     return `
       <details class="reception-detail-actions">
         <summary>詳細操作</summary>
@@ -13043,6 +13056,23 @@
     alert('毎日やることに追加しました。');
   }
 
+  function setRevenueFormSubmitLabel(label) {
+    const btn = document.getElementById('btn-revenue-submit');
+    if (btn) btn.textContent = label || '保存';
+  }
+
+  function setRevenueFormIntakeNote(text) {
+    const note = document.getElementById('revenue-form-intake-note');
+    if (!note) return;
+    if (text) {
+      note.textContent = text;
+      note.classList.remove('hidden');
+    } else {
+      note.textContent = '';
+      note.classList.add('hidden');
+    }
+  }
+
   function fillRevenueFromReceptionIntake(intakeId) {
     const intake = Storage.getReceptionIntakes().find(i => i.id === intakeId);
     if (!intake) return;
@@ -13072,6 +13102,9 @@
     fillRevenueSelects();
     navigateToView('revenue');
     resetRevenueForm();
+    pendingRevenueIntakeId = intakeId;
+    const details = document.getElementById('revenue-manual-input-details');
+    if (details) details.open = true;
     document.getElementById('revenue-work-date').value = workDate;
     document.getElementById('revenue-customer').value = candidate.customerName || '';
     const serviceEl = document.getElementById('revenue-service');
@@ -13086,11 +13119,13 @@
       ? candidate.memo + '\n' + exceptionNote
       : exceptionNote;
     document.getElementById('revenue-status').value = '予定';
-    document.getElementById('revenue-form-title').textContent = '売上明細を手入力（受付から例外補助入力）';
+    document.getElementById('revenue-form-title').textContent = '受付内容から売上確定';
+    setRevenueFormIntakeNote('カレンダー予定にない受付を、例外的に売上明細として確定します。作業予定は自動作成しません。');
+    setRevenueFormSubmitLabel('この内容で売上確定する');
     fillRevenueLeadSelect(candidate.leadId || '');
     toggleRevenueLeadOptions();
     setTimeout(() => scrollToElement('#revenue-form'), 120);
-    showAppToast('売上明細フォームに受付情報を補助入力しました（例外導線）。内容を確認して保存してください。');
+    showAppToast('受付内容を売上明細フォームに反映しました。内容を確認して保存してください。');
   }
 
   function markReceptionRevenueCandidate(intakeId) {
@@ -15083,6 +15118,8 @@
     toggleRevenueLeadOptions();
     toggleRevenueOpenLeadButton();
     document.getElementById('revenue-form-title').textContent = '売上明細を手入力';
+    setRevenueFormIntakeNote('');
+    setRevenueFormSubmitLabel('保存');
     document.getElementById('btn-revenue-cancel').classList.add('hidden');
   }
 

@@ -360,6 +360,54 @@ const ReceptionBrain = {
     };
   },
 
+  formatCustomerDisplayName(name) {
+    const n = String(name || '').trim();
+    if (!n) return 'お客様';
+    if (/様$/.test(n)) return n;
+    return n + '様';
+  },
+
+  formatIntakeSourceForDisplay(source) {
+    const s = String(source || '').trim();
+    if (!s) return '';
+    if (s === 'LP' || /LP|ホームページ|\bHP\b|\bWeb\b/i.test(s)) return 'LPからの問い合わせ';
+    return s;
+  },
+
+  buildIntakePrioritySummary(intake, context) {
+    const normalized = this.normalizeIntake(intake);
+    const state = this.getWorkflowState(normalized, context || {});
+    const name = this.formatCustomerDisplayName(normalized.customerName);
+    const parts = [];
+    const sourceLabel = this.formatIntakeSourceForDisplay(normalized.source);
+    if (sourceLabel) parts.push(sourceLabel);
+    if (normalized.serviceText) parts.push(normalized.serviceText);
+    if (Number(normalized.estimateAmount || 0) > 0 && typeof RevenueBrain !== 'undefined') {
+      parts.push(RevenueBrain.formatYen(normalized.estimateAmount));
+    }
+    const detailReason = parts.length ? parts.join(' / ') : '売上未確定の受付。内容を確認して売上確定';
+    if (state.primaryAction === 'fillRevenue' && !state.hasRevenue) {
+      return {
+        title: `${name}の受付内容を確認・売上確定`,
+        reason: detailReason,
+        fillRevenueAction: true
+      };
+    }
+    const needsLead = !normalized.relatedLeadId;
+    const needsSchedule = normalized.status === 'new' || /日程|希望日/.test(
+      [normalized.preferredDatesText, normalized.handlingStatus].join('')
+    );
+    return {
+      title: needsLead
+        ? `受付対応：${normalized.customerName || 'お客様'}（営業先未作成）`
+        : `受付対応：${normalized.customerName || 'お客様'}`,
+      reason: needsSchedule
+        ? `新規受付。${normalized.serviceText || '作業内容'}の日程調整が必要`
+        : (parts.length ? parts.join(' / ') : `新規受付。${normalized.source || '依頼元'}からの問い合わせ`),
+      fillRevenueAction: false
+    };
+  },
+
   getWorkflowState(intake, context) {
     const normalized = this.normalizeIntake(intake);
     const ctx = context || {};
@@ -415,7 +463,7 @@ const ReceptionBrain = {
     } else if (!hasWorkOrder && Number(normalized.estimateAmount || 0) > 0) {
       // v4.10.28: カレンダー未反映・作業予定なしでも例外補助で売上明細へ
       primaryAction = 'fillRevenue';
-      primaryLabel = '売上確定へ（例外）';
+      primaryLabel = 'この受付から売上確定する';
     } else if (hasWorkOrder) {
       primaryAction = 'openWorkOrder';
       primaryLabel = '作業予定を開く';
