@@ -21,8 +21,10 @@ const CalendarCandidateBrain = {
   PAST_RECOVERY_CONVERTED: 'converted',
   PAST_RECOVERY_EXCLUDED: 'excluded',
   PAST_RECOVERY_DUPLICATE: 'duplicate_suspected',
-  PAST_RECOVERY_EXCLUDED_PATTERN: /キャンセル|取消|取り消し|中止|見積|見積もり|見積り|見積のみ|日程調整|調整中|仮予定|仮押さえ|未確定/,
-  FUTURE_IMPORT_EXCLUDED_PATTERN: /キャンセル|取消|取り消し|中止|見積もり|見積り|見積のみ|見積$|日程調整中|調整中/,
+  // v4.10.42: 未確定は状態ラベルとして扱い、候補除外ワードに含めない
+  NON_EXCLUSION_CONFIRMATION_STATUSES: ['未確定', '支払方法未定', '型番確認中'],
+  PAST_RECOVERY_EXCLUDED_PATTERN: /キャンセル|取消|取り消し|中止|見積|見積もり|見積り|見積のみ|日程調整|調整中|仮予定|仮押さえ/,
+  FUTURE_IMPORT_EXCLUDED_PATTERN: /キャンセル|取消|取り消し|中止|見積もり|見積り|見積のみ|見積$|日程調整中|調整中|休み|仮予定|仮押さえ/,
 
   PASTE_LABELS: {
     '日付': 'scheduledDate',
@@ -73,6 +75,53 @@ const CalendarCandidateBrain = {
     if (!key) return '';
     if (this.PASTE_LABELS[key]) return this.PASTE_LABELS[key];
     return this.PASTE_LABEL_ALIASES[key] || '';
+  },
+
+  normalizeConfirmationStatus(value) {
+    return String(value || '').trim();
+  },
+
+  isNonExclusionConfirmationStatus(value) {
+    const status = this.normalizeConfirmationStatus(value);
+    return this.NON_EXCLUSION_CONFIRMATION_STATUSES.includes(status);
+  },
+
+  resolveConfirmationStatus(raw) {
+    const item = raw && typeof raw === 'object' ? raw : {};
+    const extracted = item.extracted && typeof item.extracted === 'object' ? item.extracted : {};
+    return this.normalizeConfirmationStatus(
+      extracted.confirmationStatus || item.confirmationStatus || ''
+    );
+  },
+
+  sanitizeMemoForExclusionCheck(memo) {
+    return String(memo || '')
+      .split('\n')
+      .filter(line => !/(?:確認)?(?:Status|ステータス|状態|確度)[：:]\s*(未確定|支払方法未定|型番確認中)\s*$/i.test(line.trim()))
+      .join(' ');
+  },
+
+  buildFutureImportExclusionText(candidate) {
+    const c = this.normalizeCandidate(candidate);
+    const memo = this.sanitizeMemoForExclusionCheck(c.memo);
+    const confidence = this.isNonExclusionConfirmationStatus(c.confidence) ? '' : c.confidence;
+    const confirmationStatus = this.isNonExclusionConfirmationStatus(c.confirmationStatus)
+      ? ''
+      : c.confirmationStatus;
+    return [
+      c.title,
+      c.customerName,
+      c.serviceText,
+      c.source,
+      memo,
+      c.cautionNote,
+      confidence,
+      confirmationStatus
+    ].join(' ');
+  },
+
+  buildPastRecoveryExclusionText(candidate) {
+    return this.buildFutureImportExclusionText(candidate);
   },
 
   normalizeCandidateMeta(raw) {
@@ -150,6 +199,7 @@ const CalendarCandidateBrain = {
       estimateAmount: amount,
       memo: String(c.memo || '').trim(),
       confidence: String(c.confidence || '').trim(),
+      confirmationStatus: String(c.confirmationStatus || '').trim(),
       cautionNote: String(c.cautionNote || c.caution || '').trim(),
       phone: String(c.phone || '').trim(),
       calendarDedupeKey: String(c.calendarDedupeKey || '').trim(),
@@ -185,6 +235,7 @@ const CalendarCandidateBrain = {
         ? extracted.amount
         : extracted.amountText
     );
+    const confirmationStatus = this.resolveConfirmationStatus(row);
     const memoParts = [String(row.description || '').trim()];
     if (extracted.phone) memoParts.push('電話：' + String(extracted.phone).trim());
     return this.normalizeCandidate({
@@ -200,6 +251,8 @@ const CalendarCandidateBrain = {
       estimateAmount: amount,
       phone: extracted.phone,
       memo: memoParts.filter(Boolean).join('\n'),
+      confidence: confirmationStatus,
+      confirmationStatus,
       calendarDedupeKey: String(budilImport.dedupeKey || '').trim()
     }, '');
   },
@@ -512,29 +565,12 @@ const CalendarCandidateBrain = {
   },
 
   hasPastRecoveryExcludedWord(candidate) {
-    const c = this.normalizeCandidate(candidate);
-    const text = [
-      c.title,
-      c.customerName,
-      c.serviceText,
-      c.source,
-      c.memo,
-      c.confidence,
-      c.cautionNote
-    ].join(' ');
+    const text = this.buildPastRecoveryExclusionText(candidate);
     return this.PAST_RECOVERY_EXCLUDED_PATTERN.test(text);
   },
 
   hasFutureImportExcludedWord(candidate) {
-    const c = this.normalizeCandidate(candidate);
-    const text = [
-      c.title,
-      c.customerName,
-      c.serviceText,
-      c.source,
-      c.memo,
-      c.cautionNote
-    ].join(' ');
+    const text = this.buildFutureImportExclusionText(candidate);
     if (this.FUTURE_IMPORT_EXCLUDED_PATTERN.test(text)) return true;
     return /(?:^|\s)見積(?:$|\s)/.test(text);
   },
@@ -863,11 +899,12 @@ const CalendarCandidateBrain = {
 
   classifyFutureImportCandidate(candidate, today) {
     const c = this.normalizeCandidate(candidate);
-    const t = today || new Date().toISOString().slice(0, 10);
     const reasons = [];
     if (!c.scheduledDate) reasons.push('日付なし');
+    // v4.10.42: 日時・作業内容・金額が揃えば候補。未確定は状態ラベルのみで除外しない。
+    if (!c.startTime) reasons.push('時間なし');
+    if (!String(c.serviceText || '').trim()) reasons.push('作業内容なし');
     // v4.10.27: 過去日付は単独では hard-exclude しない（金額あり翌日インポート対応）
-    // 過去日付でも金額があれば eligible。金額なし・対象外ワードは引き続き excluded。
     if (!Number(c.estimateAmount || 0)) reasons.push('金額なし');
     if (this.hasFutureImportExcludedWord(c)) reasons.push('対象外ワードあり');
     if (reasons.length) {
@@ -1001,7 +1038,7 @@ const CalendarCandidateBrain = {
       importSource: (extra && extra.importSource) || this.IMPORT_SOURCE,
       sourceType: this.SOURCE_TYPE,
       originalText: c.originalText || (extra && extra.originalText) || '',
-      confidence: c.confidence,
+      confidence: c.confidence || c.confirmationStatus,
       estimatedAmount: c.estimateAmount ? String(c.estimateAmount) : '',
       importedAt: now,
       confirmedRevenue: false,

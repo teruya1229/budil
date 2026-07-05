@@ -56,10 +56,10 @@ const css = load('css/style.css');
 
 // --- バージョン確認 ---
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.41'), 'index.html should show v4.10.41');
-assert(indexHtml.includes('js/app.js?v=4.10.41'), 'app.js cache buster should be v4.10.41');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.41'"), 'storage.js version should be v4.10.41');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.41'"), 'data-backup version should be v4.10.41');
+assert(indexHtml.includes('v4.10.42'), 'index.html should show v4.10.42');
+assert(indexHtml.includes('js/app.js?v=4.10.42'), 'app.js cache buster should be v4.10.42');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.42'"), 'storage.js version should be v4.10.42');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.42'"), 'data-backup version should be v4.10.42');
 
 // --- v4.10.26 今日判定が維持されていること ---
 console.log('== TODAY() local date regression ==');
@@ -307,15 +307,15 @@ console.log('== classifyFutureImportCandidate: past-date with amount is eligible
   const result = runInContext(`(() => {
     const today = '2026-07-04';
     const pastWithAmount = {
-      scheduledDate: '2026-07-03', estimateAmount: 22000,
+      scheduledDate: '2026-07-03', startTime: '15:00', endTime: '17:30', estimateAmount: 22000,
       customerName: '海老澤智貴様', serviceText: '直受 R1', source: '直受'
     };
     const pastNoAmount = {
-      scheduledDate: '2026-07-03', estimateAmount: 0,
+      scheduledDate: '2026-07-03', startTime: '15:00', endTime: '17:30', estimateAmount: 0,
       customerName: '海老澤智貴様', serviceText: '直受 R1', source: '直受'
     };
     const cancelledEvent = {
-      scheduledDate: '2026-07-05', estimateAmount: 22000,
+      scheduledDate: '2026-07-05', startTime: '10:00', endTime: '12:00', estimateAmount: 22000,
       customerName: 'テスト様', serviceText: 'キャンセル確認', source: '直受'
     };
     return {

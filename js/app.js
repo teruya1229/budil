@@ -8409,6 +8409,10 @@
           const notice = past && past.status === CalendarCandidateBrain.PAST_RECOVERY_REVENUE_CANDIDATE
             ? '過去分復元モード：売上実績候補です（一括登録前は売上ではありません）'
             : '作業予定として保存されます（売上確定は作業後）';
+          const statusLabel = c.confirmationStatus || c.confidence || '';
+          const statusNote = statusLabel
+            ? `<p class="calendar-candidate-preview-meta">確認Status：${esc(statusLabel)}</p>`
+            : '';
           const itemWarnings = (item.warnings || []).length
             ? `<p class="calendar-candidate-dup">${esc(item.warnings.join(' / '))}</p>`
             : '';
@@ -8416,6 +8420,7 @@
           return `<div class="calendar-candidate-preview-item${item.isDuplicate ? ' is-duplicate' : ''}${isExcluded ? ' is-excluded' : ''}">
             <p class="calendar-candidate-preview-title"><strong>${esc(c.customerName || '（名前なし）')}</strong> / ${esc(c.serviceText || '—')}</p>
             <p class="calendar-candidate-preview-meta">${esc(c.scheduledDate || '日付不明')} ${esc(c.startTime || '')}〜${esc(c.endTime || '')} / ${esc(c.source || '—')} / 見込み ${esc(WorkOrderBrain.formatYen(c.estimateAmount))}</p>
+            ${statusNote}
             <p class="calendar-candidate-not-sale">${esc(notice)}</p>
             ${pastStatus}
             ${itemWarnings}
@@ -8565,7 +8570,7 @@
             <span class="calendar-candidate-status-badge status-${esc(st)}">${esc(st)}</span>
           </div>
           <p class="calendar-candidate-saved-meta">${esc(wo.scheduledDate || '日付不明')} ${esc(timeLabel)} / ${esc(wo.serviceText || '—')} / ${esc(wo.address || '—')}</p>
-          <p class="calendar-candidate-saved-meta">依頼元：${esc(wo.source || '—')} / 見込み：${esc(WorkOrderBrain.formatYen(wo.estimateAmount))} / 確度：${esc((wo.candidateMeta && wo.candidateMeta.confidence) || '—')}</p>
+          <p class="calendar-candidate-saved-meta">依頼元：${esc(wo.source || '—')} / 見込み：${esc(WorkOrderBrain.formatYen(wo.estimateAmount))} / 確認Status：${esc((wo.candidateMeta && wo.candidateMeta.confidence) || '—')}</p>
           ${wo.candidateMeta && wo.candidateMeta.cautionNote ? `<p class="calendar-candidate-saved-warn">注意：${esc(wo.candidateMeta.cautionNote)}</p>` : ''}
           <div class="calendar-candidate-saved-actions">
             ${primaryAction}

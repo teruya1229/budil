@@ -1,5 +1,18 @@
 ﻿# Budil status
 
+## v4.10.42 実装内容（未確定カレンダー予定の取り込み候補修正 緊急）
+
+- 表示バージョンを v4.10.42 に更新
+- `confirmationStatus: 未確定` を候補除外理由にしない（状態ラベルとして表示のみ）
+- JSON `extracted.confirmationStatus` を `confidence` / 確認Status 表示へマップ
+- 未来取り込み候補は日付・時間・金額・作業内容が揃えば eligible（未確定でも落とさない）
+- memo 内の「確認Status：未確定」等を除外ワード判定から除外
+- 休み・仮予定・金額なし・作業内容なし・時間なしは従来通り excluded
+- v4.10.27 重複判定（calendarDedupeKey + startTime/endTime）維持
+- v4.10.39 受付状態同期 / v4.10.41 フォロー導線維持
+- CSS変更なし
+- 新規 verify-v41042-calendar-unconfirmed-candidate-import.mjs 追加
+
 ## v4.10.41 実装内容（フォロー画面カード操作・視認性改善）
 
 - 表示バージョンを v4.10.41 に更新

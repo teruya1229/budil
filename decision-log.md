@@ -2,6 +2,23 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.10.42 未確定カレンダー予定の取り込み候補修正（2026-07-05）
+
+**日付**: 2026-07-05
+
+**判断内容**:
+- GoogleカレンダーJSONに `confirmationStatus: 未確定` の予定（例: コープ 玉澤 真理子様 R2）が候補から落ちる問題を修正
+- 未確定は状態ラベルとして表示するだけで、未来取り込み・直近予定から除外しない
+- 除外は休み・仮押さえ・金額なし・作業内容なし・時間なし・キャンセル/見積系に限定
+- memo 内の「確認Status：未確定」行は除外ワード判定から外す（PAST_RECOVERY の「未確定」パターンも削除）
+- v4.10.27 の calendarDedupeKey 重複判定は維持
+
+**変更ファイル**:
+- js/calendar-candidate-brain.js（候補判定・confirmationStatus マップ・除外テキスト sanitize）
+- js/app.js（取り込みプレビュー/保存一覧の確認Status表示）
+- js/storage.js, js/data-backup.js, index.html（v4.10.42）
+- scripts/verify-v41042-calendar-unconfirmed-candidate-import.mjs（新規）
+
 ## v4.10.41 フォロー画面カード操作・視認性改善（2026-07-05）
 
 **日付**: 2026-07-05
