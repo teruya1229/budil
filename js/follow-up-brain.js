@@ -519,5 +519,68 @@ const FollowUpBrain = {
 
   buildPrioritySalesDedupeKey(taskType, leadId, taskId, today) {
     return ['exec-priority', today || new Date().toISOString().slice(0, 10), 'sales', taskType || 'next-action', leadId || taskId || ''].join('|');
+  },
+
+  buildFollowCardSkipKey(targetId, type, today) {
+    return ['follow-skip', today || new Date().toISOString().slice(0, 10), targetId || '', type || 'thanks'].join('|');
+  },
+
+  isFollowActionSkippedToday(targetId, type, today, getState) {
+    const key = this.buildFollowCardSkipKey(targetId, type, today);
+    if (!key || typeof getState !== 'function') return false;
+    const state = getState(key);
+    return !!(state && state.state === 'not_needed');
+  },
+
+  formatFollowUpStatusCell(status, skippedToday) {
+    if (skippedToday) return { label: 'スルー', hint: '今日は確認済み' };
+    const labelMap = { pending: '未', done: '済', skipped: 'スルー', planned: '予定' };
+    const hintMap = {
+      pending: '対応が必要',
+      done: '対応済み',
+      skipped: '省略済み',
+      planned: '予定済み'
+    };
+    const label = labelMap[status] || status || '—';
+    return { label, hint: hintMap[status] || '' };
+  },
+
+  buildFollowCardStatusRows(target, ctx) {
+    const today = (ctx && ctx.today) || new Date().toISOString().slice(0, 10);
+    const getState = ctx && ctx.getActionCandidateState;
+    const f = this.normalizeFollowUp(target.followUp);
+    const thanksSkipped = this.isFollowActionSkippedToday(target.id, 'thanks', today, getState);
+    const reviewSkipped = this.isFollowActionSkippedToday(target.id, 'review', today, getState);
+    const repeatSkipped = this.isFollowActionSkippedToday(target.id, 'repeat', today, getState);
+    return {
+      thanks: this.formatFollowUpStatusCell(f.thanksStatus, thanksSkipped),
+      review: this.formatFollowUpStatusCell(f.reviewStatus, reviewSkipped),
+      repeat: this.formatFollowUpStatusCell(f.repeatStatus, repeatSkipped),
+      thanksSkipped,
+      reviewSkipped,
+      repeatSkipped
+    };
+  },
+
+  getFollowActionHint(type, target, rows) {
+    if (type === 'thanks') {
+      if (rows.thanksSkipped) return '今日はスルー済み';
+      if (target.needsThanks) return '送信文面を確認して送る';
+      if (rows.thanks.label === '済') return '送信済み';
+      return '対応不要';
+    }
+    if (type === 'review') {
+      if (rows.reviewSkipped) return '今日はスルー済み';
+      if (target.needsReview) return '依頼文を確認して送る';
+      if (rows.review.label === '済') return '依頼済み';
+      return '対応不要';
+    }
+    if (type === 'repeat') {
+      if (rows.repeatSkipped) return '今日はスルー済み';
+      if (target.needsRepeat && target.maintenanceNear) return '提案文を確認する';
+      if (rows.repeat.label === '予定' || rows.repeat.label === '済') return '提案済み';
+      return '対応不要';
+    }
+    return '';
   }
 };

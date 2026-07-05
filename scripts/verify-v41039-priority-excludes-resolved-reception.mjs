@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.40 - resolved reception excluded from today's priority verification.
+ * Budil v4.10.41 - resolved reception excluded from today's priority verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/app.js', 'js/reception-brain.js', 'js/revenue-brain.js',
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.40 priority-excludes-resolved-reception ==');
+console.log('== v4.10.41 priority-excludes-resolved-reception ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -41,10 +41,10 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.40'), 'index.html should show v4.10.40');
-assert(indexHtml.includes('js/app.js?v=4.10.40'), 'app.js cache buster should be v4.10.40');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.40'"), 'storage.js version should be v4.10.40');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.40'"), 'data-backup version should be v4.10.40');
+assert(indexHtml.includes('v4.10.41'), 'index.html should show v4.10.41');
+assert(indexHtml.includes('js/app.js?v=4.10.41'), 'app.js cache buster should be v4.10.41');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.41'"), 'storage.js version should be v4.10.41');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.41'"), 'data-backup version should be v4.10.41');
 
 console.log('== resolve helpers ==');
 assert(receptionJs.includes('isIntakeRevenueResolved'), 'isIntakeRevenueResolved should exist');
@@ -67,7 +67,7 @@ assert(appJs.includes('売上確定済み（受付と既存売上が一致）'),
 
 console.log('== no CSS change ==');
 assert(css.includes('v4.10.37'), 'invoice layout marker should remain v4.10.37');
-assert(!css.includes('v4.10.40'), 'css must not change for v4.10.40');
+assert(!css.includes('v4.10.39'), 'css must not change for v4.10.39');
 
 console.log('== storage keys unchanged ==');
 assert(storageJs.includes("RECEPTION_INTAKES: 'budil_reception_intakes'"), 'reception storage key must remain');
@@ -207,4 +207,4 @@ console.log('== unmatched intake keeps fill revenue ==');
   assert(result.pendingCount === 1, 'unmatched intake should remain pending');
 }
 
-console.log('\nAll v4.10.40 priority-excludes-resolved-reception checks passed.');
+console.log('\nAll v4.10.41 priority-excludes-resolved-reception checks passed.');

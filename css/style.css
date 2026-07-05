@@ -6132,7 +6132,7 @@ body {
   }
 }
 
-/* v3.7 作業後フォロー番頭 */
+/* Budil v4.10.41 follow card actions/readability */
 .card-follow-up-comment {
   border-left: 4px solid #14b8a6;
 }
@@ -6146,16 +6146,33 @@ body {
 }
 
 .follow-up-target-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 0.75rem;
-  cursor: pointer;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 1rem;
+  cursor: default;
 }
 
-.follow-up-target-card.selected {
-  border-color: #14b8a6;
-  box-shadow: 0 0 0 1px #14b8a6;
+.follow-up-target-card.selected,
+.follow-up-target-card.priority-focus {
+  border-color: #0d9488;
+  box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.25);
+  background: #f0fdfa;
+}
+
+.follow-up-target-card.priority-focus {
+  order: -1;
+}
+
+.follow-up-priority-badge {
+  margin: 0 0 0.5rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: #ccfbf1;
+  color: #0f766e;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-block;
 }
 
 .follow-up-target-header {
@@ -6163,13 +6180,108 @@ body {
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.follow-up-target-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.follow-up-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.35rem 0.75rem;
+  margin: 0 0 0.65rem;
+  padding: 0;
+}
+
+.follow-up-status-item {
+  margin: 0;
+}
+
+.follow-up-status-item dt {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  letter-spacing: 0.02em;
+}
+
+.follow-up-status-item dd {
+  margin: 0.1rem 0 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.35;
 }
 
 .follow-up-target-meta {
-  font-size: 0.85rem;
-  color: #64748b;
+  font-size: 0.88rem;
+  color: #334155;
   margin: 0.2rem 0;
+  line-height: 1.45;
+}
+
+.follow-up-target-meta-sub {
+  font-size: 0.82rem;
+  color: #475569;
+  margin-bottom: 0.75rem;
+}
+
+.follow-up-card-section {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.65rem;
+  margin-top: 0.65rem;
+}
+
+.follow-up-card-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  align-items: baseline;
+  margin-bottom: 0.45rem;
+}
+
+.follow-up-card-section-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.follow-up-card-section-status {
+  font-size: 0.82rem;
+  color: #475569;
+}
+
+.follow-up-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.follow-up-card-expanded {
+  margin-top: 0.55rem;
+}
+
+.follow-up-card-message {
+  min-height: 100px;
+}
+
+.follow-up-card-inline-meta {
+  font-size: 0.85rem;
+  color: #334155;
+  margin: 0 0 0.35rem;
+}
+
+.follow-up-card-skipped-note,
+.follow-up-card-done-note {
+  margin: 0.15rem 0 0;
+  font-size: 0.84rem;
+  color: #475569;
 }
 
 .follow-up-badge {

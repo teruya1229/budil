@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.40 - today's priority follow/sales action buttons verification.
+ * Budil v4.10.41 - today's priority follow/sales action buttons verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/app.js', 'js/follow-up-brain.js', 'js/reception-brain.js
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.40 priority-follow-actions ==');
+console.log('== v4.10.41 priority-follow-actions ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -41,10 +41,10 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.40'), 'index.html should show v4.10.40');
-assert(indexHtml.includes('js/app.js?v=4.10.40'), 'app.js cache buster should be v4.10.40');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.40'"), 'storage.js version should be v4.10.40');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.40'"), 'data-backup version should be v4.10.40');
+assert(indexHtml.includes('v4.10.41'), 'index.html should show v4.10.41');
+assert(indexHtml.includes('js/app.js?v=4.10.41'), 'app.js cache buster should be v4.10.41');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.41'"), 'storage.js version should be v4.10.41');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.41'"), 'data-backup version should be v4.10.41');
 
 console.log('== daily priority action wiring ==');
 assert(appJs.includes('renderDailyPriorityActionButtons'), 'daily priority action renderer should exist');
@@ -65,8 +65,8 @@ assert(followJs.includes('findThanksTargetByCustomerName'), 'follow target resol
 assert(followJs.includes('buildPriorityThanksDedupeKey'), 'thanks dedupe helper should exist');
 assert(followJs.includes('buildPrioritySalesDedupeKey'), 'sales dedupe helper should exist');
 assert(executiveJs.includes('followTargetId'), 'executive follow priority metadata should remain');
-assert(receptionJs.includes('isIntakeRevenueResolved'), 'v4.10.40 reception sync should remain');
-assert(appJs.includes('isReceptionIntakeRevenueResolved'), 'v4.10.40 app sync helper should remain');
+assert(receptionJs.includes('isIntakeRevenueResolved'), 'v4.10.41 reception sync should remain');
+assert(appJs.includes('isReceptionIntakeRevenueResolved'), 'v4.10.41 app sync helper should remain');
 
 console.log('== no CSS change ==');
 assert(css.includes('v4.10.37'), 'invoice layout marker should remain v4.10.37');
@@ -185,7 +185,7 @@ console.log('== sent thanks excluded from priority ==');
   assert(result.thanksPriority === 0, 'done thanks should not appear in top priorities');
 }
 
-console.log('== v4.10.40 resolved reception still excluded ==');
+console.log('== v4.10.41 resolved reception still excluded ==');
 {
   const ctx = createSandbox();
   const intake = {
@@ -229,4 +229,4 @@ console.log('== v4.10.40 resolved reception still excluded ==');
   assert(result.fillButtons === 0, 'resolved intake must not expose fill revenue in priorities');
 }
 
-console.log('\nAll v4.10.40 priority-follow-actions checks passed.');
+console.log('\nAll v4.10.41 priority-follow-actions checks passed.');
