@@ -131,10 +131,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.11.3'), 'index.html should show v4.11.3');
-assert(indexHtml.includes('js/app.js?v=4.11.3'), 'app.js cache buster should be v4.11.3');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.3'"), 'storage.js version should be v4.11.3');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.3'"), 'data-backup version should be v4.11.3');
+assert(indexHtml.includes('v4.11.4'), 'index.html should show v4.11.4');
+assert(indexHtml.includes('js/app.js?v=4.11.4'), 'app.js cache buster should be v4.11.4');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.4'"), 'storage.js version should be v4.11.4');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.4'"), 'data-backup version should be v4.11.4');
 
 assert(indexHtml.includes('集客チェック'), 'index.html should use 集客チェック label');
 assert(indexHtml.includes('id="browser-bantou-paste"'), 'main paste textarea should exist');
@@ -248,9 +248,9 @@ console.log('== parse failure partial save ==');
 }
 
 console.log('== v4.10.14 profit 3-tier display regression ==');
-assert(appJs.includes('profit-forecast-breakdown'), 'profit forecast breakdown should remain');
-assert(appJs.includes('profit-summary-highlight'), 'profit summary highlight should remain');
-assert(appJs.includes('予定売上見込み'), 'planned revenue estimate row should remain');
+assert(appJs.includes('getSharedMonthlyMetrics'), 'profit summary should use shared monthly metrics');
+assert(appJs.includes("label: '確定売上'"), 'profit summary should show 確定売上');
+assert(appJs.includes("label: '予定売上'"), 'profit summary should show 予定売上');
 assert(appJs.includes('合計利益'), 'total profit row should remain');
 
 console.log('== v4.10.13 profit rate calculation regression ==');

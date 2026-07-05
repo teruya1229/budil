@@ -742,9 +742,9 @@ const ProfitBrain = {
     const summary = (context && context.summary) || context;
     if (!summary) return [];
     const lines = [
-      `今月売上 ${this.formatYen(summary.monthRevenue)}`,
-      `支出 ${this.formatYen(summary.monthExpense)}`,
-      `概算粗利 ${this.formatYen(summary.monthGrossProfit)}`
+      `合計売上 ${this.formatYen(summary.totalRevenue != null ? summary.totalRevenue : summary.monthRevenue)}`,
+      `今月経費 ${this.formatYen(summary.monthExpense)}`,
+      `合計利益 ${this.formatYen(summary.totalProfit != null ? summary.totalProfit : summary.monthGrossProfit)}`
     ];
     const cautions = [];
     if (summary.adExpense > 0 && summary.monthRevenue < summary.adExpense * 4) cautions.push('広告費');
@@ -776,16 +776,12 @@ const ProfitBrain = {
     const lines = [];
     lines.push('■ 利益状況');
     if (periodLabel) lines.push(`対象期間：${periodLabel}`);
-    lines.push(`今月売上：${this.formatYen(s.monthRevenue)}`);
-    lines.push(`支出：${this.formatYen(s.monthExpense)}`);
-    lines.push(`概算粗利：${this.formatYen(s.monthGrossProfit)}`);
-    lines.push(`粗利率：${this.formatRate(s.monthGrossRate)}`);
-    lines.push(`予定売上見込み：${this.formatYen(s.plannedRevenueEstimate)}`);
-    lines.push(`見込み利益：${this.formatYen(s.plannedForecastProfit)}`);
+    lines.push(`合計売上：${this.formatYen(s.totalRevenue != null ? s.totalRevenue : s.monthRevenue)}`);
+    lines.push(`今月経費：${this.formatYen(s.monthExpense)}`);
+    lines.push(`合計利益：${this.formatYen(s.totalProfit != null ? s.totalProfit : s.monthGrossProfit)}`);
     lines.push(`確定売上：${this.formatYen(s.confirmedRevenue)}`);
+    lines.push(`予定売上：${this.formatYen(s.plannedRevenueEstimate)}`);
     lines.push(`確定利益：${this.formatYen(s.confirmedProfit)}`);
-    lines.push(`合計売上：${this.formatYen(s.totalRevenue)}`);
-    lines.push(`合計利益：${this.formatYen(s.totalProfit)}`);
     lines.push(`広告費：${this.formatYen(s.adExpense)} / 手数料：${this.formatYen(s.feeExpense)} / 外注費：${this.formatYen(s.outsourceExpense)}`);
     lines.push(`未紐付け支出：${s.unlinkedCount || 0}件`);
     const monthlyLines = this.buildMonthlyRevenueProfitLines(c.revenues, c.expenses);
@@ -872,9 +868,9 @@ const ProfitBrain = {
     const expenseInputCount = monthExpenses.length;
     const expenseBreakdown = this.buildMonthExpenseBreakdown(expenses, monthKey);
     const aggregationLabel = summary.usesMonthlyResult ? '月次実績ベース' : '明細ベース';
-    const profit = Number(summary.monthGrossProfit) || 0;
-    const profitRate = Number(summary.monthGrossRate) || 0;
-    const revenue = Number(summary.monthRevenue) || 0;
+    const revenue = Number(summary.totalRevenue != null ? summary.totalRevenue : summary.monthRevenue) || 0;
+    const profit = Number(summary.totalProfit != null ? summary.totalProfit : summary.monthGrossProfit) || 0;
+    const profitRate = revenue > 0 ? Math.round((profit / revenue) * 100) : (Number(summary.monthGrossRate) || 0);
 
     let reconciliationLabel = '—';
     let hasReconciliationGap = false;
@@ -918,7 +914,7 @@ const ProfitBrain = {
       };
     } else if (isDeficit) {
       statusKey = 'deficit';
-      statusMessage = `今月利益は${this.formatYen(profit)}です。赤字に注意してください。`;
+      statusMessage = `合計利益は${this.formatYen(profit)}です。赤字に注意してください。`;
       nextAction = '外注費・材料費・交通費を確認してください。';
       primaryAction = {
         id: 'expense_breakdown',
@@ -1022,9 +1018,9 @@ const ProfitBrain = {
       hasReconciliationGap = row.status === '差額あり';
     }
 
-    const monthRevenue = Number(summary.monthRevenue) || 0;
+    const monthRevenue = Number(summary.totalRevenue != null ? summary.totalRevenue : summary.monthRevenue) || 0;
     const monthExpense = Number(summary.monthExpense) || 0;
-    const monthProfit = Number(summary.monthGrossProfit) || 0;
+    const monthProfit = Number(summary.totalProfit != null ? summary.totalProfit : summary.monthGrossProfit) || 0;
     const isProfitable = monthProfit >= 0;
 
     const statusMessages = [];
@@ -1041,10 +1037,10 @@ const ProfitBrain = {
       statusMessages.push('月次実績が未入力です');
     }
     if (isProfitable && revenueConfirmationQueueCount === 0 && !hasReconciliationGap) {
-      statusMessages.push('今月の利益は黒字です');
+      statusMessages.push('合計利益は黒字です');
     }
     if (statusMessages.length === 0
-      || (statusMessages.length === 1 && statusMessages[0] === '今月の利益は黒字です')) {
+      || (statusMessages.length === 1 && statusMessages[0] === '合計利益は黒字です')) {
       statusMessages.push('月次締めの確認ができます');
     }
 
@@ -1136,7 +1132,7 @@ const ProfitBrain = {
       statusKey,
       nextAction,
       primaryAction,
-      flowNote: '今月の売上→今月の経費→今月の利益→未確定の売上→月次実績との整合→月次締めで次にやること'
+      flowNote: '合計売上→今月経費→合計利益→未確定の売上→月次実績との整合→月次締めで次にやること'
     };
   },
 

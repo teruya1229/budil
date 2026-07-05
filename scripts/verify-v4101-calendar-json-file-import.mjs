@@ -133,11 +133,11 @@ const profitJs = load('js/profit-brain.js');
 
 console.log('== v4.10.1 calendar JSON file import ==');
 
-assert(indexHtml.includes('AI経営脳みそ v4.11.3'), 'header version should be v4.11.3');
-assert(indexHtml.includes('Budil v4.11.3'), 'sidebar version should be v4.11.3');
-assert(indexHtml.includes('js/app.js?v=4.11.3'), 'app.js cache buster should be v4.11.3');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.3'"), 'storage version should be v4.11.3');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.3'"), 'data-backup version should be v4.11.3');
+assert(indexHtml.includes('AI経営脳みそ v4.11.4'), 'header version should be v4.11.4');
+assert(indexHtml.includes('Budil v4.11.4'), 'sidebar version should be v4.11.4');
+assert(indexHtml.includes('js/app.js?v=4.11.4'), 'app.js cache buster should be v4.11.4');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.4'"), 'storage version should be v4.11.4');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.4'"), 'data-backup version should be v4.11.4');
 
 assert(indexHtml.includes('id="btn-calendar-candidate-json-import"'), 'JSON import button should exist');
 assert(indexHtml.includes('id="calendar-candidate-json-input"'), 'JSON file input should exist');

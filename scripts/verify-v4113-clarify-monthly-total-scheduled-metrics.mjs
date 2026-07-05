@@ -1,5 +1,5 @@
 /**
- * Budil v4.11.3 - clarify monthly total and scheduled metrics verification.
+ * Budil v4.11.4 - clarify monthly total and scheduled metrics verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -23,7 +23,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.11.3 clarify-monthly-total-scheduled-metrics ==');
+console.log('== v4.11.4 clarify-monthly-total-scheduled-metrics ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -41,15 +41,15 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.3'), 'index.html should show v4.11.3');
-assert(indexHtml.includes('js/app.js?v=4.11.3'), 'app.js cache buster should be v4.11.3');
-assert(indexHtml.includes('js/revenue-brain.js?v=4.11.3'), 'revenue-brain cache buster should be v4.11.3');
-assert(indexHtml.includes('js/executive-brain.js?v=4.11.3'), 'executive-brain cache buster should be v4.11.3');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.3'"), 'storage.js version should be v4.11.3');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.3'"), 'data-backup version should be v4.11.3');
-assert(statusMd.includes('v4.11.3'), 'status.md should document v4.11.3');
-assert(handoffMd.includes('v4.11.3'), 'handoff.md should document v4.11.3');
-assert(decisionLog.includes('v4.11.3'), 'decision-log.md should record v4.11.3');
+assert(indexHtml.includes('v4.11.4'), 'index.html should show v4.11.4');
+assert(indexHtml.includes('js/app.js?v=4.11.4'), 'app.js cache buster should be v4.11.4');
+assert(indexHtml.includes('js/revenue-brain.js?v=4.11.4'), 'revenue-brain cache buster should be v4.11.4');
+assert(indexHtml.includes('js/executive-brain.js?v=4.11.4'), 'executive-brain cache buster should be v4.11.4');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.4'"), 'storage.js version should be v4.11.4');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.4'"), 'data-backup version should be v4.11.4');
+assert(statusMd.includes('v4.11.4'), 'status.md should document v4.11.4');
+assert(handoffMd.includes('v4.11.4'), 'handoff.md should document v4.11.4');
+assert(decisionLog.includes('v4.11.4'), 'decision-log.md should record v4.11.4');
 
 console.log('== shared metrics fields ==');
 assert(revenueBrainJs.includes('scheduledRevenue = plannedAdditionalRevenue'), 'scheduledRevenue should alias plannedAdditionalRevenue');
@@ -72,19 +72,21 @@ assert(!appJs.includes("{ label: '予定売上', value: RevenueBrain.formatYen(m
 assert(!appJs.includes('予定利益：'), 'revenue summary html must not show 予定利益');
 
 console.log('== executive home labels ==');
-assert(appJs.includes('今月合計売上'), 'executive home should show 今月合計売上');
-assert(appJs.includes('今月合計利益'), 'executive home should show 今月合計利益');
+assert(appJs.includes('<span>合計売上</span>'), 'executive home should show 合計売上');
+assert(appJs.includes('<span>合計利益</span>'), 'executive home should show 合計利益');
 assert(appJs.includes('<span>確定売上</span>'), 'executive home should show 確定売上');
 assert(appJs.includes('<span>予定売上</span>'), 'executive home should show 予定売上');
 assert(appJs.includes('<span>今月経費</span>'), 'executive home should show 今月経費');
+assert(!appJs.includes('今月合計売上'), 'executive home must not show 今月合計売上');
+assert(!appJs.includes('今月合計利益'), 'executive home must not show 今月合計利益');
 assert(!appJs.includes('今月予定利益'), 'executive home must not show 今月予定利益');
-assert(executiveBrainJs.includes("monthRevenueLabel = '今月合計売上'"), 'executive monthRevenueLabel should be 今月合計売上');
+assert(executiveBrainJs.includes("monthRevenueLabel = '合計売上'"), 'executive monthRevenueLabel should be 合計売上');
 
 console.log('== untouched files ==');
-assert(!css.includes('v4.11.3'), 'css must not change for v4.11.3');
-assert(!receptionJs.includes('buildSharedMonthlyMetrics'), 'reception-brain must not change for v4.11.3');
-assert(!documentsJs.includes('buildSharedMonthlyMetrics'), 'documents-brain must not change for v4.11.3');
-assert(!followJs.includes('buildSharedMonthlyMetrics'), 'follow-up-brain must not change for v4.11.3');
+assert(!css.includes('v4.11.4'), 'css must not change for v4.11.4');
+assert(!receptionJs.includes('buildSharedMonthlyMetrics'), 'reception-brain must not change for v4.11.4');
+assert(!documentsJs.includes('buildSharedMonthlyMetrics'), 'documents-brain must not change for v4.11.4');
+assert(!followJs.includes('buildSharedMonthlyMetrics'), 'follow-up-brain must not change for v4.11.4');
 assert(!profitBrainJs.includes('buildSharedMonthlyMetrics'), 'profit-brain must not define shared metrics');
 
 function createSandbox() {
@@ -159,9 +161,9 @@ console.log('== numeric definition tests ==');
   assert(result.execSection.scheduledRevenue === result.shared.scheduledRevenue, 'executive and shared scheduledRevenue must match');
   assert(result.execSection.totalProfit === result.shared.totalProfit, 'executive and shared totalProfit must match');
   assert(result.execSection.confirmedRevenue === result.shared.confirmedRevenue, 'executive and shared confirmedRevenue must match');
-  assert(result.execSection.monthRevenueLabel === '今月合計売上', 'executive label should be 今月合計売上');
+  assert(result.execSection.monthRevenueLabel === '合計売上', 'executive label should be 合計売上');
 }
 
 execSync('node scripts/verify-v4112-unified-monthly-metrics.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('\nAll v4.11.3 clarify-monthly-total-scheduled-metrics checks passed.');
+console.log('\nAll v4.11.4 clarify-monthly-total-scheduled-metrics checks passed.');

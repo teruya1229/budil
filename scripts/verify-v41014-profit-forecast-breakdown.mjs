@@ -54,10 +54,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.11.3'), 'index.html should show v4.11.3');
-assert(indexHtml.includes('js/app.js?v=4.11.3'), 'app.js cache buster should be v4.11.3');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.3'"), 'storage.js version should be v4.11.3');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.3'"), 'data-backup version should be v4.11.3');
+assert(indexHtml.includes('v4.11.4'), 'index.html should show v4.11.4');
+assert(indexHtml.includes('js/app.js?v=4.11.4'), 'app.js cache buster should be v4.11.4');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.4'"), 'storage.js version should be v4.11.4');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.4'"), 'data-backup version should be v4.11.4');
 
 assert(profitJs.includes('plannedRevenueEstimate'), 'profit brain should expose plannedRevenueEstimate');
 assert(profitJs.includes('plannedForecastProfit'), 'profit brain should expose plannedForecastProfit');
@@ -66,8 +66,8 @@ assert(profitJs.includes('confirmedProfit'), 'profit brain should expose confirm
 assert(profitJs.includes('totalRevenue'), 'profit brain should expose totalRevenue');
 assert(profitJs.includes('totalProfit'), 'profit brain should expose totalProfit');
 assert(profitJs.includes('getMonthPlannedWorkOrders'), 'profit brain should filter month planned work orders');
-assert(appJs.includes('profit-forecast-breakdown'), 'profit UI should render 3-tier breakdown');
-assert(appJs.includes('予定売上見込み'), 'profit UI should show planned revenue estimate label');
+assert(appJs.includes('getSharedMonthlyMetrics'), 'profit UI should use shared monthly metrics');
+assert(appJs.includes("label: '予定売上'"), 'profit UI should show 予定売上 label');
 assert(appJs.includes('合計利益'), 'profit UI should show total profit label');
 assert(!appJs.includes('localStorage.clear()'), 'localStorage.clear must not be used');
 

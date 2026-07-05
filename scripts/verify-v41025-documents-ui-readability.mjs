@@ -28,11 +28,11 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 // --- バージョン ---
-assert(indexHtml.includes('v4.11.3'), 'index.html should show v4.11.3');
-assert(indexHtml.includes('js/app.js?v=4.11.3'), 'app.js cache buster should be v4.11.3');
+assert(indexHtml.includes('v4.11.4'), 'index.html should show v4.11.4');
+assert(indexHtml.includes('js/app.js?v=4.11.4'), 'app.js cache buster should be v4.11.4');
 assert(indexHtml.includes('css/style.css?v=4.10.41'), 'css cache buster should be v4.10.41');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.3'"), 'storage.js version should be v4.11.3');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.3'"), 'data-backup version should be v4.11.3');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.4'"), 'storage.js version should be v4.11.4');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.4'"), 'data-backup version should be v4.11.4');
 assert(statusMd.includes('v4.10.25'), 'status.md should document v4.10.25');
 assert(statusMd.includes('v4.10.26'), 'status.md should document v4.10.26');
 assert(statusMd.includes('v4.10.38'), 'status.md should document v4.10.27');
@@ -91,7 +91,7 @@ assert(appJs.includes('tryLinkDocumentToExistingRevenue'), 'link-first logic mus
 console.log('== v4.10.24 profit definition regression ==');
 const profitBrainJs = load('js/profit-brain.js');
 assert(profitBrainJs.includes('monthGrossRate > 0'), 'profit-brain monthGrossRate fallback must remain');
-assert(appJs.includes('今月の確定売上'), 'profit panel 今月の確定売上 label must remain');
+assert(appJs.includes("label: '確定売上'"), 'profit panel 確定売上 label must remain');
 
 // --- NG文言 ---
 console.log('== NG term check ==');

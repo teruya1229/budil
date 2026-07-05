@@ -1,5 +1,5 @@
 /**
- * Budil v4.11.3 - reception list revenue resolved display verification.
+ * Budil v4.11.4 - reception list revenue resolved display verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/app.js', 'js/reception-brain.js', 'js/revenue-brain.js',
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.11.3 reception-list-revenue-resolved ==');
+console.log('== v4.11.4 reception-list-revenue-resolved ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -40,12 +40,12 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.3'), 'index.html should show v4.11.3');
-assert(indexHtml.includes('js/app.js?v=4.11.3'), 'app.js cache buster should be v4.11.3');
+assert(indexHtml.includes('v4.11.4'), 'index.html should show v4.11.4');
+assert(indexHtml.includes('js/app.js?v=4.11.4'), 'app.js cache buster should be v4.11.4');
 assert(indexHtml.includes('js/reception-brain.js?v=4.11.0'), 'reception-brain cache buster should remain v4.11.0');
-assert(indexHtml.includes('js/revenue-brain.js?v=4.11.3'), 'revenue-brain cache buster should be v4.11.3');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.3'"), 'storage.js version should be v4.11.3');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.3'"), 'data-backup version should be v4.11.3');
+assert(indexHtml.includes('js/revenue-brain.js?v=4.11.4'), 'revenue-brain cache buster should be v4.11.4');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.4'"), 'storage.js version should be v4.11.4');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.4'"), 'data-backup version should be v4.11.4');
 
 console.log('== reception list display helpers ==');
 assert(revenueJs.includes('resolveRevenueForIntake'), 'resolveRevenueForIntake should exist');
@@ -80,7 +80,7 @@ assert(appJs.includes('confirmationStatus'), 'calendar confirmationStatus handli
 
 console.log('== no CSS change ==');
 assert(css.includes('v4.10.37'), 'invoice layout marker should remain v4.10.37');
-assert(!css.includes('v4.11.3'), 'css must not change for v4.11.3');
+assert(!css.includes('v4.11.4'), 'css must not change for v4.11.4');
 
 console.log('== storage keys unchanged ==');
 assert(storageJs.includes("RECEPTION_INTAKES: 'budil_reception_intakes'"), 'reception storage key must remain');
@@ -173,4 +173,4 @@ console.log('== unmatched intake keeps fill revenue in reception list ==');
   assert(ui.hasUnconfirmedLabel, 'unmatched intake should keep 売上未確定 label');
 }
 
-console.log('\nAll v4.11.3 reception-list-revenue-resolved checks passed.');
+console.log('\nAll v4.11.4 reception-list-revenue-resolved checks passed.');

@@ -37,10 +37,10 @@ const storageJs = load('js/storage.js');
 const dataBackupJs = load('js/data-backup.js');
 
 // --- バージョン確認 ---
-assert(indexHtml.includes('v4.11.3'), 'index.html should show v4.11.3');
-assert(indexHtml.includes('js/app.js?v=4.11.3'), 'app.js cache buster should be v4.11.3');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.3'"), 'storage.js version should be v4.11.3');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.3'"), 'data-backup version should be v4.11.3');
+assert(indexHtml.includes('v4.11.4'), 'index.html should show v4.11.4');
+assert(indexHtml.includes('js/app.js?v=4.11.4'), 'app.js cache buster should be v4.11.4');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.4'"), 'storage.js version should be v4.11.4');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.4'"), 'data-backup version should be v4.11.4');
 
 // --- ProfitBrain の見込み利益フォールバック修正確認 ---
 console.log('== ProfitBrain plannedForecastProfit fallback check ==');
@@ -48,12 +48,16 @@ assert(profitBrainJs.includes('woResult.marginUnset'), 'profit-brain.js should c
 assert(profitBrainJs.includes('monthGrossRate > 0'), 'profit-brain.js should use monthGrossRate as fallback condition');
 assert(profitBrainJs.includes('Math.round(est * monthGrossRate / 100)'), 'profit-brain.js should apply monthGrossRate to estimate');
 
-// --- app.js の利益管理「今月の確定売上」ラベル確認 ---
+// --- app.js の利益管理 正式8表記ラベル確認 ---
 console.log('== app.js profit panel label check ==');
-assert(appJs.includes('今月の確定売上'), 'app.js should show 今月の確定売上 in profit panel');
-assert(appJs.includes('profitRevLabel'), 'app.js should use profitRevLabel variable');
-assert(appJs.includes('profitRevValue'), 'app.js should use profitRevValue variable');
-assert(appJs.includes('s.confirmedRevenue != null ? s.confirmedRevenue : s.monthRevenue'), 'app.js should prefer confirmedRevenue for profit panel');
+assert(appJs.includes("label: '確定売上'"), 'app.js profit panel should show 確定売上');
+assert(appJs.includes("label: '予定売上'"), 'app.js profit panel should show 予定売上');
+assert(appJs.includes("label: '合計売上'"), 'app.js profit panel should show 合計売上');
+assert(appJs.includes("label: '合計利益'"), 'app.js profit panel should show 合計利益');
+assert(appJs.includes('getSharedMonthlyMetrics'), 'app.js profit panel should use shared monthly metrics');
+assert(!appJs.includes('profitRevLabel'), 'app.js must not use legacy profitRevLabel');
+assert(!appJs.includes('予定売上見込み'), 'app.js must not show 予定売上見込み');
+assert(!appJs.includes('見込み利益'), 'app.js must not show 見込み利益');
 
 // --- v4.10.23 の確定売上定義が維持されていること ---
 console.log('== v4.10.23 confirmed revenue definition regression ==');
@@ -310,8 +314,9 @@ assert(profitBrainJs.includes('confirmedRevenue'), 'ProfitBrain should have conf
 assert(profitBrainJs.includes('confirmedProfit'), 'ProfitBrain should have confirmedProfit (3-tier)');
 assert(profitBrainJs.includes('totalRevenue'), 'ProfitBrain should have totalRevenue (3-tier)');
 assert(profitBrainJs.includes('totalProfit'), 'ProfitBrain should have totalProfit (3-tier)');
-assert(appJs.includes('予定売上見込み'), 'app.js should display 予定売上見込み');
-assert(appJs.includes('見込み利益'), 'app.js should display 見込み利益');
+assert(appJs.includes("label: '予定売上'"), 'app.js should display 予定売上');
+assert(!appJs.includes('予定売上見込み'), 'app.js must not display 予定売上見込み');
+assert(!appJs.includes('見込み利益'), 'app.js must not display 見込み利益');
 assert(appJs.includes('確定売上'), 'app.js should display 確定売上');
 assert(appJs.includes('確定利益'), 'app.js should display 確定利益');
 assert(appJs.includes('合計売上'), 'app.js should display 合計売上');

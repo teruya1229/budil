@@ -52,6 +52,8 @@ const CalendarCandidateBrain = {
     '料金': 'estimateAmount',
     '売上予定': 'estimateAmount',
     '売上金額': 'estimateAmount',
+    '予定売上（円）': 'estimateAmount',
+    '予定売上': 'estimateAmount',
     '見込み金額': 'estimateAmount',
     '時間': 'startTime',
     '時刻': 'startTime',

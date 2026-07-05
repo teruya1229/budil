@@ -110,7 +110,7 @@ const ExecutiveBrain = {
     const push = line => { if (line && !lines.includes(line)) lines.push(line); };
 
     if (c.forecast && c.forecast.todayCount) {
-      push(`今日の予定が${c.forecast.todayCount}件、見込み売上${WorkOrderBrain.formatYen(c.forecast.todayAmount)}です。`);
+      push(`今日の予定が${c.forecast.todayCount}件、予定売上${WorkOrderBrain.formatYen(c.forecast.todayAmount)}です。`);
     }
 
     const bb = c.analyticsCtx && c.analyticsCtx.browserBantou;
@@ -394,7 +394,7 @@ const ExecutiveBrain = {
       })
       : {};
     const monthRevenue = shared.totalRevenue || shared.plannedRevenue || 0;
-    const monthRevenueLabel = '今月合計売上';
+    const monthRevenueLabel = '合計売上';
     const achievementRate = shared.achievementRate || 0;
     const cautions = [];
     if (shared.monthlyTarget > 0 && achievementRate < 50) {
@@ -610,8 +610,9 @@ const ExecutiveBrain = {
     sections.push({
       title: '売上・利益',
       lines: [
-        `今月売上 ${RevenueBrain.formatYen(rp.monthRevenue)} / 目標 ${RevenueBrain.formatYen(rp.monthlyTarget)}（${rp.achievementRate}%）`,
-        `支出 ${ProfitBrain.formatYen(rp.monthExpense)} / 粗利 ${ProfitBrain.formatYen(rp.grossProfit)}（${ProfitBrain.formatRate(rp.grossRate)}）`,
+        `合計売上 ${RevenueBrain.formatYen(rp.totalRevenue != null ? rp.totalRevenue : rp.monthRevenue)} / 目標 ${RevenueBrain.formatYen(rp.monthlyTarget)}（${rp.achievementRate}%）`,
+        `合計利益 ${ProfitBrain.formatYen(rp.totalProfit != null ? rp.totalProfit : rp.grossProfit)} / 確定利益 ${ProfitBrain.formatYen(rp.confirmedProfit || 0)}`,
+        `今月経費 ${ProfitBrain.formatYen(rp.monthExpense)}`,
         rp.completedNoRevenue ? `作業日経過・売上未確定 ${rp.completedNoRevenue}件` : ''
       ].filter(Boolean)
     });

@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.11.3</small>
+          <small>AI経営脳みそ v4.11.4</small>
         </div>
       </div>
       <nav class="nav">
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.11.3</small>
+        <small>Budil v4.11.4</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の優先 → 今月の数字 → 次にやること</p>
             </div>
-            <span class="exec-home-version">v4.11.3</span>
+            <span class="exec-home-version">v4.11.4</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
 
@@ -595,7 +595,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.11.3</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.11.4</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -1668,7 +1668,7 @@
         </div>
 
         <div class="card card-wide card-revenue-schedule-link">
-          <p class="calendar-source-revenue-link">売上予定・見込み利益は売上管理で確認できます。</p>
+          <p class="calendar-source-revenue-link">予定売上・合計利益は売上管理で確認できます。</p>
           <button type="button" class="btn btn-sm btn-secondary nav-item" data-view="revenue">売上管理を見る</button>
         </div>
 
@@ -1804,7 +1804,7 @@
                 <select id="work-order-source"></select>
               </div>
               <div class="form-group">
-                <label for="work-order-amount">見込み金額（円）</label>
+                <label for="work-order-amount">予定売上（円）</label>
                 <input type="number" id="work-order-amount" min="0" step="1" placeholder="15000">
               </div>
             </div>
@@ -1952,7 +1952,7 @@
                 <li>予定取り込みだけでは確定売上明細には入りません。保存後、売上予定に表示されます。</li>
                 <li>カレンダー予定は予定変更・キャンセル・金額変更が起きやすいため、取り込み時点では売上確定しません。</li>
                 <li>取り込んだ予定は作業予定として保存されます。作業日後は「毎日やること」の売上確定待ちから売上化してください。</li>
-                <li>予定金額は見込みであり、売上集計には混ぜません。</li>
+                <li>この金額は予定売上として扱い、売上確定後は確定売上に移ります。</li>
               </ul>
             </div>
           </details>
@@ -2594,7 +2594,7 @@
       <section id="view-profit" class="view">
         <header class="view-header">
           <h1>利益管理</h1>
-          <p class="view-subtitle">売上確定→経費入力→利益集計→経費内訳の流れで、今月の利益状況を確認します。月次実績がある月は月次実績ベースを優先表示します。</p>
+          <p class="view-subtitle">売上確定→経費入力→利益集計→経費内訳の流れで、合計利益などの月次数字を確認します。月次実績がある月は月次実績ベースを優先表示します。</p>
         </header>
 
         <div class="card card-wide card-profit-comment">
@@ -2686,7 +2686,7 @@
         </div>
 
         <div class="card card-wide">
-          <h2>作業予定別の見込み利益</h2>
+          <h2>作業予定別の粗利試算</h2>
           <div id="profit-work-order-rows" class="profit-table-wrap"></div>
         </div>
 
@@ -2734,7 +2734,7 @@
                 <input type="month" id="monthly-results-month" required>
               </div>
               <div class="form-group">
-                <label for="monthly-results-sales">売上</label>
+                <label for="monthly-results-sales">合計売上</label>
                 <input type="number" id="monthly-results-sales" min="0" step="1" placeholder="例：850000">
               </div>
             </div>
@@ -2764,7 +2764,7 @@
             </div>
             <div class="form-row form-row-2">
               <div class="form-group">
-                <label for="monthly-results-profit">利益</label>
+                <label for="monthly-results-profit">合計利益</label>
                 <input type="number" id="monthly-results-profit" step="1" placeholder="自動計算または手入力">
               </div>
               <div class="form-group">
@@ -3469,7 +3469,7 @@
   <div id="work-completion-modal" class="modal hidden">
     <div class="modal-content modal-lg">
       <h2>売上確定 — 実績入力</h2>
-      <p class="work-completion-modal-notice">予定金額ではなく、実際の金額・作業内容を確認してから確定売上に登録してください。</p>
+      <p class="work-completion-modal-notice">予定売上ではなく、実際の金額・作業内容を確認してから確定売上に登録してください。</p>
       <form id="work-completion-form">
         <input type="hidden" id="work-completion-wo-id">
         <input type="hidden" id="work-completion-queue-source" value="work-order">
@@ -3589,14 +3589,14 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.11.3"></script>
+  <script src="js/storage.js?v=4.11.4"></script>
   <script src="js/messages.js?v=4.10.22"></script>
   <script src="js/demand-brain.js?v=4.10.22"></script>
   <script src="js/demand-radar.js?v=4.10.22"></script>
   <script src="js/sales-brain.js?v=4.10.22"></script>
   <script src="js/management-brain.js?v=4.10.22"></script>
   <script src="js/payment-brain.js?v=4.10.22"></script>
-  <script src="js/revenue-brain.js?v=4.11.3"></script>
+  <script src="js/revenue-brain.js?v=4.11.4"></script>
   <script src="js/revenue-summary-brain.js?v=4.10.22"></script>
   <script src="js/reception-brain.js?v=4.11.0"></script>
   <script src="js/map-brain.js?v=4.10.22"></script>
@@ -3610,9 +3610,9 @@
   <script src="js/analytics-brain.js?v=4.10.22"></script>
   <script src="js/monthly-results-brain.js?v=4.10.22"></script>
   <script src="js/documents-brain.js?v=4.10.41"></script>
-  <script src="js/executive-brain.js?v=4.11.3"></script>
+  <script src="js/executive-brain.js?v=4.11.4"></script>
   <script src="js/card-ocr.js?v=4.10.22"></script>
-  <script src="js/data-backup.js?v=4.11.3"></script>
-  <script src="js/app.js?v=4.11.3"></script>
+  <script src="js/data-backup.js?v=4.11.4"></script>
+  <script src="js/app.js?v=4.11.4"></script>
 </body>
 </html>

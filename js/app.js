@@ -915,7 +915,7 @@
           <strong>${esc(wo.startTime || '—')} ${esc(wo.customerName)}</strong>
           <span class="exec-work-status">${esc(wo.statusLabel)}</span>
         </div>
-        <p class="exec-work-meta">${esc(wo.serviceText || '—')} / ${esc(wo.area)} / 見込み${WorkOrderBrain.formatYen(wo.estimateAmount)}</p>
+        <p class="exec-work-meta">${esc(wo.serviceText || '—')} / ${esc(wo.area)} / 予定売上${WorkOrderBrain.formatYen(wo.estimateAmount)}</p>
         ${wo.warnings.length ? `<p class="exec-work-warn">${wo.warnings.map(w => esc(w)).join(' · ')}</p>` : ''}
         <div class="exec-work-actions">
           <button type="button" class="btn btn-sm btn-primary" data-exec-wo-completion="${esc(wo.id)}">売上確定</button>
@@ -1002,15 +1002,15 @@
     return `
       ${monthlyNote}
       <div class="exec-home-revenue-grid${isCompact ? ' exec-home-revenue-grid-compact' : ''}">
-        <div><span>今月合計売上</span><strong>${esc(RevenueBrain.formatYen(s.totalRevenue != null ? s.totalRevenue : s.monthRevenue))}</strong></div>
-        <div><span>今月合計利益</span><strong>${esc(ProfitBrain.formatYen(s.totalProfit != null ? s.totalProfit : s.grossProfit))}</strong></div>
+        <div><span>合計売上</span><strong>${esc(RevenueBrain.formatYen(s.totalRevenue != null ? s.totalRevenue : s.monthRevenue))}</strong></div>
+        <div><span>合計利益</span><strong>${esc(ProfitBrain.formatYen(s.totalProfit != null ? s.totalProfit : s.grossProfit))}</strong></div>
         <div><span>確定売上</span><strong>${esc(RevenueBrain.formatYen(s.confirmedRevenue || 0))}</strong></div>
         <div><span>予定売上</span><strong>${esc(RevenueBrain.formatYen(s.scheduledRevenue || 0))}</strong></div>
         <div><span>確定利益</span><strong>${esc(ProfitBrain.formatYen(s.confirmedProfit || 0))}</strong></div>
         ${isCompact ? '' : `<div><span>月間目標</span><strong>${esc(RevenueBrain.formatYen(s.monthlyTarget))}</strong></div>
         <div><span>達成率</span><strong>${s.achievementRate}%</strong></div>`}
         <div><span>今月経費</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
-        ${isCompact ? '' : `<div><span>今週見込み</span><strong>${esc(WorkOrderBrain.formatYen(s.weekForecast))}</strong></div>
+        ${isCompact ? '' : `<div><span>今週予定売上</span><strong>${esc(WorkOrderBrain.formatYen(s.weekForecast))}</strong></div>
         <div><span>売上未登録</span><strong>${s.completedNoRevenue || 0}件</strong></div>`}
       </div>
       ${summaryBlock}
@@ -1672,9 +1672,9 @@
         ${monthlyNote}
         <p class="mgmt-profit-label">売上・利益：</p>
         <ul class="mgmt-profit-list">
-          <li>今月合計売上 ${esc(RevenueBrain.formatYen(rp.totalRevenue != null ? rp.totalRevenue : rp.monthRevenue))} / 目標 ${esc(RevenueBrain.formatYen(rp.monthlyTarget))}（${rp.achievementRate}%）</li>
-          <li>今月合計利益 ${esc(ProfitBrain.formatYen(rp.totalProfit != null ? rp.totalProfit : rp.grossProfit))} / 確定利益 ${esc(ProfitBrain.formatYen(rp.confirmedProfit || 0))}</li>
-          <li>支出 ${esc(ProfitBrain.formatYen(rp.monthExpense))}</li>
+          <li>合計売上 ${esc(RevenueBrain.formatYen(rp.totalRevenue != null ? rp.totalRevenue : rp.monthRevenue))} / 目標 ${esc(RevenueBrain.formatYen(rp.monthlyTarget))}（${rp.achievementRate}%）</li>
+          <li>合計利益 ${esc(ProfitBrain.formatYen(rp.totalProfit != null ? rp.totalProfit : rp.grossProfit))} / 確定利益 ${esc(ProfitBrain.formatYen(rp.confirmedProfit || 0))}</li>
+          <li>今月経費 ${esc(ProfitBrain.formatYen(rp.monthExpense))}</li>
           ${rp.completedNoRevenue ? `<li>作業日経過・売上未確定 ${rp.completedNoRevenue}件</li>` : ''}
         </ul>`;
     }
@@ -1683,7 +1683,7 @@
     if (revenueMorningEl) {
       const rev = getRevenueContext();
       const m = rev.sharedMonthlyMetrics || getSharedMonthlyMetrics();
-      revenueMorningEl.innerHTML = `<p>今月合計売上：${esc(RevenueBrain.formatYen(m.totalRevenue ?? m.plannedRevenue))} / 達成率 ${m.achievementRate}%</p>`;
+      revenueMorningEl.innerHTML = `<p>合計売上：${esc(RevenueBrain.formatYen(m.totalRevenue ?? m.plannedRevenue))} / 達成率 ${m.achievementRate}%</p>`;
     }
 
     const followUpMorningEl = document.getElementById('mgmt-follow-up');
@@ -4993,7 +4993,7 @@
     lines.push('');
 
     lines.push('■ 2. 売上状況');
-    lines.push(`今月売上：${RevenueBrain.formatYen(rev.total != null ? rev.total : (rev.confirmed + rev.planned))}`);
+    lines.push(`合計売上：${RevenueBrain.formatYen(rev.total != null ? rev.total : (rev.confirmed + rev.planned))}`);
     lines.push(`期間内売上：${RevenueBrain.formatYen(c.summary.periodRevenue)}`);
     lines.push(`目標：${RevenueBrain.formatYen(rev.monthlyTarget)}`);
     lines.push(`達成率：${rev.achievementRate}%`);
@@ -5003,7 +5003,7 @@
       const agg = c.revenueSummary;
       const compact = agg.compact;
       const diffSign = compact.monthDiff > 0 ? '+' : '';
-      lines.push('（売上集計：確定売上のみ。見込み・候補は含みません）');
+      lines.push('（売上集計：確定売上のみ。予定・候補は含みません）');
       lines.push(`今月確定売上：${RevenueBrain.formatYen(compact.thisMonthTotal)}`);
       lines.push(`先月比：${diffSign}${RevenueBrain.formatYen(compact.monthDiff)}`);
       lines.push(`今年確定売上：${RevenueBrain.formatYen(compact.yearTotal)}`);
@@ -5039,7 +5039,7 @@
     }
     if (c.profitCtx && c.profitCtx.summary) {
       const ps = c.profitCtx.summary;
-      lines.push(`期間内支出：${ProfitBrain.formatYen(ps.monthExpense)}`);
+      lines.push(`期間内今月経費：${ProfitBrain.formatYen(ps.monthExpense)}`);
       lines.push(`概算粗利：${ProfitBrain.formatYen(ps.monthGrossProfit)}`);
       lines.push(`粗利率：${ProfitBrain.formatRate(ps.monthGrossRate)}`);
     }
@@ -8430,7 +8430,7 @@
     return `<div class="calendar-candidate-preview-item calendar-import-result-item${item.isDuplicate ? ' is-duplicate' : ''}${isExcluded ? ' is-excluded' : ''}">
       ${bucketLabel}
       <p class="calendar-candidate-preview-title"><strong>${esc(c.customerName || '（名前なし）')}</strong> / ${esc(c.serviceText || '—')}</p>
-      <p class="calendar-candidate-preview-meta">${esc(c.scheduledDate || '日付不明')} ${esc(c.startTime || '')}〜${esc(c.endTime || '')} / ${esc(c.source || '—')} / 見込み ${esc(WorkOrderBrain.formatYen(c.estimateAmount))}</p>
+      <p class="calendar-candidate-preview-meta">${esc(c.scheduledDate || '日付不明')} ${esc(c.startTime || '')}〜${esc(c.endTime || '')} / ${esc(c.source || '—')} / 予定売上 ${esc(WorkOrderBrain.formatYen(c.estimateAmount))}</p>
       ${statusNote}
       <p class="calendar-candidate-not-sale">${esc(notice)}</p>
       ${pastStatus}
@@ -8661,7 +8661,7 @@
             <span class="calendar-candidate-status-badge status-${esc(st)}">${esc(st)}</span>
           </div>
           <p class="calendar-candidate-saved-meta">${esc(wo.scheduledDate || '日付不明')} ${esc(timeLabel)} / ${esc(wo.serviceText || '—')} / ${esc(wo.address || '—')}</p>
-          <p class="calendar-candidate-saved-meta">依頼元：${esc(wo.source || '—')} / 見込み：${esc(WorkOrderBrain.formatYen(wo.estimateAmount))} / 確認Status：${esc((wo.candidateMeta && wo.candidateMeta.confidence) || '—')}</p>
+          <p class="calendar-candidate-saved-meta">依頼元：${esc(wo.source || '—')} / 予定売上：${esc(WorkOrderBrain.formatYen(wo.estimateAmount))} / 確認Status：${esc((wo.candidateMeta && wo.candidateMeta.confidence) || '—')}</p>
           ${wo.candidateMeta && wo.candidateMeta.cautionNote ? `<p class="calendar-candidate-saved-warn">注意：${esc(wo.candidateMeta.cautionNote)}</p>` : ''}
           <div class="calendar-candidate-saved-actions">
             ${primaryAction}
@@ -9637,7 +9637,7 @@
     const hint = document.getElementById('work-completion-estimate-hint');
     if (hint) {
       hint.textContent = wo.estimateAmount
-        ? `予定金額（見込み）：${WorkOrderBrain.formatYen(wo.estimateAmount)} — 実績と違う場合は修正してください`
+        ? `予定売上：${WorkOrderBrain.formatYen(wo.estimateAmount)} — 実績と違う場合は修正してください`
         : '';
     }
     document.getElementById('work-completion-modal').classList.remove('hidden');
@@ -9885,7 +9885,7 @@
           ${renderWorkCompletionStatusBadge(wo)}
         </div>
         <p class="work-order-item-meta"><strong>${esc(wo.customerName || '（名前なし）')}</strong> / ${esc(wo.serviceText || '—')}</p>
-        <p class="work-order-item-meta">エリア：${esc(area)} ${renderAreaDistanceBadge(area, wo.address)} / 見込み：${esc(WorkOrderBrain.formatYen(wo.estimateAmount))}${typeof CalendarCandidateBrain !== 'undefined' && CalendarCandidateBrain.isCalendarCandidateWorkOrder(wo) && !wo.actualRevenueId ? ' <span class="work-order-not-revenue">（売上未確定）</span>' : ''}</p>
+        <p class="work-order-item-meta">エリア：${esc(area)} ${renderAreaDistanceBadge(area, wo.address)} / 予定売上：${esc(WorkOrderBrain.formatYen(wo.estimateAmount))}${typeof CalendarCandidateBrain !== 'undefined' && CalendarCandidateBrain.isCalendarCandidateWorkOrder(wo) && !wo.actualRevenueId ? ' <span class="work-order-not-revenue">（売上未確定）</span>' : ''}</p>
         <div class="work-order-item-actions">
           ${renderWorkOrderItemActions(wo)}
         </div>
@@ -10006,11 +10006,11 @@
     if (!el) return;
     const forecast = WorkOrderBrain.getSalesForecast(Storage.getWorkOrders(), Storage.getRevenueRecords(), TODAY());
     const cards = [
-      { label: '今日の売上見込み', value: WorkOrderBrain.formatYen(forecast.todayAmount), sub: `${forecast.todayCount}件` },
-      { label: '今週の売上見込み', value: WorkOrderBrain.formatYen(forecast.weekAmount), sub: `${forecast.weekCount}件` },
-      { label: '今月の売上見込み', value: WorkOrderBrain.formatYen(forecast.monthAmount), sub: `${forecast.monthCount}件` },
-      { label: '仮予定の見込み', value: WorkOrderBrain.formatYen(forecast.tentativeAmount), sub: `${forecast.tentativeCount}件` },
-      { label: '確定予定の見込み', value: WorkOrderBrain.formatYen(forecast.confirmedAmount), sub: `${forecast.confirmedCount}件` },
+      { label: '今日の予定売上', value: WorkOrderBrain.formatYen(forecast.todayAmount), sub: `${forecast.todayCount}件` },
+      { label: '今週の予定売上', value: WorkOrderBrain.formatYen(forecast.weekAmount), sub: `${forecast.weekCount}件` },
+      { label: '今月の予定売上', value: WorkOrderBrain.formatYen(forecast.monthAmount), sub: `${forecast.monthCount}件` },
+      { label: '仮予定の予定売上', value: WorkOrderBrain.formatYen(forecast.tentativeAmount), sub: `${forecast.tentativeCount}件` },
+      { label: '確定予定の予定売上', value: WorkOrderBrain.formatYen(forecast.confirmedAmount), sub: `${forecast.confirmedCount}件` },
       { label: '完了・売上未登録', value: `${forecast.completedNoRevenueCount}件`, sub: '要対応' }
     ];
     el.innerHTML = cards.map(c =>
@@ -10066,7 +10066,7 @@
       safeRenderSection(null, () => renderWorkOrderCalendarBrief(), '過去売上復元');
       safeRenderSection('work-order-pending-completion-list', () => renderWorkOrderPendingCompletionList(), '売上確定待ち');
       if (document.getElementById('work-order-forecast')) {
-        safeRenderSection('work-order-forecast', () => renderWorkOrderForecast(), '売上見込み');
+        safeRenderSection('work-order-forecast', () => renderWorkOrderForecast(), '予定売上');
       }
       safeRenderSection('work-order-week-list', () => renderWorkOrderWeekList(), '今週の作業予定');
       safeRenderSection('work-order-today-list', () => renderWorkOrderTodayList(), '今日の作業予定');
@@ -10757,27 +10757,32 @@
     const el = document.getElementById('profit-summary');
     if (!el) return;
     const s = ctx.summary;
+    const m = getSharedMonthlyMetrics({ monthKey: s.monthKey });
     const expenseCount = ProfitBrain.filterMonthExpenses(ctx.expenses || [], s.monthKey).length;
     const monthlyNote = s.usesMonthlyResult && s.aggregationSourceNote
       ? `<p class="profit-monthly-source-note">${esc(s.aggregationSourceNote)}</p>`
       : '';
-    const flowNote = `<p class="profit-flow-note">利益は「売上 − 経費」で確認します。月次実績がある月は月次実績ベースの経営数字を優先表示します。日々の経費入力は支出明細として保存されます。</p>`;
+    const flowNote = `<p class="profit-flow-note">利益は「合計売上 − 今月経費」で確認します。月次実績がある月は月次実績ベースの経営数字を優先表示します。日々の経費入力は支出明細として保存されます。</p>`;
     const aggBadge = `<p class="profit-aggregation-label">集計：<strong>${esc(s.usesMonthlyResult ? '月次実績ベース' : '明細ベース')}</strong></p>`;
-    const profitRevLabel = s.usesMonthlyResult ? '今月売上' : '今月の確定売上';
-    const profitRevValue = s.usesMonthlyResult
-      ? s.monthRevenue
-      : (s.confirmedRevenue != null ? s.confirmedRevenue : s.monthRevenue);
     let monthlyBrief = '';
     if (!s.usesMonthlyResult && typeof RevenueSummaryBrain !== 'undefined') {
       const monthly = RevenueSummaryBrain.buildMonthlySummary(
         RevenueSummaryBrain.confirmedRecords(Storage.getRevenueRecords())
       ).slice(0, 3);
       if (monthly.length) {
-        monthlyBrief = `<div class="profit-monthly-brief"><p class="profit-monthly-brief-title">月別確定売上（直近）</p>${monthly.map(m =>
-          `<p class="profit-monthly-brief-line">${esc(m.label)}：${esc(RevenueSummaryBrain.formatYen(m.total))} / ${m.count}件</p>`
+        monthlyBrief = `<div class="profit-monthly-brief"><p class="profit-monthly-brief-title">月別確定売上（直近）</p>${monthly.map(item =>
+          `<p class="profit-monthly-brief-line">${esc(item.label)}：${esc(RevenueSummaryBrain.formatYen(item.total))} / ${item.count}件</p>`
         ).join('')}</div>`;
       }
     }
+    const baseItems = [
+      { label: '確定売上', value: RevenueBrain.formatYen(m.confirmedRevenue), extraClass: 'profit-summary-highlight' },
+      { label: '予定売上', value: RevenueBrain.formatYen(m.scheduledRevenue ?? m.plannedAdditionalRevenue ?? 0) },
+      { label: '合計売上', value: RevenueBrain.formatYen(m.totalRevenue ?? m.plannedRevenue ?? 0) },
+      { label: '今月経費', value: RevenueBrain.formatYen(m.monthExpense) },
+      { label: '確定利益', value: RevenueBrain.formatYen(m.confirmedProfit) },
+      { label: '合計利益', value: RevenueBrain.formatYen(m.totalProfit ?? m.plannedProfit ?? 0), extraClass: 'profit-summary-total-profit' }
+    ];
     el.innerHTML = `
       ${flowNote}
       ${aggBadge}
@@ -10797,30 +10802,11 @@
         })
         : ''}
       <div class="profit-summary-grid">
-      <div class="profit-summary-item profit-summary-highlight"><span>今月利益</span><strong>${esc(ProfitBrain.formatYen(s.monthGrossProfit))}</strong></div>
-      <div class="profit-summary-item"><span>利益率</span><strong>${esc(ProfitBrain.formatRate(s.monthGrossRate))}</strong></div>
-      <div class="profit-summary-item"><span>${profitRevLabel}</span><strong>${esc(ProfitBrain.formatYen(profitRevValue))}</strong></div>
-      <div class="profit-summary-item"><span>今月経費</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
+      ${baseItems.map(item => `
+      <div class="profit-summary-item ${item.extraClass || ''}"><span>${esc(item.label)}</span><strong>${esc(item.value)}</strong></div>`).join('')}
       <div class="profit-summary-item"><span>経費入力</span><strong>今月${expenseCount}件</strong></div>
       </div>
       ${monthlyBrief}
-      <div class="profit-forecast-breakdown">
-        <p class="profit-breakdown-section-label">予定</p>
-        <div class="profit-breakdown-grid">
-          <div class="profit-summary-item"><span>予定売上見込み</span><strong>${esc(ProfitBrain.formatYen(s.plannedRevenueEstimate))}</strong></div>
-          <div class="profit-summary-item"><span>見込み利益</span><strong>${esc(ProfitBrain.formatYen(s.plannedForecastProfit))}</strong></div>
-        </div>
-        <p class="profit-breakdown-section-label">確定</p>
-        <div class="profit-breakdown-grid">
-          <div class="profit-summary-item"><span>確定売上</span><strong>${esc(ProfitBrain.formatYen(s.confirmedRevenue))}</strong></div>
-          <div class="profit-summary-item"><span>確定利益</span><strong>${esc(ProfitBrain.formatYen(s.confirmedProfit))}</strong></div>
-        </div>
-        <p class="profit-breakdown-section-label">合計</p>
-        <div class="profit-breakdown-grid">
-          <div class="profit-summary-item"><span>合計売上</span><strong>${esc(ProfitBrain.formatYen(s.totalRevenue))}</strong></div>
-          <div class="profit-summary-item profit-summary-total-profit"><span>合計利益</span><strong>${esc(ProfitBrain.formatYen(s.totalProfit))}</strong></div>
-        </div>
-      </div>
       <div class="profit-summary-grid profit-summary-secondary">
       <div class="profit-summary-item"><span>仲介料・控除（粗利率）</span><strong>${esc(ProfitBrain.formatYen(s.marginDeductionTotal || 0))}</strong></div>
       <div class="profit-summary-item"><span>広告費</span><strong>${esc(ProfitBrain.formatYen(s.adExpense))}</strong></div>
@@ -11099,9 +11085,9 @@
         ${titleBlock}
         ${noteBlock}
         <ul class="revenue-flow-diagnostics-stats">
-          <li><span>今月売上：</span><strong>${esc(ProfitBrain.formatYen(check.monthRevenue))}</strong></li>
+          <li><span>合計売上：</span><strong>${esc(ProfitBrain.formatYen(check.monthRevenue))}</strong></li>
           <li><span>今月経費：</span><strong>${esc(ProfitBrain.formatYen(check.monthExpense))}</strong></li>
-          <li><span>今月利益：</span><strong>${esc(ProfitBrain.formatYen(check.monthProfit))}</strong></li>
+          <li><span>合計利益：</span><strong>${esc(ProfitBrain.formatYen(check.monthProfit))}</strong></li>
           <li><span>売上確定待ち：</span><strong>${esc(queueLabel)}</strong></li>
           <li><span>売上予定（未確定）：</span><strong>${esc(upcomingLabel)}</strong></li>
           <li><span>月次実績：</span><strong>${esc(check.monthlyResultLabel)}</strong></li>
@@ -11145,9 +11131,9 @@
       : '<p class="revenue-flow-diagnostics-note">読み取り専用です。データの修正・削除・自動同期は行いません。</p>';
     const defsBlock = isCompact ? '' : `
         <dl class="revenue-flow-diagnostics-defs">
-          <div><dt>売上</dt><dd>確定売上明細、または月次実績の売上です。</dd></div>
-          <div><dt>経費</dt><dd>経費入力で保存した支出明細です。</dd></div>
-          <div><dt>利益</dt><dd>売上 − 経費で確認します。</dd></div>
+          <div><dt>合計売上</dt><dd>確定売上明細と予定売上の合計、または月次実績の合計売上です。</dd></div>
+          <div><dt>今月経費</dt><dd>経費入力で保存した支出明細の当月合計です。</dd></div>
+          <div><dt>合計利益</dt><dd>合計売上 − 今月経費で確認します。</dd></div>
           <div><dt>月次実績</dt><dd>ある月は月次実績ベースを優先表示します（売上明細とは別管理）。</dd></div>
         </dl>`;
     const nextBlock = suppressAction
@@ -11162,9 +11148,9 @@
         ${titleBlock}
         ${noteBlock}
         <ul class="revenue-flow-diagnostics-stats">
-          <li><span>今月利益：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthProfit))}</strong></li>
+          <li><span>合計利益：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthProfit))}</strong></li>
           <li><span>利益率：</span><strong>${esc(ProfitBrain.formatRate(diagnostics.monthProfitRate))}</strong></li>
-          <li><span>今月売上：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthRevenue))}</strong></li>
+          <li><span>合計売上：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthRevenue))}</strong></li>
           <li><span>今月経費：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthExpense))}</strong></li>
           <li><span>経費入力：</span><strong>今月${expenseCount}件</strong></li>
           ${isCompact ? '' : `<li><span>集計：</span><strong>${esc(diagnostics.aggregationLabel)}</strong></li>
@@ -11238,7 +11224,7 @@
     if (!el) return;
     const rows = ctx.workOrderRows || [];
     if (!rows.length) {
-      el.innerHTML = '<p class="placeholder-text">見込み利益のある作業予定はありません。</p>';
+      el.innerHTML = '<p class="placeholder-text">粗利試算のある作業予定はありません。</p>';
       return;
     }
     el.innerHTML = rows.map(r => `
@@ -11248,7 +11234,7 @@
           <span>${esc(r.scheduledDate || '—')}</span>
           ${r.distanceLabel ? `<span class="profit-distance-badge">${esc(r.distanceLabel)}</span>` : ''}
         </div>
-        <p class="profit-meta">${esc(r.serviceText || '—')} / 見込み${esc(ProfitBrain.formatYen(r.estimate))} / 支出${esc(ProfitBrain.formatYen(r.expenseTotal))} / 利益${esc(ProfitBrain.formatYen(r.forecastProfit))}</p>
+        <p class="profit-meta">${esc(r.serviceText || '—')} / 予定売上${esc(ProfitBrain.formatYen(r.estimate))} / 支出${esc(ProfitBrain.formatYen(r.expenseTotal))} / 粗利${esc(ProfitBrain.formatYen(r.forecastProfit))}</p>
         <p class="profit-meta">エリア：${esc(r.area || '—')}</p>
         ${r.cautionText ? `<p class="profit-caution">${esc(r.cautionText)}</p>` : ''}
         ${r.mapUrl ? `<a href="${esc(r.mapUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary">Googleマップで開く</a>` : ''}
@@ -11292,7 +11278,7 @@
           ${r.farCaution ? '<span class="profit-distance-badge">遠方注意</span>' : ''}
         </div>
         <p class="profit-meta">売上${esc(ProfitBrain.formatYen(r.revenueTotal))} / 支出${esc(ProfitBrain.formatYen(r.expenseTotal))} / 粗利${esc(ProfitBrain.formatYen(r.grossProfit))}</p>
-        <p class="profit-meta">作業予定見込み：${esc(ProfitBrain.formatYen(r.workOrderEstimate))}</p>
+        <p class="profit-meta">予定売上：${esc(ProfitBrain.formatYen(r.workOrderEstimate))}</p>
         <p class="profit-comment">${esc(r.comment || '')}</p>
       </div>`).join('');
   }
@@ -12943,7 +12929,7 @@
           ${renderAreaDistanceBadge(row.area, row.area)}
         </div>
         <p class="area-summary-meta">営業先：${row.leadCount}件 / 受付：${row.intakeCount}件 / 作業予定：${row.workOrderCount || 0}件 / 売上：${esc(RevenueBrain.formatYen(row.revenueTotal))}</p>
-        <p class="area-summary-meta">今日の作業：${row.todayWorkOrders || 0}件 / 今週：${row.weekWorkOrders || 0}件 / 見込み：${esc(RevenueBrain.formatYen(row.workOrderEstimate || 0))}</p>
+        <p class="area-summary-meta">今日の作業：${row.todayWorkOrders || 0}件 / 今週：${row.weekWorkOrders || 0}件 / 予定売上：${esc(RevenueBrain.formatYen(row.workOrderEstimate || 0))}</p>
         <p class="area-summary-meta">次：${nextParts.length ? esc(nextParts.join('、')) : '—'}</p>
         <div class="map-actions-inline">
           ${areaUrl ? `<a href="${esc(areaUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary">Googleマップでエリア検索</a>` : ''}
@@ -13054,7 +13040,7 @@
       return `
       <div class="area-summary-card">
         <strong>${esc(area)}</strong> ${renderAreaDistanceBadge(area, area)}
-        <p class="area-summary-meta">作業予定 ${list.length}件 / 今日 ${todayCount}件 / 今週 ${weekCount}件 / 見込み ${esc(WorkOrderBrain.formatYen(estimate))}</p>
+        <p class="area-summary-meta">作業予定 ${list.length}件 / 今日 ${todayCount}件 / 今週 ${weekCount}件 / 予定売上 ${esc(WorkOrderBrain.formatYen(estimate))}</p>
       </div>`;
     }).join('');
   }
@@ -16279,7 +16265,7 @@
     const thisMonthLabel = compact.usesMonthlyResultThisMonth ? '今月実績（月次実績ベース）' : '今月確定売上';
     const scopeNote = compact.usesMonthlyResultThisMonth
       ? '月次実績がある月は月次実績ベースで表示します。明細売上とは別管理です。'
-      : '確定売上のみ集計（売上確定済みの明細のみ）。見込み・候補は含みません。';
+      : '確定売上のみ集計（売上確定済みの明細のみ）。予定・候補は含みません。';
     const monthlyBreakdown = compact.usesMonthlyResultThisMonth
       ? `<p class="reconciliation-brief-line">明細売上合計：${esc(RevenueSummaryBrain.formatYen(thisMonthView.detailTotal || 0))} / 差額：${esc(RevenueSummaryBrain.formatYen(thisMonthView.diff || 0))}</p>
          ${thisMonthView.status === '差額あり' ? '<p class="reconciliation-brief-warn">※この月は月次実績と売上明細が一致していません。</p>' : ''}

@@ -46,10 +46,10 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 // --- バージョン確認 ---
-assert(indexHtml.includes('v4.11.3'), 'index.html should show v4.11.3');
-assert(indexHtml.includes('js/app.js?v=4.11.3'), 'app.js cache buster should be v4.11.3');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.3'"), 'storage.js version should be v4.11.3');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.3'"), 'data-backup version should be v4.11.3');
+assert(indexHtml.includes('v4.11.4'), 'index.html should show v4.11.4');
+assert(indexHtml.includes('js/app.js?v=4.11.4'), 'app.js cache buster should be v4.11.4');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.4'"), 'storage.js version should be v4.11.4');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.4'"), 'data-backup version should be v4.11.4');
 assert(statusMd.includes('v4.10.25'), 'status.md should document v4.10.25');
 assert(handoffMd.includes('v4.10.25'), 'handoff.md should document v4.10.25');
 assert(decisionLog.includes('v4.10.25'), 'decision-log.md should record v4.10.25');
@@ -75,12 +75,12 @@ assert(revenueSummaryBrainJs.includes('isConfirmedRevenueRecord'), 'RevenueSumma
 
 // --- UI表示ラベルの整合確認 ---
 console.log('== UI label consistency check ==');
-assert(appJs.includes('予定売上見込み'), 'app.js should show 予定売上見込み');
-assert(appJs.includes('確定売上'), 'app.js should show 確定売上');
+assert(appJs.includes("label: '確定売上'"), 'app.js should show 確定売上');
+assert(appJs.includes("label: '予定売上'"), 'app.js should show 予定売上');
 assert(appJs.includes('合計売上'), 'app.js should show 合計売上');
-assert(appJs.includes('見込み利益'), 'app.js should show 見込み利益');
-assert(appJs.includes('確定利益'), 'app.js should show 確定利益');
 assert(appJs.includes('合計利益'), 'app.js should show 合計利益');
+assert(!appJs.includes('予定売上見込み'), 'app.js must not show 予定売上見込み');
+assert(!appJs.includes('見込み利益'), 'app.js must not show 見込み利益');
 // 月次実績なし時は summary.confirmed（確定売上）を表示
 assert(appJs.includes('summary.confirmed'), 'app.js should use summary.confirmed for confirmed revenue display');
 // summary.total を合計売上として使用
