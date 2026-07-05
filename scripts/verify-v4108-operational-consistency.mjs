@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Budil v4.10.20 — operational flow and label consistency verification.
  */
 import { readFileSync } from 'node:fs';
@@ -22,8 +22,8 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.11.4'), 'index.html should show v4.11.4');
-assert(indexHtml.includes('js/app.js?v=4.11.4'), 'app.js cache buster should be v4.11.4');
+assert(indexHtml.includes('v4.11.5'), 'index.html should show v4.11.5');
+assert(indexHtml.includes('js/app.js?v=4.11.5'), 'app.js cache buster should be v4.11.5');
 
 assert(indexHtml.includes('id="exec-home-revenue-queue-list"'), 'executive home should show revenue queue');
 assert(indexHtml.includes('id="exec-home-upcoming-schedule-main"'), 'executive home should show upcoming schedule');

@@ -1,5 +1,5 @@
 /**
- * Budil v4.11.4 - clarify monthly total and scheduled metrics verification.
+ * Budil v4.11.5 - clarify monthly total and scheduled metrics verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -23,7 +23,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.11.4 clarify-monthly-total-scheduled-metrics ==');
+console.log('== v4.11.5 clarify-monthly-total-scheduled-metrics ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -41,20 +41,20 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.4'), 'index.html should show v4.11.4');
-assert(indexHtml.includes('js/app.js?v=4.11.4'), 'app.js cache buster should be v4.11.4');
-assert(indexHtml.includes('js/revenue-brain.js?v=4.11.4'), 'revenue-brain cache buster should be v4.11.4');
-assert(indexHtml.includes('js/executive-brain.js?v=4.11.4'), 'executive-brain cache buster should be v4.11.4');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.4'"), 'storage.js version should be v4.11.4');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.4'"), 'data-backup version should be v4.11.4');
-assert(statusMd.includes('v4.11.4'), 'status.md should document v4.11.4');
-assert(handoffMd.includes('v4.11.4'), 'handoff.md should document v4.11.4');
-assert(decisionLog.includes('v4.11.4'), 'decision-log.md should record v4.11.4');
+assert(indexHtml.includes('v4.11.5'), 'index.html should show v4.11.5');
+assert(indexHtml.includes('js/app.js?v=4.11.5'), 'app.js cache buster should be v4.11.5');
+assert(indexHtml.includes('js/revenue-brain.js?v=4.11.5'), 'revenue-brain cache buster should be v4.11.5');
+assert(indexHtml.includes('js/executive-brain.js?v=4.11.5'), 'executive-brain cache buster should be v4.11.5');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.5'"), 'storage.js version should be v4.11.5');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.5'"), 'data-backup version should be v4.11.5');
+assert(statusMd.includes('v4.11.5'), 'status.md should document v4.11.5');
+assert(handoffMd.includes('v4.11.5'), 'handoff.md should document v4.11.5');
+assert(decisionLog.includes('v4.11.5'), 'decision-log.md should record v4.11.5');
 
 console.log('== shared metrics fields ==');
 assert(revenueBrainJs.includes('scheduledRevenue = plannedAdditionalRevenue'), 'scheduledRevenue should alias plannedAdditionalRevenue');
 assert(revenueBrainJs.includes('totalRevenue = confirmedRevenue + plannedAdditionalRevenue'), 'totalRevenue should sum confirmed and scheduled');
-assert(revenueBrainJs.includes('totalProfit = totalRevenue - monthExpense'), 'totalProfit should be totalRevenue minus expense');
+assert(revenueBrainJs.includes('totalProfit = confirmedGrossProfit + scheduledGrossProfit - monthExpense'), 'totalProfit should use gross shares minus expense');
 assert(revenueBrainJs.includes('plannedRevenue = totalRevenue'), 'plannedRevenue should remain legacy alias of totalRevenue');
 assert(revenueBrainJs.includes('plannedProfit = totalProfit'), 'plannedProfit should remain legacy alias of totalProfit');
 assert(revenueBrainJs.includes('monthlyTarget - totalRevenue'), 'remainingToTarget should use totalRevenue');
@@ -66,10 +66,9 @@ assert(appJs.includes("label: '合計売上'"), 'revenue summary should show 合
 assert(appJs.includes("label: '確定利益'"), 'revenue summary should show 確定利益 label');
 assert(appJs.includes("label: '合計利益'"), 'revenue summary should show 合計利益 label');
 assert(appJs.includes("label: '今月経費'"), 'revenue summary should show 今月経費 label');
-assert(!appJs.includes("label: '予定利益'"), 'revenue summary must not show 予定利益 label');
+assert(appJs.includes("label: '予定利益'"), 'revenue summary should show 予定利益 label');
 assert(!appJs.includes("label: '確定', value:"), 'revenue summary must not keep standalone 確定 label');
 assert(!appJs.includes("{ label: '予定売上', value: RevenueBrain.formatYen(m.plannedRevenue)"), '予定売上 must not use plannedRevenue for display');
-assert(!appJs.includes('予定利益：'), 'revenue summary html must not show 予定利益');
 
 console.log('== executive home labels ==');
 assert(appJs.includes('<span>合計売上</span>'), 'executive home should show 合計売上');
@@ -79,15 +78,16 @@ assert(appJs.includes('<span>予定売上</span>'), 'executive home should show 
 assert(appJs.includes('<span>今月経費</span>'), 'executive home should show 今月経費');
 assert(!appJs.includes('今月合計売上'), 'executive home must not show 今月合計売上');
 assert(!appJs.includes('今月合計利益'), 'executive home must not show 今月合計利益');
-assert(!appJs.includes('今月予定利益'), 'executive home must not show 今月予定利益');
+assert(appJs.includes('<span>予定利益</span>'), 'executive home should show 予定利益');
 assert(executiveBrainJs.includes("monthRevenueLabel = '合計売上'"), 'executive monthRevenueLabel should be 合計売上');
 
 console.log('== untouched files ==');
-assert(!css.includes('v4.11.4'), 'css must not change for v4.11.4');
-assert(!receptionJs.includes('buildSharedMonthlyMetrics'), 'reception-brain must not change for v4.11.4');
-assert(!documentsJs.includes('buildSharedMonthlyMetrics'), 'documents-brain must not change for v4.11.4');
-assert(!followJs.includes('buildSharedMonthlyMetrics'), 'follow-up-brain must not change for v4.11.4');
-assert(!profitBrainJs.includes('buildSharedMonthlyMetrics'), 'profit-brain must not define shared metrics');
+assert(!css.includes('v4.11.5'), 'css must not change for v4.11.5');
+assert(!receptionJs.includes('buildSharedMonthlyMetrics'), 'reception-brain must not change for v4.11.5');
+assert(!documentsJs.includes('buildSharedMonthlyMetrics'), 'documents-brain must not change for v4.11.5');
+assert(!followJs.includes('buildSharedMonthlyMetrics'), 'follow-up-brain must not change for v4.11.5');
+assert(profitBrainJs.includes('getSharedMonthlyMetricsForProfit'), 'profit-brain should delegate to RevenueBrain shared metrics');
+assert(!profitBrainJs.includes('buildSharedMonthlyMetrics(ctx)'), 'profit-brain must not define its own buildSharedMonthlyMetrics');
 
 function createSandbox() {
   const sandbox = {
@@ -117,12 +117,12 @@ console.log('== numeric definition tests ==');
     const TODAY = '2026-07-05';
     const monthKey = '2026-07';
     const records = [
-      { id: 'r1', workDate: '2026-07-03', amount: 25000, status: '確定', paymentStatus: 'paid' },
+      { id: 'r1', workDate: '2026-07-03', amount: 25000, source: '直請け', status: '確定', paymentStatus: 'paid' },
       { id: 'r2', workDate: '2026-07-04', amount: 8000, status: '予定', paymentStatus: 'pending' },
       { id: 'r3', workDate: '2026-07-06', amount: 5000, status: 'キャンセル', paymentStatus: 'pending' }
     ];
     const workOrders = [
-      { id: 'wo1', scheduledDate: '2026-07-07', estimateAmount: 32670, status: 'tentative' },
+      { id: 'wo1', scheduledDate: '2026-07-07', estimateAmount: 32670, source: '直請け', status: 'tentative' },
       { id: 'wo2', scheduledDate: '2026-07-10', estimateAmount: 15000, status: 'tentative', actualRevenueId: 'linked' },
       { id: 'wo3', scheduledDate: '2026-07-12', estimateAmount: 0, status: 'tentative' },
       { id: 'wo4', scheduledDate: '2026-07-15', estimateAmount: 12000, status: 'completed' }
@@ -152,7 +152,7 @@ console.log('== numeric definition tests ==');
   assert(result.shared.totalRevenue === result.shared.confirmedRevenue + result.shared.scheduledRevenue, 'totalRevenue should equal confirmed + scheduled');
   assert(result.shared.plannedRevenue === result.shared.totalRevenue, 'plannedRevenue legacy alias should equal totalRevenue');
   assert(result.shared.totalProfit === 54670, `totalProfit should be 54670, got ${result.shared.totalProfit}`);
-  assert(result.shared.totalProfit === result.shared.totalRevenue - result.shared.monthExpense, 'totalProfit should be totalRevenue minus expense');
+  assert(result.shared.totalProfit === result.shared.confirmedGrossProfit + result.shared.scheduledGrossProfit - result.shared.monthExpense, 'totalProfit should use gross shares minus expense');
   assert(result.shared.plannedProfit === result.shared.totalProfit, 'plannedProfit legacy alias should equal totalProfit');
   assert(result.shared.remainingToTarget === 42330, `remainingToTarget should be 42330, got ${result.shared.remainingToTarget}`);
   assert(result.shared.achievementRate === 58, `achievementRate should be 58, got ${result.shared.achievementRate}`);
@@ -166,4 +166,4 @@ console.log('== numeric definition tests ==');
 
 execSync('node scripts/verify-v4112-unified-monthly-metrics.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('\nAll v4.11.4 clarify-monthly-total-scheduled-metrics checks passed.');
+console.log('\nAll v4.11.5 clarify-monthly-total-scheduled-metrics checks passed.');

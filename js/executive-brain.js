@@ -426,6 +426,7 @@ const ExecutiveBrain = {
       monthRevenueLabel,
       confirmedRevenue: shared.confirmedRevenue || 0,
       confirmedProfit: shared.confirmedProfit || 0,
+      scheduledProfit: shared.scheduledProfit || 0,
       scheduledRevenue: shared.scheduledRevenue || shared.plannedAdditionalRevenue || 0,
       totalRevenue: shared.totalRevenue || shared.plannedRevenue || 0,
       totalProfit: shared.totalProfit || shared.plannedProfit || 0,
@@ -611,7 +612,7 @@ const ExecutiveBrain = {
       title: '売上・利益',
       lines: [
         `合計売上 ${RevenueBrain.formatYen(rp.totalRevenue != null ? rp.totalRevenue : rp.monthRevenue)} / 目標 ${RevenueBrain.formatYen(rp.monthlyTarget)}（${rp.achievementRate}%）`,
-        `合計利益 ${ProfitBrain.formatYen(rp.totalProfit != null ? rp.totalProfit : rp.grossProfit)} / 確定利益 ${ProfitBrain.formatYen(rp.confirmedProfit || 0)}`,
+        `合計利益 ${ProfitBrain.formatYen(rp.totalProfit != null ? rp.totalProfit : rp.grossProfit)} / 確定利益 ${ProfitBrain.formatYen(rp.confirmedProfit || 0)} / 予定利益 ${ProfitBrain.formatYen(rp.scheduledProfit || 0)}`,
         `今月経費 ${ProfitBrain.formatYen(rp.monthExpense)}`,
         rp.completedNoRevenue ? `作業日経過・売上未確定 ${rp.completedNoRevenue}件` : ''
       ].filter(Boolean)

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Budil v4.10.25 — 請求書・見積書画面 視認性・入力しやすさ verification.
  */
 import { readFileSync } from 'node:fs';
@@ -28,11 +28,11 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 // --- バージョン ---
-assert(indexHtml.includes('v4.11.4'), 'index.html should show v4.11.4');
-assert(indexHtml.includes('js/app.js?v=4.11.4'), 'app.js cache buster should be v4.11.4');
+assert(indexHtml.includes('v4.11.5'), 'index.html should show v4.11.5');
+assert(indexHtml.includes('js/app.js?v=4.11.5'), 'app.js cache buster should be v4.11.5');
 assert(indexHtml.includes('css/style.css?v=4.10.41'), 'css cache buster should be v4.10.41');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.4'"), 'storage.js version should be v4.11.4');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.4'"), 'data-backup version should be v4.11.4');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.5'"), 'storage.js version should be v4.11.5');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.5'"), 'data-backup version should be v4.11.5');
 assert(statusMd.includes('v4.10.25'), 'status.md should document v4.10.25');
 assert(statusMd.includes('v4.10.26'), 'status.md should document v4.10.26');
 assert(statusMd.includes('v4.10.38'), 'status.md should document v4.10.27');

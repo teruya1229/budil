@@ -1007,6 +1007,7 @@
         <div><span>確定売上</span><strong>${esc(RevenueBrain.formatYen(s.confirmedRevenue || 0))}</strong></div>
         <div><span>予定売上</span><strong>${esc(RevenueBrain.formatYen(s.scheduledRevenue || 0))}</strong></div>
         <div><span>確定利益</span><strong>${esc(ProfitBrain.formatYen(s.confirmedProfit || 0))}</strong></div>
+        <div><span>予定利益</span><strong>${esc(ProfitBrain.formatYen(s.scheduledProfit || 0))}</strong></div>
         ${isCompact ? '' : `<div><span>月間目標</span><strong>${esc(RevenueBrain.formatYen(s.monthlyTarget))}</strong></div>
         <div><span>達成率</span><strong>${s.achievementRate}%</strong></div>`}
         <div><span>今月経費</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
@@ -1673,7 +1674,7 @@
         <p class="mgmt-profit-label">売上・利益：</p>
         <ul class="mgmt-profit-list">
           <li>合計売上 ${esc(RevenueBrain.formatYen(rp.totalRevenue != null ? rp.totalRevenue : rp.monthRevenue))} / 目標 ${esc(RevenueBrain.formatYen(rp.monthlyTarget))}（${rp.achievementRate}%）</li>
-          <li>合計利益 ${esc(ProfitBrain.formatYen(rp.totalProfit != null ? rp.totalProfit : rp.grossProfit))} / 確定利益 ${esc(ProfitBrain.formatYen(rp.confirmedProfit || 0))}</li>
+          <li>合計利益 ${esc(ProfitBrain.formatYen(rp.totalProfit != null ? rp.totalProfit : rp.grossProfit))} / 確定利益 ${esc(ProfitBrain.formatYen(rp.confirmedProfit || 0))} / 予定利益 ${esc(ProfitBrain.formatYen(rp.scheduledProfit || 0))}</li>
           <li>今月経費 ${esc(ProfitBrain.formatYen(rp.monthExpense))}</li>
           ${rp.completedNoRevenue ? `<li>作業日経過・売上未確定 ${rp.completedNoRevenue}件</li>` : ''}
         </ul>`;
@@ -10762,7 +10763,7 @@
     const monthlyNote = s.usesMonthlyResult && s.aggregationSourceNote
       ? `<p class="profit-monthly-source-note">${esc(s.aggregationSourceNote)}</p>`
       : '';
-    const flowNote = `<p class="profit-flow-note">利益は「合計売上 − 今月経費」で確認します。月次実績がある月は月次実績ベースの経営数字を優先表示します。日々の経費入力は支出明細として保存されます。</p>`;
+    const flowNote = `<p class="profit-flow-note">利益は「確定粗利＋予定粗利 − 今月経費」で確認します。依頼元別の取り分率を反映しています。月次実績がある月は月次実績ベースの経営数字を優先表示します。日々の経費入力は支出明細として保存されます。</p>`;
     const aggBadge = `<p class="profit-aggregation-label">集計：<strong>${esc(s.usesMonthlyResult ? '月次実績ベース' : '明細ベース')}</strong></p>`;
     let monthlyBrief = '';
     if (!s.usesMonthlyResult && typeof RevenueSummaryBrain !== 'undefined') {
@@ -10781,6 +10782,7 @@
       { label: '合計売上', value: RevenueBrain.formatYen(m.totalRevenue ?? m.plannedRevenue ?? 0) },
       { label: '今月経費', value: RevenueBrain.formatYen(m.monthExpense) },
       { label: '確定利益', value: RevenueBrain.formatYen(m.confirmedProfit) },
+      { label: '予定利益', value: RevenueBrain.formatYen(m.scheduledProfit ?? 0) },
       { label: '合計利益', value: RevenueBrain.formatYen(m.totalProfit ?? m.plannedProfit ?? 0), extraClass: 'profit-summary-total-profit' }
     ];
     el.innerHTML = `
@@ -11112,7 +11114,9 @@
     const diagnostics = ProfitBrain.buildProfitOperationsDiagnostics(ctx, {
       today: TODAY(),
       monthlyResults: Storage.getMonthlyResults(),
-      revenues: Storage.getRevenueRecords()
+      revenues: Storage.getRevenueRecords(),
+      workOrders: Storage.getWorkOrders(),
+      expenses: ctx.expenses || Storage.getExpenseRecords()
     });
     const monthExpenses = ProfitBrain.filterMonthExpenses(ctx.expenses || [], diagnostics.monthKey);
     const expenseCount = monthExpenses.length;
@@ -11133,7 +11137,7 @@
         <dl class="revenue-flow-diagnostics-defs">
           <div><dt>合計売上</dt><dd>確定売上明細と予定売上の合計、または月次実績の合計売上です。</dd></div>
           <div><dt>今月経費</dt><dd>経費入力で保存した支出明細の当月合計です。</dd></div>
-          <div><dt>合計利益</dt><dd>合計売上 − 今月経費で確認します。</dd></div>
+          <div><dt>合計利益</dt><dd>確定粗利＋予定粗利 − 今月経費で確認します（依頼元別取り分率を反映）。</dd></div>
           <div><dt>月次実績</dt><dd>ある月は月次実績ベースを優先表示します（売上明細とは別管理）。</dd></div>
         </dl>`;
     const nextBlock = suppressAction
@@ -16425,6 +16429,7 @@
         { label: '入金待ち', value: RevenueBrain.formatYen(m.unpaidAmount) },
         { label: '今月経費', value: RevenueBrain.formatYen(m.monthExpense) },
         { label: '確定利益', value: RevenueBrain.formatYen(m.confirmedProfit) },
+        { label: '予定利益', value: RevenueBrain.formatYen(m.scheduledProfit ?? 0) },
         { label: '合計利益', value: RevenueBrain.formatYen(m.totalProfit ?? m.plannedProfit ?? 0) },
         { label: '月間目標', value: RevenueBrain.formatYen(m.monthlyTarget) },
         { label: '目標まで残り', value: RevenueBrain.formatYen(m.remainingToTarget) },

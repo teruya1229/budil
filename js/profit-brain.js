@@ -634,6 +634,20 @@ const ProfitBrain = {
     return this.buildSourceRows(revenues, expenses, workOrders, intakes);
   },
 
+  getSharedMonthlyMetricsForProfit(ctx, opts) {
+    if (typeof RevenueBrain === 'undefined') return null;
+    const today = (ctx && ctx.today) || (opts && opts.today) || new Date().toISOString().slice(0, 10);
+    const monthKey = (ctx && ctx.monthKey) || (opts && opts.monthKey) || this.currentMonthKey(today);
+    return RevenueBrain.buildSharedMonthlyMetrics({
+      records: RevenueBrain.normalizeRevenueRecords((ctx && ctx.revenues) || (opts && opts.revenues) || []),
+      settings: (opts && opts.settings) || {},
+      workOrders: (ctx && ctx.workOrders) || (opts && opts.workOrders) || [],
+      expenses: (ctx && ctx.expenses) || (opts && opts.expenses) || [],
+      today,
+      monthKey
+    });
+  },
+
   buildProfitContext(ctx) {
     const today = ctx.today || new Date().toISOString().slice(0, 10);
     const baseSummary = this.getPeriodProfitSummary(ctx);
@@ -868,8 +882,18 @@ const ProfitBrain = {
     const expenseInputCount = monthExpenses.length;
     const expenseBreakdown = this.buildMonthExpenseBreakdown(expenses, monthKey);
     const aggregationLabel = summary.usesMonthlyResult ? '月次実績ベース' : '明細ベース';
-    const revenue = Number(summary.totalRevenue != null ? summary.totalRevenue : summary.monthRevenue) || 0;
-    const profit = Number(summary.totalProfit != null ? summary.totalProfit : summary.monthGrossProfit) || 0;
+    const sharedMetrics = !summary.usesMonthlyResult
+      ? this.getSharedMonthlyMetricsForProfit(profitCtx, opts)
+      : null;
+    const revenue = sharedMetrics
+      ? Number(sharedMetrics.totalRevenue) || 0
+      : Number(summary.totalRevenue != null ? summary.totalRevenue : summary.monthRevenue) || 0;
+    const monthExpenseValue = sharedMetrics
+      ? Number(sharedMetrics.monthExpense) || 0
+      : Number(summary.monthExpense) || 0;
+    const profit = sharedMetrics
+      ? Number(sharedMetrics.totalProfit) || 0
+      : Number(summary.totalProfit != null ? summary.totalProfit : summary.monthGrossProfit) || 0;
     const profitRate = revenue > 0 ? Math.round((profit / revenue) * 100) : (Number(summary.monthGrossRate) || 0);
 
     let reconciliationLabel = '—';
@@ -958,7 +982,7 @@ const ProfitBrain = {
     return {
       monthKey,
       monthRevenue: revenue,
-      monthExpense: Number(summary.monthExpense) || 0,
+      monthExpense: monthExpenseValue,
       monthProfit: profit,
       monthProfitRate: profitRate,
       expenseInputCount,
@@ -971,7 +995,7 @@ const ProfitBrain = {
       statusMessage,
       nextAction,
       primaryAction,
-      flowNote: '売上確定→経費入力→利益集計→経費内訳。月次実績がある月は月次実績ベースを優先表示します。'
+      flowNote: '売上確定→経費入力→利益集計→経費内訳。月次実績がある月は月次実績ベースを優先表示します。明細ベースの合計利益は確定粗利＋予定粗利−今月経費です。'
     };
   },
 
@@ -1018,9 +1042,25 @@ const ProfitBrain = {
       hasReconciliationGap = row.status === '差額あり';
     }
 
-    const monthRevenue = Number(summary.totalRevenue != null ? summary.totalRevenue : summary.monthRevenue) || 0;
-    const monthExpense = Number(summary.monthExpense) || 0;
-    const monthProfit = Number(summary.totalProfit != null ? summary.totalProfit : summary.monthGrossProfit) || 0;
+    const sharedMetrics = !summary.usesMonthlyResult
+      ? this.getSharedMonthlyMetricsForProfit(profitCtx, {
+        today,
+        revenues,
+        expenses,
+        workOrders,
+        monthKey
+      })
+      : null;
+
+    const monthRevenue = sharedMetrics
+      ? Number(sharedMetrics.totalRevenue) || 0
+      : Number(summary.totalRevenue != null ? summary.totalRevenue : summary.monthRevenue) || 0;
+    const monthExpense = sharedMetrics
+      ? Number(sharedMetrics.monthExpense) || 0
+      : Number(summary.monthExpense) || 0;
+    const monthProfit = sharedMetrics
+      ? Number(sharedMetrics.totalProfit) || 0
+      : Number(summary.totalProfit != null ? summary.totalProfit : summary.monthGrossProfit) || 0;
     const isProfitable = monthProfit >= 0;
 
     const statusMessages = [];

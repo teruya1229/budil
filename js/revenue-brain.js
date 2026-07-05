@@ -11,16 +11,80 @@ const RevenueBrain = {
   ],
 
   DEFAULT_GROSS_MARGIN_RATES: {
-    'ヤマダ': 60,
+    'LP': 100,
+    '110番': 80,
     'くらしのマーケット': 80,
-    'LP': 100
+    'コープ': 80,
+    'ヤマダ': 60
+  },
+
+  normalizeRevenueSource(sourceText) {
+    const s = String(sourceText || '').trim();
+    if (!s || /^(未設定|不明|判定不能)$/.test(s)) return 'unknown';
+    if (s === 'その他') return 'unknown';
+    if (s === 'LP') return 'direct';
+    if (s === '110番') return 'coop';
+    if (s === 'くらしのマーケット') return 'market';
+    if (s === 'コープ') return 'coop';
+    if (s === 'ヤマダ') return 'yamada';
+    if (/直請|直受|自社|^line$|電話|既存客|自社line|airリザーブ|air/i.test(s)) return 'direct';
+    if (/紹介直|手数料なし/.test(s)) return 'referralDirect';
+    if (/^(紹介)$/.test(s)) return 'referralDirect';
+    if (/\blp\b|google|google検索|自社導線|ホームページ|\bhp\b|\bweb\b|サイト/i.test(s)) return 'direct';
+    if (/コープ|生協|\bcoop\b/i.test(s)) return 'coop';
+    if (/110番|片付け110|エアコン110番|生活110番/.test(s)) return 'coop';
+    if (/くらしのマーケット|くらマ|くらし/.test(s)) return 'market';
+    if (/ヤマダ|yamada/i.test(s)) return 'yamada';
+    return 'unknown';
+  },
+
+  getSourceProfitRate(sourceText) {
+    const category = this.normalizeRevenueSource(sourceText);
+    const rates = {
+      direct: 100,
+      referralDirect: 100,
+      coop: 80,
+      market: 80,
+      yamada: 60
+    };
+    if (category === 'unknown') {
+      return { rate: 0, reviewRequired: true, category: 'unknown' };
+    }
+    return { rate: rates[category], reviewRequired: false, category };
+  },
+
+  calculateNetRevenueBySource(amount, sourceText) {
+    const info = this.getSourceProfitRate(sourceText);
+    return this.computeMarginProfit(amount, info.rate);
+  },
+
+  resolveRecordSourceText(record) {
+    const item = record && typeof record === 'object' ? record : {};
+    return String(
+      item.source || item.requestSource || item.clientSource || item.candidateMeta?.source || ''
+    ).trim();
+  },
+
+  computeRecordGrossShare(record) {
+    const item = record && typeof record === 'object' ? record : {};
+    const amount = Number(item.amount || item.estimateAmount || 0);
+    if (!Number.isFinite(amount) || amount <= 0) return 0;
+    const raw = item.grossMarginRate;
+    if (raw !== '' && raw != null && !Number.isNaN(Number(raw))) {
+      const rate = Number(raw);
+      if (rate >= 0 && rate <= 100) return this.computeMarginProfit(amount, rate);
+    }
+    return this.calculateNetRevenueBySource(amount, this.resolveRecordSourceText(item));
   },
 
   getDefaultGrossProfitRateBySource(source) {
     const normalized = this.normalizeSourceForForm(source);
-    return Object.prototype.hasOwnProperty.call(this.DEFAULT_GROSS_MARGIN_RATES, normalized)
-      ? this.DEFAULT_GROSS_MARGIN_RATES[normalized]
-      : null;
+    if (Object.prototype.hasOwnProperty.call(this.DEFAULT_GROSS_MARGIN_RATES, normalized)) {
+      return this.DEFAULT_GROSS_MARGIN_RATES[normalized];
+    }
+    const fromMaster = this.getSourceProfitRate(source);
+    if (!fromMaster.reviewRequired) return fromMaster.rate;
+    return null;
   },
 
   normalizeSourceForForm(source) {
@@ -133,7 +197,7 @@ const RevenueBrain = {
       const rate = Number(raw);
       if (rate >= 0 && rate <= 100) return rate;
     }
-    const fromSource = this.getDefaultGrossProfitRateBySource(item.source);
+    const fromSource = this.getDefaultGrossProfitRateBySource(this.resolveRecordSourceText(item));
     return fromSource != null ? fromSource : null;
   },
 
@@ -521,8 +585,22 @@ const RevenueBrain = {
       : (expenses || []).filter(e => e.date && e.date.startsWith(monthKey))
         .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
-    const confirmedProfit = confirmedRevenue - monthExpense;
-    const totalProfit = totalRevenue - monthExpense;
+    const confirmedGrossProfit = confirmedList.reduce(
+      (sum, r) => sum + this.computeRecordGrossShare(r), 0
+    );
+    const scheduledGrossProfit = plannedWorkOrders.reduce((sum, w) => {
+      const amt = this.getWorkOrderPlannedAmount(w);
+      return sum + this.computeRecordGrossShare({ ...w, amount: amt });
+    }, 0);
+    const totalGrossProfit = confirmedGrossProfit + scheduledGrossProfit;
+    const profitReviewRequiredRevenue = [
+      ...confirmedList.filter(r => this.getSourceProfitRate(this.resolveRecordSourceText(r)).reviewRequired),
+      ...plannedWorkOrders.filter(w => this.getSourceProfitRate(this.resolveRecordSourceText(w)).reviewRequired)
+    ].reduce((sum, item) => sum + Number(item.amount || this.getWorkOrderPlannedAmount(item) || 0), 0);
+
+    const confirmedProfit = confirmedGrossProfit - monthExpense;
+    const scheduledProfit = scheduledGrossProfit;
+    const totalProfit = confirmedGrossProfit + scheduledGrossProfit - monthExpense;
     const plannedProfit = totalProfit;
 
     const paidAmount = confirmedList.reduce((sum, r) => {
@@ -550,11 +628,16 @@ const RevenueBrain = {
       plannedAdditionalRevenue,
       scheduledRevenue,
       totalRevenue,
+      confirmedGrossProfit,
+      scheduledGrossProfit,
+      totalGrossProfit,
       totalProfit,
       plannedRevenue,
       monthExpense,
       confirmedProfit,
+      scheduledProfit,
       plannedProfit,
+      profitReviewRequiredRevenue,
       paidAmount,
       unpaidAmount,
       monthlyTarget,

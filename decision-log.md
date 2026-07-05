@@ -2,6 +2,23 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.11.5 依頼元別取り分率を反映した利益計算統一（2026-07-05）
+
+**日付**: 2026-07-05
+
+**判断内容**:
+- v4.11.4 で表記は統一済みだが、利益計算が「売上 − 経費」のみでコープ・110番・くらしのマーケット・ヤマダ等の仲介料/控除率が未反映
+- 依頼元別取り分率マスターを正本として `buildSharedMonthlyMetrics()` の粗利/利益計算を変更
+- 不明依頼元は 100% 利益扱いにせず要確認（取り分 0%）とし、売上額面のみ計上
+- 利益状態（buildProfitOperationsDiagnostics）も共通月次メトリクス参照に統一
+- 予定利益を正式表示項目として追加
+
+**変更ファイル**:
+- js/revenue-brain.js, js/profit-brain.js, js/executive-brain.js, js/app.js
+- index.html, js/storage.js, js/data-backup.js（v4.11.5）
+- scripts/verify-v4115-source-profit-rates.mjs
+- status.md, handoff.md, decision-log.md
+
 ## v4.11.4 月次メトリクス表示名の全画面統一（2026-07-05）
 
 **日付**: 2026-07-05

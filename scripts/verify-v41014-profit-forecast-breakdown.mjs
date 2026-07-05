@@ -54,10 +54,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.11.4'), 'index.html should show v4.11.4');
-assert(indexHtml.includes('js/app.js?v=4.11.4'), 'app.js cache buster should be v4.11.4');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.4'"), 'storage.js version should be v4.11.4');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.4'"), 'data-backup version should be v4.11.4');
+assert(indexHtml.includes('v4.11.5'), 'index.html should show v4.11.5');
+assert(indexHtml.includes('js/app.js?v=4.11.5'), 'app.js cache buster should be v4.11.5');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.5'"), 'storage.js version should be v4.11.5');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.5'"), 'data-backup version should be v4.11.5');
 
 assert(profitJs.includes('plannedRevenueEstimate'), 'profit brain should expose plannedRevenueEstimate');
 assert(profitJs.includes('plannedForecastProfit'), 'profit brain should expose plannedForecastProfit');
@@ -124,10 +124,10 @@ console.log('== breakdown math (v4.10.13 regression sample) ==');
   assert(result.summary.confirmedRevenue === 25300, `confirmed revenue should be 25300, got ${result.summary.confirmedRevenue}`);
   assert(result.summary.confirmedProfit === 15180, `confirmed profit should be 15180, got ${result.summary.confirmedProfit}`);
   assert(result.summary.plannedRevenueEstimate === 65800, `planned revenue should be 65800, got ${result.summary.plannedRevenueEstimate}`);
-  // v4.10.24: ??????workOrder?monthGrossRate(60%)???????????????
-  assert(result.summary.plannedForecastProfit === 39480, `planned forecast profit should be 39480 (with monthGrossRate fallback), got ${result.summary.plannedForecastProfit}`);
+  // v4.11.5: コープ案件は依頼元別80%を反映。直安は不明のため monthGrossRate(60%) フォールバック
+  assert(result.summary.plannedForecastProfit === 43180, `planned forecast profit should be 43180 (coop 80% + genchi fallback), got ${result.summary.plannedForecastProfit}`);
   assert(result.summary.totalRevenue === 91100, `total revenue should be 91100, got ${result.summary.totalRevenue}`);
-  assert(result.summary.totalProfit === 54660, `total profit should be 54660 (39480+15180), got ${result.summary.totalProfit}`);
+  assert(result.summary.totalProfit === 58360, `total profit should be 58360 (43180+15180), got ${result.summary.totalProfit}`);
   assert(result.summary.plannedForecastProfit <= result.summary.plannedRevenueEstimate, 'planned forecast profit must not exceed planned revenue');
   assert(result.summary.forecastProfit === result.summary.plannedForecastProfit, 'forecastProfit alias should be planned-only');
   assert(result.summary.totalProfit === result.summary.plannedForecastProfit + result.summary.confirmedProfit, 'total profit should equal planned + confirmed');
