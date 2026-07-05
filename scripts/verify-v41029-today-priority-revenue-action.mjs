@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.30 緊急修正 — 今日の最優先から受付売上確定導線 verification.
+ * Budil v4.10.31 緊急修正 — 今日の最優先から受付売上確定導線 verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/app.js', 'js/reception-brain.js', 'js/revenue-brain.js',
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.30 today-priority-revenue-action ==');
+console.log('== v4.10.31 today-priority-revenue-action ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -41,10 +41,10 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.30'), 'index.html should show v4.10.30');
-assert(indexHtml.includes('js/app.js?v=4.10.30'), 'app.js cache buster should be v4.10.30');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.30'"), 'storage.js version should be v4.10.30');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.30'"), 'data-backup version should be v4.10.30');
+assert(indexHtml.includes('v4.10.31'), 'index.html should show v4.10.31');
+assert(indexHtml.includes('js/app.js?v=4.10.31'), 'app.js cache buster should be v4.10.31');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.31'"), 'storage.js version should be v4.10.31');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.31'"), 'data-backup version should be v4.10.31');
 
 console.log('== priority action button wiring ==');
 assert(appJs.includes('data-exec-priority-fill-revenue'), 'exec priority should expose fill-revenue button');
@@ -62,7 +62,7 @@ assert(executiveJs.includes('fillRevenueAction'), 'executive brain should pass f
 assert(appJs.includes('fillRevenueFromReceptionIntake'), 'fillRevenueFromReceptionIntake should remain');
 assert(appJs.includes('warnExceptionRevenueDuplicate'), 'duplicate guard should remain');
 assert(revenueJs.includes('buildExceptionRevenueFormFromIntake'), 'exception prefill should remain');
-assert(!css.includes('v4.10.30'), 'css must not be changed for v4.10.30');
+assert(!css.includes('v4.10.31'), 'css must not be changed for v4.10.31');
 
 console.log('== NG terms ==');
 for (const term of NG_TERMS) {
@@ -171,4 +171,4 @@ console.log('== duplicate warning without auto overwrite ==');
 console.log('== no auto work-order / calendar creation ==');
 assert(!appJs.match(/fillRevenueFromReceptionIntake[\s\S]{0,1200}Storage\.addWorkOrder/), 'exception fill must not auto-create work orders');
 
-console.log('\nAll v4.10.30 today-priority-revenue-action checks passed.');
+console.log('\nAll v4.10.31 today-priority-revenue-action checks passed.');

@@ -28,20 +28,20 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 // --- バージョン ---
-assert(indexHtml.includes('v4.10.30'), 'index.html should show v4.10.30');
-assert(indexHtml.includes('js/app.js?v=4.10.30'), 'app.js cache buster should be v4.10.30');
+assert(indexHtml.includes('v4.10.31'), 'index.html should show v4.10.31');
+assert(indexHtml.includes('js/app.js?v=4.10.31'), 'app.js cache buster should be v4.10.31');
 assert(indexHtml.includes('css/style.css?v=4.10.25.1'), 'css cache buster should be v4.10.25.1');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.30'"), 'storage.js version should be v4.10.30');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.30'"), 'data-backup version should be v4.10.30');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.31'"), 'storage.js version should be v4.10.31');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.31'"), 'data-backup version should be v4.10.31');
 assert(statusMd.includes('v4.10.25'), 'status.md should document v4.10.25');
 assert(statusMd.includes('v4.10.26'), 'status.md should document v4.10.26');
-assert(statusMd.includes('v4.10.30'), 'status.md should document v4.10.27');
+assert(statusMd.includes('v4.10.31'), 'status.md should document v4.10.27');
 assert(handoffMd.includes('v4.10.25'), 'handoff.md should document v4.10.25');
 assert(handoffMd.includes('v4.10.26'), 'handoff.md should document v4.10.26');
-assert(handoffMd.includes('v4.10.30'), 'handoff.md should document v4.10.27');
+assert(handoffMd.includes('v4.10.31'), 'handoff.md should document v4.10.27');
 assert(decisionLog.includes('v4.10.25'), 'decision-log.md should record v4.10.25');
 assert(decisionLog.includes('v4.10.26'), 'decision-log.md should record v4.10.26');
-assert(decisionLog.includes('v4.10.30'), 'decision-log.md should record v4.10.27');
+assert(decisionLog.includes('v4.10.31'), 'decision-log.md should record v4.10.27');
 
 // --- CSS 対象限定 ---
 console.log('== CSS scope check ==');

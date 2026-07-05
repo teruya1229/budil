@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.30 緊急修正 — 請求書出力サニタイズ・内税明細 verification.
+ * Budil v4.10.31 緊急修正 — 請求書出力サニタイズ・内税明細 verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/app.js', 'js/documents-brain.js', 'js/revenue-brain.js',
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.30 invoice-output-sanitizing-tax ==');
+console.log('== v4.10.31 invoice-output-sanitizing-tax ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -40,10 +40,10 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.30'), 'index.html should show v4.10.30');
-assert(indexHtml.includes('js/app.js?v=4.10.30'), 'app.js cache buster should be v4.10.30');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.30'"), 'storage.js version should be v4.10.30');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.30'"), 'data-backup version should be v4.10.30');
+assert(indexHtml.includes('v4.10.31'), 'index.html should show v4.10.31');
+assert(indexHtml.includes('js/app.js?v=4.10.31'), 'app.js cache buster should be v4.10.31');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.31'"), 'storage.js version should be v4.10.31');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.31'"), 'data-backup version should be v4.10.31');
 
 console.log('== sanitizing helpers ==');
 assert(documentsJs.includes('sanitizeDocumentForCustomerDisplay'), 'documents brain should sanitize customer display');
@@ -54,7 +54,7 @@ assert(documentsJs.includes('displayItems'), 'calcFromItems should expose displa
 assert(revenueJs.includes('getCustomerFacingServiceLabel'), 'revenue brain should expose service label helper');
 assert(appJs.includes('この受付から売上確定する'), 'v4.10.29 reception revenue action must remain');
 assert(indexHtml.includes('css/style.css?v=4.10.25.1'), 'v4.10.25 documents CSS cache buster must remain');
-assert(!css.includes('v4.10.30'), 'css must not be changed for v4.10.30');
+assert(!css.includes('v4.10.31'), 'css must not be changed for v4.10.31');
 
 for (const term of NG_TERMS) {
   assert(!appJs.includes(term), `NG term ${term} must not appear in app.js UI`);
@@ -214,4 +214,4 @@ console.log('== non-taxable regression ==');
   assert(result.displayItems[0].amount === 5000, 'non-taxable display amount should remain 5000');
 }
 
-console.log('\nAll v4.10.30 invoice-output-sanitizing-tax checks passed.');
+console.log('\nAll v4.10.31 invoice-output-sanitizing-tax checks passed.');

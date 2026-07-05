@@ -53,10 +53,10 @@ const dataBackupJs = load('js/data-backup.js');
 
 // --- バージョン確認 ---
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.30'), 'index.html should show v4.10.30');
-assert(indexHtml.includes('js/app.js?v=4.10.30'), 'app.js cache buster should be v4.10.30');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.30'"), 'storage.js version should be v4.10.30');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.30'"), 'data-backup version should be v4.10.30');
+assert(indexHtml.includes('v4.10.31'), 'index.html should show v4.10.31');
+assert(indexHtml.includes('js/app.js?v=4.10.31'), 'app.js cache buster should be v4.10.31');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.31'"), 'storage.js version should be v4.10.31');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.31'"), 'data-backup version should be v4.10.31');
 
 // --- TODAY() がローカル日付基準であること ---
 console.log('== TODAY() local date check ==');

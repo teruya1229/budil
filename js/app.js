@@ -14592,7 +14592,7 @@
   function suggestDocumentPaymentFromMethod(preserveUserInput, forceStatusDefault) {
     const items = readDocItemsFromForm();
     const taxSettings = readTaxSettingsFromForm();
-    const calc = DocumentsBrain.calcFromItems(items, taxSettings);
+    const calc = DocumentsBrain.calcFromFormItems(items, taxSettings);
     const issueDate = document.getElementById('doc-issue-date')?.value || TODAY();
     const method = document.getElementById('doc-payment-method')?.value || 'bank_transfer';
     const current = preserveUserInput ? readDocumentPaymentFieldsFromForm() : {};
@@ -14606,7 +14606,7 @@
   function recalculateDocumentExpectedPaymentDate() {
     const items = readDocItemsFromForm();
     const taxSettings = readTaxSettingsFromForm();
-    const calc = DocumentsBrain.calcFromItems(items, taxSettings);
+    const calc = DocumentsBrain.calcFromFormItems(items, taxSettings);
     const issueDate = document.getElementById('doc-issue-date')?.value || TODAY();
     const method = document.getElementById('doc-payment-method')?.value || 'bank_transfer';
     const current = readDocumentPaymentFieldsFromForm();
@@ -14620,7 +14620,7 @@
   function applyDocumentPaymentStatusDefaults() {
     const items = readDocItemsFromForm();
     const taxSettings = readTaxSettingsFromForm();
-    const calc = DocumentsBrain.calcFromItems(items, taxSettings);
+    const calc = DocumentsBrain.calcFromFormItems(items, taxSettings);
     const issueDate = document.getElementById('doc-issue-date')?.value || TODAY();
     const current = readDocumentPaymentFieldsFromForm();
     const next = PaymentBrain.applyPaymentStatusDefaults(current, calc.total, issueDate);
@@ -15273,7 +15273,7 @@
     const revAmount = Number(rev.amount) || 0;
     const items = readDocItemsFromForm();
     const taxSettings = readTaxSettingsFromForm();
-    const calc = DocumentsBrain.calcFromItems(items, taxSettings);
+    const calc = DocumentsBrain.calcFromFormItems(items, taxSettings);
     if (calc.total !== revAmount) {
       warn.classList.remove('hidden');
       warn.textContent = `売上金額（${RevenueBrain.formatYen(revAmount)}）と請求合計（${DocumentsBrain.formatYen(calc.total)}）が異なります。`;
@@ -16221,7 +16221,7 @@
     if (!preview) return;
     const ts = readTaxSettingsFromForm();
     const items = readDocItemsFromForm();
-    const calc = DocumentsBrain.calcFromItems(items, ts);
+    const calc = DocumentsBrain.calcFromFormItems(items, ts);
     const modeLabel = ts.taxDisplayMode === 'taxIncluded' ? '内税' : '外税';
     const catLabel = DocumentsBrain.taxCategoryLabel(ts.taxCategory);
     preview.textContent = `${modeLabel} / ${catLabel} / 小計 ${DocumentsBrain.formatYen(calc.subtotal)} / 税 ${DocumentsBrain.formatYen(calc.tax)} / 合計 ${DocumentsBrain.formatYen(calc.total)}`;
@@ -16308,7 +16308,7 @@
     document.getElementById('doc-note').value = base.note || '';
     writeDocumentPaymentFieldsToForm(base);
     toggleDocFormFields(base.type);
-    renderDocItemsEditor(base.items, base.type);
+    renderDocItemsEditor(DocumentsBrain.getFormItemsFromDocument(base), base.type);
     if (fromRevenue && base.linkedRevenueId) {
       pendingLinkedRevenueId = base.linkedRevenueId;
       const rev = Storage.getRevenueRecords().find(r => r.id === base.linkedRevenueId);
@@ -16327,7 +16327,7 @@
     const type = document.getElementById('doc-type').value;
     const taxSettings = readTaxSettingsFromForm();
     const items = readDocItemsFromForm();
-    const calc = DocumentsBrain.calcFromItems(items, taxSettings);
+    const calc = DocumentsBrain.calcFromFormItems(items, taxSettings);
     return DocumentsBrain.normalizeDocument({
       id: document.getElementById('doc-edit-id').value,
       type,

@@ -307,8 +307,64 @@ const DocumentsBrain = {
     return normalized;
   },
 
-  calcFromItems(items, taxSettings) {
+  detectItemsTaxBasis(items, taxSettings, storedTotals) {
     const ts = this.normalizeTaxSettings({ taxSettings });
+    if (ts.taxDisplayMode !== 'taxIncluded') return 'exclusive';
+
+    const normalized = (items || []).map(it => this.normalizeItem(it, ts.lineRounding, ts.showUnit));
+    const itemsSum = normalized.reduce((sum, it) => sum + it.amount, 0);
+    if (itemsSum <= 0) return 'exclusive';
+
+    const storedSubtotal = this.parseAmount(storedTotals && storedTotals.subtotal);
+    const storedTotal = this.parseAmount(storedTotals && storedTotals.total);
+    const matchesSubtotal = storedSubtotal > 0 && Math.abs(itemsSum - storedSubtotal) <= 1;
+    const matchesTotal = storedTotal > 0 && Math.abs(itemsSum - storedTotal) <= 1;
+
+    if (matchesSubtotal && !matchesTotal) return 'exclusive';
+    if (matchesTotal && !matchesSubtotal) return 'inclusive';
+    if (matchesSubtotal && matchesTotal) return 'exclusive';
+
+    if (storedTotals && storedTotals.preferExclusive === true) return 'exclusive';
+    return 'inclusive';
+  },
+
+  resolveItemsTaxBasis(items, taxSettings, options) {
+    const opts = options && typeof options === 'object' ? options : {};
+    if (opts.itemsTaxBasis === 'inclusive' || opts.itemsTaxBasis === 'exclusive') {
+      return opts.itemsTaxBasis;
+    }
+    return this.detectItemsTaxBasis(items, taxSettings, {
+      subtotal: opts.subtotal,
+      total: opts.total,
+      preferExclusive: opts.preferExclusive
+    });
+  },
+
+  getFormItemsFromDocument(doc) {
+    const d = doc && typeof doc === 'object' ? doc : {};
+    const ts = this.normalizeTaxSettings(d, d.taxMode);
+    const items = d.items || [];
+    if (ts.taxDisplayMode !== 'taxIncluded') return items;
+
+    const basis = this.detectItemsTaxBasis(items, ts, { subtotal: d.subtotal, total: d.total });
+    if (basis === 'exclusive') {
+      return items.map(it => this.normalizeItem(it, ts.lineRounding, ts.showUnit));
+    }
+    const calc = this.calcFromItems(items, ts, { itemsTaxBasis: 'inclusive' });
+    return calc.displayItems || calc.items;
+  },
+
+  calcFromFormItems(items, taxSettings) {
+    const ts = this.normalizeTaxSettings({ taxSettings });
+    if (ts.taxDisplayMode === 'taxIncluded') {
+      return this.calcFromItems(items, ts, { itemsTaxBasis: 'exclusive', preferExclusive: true });
+    }
+    return this.calcFromItems(items, ts);
+  },
+
+  calcFromItems(items, taxSettings, options) {
+    const ts = this.normalizeTaxSettings({ taxSettings });
+    const opts = options && typeof options === 'object' ? options : {};
     const rate = ts.taxRate;
     const normalized = (items || []).map(it => this.normalizeItem(it, ts.lineRounding, ts.showUnit));
     const itemsSum = normalized.reduce((sum, it) => sum + it.amount, 0);
@@ -327,7 +383,34 @@ const DocumentsBrain = {
         total,
         taxExcluded: subtotal,
         taxIncluded: total,
-        taxSettings: ts
+        taxSettings: ts,
+        itemsTaxBasis: 'exclusive'
+      };
+    }
+
+    const basis = this.resolveItemsTaxBasis(items, ts, {
+      itemsTaxBasis: opts.itemsTaxBasis,
+      subtotal: opts.subtotal,
+      total: opts.total,
+      preferExclusive: opts.preferExclusive
+    });
+
+    if (basis === 'exclusive') {
+      const subtotal = itemsSum;
+      const tax = rate > 0
+        ? this.roundBySetting(subtotal * rate / 100, ts.taxRounding)
+        : 0;
+      const total = subtotal + tax;
+      return {
+        items: normalized,
+        displayItems: normalized,
+        subtotal,
+        tax,
+        total,
+        taxExcluded: subtotal,
+        taxIncluded: total,
+        taxSettings: ts,
+        itemsTaxBasis: 'exclusive'
       };
     }
 
@@ -367,7 +450,8 @@ const DocumentsBrain = {
       total,
       taxExcluded: displaySubtotal,
       taxIncluded: total,
-      taxSettings: ts
+      taxSettings: ts,
+      itemsTaxBasis: 'inclusive'
     };
   },
 
@@ -435,7 +519,10 @@ const DocumentsBrain = {
     const doc = raw && typeof raw === 'object' ? { ...raw } : {};
     const type = doc.type === 'estimate' ? 'estimate' : 'invoice';
     const taxSettings = this.normalizeTaxSettings(doc, doc.taxMode);
-    const calc = this.calcFromItems(doc.items || [], taxSettings);
+    const calc = this.calcFromItems(doc.items || [], taxSettings, {
+      subtotal: doc.subtotal,
+      total: doc.total
+    });
     const issuer = { ...this.defaultIssuer(), ...(doc.issuer || {}) };
     issuer.sealImage = issuer.sealImage || this.SEAL_IMAGE;
     const taxMode = taxSettings.taxDisplayMode === 'taxIncluded' ? 'taxIncluded' : 'taxExcluded';
@@ -511,7 +598,10 @@ const DocumentsBrain = {
     const normalized = this.normalizeDocument(doc);
     const d = this.sanitizeDocumentForCustomerDisplay(normalized);
     const ts = d.taxSettings;
-    const sheetCalc = this.calcFromItems(normalized.items, ts);
+    const sheetCalc = this.calcFromItems(normalized.items, ts, {
+      subtotal: normalized.subtotal,
+      total: normalized.total
+    });
     const sheetItems = sheetCalc.displayItems || sheetCalc.items;
     d.subtotal = sheetCalc.subtotal;
     d.tax = sheetCalc.tax;
@@ -720,14 +810,16 @@ const DocumentsBrain = {
       quantity: 1,
       amount
     }];
-    const calc = this.calcFromItems(items, taxSettings);
+    const calc = this.calcFromItems(items, taxSettings, { itemsTaxBasis: 'inclusive' });
+    const formItems = calc.displayItems || calc.items;
+    const storedCalc = this.calcFromItems(formItems, taxSettings, { itemsTaxBasis: 'exclusive', preferExclusive: true });
     const paymentSrc = typeof PaymentBrain !== 'undefined'
       ? PaymentBrain.normalizeRevenuePayment(rev, { total: amount, defaultDate: rev.workDate || today })
       : {};
     const payment = typeof PaymentBrain !== 'undefined'
       ? PaymentBrain.normalizeDocumentPayment(
         { ...paymentSrc, paymentMemo: rev.paymentMemo || '' },
-        { total: calc.total, defaultDate: today }
+        { total: storedCalc.total, defaultDate: today }
       )
       : {
         paymentMethod: 'bank_transfer',
@@ -735,7 +827,7 @@ const DocumentsBrain = {
         expectedPaymentDate: '',
         paidDate: '',
         paidAmount: 0,
-        unpaidAmount: calc.total,
+        unpaidAmount: storedCalc.total,
         paymentMemo: ''
       };
     const issueDate = today;
@@ -751,11 +843,11 @@ const DocumentsBrain = {
       customerHonorific: customerRaw.endsWith('御中') ? '御中' : '様',
       title,
       status: 'draft',
-      items: calc.items,
-      subtotal: calc.subtotal,
-      tax: calc.tax,
-      total: calc.total,
-      taxSettings: calc.taxSettings,
+      items: storedCalc.items,
+      subtotal: storedCalc.subtotal,
+      tax: storedCalc.tax,
+      total: storedCalc.total,
+      taxSettings: storedCalc.taxSettings,
       note: this.INVOICE_DEFAULTS.note,
       bankInfo: this.DEFAULT_BANK_INFO,
       issuer: this.defaultIssuer(),
