@@ -1002,10 +1002,11 @@
     return `
       ${monthlyNote}
       <div class="exec-home-revenue-grid${isCompact ? ' exec-home-revenue-grid-compact' : ''}">
-        <div><span>今月予定売上</span><strong>${esc(RevenueBrain.formatYen(s.plannedRevenue != null ? s.plannedRevenue : s.monthRevenue))}</strong></div>
-        <div><span>今月予定利益</span><strong>${esc(ProfitBrain.formatYen(s.plannedProfit != null ? s.plannedProfit : s.grossProfit))}</strong></div>
-        <div><span>今月確定売上</span><strong>${esc(RevenueBrain.formatYen(s.confirmedRevenue || 0))}</strong></div>
-        <div><span>今月確定利益</span><strong>${esc(ProfitBrain.formatYen(s.confirmedProfit || 0))}</strong></div>
+        <div><span>今月合計売上</span><strong>${esc(RevenueBrain.formatYen(s.totalRevenue != null ? s.totalRevenue : s.monthRevenue))}</strong></div>
+        <div><span>今月合計利益</span><strong>${esc(ProfitBrain.formatYen(s.totalProfit != null ? s.totalProfit : s.grossProfit))}</strong></div>
+        <div><span>確定売上</span><strong>${esc(RevenueBrain.formatYen(s.confirmedRevenue || 0))}</strong></div>
+        <div><span>予定売上</span><strong>${esc(RevenueBrain.formatYen(s.scheduledRevenue || 0))}</strong></div>
+        <div><span>確定利益</span><strong>${esc(ProfitBrain.formatYen(s.confirmedProfit || 0))}</strong></div>
         ${isCompact ? '' : `<div><span>月間目標</span><strong>${esc(RevenueBrain.formatYen(s.monthlyTarget))}</strong></div>
         <div><span>達成率</span><strong>${s.achievementRate}%</strong></div>`}
         <div><span>今月経費</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
@@ -1671,8 +1672,8 @@
         ${monthlyNote}
         <p class="mgmt-profit-label">売上・利益：</p>
         <ul class="mgmt-profit-list">
-          <li>今月予定売上 ${esc(RevenueBrain.formatYen(rp.plannedRevenue != null ? rp.plannedRevenue : rp.monthRevenue))} / 目標 ${esc(RevenueBrain.formatYen(rp.monthlyTarget))}（${rp.achievementRate}%）</li>
-          <li>今月予定利益 ${esc(ProfitBrain.formatYen(rp.plannedProfit != null ? rp.plannedProfit : rp.grossProfit))} / 今月確定利益 ${esc(ProfitBrain.formatYen(rp.confirmedProfit || 0))}</li>
+          <li>今月合計売上 ${esc(RevenueBrain.formatYen(rp.totalRevenue != null ? rp.totalRevenue : rp.monthRevenue))} / 目標 ${esc(RevenueBrain.formatYen(rp.monthlyTarget))}（${rp.achievementRate}%）</li>
+          <li>今月合計利益 ${esc(ProfitBrain.formatYen(rp.totalProfit != null ? rp.totalProfit : rp.grossProfit))} / 確定利益 ${esc(ProfitBrain.formatYen(rp.confirmedProfit || 0))}</li>
           <li>支出 ${esc(ProfitBrain.formatYen(rp.monthExpense))}</li>
           ${rp.completedNoRevenue ? `<li>作業日経過・売上未確定 ${rp.completedNoRevenue}件</li>` : ''}
         </ul>`;
@@ -1682,7 +1683,7 @@
     if (revenueMorningEl) {
       const rev = getRevenueContext();
       const m = rev.sharedMonthlyMetrics || getSharedMonthlyMetrics();
-      revenueMorningEl.innerHTML = `<p>今月予定売上：${esc(RevenueBrain.formatYen(m.plannedRevenue))} / 達成率 ${m.achievementRate}%</p>`;
+      revenueMorningEl.innerHTML = `<p>今月合計売上：${esc(RevenueBrain.formatYen(m.totalRevenue ?? m.plannedRevenue))} / 達成率 ${m.achievementRate}%</p>`;
     }
 
     const followUpMorningEl = document.getElementById('mgmt-follow-up');
@@ -3800,11 +3801,13 @@
     const lines = [
       monthlyBrief,
       `<p class="revenue-summary-line">確定売上：<strong>${esc(RevenueBrain.formatYen(m.confirmedRevenue ?? summary.confirmed))}</strong></p>`,
-      `<p class="revenue-summary-line">確定利益：${esc(RevenueBrain.formatYen(m.confirmedProfit ?? 0))}</p>`,
-      `<p class="revenue-summary-line">予定売上：${esc(RevenueBrain.formatYen(m.plannedRevenue ?? summary.confirmed))}</p>`,
-      `<p class="revenue-summary-line">予定利益：${esc(RevenueBrain.formatYen(m.plannedProfit ?? 0))}</p>`,
+      `<p class="revenue-summary-line">予定売上：${esc(RevenueBrain.formatYen(m.scheduledRevenue ?? m.plannedAdditionalRevenue ?? 0))}</p>`,
+      `<p class="revenue-summary-line">合計売上：${esc(RevenueBrain.formatYen(m.totalRevenue ?? m.plannedRevenue ?? 0))}</p>`,
       `<p class="revenue-summary-line">入金済み：${esc(RevenueBrain.formatYen(m.paidAmount ?? summary.paid))}</p>`,
       `<p class="revenue-summary-line">入金待ち：${esc(RevenueBrain.formatYen(m.unpaidAmount ?? summary.unpaid))}</p>`,
+      `<p class="revenue-summary-line">今月経費：${esc(RevenueBrain.formatYen(m.monthExpense ?? 0))}</p>`,
+      `<p class="revenue-summary-line">確定利益：${esc(RevenueBrain.formatYen(m.confirmedProfit ?? 0))}</p>`,
+      `<p class="revenue-summary-line">合計利益：${esc(RevenueBrain.formatYen(m.totalProfit ?? m.plannedProfit ?? 0))}</p>`,
       `<p class="revenue-summary-line">月間目標：${esc(RevenueBrain.formatYen(m.monthlyTarget ?? summary.monthlyTarget))}</p>`,
       `<p class="revenue-summary-line">目標まで残り：${esc(RevenueBrain.formatYen(m.remainingToTarget ?? summary.remainingToTarget))}</p>`,
       `<p class="revenue-summary-line">達成率：${m.achievementRate ?? summary.achievementRate}%</p>`
@@ -16430,11 +16433,13 @@
       const m = sharedMonthlyMetrics || getSharedMonthlyMetrics();
       const baseItems = [
         { label: '確定売上', value: RevenueBrain.formatYen(m.confirmedRevenue) },
-        { label: '確定利益', value: RevenueBrain.formatYen(m.confirmedProfit) },
-        { label: '予定売上', value: RevenueBrain.formatYen(m.plannedRevenue) },
-        { label: '予定利益', value: RevenueBrain.formatYen(m.plannedProfit) },
+        { label: '予定売上', value: RevenueBrain.formatYen(m.scheduledRevenue ?? m.plannedAdditionalRevenue ?? 0) },
+        { label: '合計売上', value: RevenueBrain.formatYen(m.totalRevenue ?? m.plannedRevenue ?? 0) },
         { label: '入金済み', value: RevenueBrain.formatYen(m.paidAmount) },
         { label: '入金待ち', value: RevenueBrain.formatYen(m.unpaidAmount) },
+        { label: '今月経費', value: RevenueBrain.formatYen(m.monthExpense) },
+        { label: '確定利益', value: RevenueBrain.formatYen(m.confirmedProfit) },
+        { label: '合計利益', value: RevenueBrain.formatYen(m.totalProfit ?? m.plannedProfit ?? 0) },
         { label: '月間目標', value: RevenueBrain.formatYen(m.monthlyTarget) },
         { label: '目標まで残り', value: RevenueBrain.formatYen(m.remainingToTarget) },
         { label: '達成率', value: m.achievementRate + '%' },

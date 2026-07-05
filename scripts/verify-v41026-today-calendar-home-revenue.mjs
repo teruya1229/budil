@@ -53,10 +53,10 @@ const dataBackupJs = load('js/data-backup.js');
 
 // --- バージョン確認 ---
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.2'), 'index.html should show v4.11.2');
-assert(indexHtml.includes('js/app.js?v=4.11.2'), 'app.js cache buster should be v4.11.2');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.2'"), 'storage.js version should be v4.11.2');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.2'"), 'data-backup version should be v4.11.2');
+assert(indexHtml.includes('v4.11.3'), 'index.html should show v4.11.3');
+assert(indexHtml.includes('js/app.js?v=4.11.3'), 'app.js cache buster should be v4.11.3');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.3'"), 'storage.js version should be v4.11.3');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.3'"), 'data-backup version should be v4.11.3');
 
 // --- TODAY() がローカル日付基準であること ---
 console.log('== TODAY() local date check ==');
@@ -87,12 +87,12 @@ assert(
   'executive-brain.js should have monthRevenueLabel field'
 );
 assert(
-  execBrainJs.includes('今月予定売上') || execBrainJs.includes('今月の合計売上（予定含む）') || execBrainJs.includes('今月売上見込み（予定含む）'),
+  execBrainJs.includes('今月合計売上') || execBrainJs.includes('今月予定売上') || execBrainJs.includes('今月の合計売上（予定含む）') || execBrainJs.includes('今月売上見込み（予定含む）'),
   'executive-brain.js should have a clear scheduled revenue label'
 );
 assert(
-  appJs.includes('今月確定売上'),
-  'app.js should show 今月確定売上 on executive home'
+  appJs.includes('確定売上'),
+  'app.js should show 確定売上 on executive home'
 );
 assert(
   !execBrainJs.match(/monthRevenueLabel[^=]*=.*'今月売上'[^（]/),
@@ -106,14 +106,14 @@ assert(
   'executive-brain.js should use buildSharedMonthlyMetrics for monthRevenue calculation'
 );
 assert(
-  execBrainJs.includes('plannedRevenue'),
-  'executive-brain.js should expose plannedRevenue from shared metrics'
+  execBrainJs.includes('totalRevenue') || execBrainJs.includes('plannedRevenue'),
+  'executive-brain.js should expose totalRevenue from shared metrics'
 );
 
 // --- app.jsで予定売上ラベルを使っていること ---
 console.log('== app.js uses scheduled revenue label ==');
 assert(
-  appJs.includes('今月予定売上') || appJs.includes("s.monthRevenueLabel || '今月売上'"),
+  appJs.includes('今月合計売上') || appJs.includes('今月予定売上') || appJs.includes("s.monthRevenueLabel || '今月売上'"),
   'app.js should show clear scheduled revenue label in revenue grid'
 );
 // 曖昧な「今月売上」がグリッドにハードコードされていないこと

@@ -1,5 +1,5 @@
 /**
- * Budil v4.11.3 / v4.11.3 - unified monthly revenue/profit metrics verification.
+ * Budil v4.11.3 - clarify monthly total and scheduled metrics verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -23,7 +23,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.11.3 unified-monthly-metrics ==');
+console.log('== v4.11.3 clarify-monthly-total-scheduled-metrics ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -45,30 +45,40 @@ assert(indexHtml.includes('v4.11.3'), 'index.html should show v4.11.3');
 assert(indexHtml.includes('js/app.js?v=4.11.3'), 'app.js cache buster should be v4.11.3');
 assert(indexHtml.includes('js/revenue-brain.js?v=4.11.3'), 'revenue-brain cache buster should be v4.11.3');
 assert(indexHtml.includes('js/executive-brain.js?v=4.11.3'), 'executive-brain cache buster should be v4.11.3');
-assert(indexHtml.includes('js/reception-brain.js?v=4.11.0'), 'reception-brain cache buster should remain v4.11.0');
 assert(storageJs.includes("BUDIL_VERSION: 'v4.11.3'"), 'storage.js version should be v4.11.3');
 assert(dataBackupJs.includes("APP_VERSION: 'v4.11.3'"), 'data-backup version should be v4.11.3');
 assert(statusMd.includes('v4.11.3'), 'status.md should document v4.11.3');
 assert(handoffMd.includes('v4.11.3'), 'handoff.md should document v4.11.3');
 assert(decisionLog.includes('v4.11.3'), 'decision-log.md should record v4.11.3');
 
-console.log('== shared metrics wiring ==');
-assert(revenueBrainJs.includes('buildSharedMonthlyMetrics'), 'RevenueBrain should expose buildSharedMonthlyMetrics');
-assert(revenueBrainJs.includes('isPlannedAdditionalWorkOrder'), 'RevenueBrain should filter planned work orders');
-assert(revenueBrainJs.includes('confirmedProfit = confirmedRevenue - monthExpense'), 'confirmedProfit should be revenue minus expense');
-assert(revenueBrainJs.includes('totalRevenue = confirmedRevenue + plannedAdditionalRevenue'), 'totalRevenue should avoid double counting');
-assert(revenueBrainJs.includes('Math.max(0, confirmedRevenue - paidAmount)'), 'unpaidAmount should use confirmed revenue');
+console.log('== shared metrics fields ==');
+assert(revenueBrainJs.includes('scheduledRevenue = plannedAdditionalRevenue'), 'scheduledRevenue should alias plannedAdditionalRevenue');
+assert(revenueBrainJs.includes('totalRevenue = confirmedRevenue + plannedAdditionalRevenue'), 'totalRevenue should sum confirmed and scheduled');
+assert(revenueBrainJs.includes('totalProfit = totalRevenue - monthExpense'), 'totalProfit should be totalRevenue minus expense');
+assert(revenueBrainJs.includes('plannedRevenue = totalRevenue'), 'plannedRevenue should remain legacy alias of totalRevenue');
+assert(revenueBrainJs.includes('plannedProfit = totalProfit'), 'plannedProfit should remain legacy alias of totalProfit');
 assert(revenueBrainJs.includes('monthlyTarget - totalRevenue'), 'remainingToTarget should use totalRevenue');
-assert(executiveBrainJs.includes('buildSharedMonthlyMetrics'), 'executive home should use shared metrics');
-assert(appJs.includes('getSharedMonthlyMetrics'), 'app.js should expose getSharedMonthlyMetrics');
-assert(appJs.includes('sharedMonthlyMetrics'), 'app.js should pass sharedMonthlyMetrics to UI');
+assert(revenueBrainJs.includes('totalRevenue / monthlyTarget'), 'achievementRate should use totalRevenue');
 
 console.log('== revenue summary labels ==');
-assert(appJs.includes("label: '確定利益'"), 'revenue summary should show 確定利益 label');
 assert(appJs.includes("label: '予定売上'"), 'revenue summary should show 予定売上 label');
 assert(appJs.includes("label: '合計売上'"), 'revenue summary should show 合計売上 label');
+assert(appJs.includes("label: '確定利益'"), 'revenue summary should show 確定利益 label');
+assert(appJs.includes("label: '合計利益'"), 'revenue summary should show 合計利益 label');
+assert(appJs.includes("label: '今月経費'"), 'revenue summary should show 今月経費 label');
+assert(!appJs.includes("label: '予定利益'"), 'revenue summary must not show 予定利益 label');
 assert(!appJs.includes("label: '確定', value:"), 'revenue summary must not keep standalone 確定 label');
+assert(!appJs.includes("{ label: '予定売上', value: RevenueBrain.formatYen(m.plannedRevenue)"), '予定売上 must not use plannedRevenue for display');
+assert(!appJs.includes('予定利益：'), 'revenue summary html must not show 予定利益');
+
+console.log('== executive home labels ==');
 assert(appJs.includes('今月合計売上'), 'executive home should show 今月合計売上');
+assert(appJs.includes('今月合計利益'), 'executive home should show 今月合計利益');
+assert(appJs.includes('<span>確定売上</span>'), 'executive home should show 確定売上');
+assert(appJs.includes('<span>予定売上</span>'), 'executive home should show 予定売上');
+assert(appJs.includes('<span>今月経費</span>'), 'executive home should show 今月経費');
+assert(!appJs.includes('今月予定利益'), 'executive home must not show 今月予定利益');
+assert(executiveBrainJs.includes("monthRevenueLabel = '今月合計売上'"), 'executive monthRevenueLabel should be 今月合計売上');
 
 console.log('== untouched files ==');
 assert(!css.includes('v4.11.3'), 'css must not change for v4.11.3');
@@ -122,9 +132,6 @@ console.log('== numeric definition tests ==');
     const shared = RevenueBrain.buildSharedMonthlyMetrics({
       records, settings, workOrders, expenses, today: TODAY, monthKey
     });
-    const summaryPanel = RevenueBrain.buildSharedMonthlyMetrics({
-      records, settings, workOrders, expenses, today: TODAY, monthKey
-    });
     const execSection = ExecutiveBrain.buildRevenueProfitSection({
       today: TODAY,
       workOrders,
@@ -133,50 +140,28 @@ console.log('== numeric definition tests ==');
       profitCtx: { summary: { unlinkedCount: 0, adExpense: 0 }, revenueRows: [] },
       forecast: {}
     });
-    return { shared, summaryPanel, execSection };
+    return { shared, execSection };
   })()`, ctx);
 
   assert(result.shared.confirmedRevenue === 25000, `confirmedRevenue should be 25000, got ${result.shared.confirmedRevenue}`);
-  assert(result.shared.plannedAdditionalRevenue === 32670, `plannedAdditionalRevenue should be 32670, got ${result.shared.plannedAdditionalRevenue}`);
-  assert(result.shared.plannedRevenue === 57670, `plannedRevenue legacy alias should be 57670, got ${result.shared.plannedRevenue}`);
-  assert(result.shared.totalRevenue === result.shared.plannedRevenue, 'totalRevenue should equal plannedRevenue legacy alias');
-  assert(result.shared.monthExpense === 3000, `monthExpense should be 3000, got ${result.shared.monthExpense}`);
-  assert(result.shared.confirmedProfit === 22000, `confirmedProfit should be 22000, got ${result.shared.confirmedProfit}`);
-  assert(result.shared.plannedProfit === 54670, `plannedProfit legacy alias should be 54670, got ${result.shared.plannedProfit}`);
-  assert(result.shared.totalProfit === result.shared.plannedProfit, 'totalProfit should equal plannedProfit legacy alias');
-  assert(result.shared.paidAmount === 25000, `paidAmount should be 25000, got ${result.shared.paidAmount}`);
-  assert(result.shared.unpaidAmount === 0, `unpaidAmount should be 0, got ${result.shared.unpaidAmount}`);
+  assert(result.shared.scheduledRevenue === 32670, `scheduledRevenue should be 32670, got ${result.shared.scheduledRevenue}`);
+  assert(result.shared.plannedAdditionalRevenue === result.shared.scheduledRevenue, 'scheduledRevenue should equal plannedAdditionalRevenue');
+  assert(result.shared.totalRevenue === 57670, `totalRevenue should be 57670, got ${result.shared.totalRevenue}`);
+  assert(result.shared.totalRevenue === result.shared.confirmedRevenue + result.shared.scheduledRevenue, 'totalRevenue should equal confirmed + scheduled');
+  assert(result.shared.plannedRevenue === result.shared.totalRevenue, 'plannedRevenue legacy alias should equal totalRevenue');
+  assert(result.shared.totalProfit === 54670, `totalProfit should be 54670, got ${result.shared.totalProfit}`);
+  assert(result.shared.totalProfit === result.shared.totalRevenue - result.shared.monthExpense, 'totalProfit should be totalRevenue minus expense');
+  assert(result.shared.plannedProfit === result.shared.totalProfit, 'plannedProfit legacy alias should equal totalProfit');
   assert(result.shared.remainingToTarget === 42330, `remainingToTarget should be 42330, got ${result.shared.remainingToTarget}`);
   assert(result.shared.achievementRate === 58, `achievementRate should be 58, got ${result.shared.achievementRate}`);
-  assert(result.shared.dailyNeeded === Math.ceil(42330 / result.shared.remainingDays), 'dailyNeeded should use remainingDays');
 
   assert(result.execSection.totalRevenue === result.shared.totalRevenue, 'executive and shared totalRevenue must match');
-  assert(result.execSection.confirmedRevenue === result.shared.confirmedRevenue, 'executive and shared confirmedRevenue must match');
+  assert(result.execSection.scheduledRevenue === result.shared.scheduledRevenue, 'executive and shared scheduledRevenue must match');
   assert(result.execSection.totalProfit === result.shared.totalProfit, 'executive and shared totalProfit must match');
-  assert(result.execSection.confirmedProfit === result.shared.confirmedProfit, 'executive and shared confirmedProfit must match');
+  assert(result.execSection.confirmedRevenue === result.shared.confirmedRevenue, 'executive and shared confirmedRevenue must match');
   assert(result.execSection.monthRevenueLabel === '今月合計売上', 'executive label should be 今月合計売上');
 }
 
-console.log('== monthly results isolation ==');
-{
-  const ctx = createSandbox();
-  const result = runInContext(`(() => {
-    const records = [{ id: 'r1', workDate: '2026-06-01', amount: 10000, status: '確定', paymentStatus: 'paid' }];
-    const settings = { monthlyTarget: 50000 };
-    const shared = RevenueBrain.buildSharedMonthlyMetrics({
-      records,
-      settings,
-      workOrders: [],
-      expenses: [],
-      today: '2026-07-05',
-      monthKey: '2026-07'
-    });
-    return shared;
-  })()`, ctx);
-  assert(result.confirmedRevenue === 0, 'shared metrics must not use monthly results data');
-  assert(result.plannedRevenue === 0, 'shared metrics for empty month should be zero');
-}
+execSync('node scripts/verify-v4112-unified-monthly-metrics.mjs', { cwd: root, stdio: 'inherit' });
 
-execSync('node scripts/verify-v4111-calendar-import-result-shows-tamazawa.mjs', { cwd: root, stdio: 'inherit' });
-
-console.log('\nAll v4.11.3 unified-monthly-metrics checks passed.');
+console.log('\nAll v4.11.3 clarify-monthly-total-scheduled-metrics checks passed.');

@@ -393,17 +393,17 @@ const ExecutiveBrain = {
         monthKey: RevenueBrain.currentMonthKey(ctx.today)
       })
       : {};
-    const monthRevenue = shared.plannedRevenue || 0;
-    const monthRevenueLabel = '今月予定売上';
+    const monthRevenue = shared.totalRevenue || shared.plannedRevenue || 0;
+    const monthRevenueLabel = '今月合計売上';
     const achievementRate = shared.achievementRate || 0;
     const cautions = [];
     if (shared.monthlyTarget > 0 && achievementRate < 50) {
       cautions.push('月間目標に対して不足気味です');
     }
-    if ((shared.monthExpense || 0) > 0 && (shared.plannedProfit || 0) < 0) {
+    if ((shared.monthExpense || 0) > 0 && (shared.totalProfit || shared.plannedProfit || 0) < 0) {
       cautions.push('今月は赤字注意です');
     }
-    if (ps.adExpense > 0 && (shared.plannedRevenue || 0) < ps.adExpense * 4) cautions.push('広告費注意');
+    if (ps.adExpense > 0 && (shared.totalRevenue || shared.plannedRevenue || 0) < ps.adExpense * 4) cautions.push('広告費注意');
     if (ps.unlinkedCount > 0) cautions.push(`未紐付け支出${ps.unlinkedCount}件`);
     const deficitCount = ((ctx.profitCtx && ctx.profitCtx.revenueRows) || [])
       .filter(r => r.label === '赤字注意').length;
@@ -426,12 +426,15 @@ const ExecutiveBrain = {
       monthRevenueLabel,
       confirmedRevenue: shared.confirmedRevenue || 0,
       confirmedProfit: shared.confirmedProfit || 0,
+      scheduledRevenue: shared.scheduledRevenue || shared.plannedAdditionalRevenue || 0,
+      totalRevenue: shared.totalRevenue || shared.plannedRevenue || 0,
+      totalProfit: shared.totalProfit || shared.plannedProfit || 0,
       plannedRevenue: shared.plannedRevenue || 0,
       plannedProfit: shared.plannedProfit || 0,
       monthlyTarget: shared.monthlyTarget || summary.monthlyTarget || 0,
       achievementRate,
       monthExpense: shared.monthExpense || ps.monthExpense || 0,
-      grossProfit: shared.plannedProfit || 0,
+      grossProfit: shared.totalProfit || shared.plannedProfit || 0,
       grossRate: ps.monthGrossRate || 0,
       weekForecast: forecast.weekAmount || 0,
       completedNoRevenue: forecast.completedNoRevenueCount || 0,

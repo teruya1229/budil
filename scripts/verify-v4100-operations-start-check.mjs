@@ -72,10 +72,10 @@ const css = load('css/style.css');
 
 console.log('== v4.10.1 operations start check ==');
 
-assert(indexHtml.includes('AI経営脳みそ v4.11.2'), 'header version should be v4.11.2');
-assert(indexHtml.includes('Budil v4.11.2'), 'sidebar version should be v4.11.2');
-assert(indexHtml.includes('js/app.js?v=4.11.2'), 'app.js cache buster should be v4.11.2');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.11.2'"), 'storage version should be v4.11.2');
+assert(indexHtml.includes('AI経営脳みそ v4.11.3'), 'header version should be v4.11.3');
+assert(indexHtml.includes('Budil v4.11.3'), 'sidebar version should be v4.11.3');
+assert(indexHtml.includes('js/app.js?v=4.11.3'), 'app.js cache buster should be v4.11.3');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.11.3'"), 'storage version should be v4.11.3');
 
 assert(indexHtml.includes('id="exec-home-operations-start-check"'), 'operations start check container should exist');
 assert(indexHtml.includes('exec-home-operations-start-check-block'), 'operations start check block class should exist');

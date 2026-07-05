@@ -512,7 +512,9 @@ const RevenueBrain = {
     const plannedAdditionalRevenue = plannedWorkOrders.reduce(
       (sum, w) => sum + this.getWorkOrderPlannedAmount(w), 0
     );
-    const plannedRevenue = confirmedRevenue + plannedAdditionalRevenue;
+    const scheduledRevenue = plannedAdditionalRevenue;
+    const totalRevenue = confirmedRevenue + plannedAdditionalRevenue;
+    const plannedRevenue = totalRevenue;
 
     const monthExpense = typeof ProfitBrain !== 'undefined'
       ? ProfitBrain.sumAmount(ProfitBrain.filterMonthExpenses(expenses, monthKey))
@@ -520,7 +522,8 @@ const RevenueBrain = {
         .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
     const confirmedProfit = confirmedRevenue - monthExpense;
-    const plannedProfit = plannedRevenue - monthExpense;
+    const totalProfit = totalRevenue - monthExpense;
+    const plannedProfit = totalProfit;
 
     const paidAmount = confirmedList.reduce((sum, r) => {
       if (typeof PaymentBrain !== 'undefined') return sum + PaymentBrain.getPaidAmount(r);
@@ -529,8 +532,8 @@ const RevenueBrain = {
     const unpaidAmount = Math.max(0, confirmedRevenue - paidAmount);
 
     const monthlyTarget = Number(settings.monthlyTarget) || 0;
-    const remainingToTarget = Math.max(0, monthlyTarget - plannedRevenue);
-    const achievementRate = monthlyTarget > 0 ? Math.round((plannedRevenue / monthlyTarget) * 100) : 0;
+    const remainingToTarget = Math.max(0, monthlyTarget - totalRevenue);
+    const achievementRate = monthlyTarget > 0 ? Math.round((totalRevenue / monthlyTarget) * 100) : 0;
 
     const parts = monthKey.split('-');
     const year = parseInt(parts[0], 10);
@@ -545,6 +548,9 @@ const RevenueBrain = {
       monthKey,
       confirmedRevenue,
       plannedAdditionalRevenue,
+      scheduledRevenue,
+      totalRevenue,
+      totalProfit,
       plannedRevenue,
       monthExpense,
       confirmedProfit,

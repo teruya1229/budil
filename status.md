@@ -1,5 +1,17 @@
 ﻿# Budil status
 
+## v4.11.3 実装内容（月次メトリクス表示名の意味整理）
+
+- 表示バージョンを v4.11.3 に更新
+- `RevenueBrain.buildSharedMonthlyMetrics()` に `scheduledRevenue` / `totalRevenue` / `totalProfit` を追加
+- `plannedRevenue` / `plannedProfit` は legacy alias として互換維持（totalRevenue / totalProfit と同値）
+- 売上サマリー：確定売上・予定売上・合計売上・確定利益・合計利益・今月経費を明確表示。「予定利益」表示を廃止
+- 経営ホーム：今月合計売上・今月合計利益・確定売上・予定売上・確定利益・今月経費を共通メトリクス参照
+- 目標まで残り / 達成率 / 1日あたり必要 は totalRevenue ベース
+- v4.11.2 の二重計上防止・月次実績分離は維持
+- CSS・受付・請求書・フォロー・Googleカレンダー保存処理は変更なし
+- 新規 verify-v4113-clarify-monthly-total-scheduled-metrics.mjs 追加
+
 ## v4.11.2 実装内容（経営ホーム・売上サマリー月次数字の共通定義統一）
 
 - 表示バージョンを v4.11.2 に更新

@@ -2,6 +2,25 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.11.3 月次メトリクス表示名の意味整理（2026-07-05）
+
+**日付**: 2026-07-05
+
+**判断内容**:
+- v4.11.2 で統一した共通月次メトリクスは計算は正しいが、`plannedRevenue` が合計売上なのに「予定売上」と表示され現場で混乱
+- 確定売上 / 予定売上 / 合計売上 / 確定利益 / 合計利益の表示定義を明確化
+- `scheduledRevenue` = 作業予定由来の予定追加売上、`totalRevenue` = 確定+予定、`totalProfit` = 合計売上−経費
+- `plannedRevenue` / `plannedProfit` は legacy alias として残し、画面表示では使わない
+- 目標系（残り / 達成率 / 1日あたり必要）は totalRevenue ベース
+- 大きな再設計・新画面・CSS変更はしない
+
+**変更ファイル**:
+- js/revenue-brain.js（scheduledRevenue / totalRevenue / totalProfit 追加）
+- js/executive-brain.js（表示ラベル・参照フィールド更新）
+- js/app.js（売上サマリー・経営ホーム・朝レポート表示）
+- index.html, js/storage.js, js/data-backup.js（v4.11.3）
+- scripts/verify-v4113-clarify-monthly-total-scheduled-metrics.mjs（新規）
+
 ## v4.11.2 経営ホーム・売上サマリー月次数字の共通定義統一（2026-07-05）
 
 **日付**: 2026-07-05

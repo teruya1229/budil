@@ -56,10 +56,10 @@ const css = load('css/style.css');
 
 // --- バージョン確認 ---
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.2'), 'index.html should show v4.11.2');
-assert(indexHtml.includes('js/app.js?v=4.11.2'), 'app.js cache buster should be v4.11.2');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.2'"), 'storage.js version should be v4.11.2');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.2'"), 'data-backup version should be v4.11.2');
+assert(indexHtml.includes('v4.11.3'), 'index.html should show v4.11.3');
+assert(indexHtml.includes('js/app.js?v=4.11.3'), 'app.js cache buster should be v4.11.3');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.3'"), 'storage.js version should be v4.11.3');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.3'"), 'data-backup version should be v4.11.3');
 
 // --- v4.10.26 今日判定が維持されていること ---
 console.log('== TODAY() local date regression ==');
