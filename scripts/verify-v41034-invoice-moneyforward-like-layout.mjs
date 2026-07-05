@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.36 - invoice/estimate Money Forward-like layout verification.
+ * Budil v4.10.37 - invoice/estimate Money Forward-like layout verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/app.js', 'js/documents-brain.js', 'js/storage.js']) {
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.36 invoice-moneyforward-like-layout ==');
+console.log('== v4.10.37 invoice-moneyforward-like-layout ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -39,11 +39,11 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.36'), 'index.html should show v4.10.36');
-assert(indexHtml.includes('js/app.js?v=4.10.36'), 'app.js cache buster should be v4.10.36');
-assert(indexHtml.includes('css/style.css?v=4.10.36'), 'style.css cache buster should be v4.10.36');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.36'"), 'storage.js version should be v4.10.36');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.36'"), 'data-backup version should be v4.10.36');
+assert(indexHtml.includes('v4.10.37'), 'index.html should show v4.10.37');
+assert(indexHtml.includes('js/app.js?v=4.10.37'), 'app.js cache buster should be v4.10.37');
+assert(indexHtml.includes('css/style.css?v=4.10.37'), 'style.css cache buster should be v4.10.37');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.37'"), 'storage.js version should be v4.10.37');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.37'"), 'data-backup version should be v4.10.37');
 
 console.log('== layout structure ==');
 assert(documentsJs.includes('doc-sheet-left'), 'left header block should exist');
@@ -52,7 +52,7 @@ assert(documentsJs.includes('doc-issuer-block'), 'issuer block should exist');
 assert(documentsJs.includes('doc-issuer-text'), 'issuer text should exist');
 assert(documentsJs.includes('doc-seal'), 'seal image should exist');
 assert(documentsJs.includes('doc-framed-block'), 'framed block class should exist');
-assert(!documentsJs.includes('doc-company-name'), 'v4.10.36 broken company markup must be removed');
+assert(!documentsJs.includes('doc-company-name'), 'v4.10.37 broken company markup must be removed');
 assert(!documentsJs.includes('doc-sheet-footer'), 'footer wrapper must not compress layout');
 assert(!documentsJs.includes('税率別内訳'), 'tax breakdown table must not be rendered');
 
@@ -62,7 +62,7 @@ assert(css.includes('.doc-framed-block'), 'framed block CSS should exist');
 assert(css.includes('.doc-sheet-right'), 'right header CSS should exist');
 assert(css.includes('body.doc-printing .doc-seal'), 'print seal CSS should exist');
 assert(css.includes('body.doc-printing .doc-framed-block'), 'print framed block CSS should exist');
-assert(css.includes('v4.10.36'), 'layout marker should exist in css');
+assert(css.includes('v4.10.37'), 'layout marker should exist in css');
 
 console.log('== tax display mode UI maintained ==');
 assert(indexHtml.includes('id="doc-tax-display-mode"'), 'tax display mode select should exist');
@@ -185,4 +185,4 @@ assert(css.includes('size: A4 portrait'), 'A4 portrait should be specified');
 assert(css.includes('body.doc-printing .sidebar'), 'sidebar should be hidden when printing');
 assert(appJs.includes('doc-printing'), 'app.js should toggle doc-printing for print');
 
-console.log('\nAll v4.10.36 invoice-moneyforward-like-layout checks passed.');
+console.log('\nAll v4.10.37 invoice-moneyforward-like-layout checks passed.');

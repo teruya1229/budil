@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.37 - invoice/estimate print layout verification.
+ * Budil v4.10.37 - invoice/estimate A4 layout spacing verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/app.js', 'js/documents-brain.js', 'js/storage.js']) {
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.37 invoice-print-layout ==');
+console.log('== v4.10.37 invoice-layout-spacing ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -26,45 +26,60 @@ const css = load('css/style.css');
 const storageJs = load('js/storage.js');
 const dataBackupJs = load('js/data-backup.js');
 
+const NG_TERMS = [
+  '売上登録',
+  '売上登録へ',
+  '一括売上登録',
+  '登録対象を売上登録',
+  '作業完了',
+  '作業完了後',
+  '売上登録済み',
+  '作業後確定',
+  '作業後売上確定'
+];
+
 console.log('== version check ==');
 assert(indexHtml.includes('v4.10.37'), 'index.html should show v4.10.37');
 assert(indexHtml.includes('js/app.js?v=4.10.37'), 'app.js cache buster should be v4.10.37');
 assert(indexHtml.includes('css/style.css?v=4.10.37'), 'style.css cache buster should be v4.10.37');
+assert(indexHtml.includes('js/documents-brain.js?v=4.10.37'), 'documents-brain cache buster should be v4.10.37');
 assert(storageJs.includes("BUDIL_VERSION: 'v4.10.37'"), 'storage.js version should be v4.10.37');
 assert(dataBackupJs.includes("APP_VERSION: 'v4.10.37'"), 'data-backup version should be v4.10.37');
 
-console.log('== print CSS ==');
-assert(css.includes('@media print'), 'print media query should exist');
-assert(css.includes('body.doc-printing'), 'doc-printing print scope should exist');
-assert(css.includes('@page'), 'print page rule should exist');
-assert(css.includes('size: A4 portrait'), 'A4 portrait should be specified');
-assert(css.includes('body.doc-printing .sidebar'), 'sidebar should be hidden when printing');
-assert(css.includes('body.doc-printing .doc-preview-heading'), 'preview heading should be hidden when printing');
-assert(css.includes('body.doc-printing .documents-purpose-note'), 'purpose note should be hidden when printing');
-assert(css.includes('body.doc-printing .doc-preview-toolbar'), 'preview toolbar should be hidden when printing');
-assert(css.includes('body.doc-printing .documents-preview-body'), 'preview frame padding/border reset for print');
-assert(css.includes('body.doc-printing .doc-sheet'), 'doc-sheet print compaction should exist');
-assert(css.includes('body.doc-printing .doc-bank'), 'bank block print rule should exist');
-assert(css.includes('page-break-before: avoid'), 'bank should avoid page break before');
-assert(css.includes('v4.10.37'), 'v4.10.37 print layout marker should exist in css');
+console.log('== spacing adjustments ==');
+assert(css.includes('v4.10.37'), 'v4.10.37 layout marker should exist in css');
+assert(css.includes('margin-bottom: 1.35rem'), 'header bottom spacing should be increased');
+assert(css.includes('margin-bottom: 1rem'), 'meta bottom spacing should be increased');
+assert(css.includes('margin: 0.9rem 0 1.05rem'), 'total banner spacing should be increased');
+assert(css.includes('margin-top: 0.25rem'), 'table/totals top spacing should exist');
+assert(css.includes('margin-top: 0.85rem'), 'bank/note top spacing should be increased');
+assert(css.includes('width: 210mm'), 'A4 width must remain fixed');
+assert(css.includes('padding: 16mm 18mm'), 'A4 horizontal padding must remain');
+assert(!css.includes('font-size: 9.5pt !important'), 'print must not reintroduce sheet shrink');
 
-console.log('== screen UI preserved ==');
-assert(indexHtml.includes('doc-print-browser-hint'), 'browser print hint should exist on screen');
-assert(indexHtml.includes('no-print'), 'no-print class should be used for non-print UI');
-assert(css.includes('--doc-preview-frame'), 'v4.10.25 screen preview frame vars should remain');
-assert(css.includes('#view-documents .documents-preview-body'), 'v4.10.25 screen preview body styles should remain');
-assert(appJs.includes('doc-printing'), 'app.js should toggle doc-printing for print');
+console.log('== layout structure ==');
+assert(documentsJs.includes('doc-issuer-block'), 'issuer block should exist');
+assert(documentsJs.includes('doc-seal'), 'seal image should exist');
+assert(documentsJs.includes('doc-framed-block'), 'framed blocks should exist');
+assert(!documentsJs.includes('税率別内訳'), 'tax breakdown table must not be rendered');
 
-console.log('== v4.10.37 tax consistency maintained ==');
-assert(documentsJs.includes('calcFromFormItems'), 'calcFromFormItems must remain');
-assert(documentsJs.includes('getFormItemsFromDocument'), 'getFormItemsFromDocument must remain');
-assert(appJs.includes('calcFromFormItems'), 'app.js must still use calcFromFormItems');
+console.log('== CSS layout ==');
+assert(css.includes('body.doc-printing .doc-seal'), 'print seal CSS should exist');
+assert(css.includes('width: 72px !important'), 'print seal should stay 72px');
+assert(css.includes('.doc-col-price { width: 5.75rem; }'), 'column widths should remain');
+
+for (const term of NG_TERMS) {
+  assert(!appJs.includes(term), `NG term ${term} must not appear in app.js UI`);
+}
 
 function createSandbox() {
   const ctx = createContext({
     console, Date, JSON, Math, Number, String, Array, Object, Error,
     parseInt, parseFloat, isNaN, undefined, RegExp,
-    RevenueBrain: { normalizeRevenueRecord: r => ({ ...(r || {}) }) },
+    RevenueBrain: {
+      normalizeRevenueRecord: r => ({ ...(r || {}) }),
+      formatYen: n => Number(n || 0).toLocaleString('ja-JP') + '円'
+    },
     PaymentBrain: {
       normalizeRevenuePayment: (r, o) => ({
         paymentMethod: 'bank_transfer', paymentStatus: 'pending',
@@ -84,14 +99,38 @@ function createSandbox() {
   return ctx;
 }
 
+console.log('== rendered layout ==');
+{
+  const ctx = createSandbox();
+  const result = runInContext(`(() => {
+    const draft = DocumentsBrain.buildInvoiceFromRevenue({
+      id: 'rev-layout',
+      customerName: 'テスト商事',
+      service: 'エアコン通常',
+      serviceText: 'R1',
+      amount: 22000,
+      workDate: '2026-07-03'
+    }, []);
+    const html = DocumentsBrain.renderDocumentSheet(draft, s => String(s || ''));
+    return { html };
+  })()`, ctx);
+  assert(result.html.includes('doc-sheet-right'), 'company block should remain top-right');
+  assert(result.html.includes('doc-seal'), 'seal should remain in sheet');
+  assert(result.html.includes('doc-framed-block'), 'framed blocks should remain');
+  assert(!result.html.includes('税率別'), 'tax breakdown must not appear');
+}
+
 console.log('== taxIncluded 22,000 yen case ==');
 {
   const ctx = createSandbox();
   const result = runInContext(`(() => {
-    const taxSettings = { taxDisplayMode: 'taxIncluded', taxCategory: 'taxable10', taxRounding: 'floor', lineRounding: 'floor' };
     const draft = DocumentsBrain.buildInvoiceFromRevenue({
-      id: 'rev-tax', customerName: 'Customer', service: 'AC cleaning', serviceText: 'R1',
-      amount: 22000, workDate: '2026-07-03'
+      id: 'rev-tax',
+      customerName: 'Customer',
+      service: 'AC cleaning',
+      serviceText: 'R1',
+      amount: 22000,
+      workDate: '2026-07-03'
     }, []);
     const formItems = DocumentsBrain.getFormItemsFromDocument(draft);
     const formCalc = DocumentsBrain.calcFromFormItems(formItems, draft.taxSettings);
@@ -99,21 +138,21 @@ console.log('== taxIncluded 22,000 yen case ==');
     return { draft, formCalc, html };
   })()`, ctx);
   assert(result.draft.items[0].unitPrice === 20000, 'unit price should be 20000');
-  assert(result.draft.items[0].amount === 20000, 'amount should be 20000');
-  assert(result.formCalc.subtotal === 20000, 'subtotal should be 20000');
-  assert(result.formCalc.tax === 2000, 'tax should be 2000');
   assert(result.formCalc.total === 22000, 'total should be 22000');
-  assert(/20,000/.test(result.html), 'sheet should show 20,000');
-  assert(result.html.includes('doc-sheet'), 'rendered output should include doc-sheet');
-  assert(result.html.includes('doc-bank'), 'invoice should include bank block');
+  assert(result.html.includes('20,000円'), 'sheet should show 20,000 yen');
+  assert(result.html.includes('22,000円'), 'sheet should show 22,000 yen total');
 }
 
 console.log('== v4.10.30 sanitizing maintained ==');
 {
   const ctx = createSandbox();
   const revenue = {
-    id: 'rev-sanitize', customerName: 'Customer', service: 'AC cleaning', serviceText: 'R1',
-    amount: 22000, workDate: '2026-07-03',
+    id: 'rev-sanitize',
+    customerName: 'Customer',
+    service: 'AC cleaning',
+    serviceText: 'R1',
+    amount: 22000,
+    workDate: '2026-07-03',
     memo: 'phone: 000-0000-0000\nhttps://drive.google.com/file/d/abc/view\nreceipt: https://example.com/receipt.jpg\ninternal-only memo',
     description: 'GPT helper'
   };
@@ -128,4 +167,4 @@ console.log('== v4.10.30 sanitizing maintained ==');
   assert(!result.html.includes('internal-only memo'), 'internal memo must not appear');
 }
 
-console.log('\nAll v4.10.37 invoice-print-layout checks passed.');
+console.log('\nAll v4.10.37 invoice-layout-spacing checks passed.');

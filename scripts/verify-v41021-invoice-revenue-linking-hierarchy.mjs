@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.10.36 — invoice/estimate revenue linking hierarchy verification.
+ * Budil v4.10.37 — invoice/estimate revenue linking hierarchy verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -29,10 +29,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.36'), 'index.html should show v4.10.36');
-assert(indexHtml.includes('js/app.js?v=4.10.36'), 'app.js cache buster should be v4.10.36');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.36'"), 'storage.js version should be v4.10.36');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.36'"), 'data-backup version should be v4.10.36');
+assert(indexHtml.includes('v4.10.37'), 'index.html should show v4.10.37');
+assert(indexHtml.includes('js/app.js?v=4.10.37'), 'app.js cache buster should be v4.10.37');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.37'"), 'storage.js version should be v4.10.37');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.37'"), 'data-backup version should be v4.10.37');
 
 // 請求書・見積書 view に目的注記があること
 assert(indexHtml.includes('documents-purpose-note'), 'documents-purpose-note should exist in index.html');

@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.36 - invoice layout redo verification.
+ * Budil v4.10.37 - invoice layout redo verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/app.js', 'js/documents-brain.js', 'js/storage.js']) {
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.36 invoice-layout-redo ==');
+console.log('== v4.10.37 invoice-layout-redo ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -39,12 +39,12 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.36'), 'index.html should show v4.10.36');
-assert(indexHtml.includes('js/app.js?v=4.10.36'), 'app.js cache buster should be v4.10.36');
-assert(indexHtml.includes('css/style.css?v=4.10.36'), 'style.css cache buster should be v4.10.36');
-assert(indexHtml.includes('js/documents-brain.js?v=4.10.36'), 'documents-brain cache buster should be v4.10.36');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.36'"), 'storage.js version should be v4.10.36');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.36'"), 'data-backup version should be v4.10.36');
+assert(indexHtml.includes('v4.10.37'), 'index.html should show v4.10.37');
+assert(indexHtml.includes('js/app.js?v=4.10.37'), 'app.js cache buster should be v4.10.37');
+assert(indexHtml.includes('css/style.css?v=4.10.37'), 'style.css cache buster should be v4.10.37');
+assert(indexHtml.includes('js/documents-brain.js?v=4.10.37'), 'documents-brain cache buster should be v4.10.37');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.37'"), 'storage.js version should be v4.10.37');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.37'"), 'data-backup version should be v4.10.37');
 
 console.log('== layout structure ==');
 assert(documentsJs.includes('doc-issuer-block'), 'issuer block should exist');
@@ -63,7 +63,7 @@ assert(css.includes('.doc-framed-block'), 'framed block CSS should exist');
 assert(css.includes('body.doc-printing .doc-seal'), 'print seal CSS should exist');
 assert(css.includes('position: absolute !important'), 'print seal must stay absolute');
 assert(css.includes('display: block !important'), 'print seal must stay visible');
-assert(css.includes('v4.10.36'), 'v4.10.36 layout marker should exist in css');
+assert(css.includes('v4.10.37'), 'v4.10.37 layout marker should exist in css');
 assert(!css.includes('table-layout: fixed'), 'v4.10.34 table-layout fixed must be removed');
 
 console.log('== tax display mode UI maintained ==');
@@ -186,4 +186,4 @@ assert(css.includes('size: A4 portrait'), 'A4 portrait should be specified');
 assert(css.includes('body.doc-printing .sidebar'), 'sidebar should be hidden when printing');
 assert(appJs.includes('doc-printing'), 'app.js should toggle doc-printing for print');
 
-console.log('\nAll v4.10.36 invoice-layout-redo checks passed.');
+console.log('\nAll v4.10.37 invoice-layout-redo checks passed.');

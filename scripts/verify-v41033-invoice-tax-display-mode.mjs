@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.36 - invoice/estimate tax display mode verification.
+ * Budil v4.10.37 - invoice/estimate tax display mode verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/app.js', 'js/documents-brain.js', 'js/storage.js']) {
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.36 invoice-tax-display-mode ==');
+console.log('== v4.10.37 invoice-tax-display-mode ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -39,11 +39,11 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.36'), 'index.html should show v4.10.36');
-assert(indexHtml.includes('js/app.js?v=4.10.36'), 'app.js cache buster should be v4.10.36');
-assert(indexHtml.includes('css/style.css?v=4.10.36'), 'style.css cache buster should be v4.10.36');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.36'"), 'storage.js version should be v4.10.36');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.36'"), 'data-backup version should be v4.10.36');
+assert(indexHtml.includes('v4.10.37'), 'index.html should show v4.10.37');
+assert(indexHtml.includes('js/app.js?v=4.10.37'), 'app.js cache buster should be v4.10.37');
+assert(indexHtml.includes('css/style.css?v=4.10.37'), 'style.css cache buster should be v4.10.37');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.37'"), 'storage.js version should be v4.10.37');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.37'"), 'data-backup version should be v4.10.37');
 
 console.log('== tax display mode UI ==');
 assert(indexHtml.includes('id="doc-tax-display-mode"'), 'tax display mode select should exist');
@@ -239,7 +239,7 @@ console.log('== v4.10.32 print layout maintained ==');
 assert(css.includes('@media print'), 'print media query should exist');
 assert(css.includes('body.doc-printing'), 'doc-printing print scope should exist');
 assert(css.includes('size: A4 portrait'), 'A4 portrait should be specified');
-assert(css.includes('v4.10.36'), 'v4.10.36 print layout marker should exist in css');
+assert(css.includes('v4.10.37'), 'v4.10.37 print layout marker should exist in css');
 assert(appJs.includes('doc-printing'), 'app.js should toggle doc-printing for print');
 
-console.log('\nAll v4.10.36 invoice-tax-display-mode checks passed.');
+console.log('\nAll v4.10.37 invoice-tax-display-mode checks passed.');
