@@ -880,9 +880,11 @@
     const taskBtn = p.taskId
       ? `<button type="button" class="btn btn-sm btn-primary" data-exec-priority-done="${esc(p.taskId)}">完了</button>`
       : `<button type="button" class="btn btn-sm btn-primary" data-exec-priority-add-task="${esc(p.id)}">毎日やることに追加</button>`;
-    const intakeRevenueBtn = p.fillRevenueAction && p.intakeId
-      ? `<button type="button" class="btn btn-sm btn-secondary" data-exec-priority-fill-revenue="${esc(p.intakeId)}" title="カレンダー未反映の受付から売上確定">この受付から売上確定する</button>`
-      : '';
+    const intakeRevenueBtn = p.viewRevenueAction && p.revenueId
+      ? `<button type="button" class="btn btn-sm btn-secondary" data-exec-priority-view-revenue="${esc(p.revenueId)}" title="既存売上を確認">関連売上を見る</button>`
+      : (p.fillRevenueAction && p.intakeId
+        ? `<button type="button" class="btn btn-sm btn-secondary" data-exec-priority-fill-revenue="${esc(p.intakeId)}" title="カレンダー未反映の受付から売上確定">この受付から売上確定する</button>`
+        : '');
     return `
       <div class="exec-priority-item" data-priority-id="${esc(p.id)}">
         <div class="exec-priority-header">
@@ -1328,7 +1330,9 @@
       // v4.10.28: 売上未確定の受付には例外補助導線ボタンを追加する
       const revenueExceptionBtn = state.primaryAction === 'fillRevenue' && !state.hasRevenue
         ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(intake.id)}">この受付から売上確定する</button>`
-        : '';
+        : (state.hasRevenue
+          ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-revenue="${esc(intake.id)}">関連売上を見る</button>`
+          : '');
       actions.insertAdjacentHTML('afterbegin', `
         <span class="exec-reception-actions-v484">
           ${renderReceptionPrimaryAction(intake.id, state, { compact: true })}
@@ -1368,6 +1372,14 @@
       if (btn.dataset.bound) return;
       btn.dataset.bound = '1';
       btn.addEventListener('click', () => fillRevenueFromReceptionIntake(btn.dataset.execPriorityFillRevenue));
+    });
+    root.querySelectorAll('[data-exec-priority-view-revenue]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => {
+        navigateToView('revenue');
+        openRevenueEdit(btn.dataset.execPriorityViewRevenue);
+      });
     });
     root.querySelectorAll('[data-exec-priority-not-needed]').forEach(btn => {
       if (btn.dataset.bound) return;
@@ -2835,7 +2847,9 @@
         priorityId: p.id,
         taskId: p.taskId,
         intakeId: p.intakeId,
-        fillRevenueAction: p.fillRevenueAction
+        fillRevenueAction: p.fillRevenueAction,
+        viewRevenueAction: p.viewRevenueAction,
+        revenueId: p.revenueId
       });
     });
 
@@ -3075,16 +3089,26 @@
         ${visible.map(it => `<li class="daily-priority-item daily-priority-${esc(it.kind)}">
           <strong>${esc(it.title)}</strong>
           <span class="daily-priority-reason">${esc(it.reason)}</span>
-          ${it.fillRevenueAction && it.intakeId
-            ? `<button type="button" class="btn btn-sm btn-secondary" data-daily-priority-fill-revenue="${esc(it.intakeId)}">この受付から売上確定する</button>`
-            : ''}
+          ${it.viewRevenueAction && it.revenueId
+            ? `<button type="button" class="btn btn-sm btn-secondary" data-daily-priority-view-revenue="${esc(it.revenueId)}">関連売上を見る</button>`
+            : (it.fillRevenueAction && it.intakeId
+              ? `<button type="button" class="btn btn-sm btn-secondary" data-daily-priority-fill-revenue="${esc(it.intakeId)}">この受付から売上確定する</button>`
+              : '')}
         </li>`).join('')}
       </ul>
-      ${hidden.length ? `<details class="daily-priority-more"><summary>ほか${hidden.length}件</summary><ul class="daily-priority-items">${hidden.map(it => `<li class="daily-priority-item"><strong>${esc(it.title)}</strong> — ${esc(it.reason)}${it.fillRevenueAction && it.intakeId ? ` <button type="button" class="btn btn-sm btn-secondary" data-daily-priority-fill-revenue="${esc(it.intakeId)}">この受付から売上確定する</button>` : ''}</li>`).join('')}</ul></details>` : ''}`;
+      ${hidden.length ? `<details class="daily-priority-more"><summary>ほか${hidden.length}件</summary><ul class="daily-priority-items">${hidden.map(it => `<li class="daily-priority-item"><strong>${esc(it.title)}</strong> — ${esc(it.reason)}${it.viewRevenueAction && it.revenueId ? ` <button type="button" class="btn btn-sm btn-secondary" data-daily-priority-view-revenue="${esc(it.revenueId)}">関連売上を見る</button>` : (it.fillRevenueAction && it.intakeId ? ` <button type="button" class="btn btn-sm btn-secondary" data-daily-priority-fill-revenue="${esc(it.intakeId)}">この受付から売上確定する</button>` : '')}</li>`).join('')}</ul></details>` : ''}`;
     el.querySelectorAll('[data-daily-priority-fill-revenue]').forEach(btn => {
       if (btn.dataset.bound) return;
       btn.dataset.bound = '1';
       btn.addEventListener('click', () => fillRevenueFromReceptionIntake(btn.dataset.dailyPriorityFillRevenue));
+    });
+    el.querySelectorAll('[data-daily-priority-view-revenue]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => {
+        navigateToView('revenue');
+        openRevenueEdit(btn.dataset.dailyPriorityViewRevenue);
+      });
     });
   }
 
@@ -12627,7 +12651,7 @@
       ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-work-order="${esc(id)}">作業予定を開く</button>`
       : `<button type="button" class="btn btn-sm btn-secondary" data-reception-create-work-order="${esc(id)}">この受付から作業予定を作る</button>`;
     const revenueAction = state.hasRevenue
-      ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-revenue="${esc(id)}">売上を開く</button>`
+      ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-revenue="${esc(id)}">関連売上を見る</button>`
       : `<button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(id)}">この受付から売上確定する</button>`;
     return `
       <details class="reception-detail-actions">
@@ -12770,7 +12794,9 @@
     el.innerHTML = intakes.map(intake => {
       const lead = intake.relatedLeadId ? leads.find(l => l.id === intake.relatedLeadId) : null;
       const leadLabel = lead ? lead.company : (intake.relatedLeadId ? '（削除済み）' : '—');
-      const revLabel = intake.relatedRevenueId ? 'あり' : (intake.status === 'revenue_candidate' ? '候補' : '—');
+      const revLabel = workflow.hasRevenue
+        ? (intake.relatedRevenueId ? 'あり' : '一致')
+        : (intake.status === 'revenue_candidate' ? '候補' : '—');
       const area = MapBrain.getIntakeArea(intake);
       const addr = (intake.address || '').trim();
       const workflow = getReceptionWorkflowState(intake);
@@ -12891,12 +12917,14 @@
     const id = String(intakeId || '').trim();
     if (!id) return null;
     const intake = Storage.getReceptionIntakes().find(i => i.id === id);
+    if (!intake) return null;
     const revenues = Storage.getRevenueRecords();
-    if (intake && intake.relatedRevenueId) {
-      const linked = revenues.find(r => r.id === intake.relatedRevenueId);
-      if (linked) return linked;
-    }
-    return revenues.find(r => getRevenueReceptionId(r) === id) || null;
+    const resolved = RevenueBrain.resolveRevenueForIntake(intake, {
+      revenues,
+      workOrders: Storage.getWorkOrders(),
+      leads: Storage.getLeads()
+    });
+    return resolved.revenue || null;
   }
 
   function linkReceptionToWorkOrder(intakeId, workOrderId) {
@@ -13076,6 +13104,11 @@
   function fillRevenueFromReceptionIntake(intakeId) {
     const intake = Storage.getReceptionIntakes().find(i => i.id === intakeId);
     if (!intake) return;
+    const state = getReceptionWorkflowState(intake);
+    if (state.hasRevenue && state.revenue) {
+      openRevenueFromReceptionIntake(intakeId);
+      return;
+    }
     const candidate = ReceptionBrain.buildRevenueCandidate(intake);
     const workDate = candidate.workDate || ReceptionBrain.extractWorkDate(intake) || TODAY();
     const serviceVal = ReceptionBrain.matchRevenueService(candidate.service);

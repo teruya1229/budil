@@ -51,8 +51,16 @@ const ExecutiveBrain = {
       ? WorkCompletionBrain.summarizeTargets(workOrders, raw.revenues || [], today)
       : {};
     const todayWork = WorkOrderBrain.getTodayWorkOrders(workOrders, today);
-    const receptionSummary = ReceptionBrain.getReceptionSummary(intakes, today);
-    const pendingReceptions = this.getPendingReceptions(intakes);
+    const receptionSummary = ReceptionBrain.getReceptionSummary(intakes, today, {
+      revenues: raw.revenues || [],
+      workOrders,
+      leads: raw.leads || []
+    });
+    const pendingReceptions = this.getPendingReceptions(intakes, {
+      revenues: raw.revenues || [],
+      workOrders,
+      leads: raw.leads || []
+    });
     const ctx = {
       today,
       workOrders,
@@ -153,19 +161,26 @@ const ExecutiveBrain = {
     return { isEmpty: false, lines: lines.slice(0, 3) };
   },
 
-  getPendingReceptions(intakes) {
+  getPendingReceptions(intakes, context) {
+    const ctx = context || {};
     const skip = new Set(['done', 'archived', 'work_scheduled']);
     return (intakes || [])
       .map(i => ReceptionBrain.normalizeIntake(i))
       .filter(i => !skip.has(i.status))
-      .filter(i =>
-        i.status === 'new'
-        || i.status === 'lead_created'
-        || i.status === 'task_created'
-        || i.status === 'revenue_candidate'
-        || !i.relatedLeadId
-        || !i.relatedWorkOrderId
-      )
+      .filter(i => {
+        const state = ReceptionBrain.getWorkflowState(i, {
+          leads: ctx.leads || [],
+          workOrders: ctx.workOrders || [],
+          revenues: ctx.revenues || []
+        });
+        if (state.hasRevenue) return false;
+        return i.status === 'new'
+          || i.status === 'lead_created'
+          || i.status === 'task_created'
+          || i.status === 'revenue_candidate'
+          || !i.relatedLeadId
+          || !i.relatedWorkOrderId;
+      })
       .slice(0, 8);
   },
 
@@ -211,7 +226,8 @@ const ExecutiveBrain = {
         ? ReceptionBrain.buildIntakePrioritySummary(intake, {
           leads: c.leads,
           workOrders: c.workOrders,
-          revenues: c.revenues || (c.revCtx && c.revCtx.records) || []
+          revenues: c.revenues || (c.revCtx && c.revCtx.records) || [],
+          followTargets: c.followTargets || []
         })
         : null;
       const needsLead = !intake.relatedLeadId;
@@ -228,6 +244,8 @@ const ExecutiveBrain = {
         sourceKey: 'reception',
         intakeId: intake.id,
         fillRevenueAction: !!(summary && summary.fillRevenueAction),
+        viewRevenueAction: !!(summary && summary.viewRevenueAction),
+        revenueId: summary && summary.revenueId ? summary.revenueId : '',
         dedupeKey: ['exec-priority', today, 'intake', intake.id].join('|'),
         taskDedupeKey: ['intake', today, intake.id, intake.customerName].join('|')
       });

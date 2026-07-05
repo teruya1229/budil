@@ -376,7 +376,8 @@ const ReceptionBrain = {
 
   buildIntakePrioritySummary(intake, context) {
     const normalized = this.normalizeIntake(intake);
-    const state = this.getWorkflowState(normalized, context || {});
+    const ctx = context || {};
+    const state = this.getWorkflowState(normalized, ctx);
     const name = this.formatCustomerDisplayName(normalized.customerName);
     const parts = [];
     const sourceLabel = this.formatIntakeSourceForDisplay(normalized.source);
@@ -385,12 +386,32 @@ const ReceptionBrain = {
     if (Number(normalized.estimateAmount || 0) > 0 && typeof RevenueBrain !== 'undefined') {
       parts.push(RevenueBrain.formatYen(normalized.estimateAmount));
     }
+
+    if (state.hasRevenue) {
+      const followTargets = Array.isArray(ctx.followTargets) ? ctx.followTargets : [];
+      const revenueId = state.revenue && state.revenue.id;
+      const thanksPending = followTargets.some(t =>
+        t && t.needsThanks && revenueId && t.revenueId === revenueId
+      );
+      return {
+        title: `${name}：売上確定済み`,
+        reason: thanksPending
+          ? 'お礼LINE作成/確認'
+          : (parts.length ? parts.join(' / ') : '売上確定済み'),
+        fillRevenueAction: false,
+        viewRevenueAction: true,
+        revenueId: revenueId || ''
+      };
+    }
+
     const detailReason = parts.length ? parts.join(' / ') : '売上未確定の受付。内容を確認して売上確定';
     if (state.primaryAction === 'fillRevenue' && !state.hasRevenue) {
       return {
         title: `${name}の受付内容を確認・売上確定`,
         reason: detailReason,
-        fillRevenueAction: true
+        fillRevenueAction: true,
+        viewRevenueAction: false,
+        revenueId: ''
       };
     }
     const needsLead = !normalized.relatedLeadId;
@@ -404,7 +425,9 @@ const ReceptionBrain = {
       reason: needsSchedule
         ? `新規受付。${normalized.serviceText || '作業内容'}の日程調整が必要`
         : (parts.length ? parts.join(' / ') : `新規受付。${normalized.source || '依頼元'}からの問い合わせ`),
-      fillRevenueAction: false
+      fillRevenueAction: false,
+      viewRevenueAction: false,
+      revenueId: ''
     };
   },
 
@@ -429,19 +452,11 @@ const ReceptionBrain = {
     const primaryWorkOrder = relatedWorkOrders.find(w => w.id === normalized.relatedWorkOrderId)
       || relatedWorkOrders[0]
       || null;
-    const revenueId = normalized.relatedRevenueId
-      || (primaryWorkOrder && primaryWorkOrder.actualRevenueId)
-      || '';
-    const revenue = revenueId
-      ? revenues.find(r => r && r.id === revenueId)
-      : revenues.find(r => {
-        if (!r) return false;
-        const revIntakeIds = [r.intakeId, r.receptionIntakeId, r.sourceIntakeId].map(v => String(v || '').trim());
-        return normalized.id && (
-          revIntakeIds.includes(normalized.id)
-          || (primaryWorkOrder && (r.sourceWorkOrderId === primaryWorkOrder.id || r.workOrderId === primaryWorkOrder.id))
-        );
-      }) || null;
+    const resolved = typeof RevenueBrain !== 'undefined'
+      ? RevenueBrain.resolveRevenueForIntake(normalized, { revenues, workOrders, leads })
+      : { revenue: null, resolvedRevenue: null, linkSource: null };
+    const revenue = resolved.revenue || null;
+    const resolvedRevenue = resolved.resolvedRevenue || null;
     const hasLead = !!lead;
     const hasWorkOrder = !!primaryWorkOrder;
     const hasRevenue = !!revenue;
@@ -456,10 +471,10 @@ const ReceptionBrain = {
     let primaryLabel = '案件化する';
     if (hasRevenue) {
       primaryAction = 'openRevenue';
-      primaryLabel = '売上を開く';
+      primaryLabel = '関連売上を見る';
     } else if (completedNoRevenue) {
       primaryAction = 'fillRevenue';
-      primaryLabel = '売上確定へ進む';
+      primaryLabel = 'この受付から売上確定する';
     } else if (!hasWorkOrder && Number(normalized.estimateAmount || 0) > 0) {
       // v4.10.28: カレンダー未反映・作業予定なしでも例外補助で売上明細へ
       primaryAction = 'fillRevenue';
@@ -476,6 +491,8 @@ const ReceptionBrain = {
       lead,
       workOrder: primaryWorkOrder,
       revenue,
+      resolvedRevenue,
+      revenueLinkSource: resolved.linkSource || null,
       relatedWorkOrders,
       hasLead,
       hasWorkOrder,
@@ -523,14 +540,21 @@ const ReceptionBrain = {
     return 'その他';
   },
 
-  getReceptionSummary(intakes, today) {
+  getReceptionSummary(intakes, today, options) {
     const list = (intakes || []).map(i => this.normalizeIntake(i));
     const active = list.filter(i => i.status !== 'archived' && i.status !== 'done');
+    const ctx = options || {};
+    const revenues = Array.isArray(ctx.revenues) ? ctx.revenues : [];
+    const workOrders = Array.isArray(ctx.workOrders) ? ctx.workOrders : [];
+    const leads = Array.isArray(ctx.leads) ? ctx.leads : [];
     const newCount = active.filter(i => i.status === 'new').length;
     const noLeadCount = active.filter(i => !i.relatedLeadId).length;
-    const revenuePending = active.filter(i =>
-      i.estimateAmount > 0 && i.status !== 'revenue_candidate' && !i.relatedRevenueId
-    ).length;
+    const revenuePending = active.filter(i => {
+      const state = this.getWorkflowState(i, { revenues, workOrders, leads });
+      return !state.hasRevenue
+        && i.estimateAmount > 0
+        && i.status !== 'revenue_candidate';
+    }).length;
     const scheduleTasks = list.filter(i =>
       i.status !== 'done' && i.status !== 'archived' &&
       (/日程|希望日/.test([i.preferredDatesText, i.memo, i.serviceText].join('')) || i.handlingStatus.includes('日程'))

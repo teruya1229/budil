@@ -2,6 +2,23 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.10.38 受付＝一人のお客様 状態同期（2026-07-05）
+
+**日付**: 2026-07-05
+
+**判断内容**:
+- relatedRevenueId 無しでも既存売上と強一致する受付は「売上確定済み扱い」にする（表示・導線のみ）
+- localStorage への relatedRevenueId 自動保存は行わない
+- 二重作成ボタンを出さず「関連売上を見る」に切り替える
+
+**変更ファイル**:
+- js/revenue-brain.js（resolveRevenueForIntake / 強一致判定）
+- js/reception-brain.js（workflow / priority / revenuePending）
+- js/executive-brain.js（pendingReceptions / topPriorities）
+- js/app.js（ボタン切替・導線）
+- index.html, js/storage.js, js/data-backup.js（バージョン更新）
+- scripts/verify-v41038-reception-customer-state-sync.mjs（新規）
+
 ## v4.10.37 請求書・見積書 A4余白調整 小修正（2026-07-05）
 
 **日付**: 2026-07-05

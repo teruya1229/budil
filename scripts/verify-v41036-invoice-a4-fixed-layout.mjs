@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.37 - invoice/estimate A4 fixed layout verification.
+ * Budil v4.10.38 - invoice/estimate A4 fixed layout verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/app.js', 'js/documents-brain.js', 'js/storage.js']) {
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.37 invoice-a4-fixed-layout ==');
+console.log('== v4.10.38 invoice-a4-fixed-layout ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -39,19 +39,19 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.37'), 'index.html should show v4.10.37');
-assert(indexHtml.includes('js/app.js?v=4.10.37'), 'app.js cache buster should be v4.10.37');
-assert(indexHtml.includes('css/style.css?v=4.10.37'), 'style.css cache buster should be v4.10.37');
-assert(indexHtml.includes('js/documents-brain.js?v=4.10.37'), 'documents-brain cache buster should be v4.10.37');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.37'"), 'storage.js version should be v4.10.37');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.37'"), 'data-backup version should be v4.10.37');
+assert(indexHtml.includes('v4.10.38'), 'index.html should show v4.10.38');
+assert(indexHtml.includes('js/app.js?v=4.10.38'), 'app.js cache buster should be v4.10.38');
+assert(indexHtml.includes('css/style.css?v=4.10.38'), 'style.css cache buster should be v4.10.38');
+assert(indexHtml.includes('js/documents-brain.js?v=4.10.38'), 'documents-brain cache buster should be v4.10.38');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.38'"), 'storage.js version should be v4.10.38');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.38'"), 'data-backup version should be v4.10.38');
 
 console.log('== A4 fixed sheet CSS ==');
 assert(css.includes('width: 210mm'), 'doc-sheet should use fixed A4 width');
 assert(css.includes('min-height: 297mm'), 'doc-sheet should use fixed A4 min-height');
 assert(css.includes('box-sizing: border-box'), 'doc-sheet should use border-box sizing');
 assert(css.includes('padding: 16mm 18mm'), 'doc-sheet should use practical A4 padding');
-assert(css.includes('v4.10.37'), 'v4.10.37 layout marker should exist in css');
+assert(css.includes('v4.10.37'), 'v4.10.38 layout marker should exist in css');
 assert(css.includes('body.doc-printing .doc-sheet'), 'print doc-sheet rule should exist');
 assert(css.includes('width: 210mm !important'), 'print should keep A4 width');
 assert(css.includes('padding: 16mm 18mm !important'), 'print should keep A4 padding');
@@ -202,4 +202,4 @@ assert(css.includes('size: A4 portrait'), 'A4 portrait should be specified');
 assert(css.includes('body.doc-printing .sidebar'), 'sidebar should be hidden when printing');
 assert(appJs.includes('doc-printing'), 'app.js should toggle doc-printing for print');
 
-console.log('\nAll v4.10.37 invoice-a4-fixed-layout checks passed.');
+console.log('\nAll v4.10.38 invoice-a4-fixed-layout checks passed.');

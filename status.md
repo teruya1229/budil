@@ -1,5 +1,13 @@
 ﻿# Budil status
 
+## v4.10.38 実装内容（受付＝一人のお客様 状態同期）
+
+- 表示バージョンを v4.10.38 に更新
+- relatedRevenueId が無くても同日・同名・同額・作業/依頼元一致の既存売上を resolvedRevenue として扱う（表示のみ、localStorage 書き換えなし）
+- 売上確定済み受付は「この受付から売上確定する」ではなく「関連売上を見る」に切り替え
+- 今日の最優先・受付一覧・売上未確定カウントから resolved 受付を除外
+- 新規 verify-v41038-reception-customer-state-sync.mjs 追加
+
 ## v4.10.37 実装内容（請求書・見積書 A4余白調整 小修正）
 
 - 表示バージョンを v4.10.37 に更新（app.js / style.css / documents-brain.js キャッシュバスターも v4.10.37）

@@ -751,6 +751,116 @@ const RevenueBrain = {
     return { hasDuplicate: matches.length > 0, matches };
   },
 
+  // v4.10.38: 受付と既存売上の近似解決（表示・導線のみ。localStorage は書き換えない）
+  normalizeCustomerForReceptionMatch(name) {
+    return String(name || '')
+      .trim()
+      .replace(/\s*(様|御中|さん)$/i, '')
+      .replace(/\s+/g, '')
+      .toLowerCase();
+  },
+
+  isCustomerNameStrongMatch(a, b) {
+    const na = this.normalizeCustomerForReceptionMatch(a);
+    const nb = this.normalizeCustomerForReceptionMatch(b);
+    if (!na || !nb) return false;
+    if (na === nb) return true;
+    if (na.includes(nb) || nb.includes(na)) return true;
+    if (typeof CalendarCandidateBrain !== 'undefined') {
+      const ka = CalendarCandidateBrain.normalizeCustomerForLink(a);
+      const kb = CalendarCandidateBrain.normalizeCustomerForLink(b);
+      if (ka && kb && ka === kb) return true;
+    }
+    return false;
+  },
+
+  isServiceOrSourceNearForIntake(intake, record) {
+    const service = String(intake.serviceText || '').trim();
+    const source = String(intake.source || '').trim();
+    const recService = String(record.service || record.actualService || record.serviceText || '').trim();
+    const recSource = String(record.source || '').trim();
+    if (!service && !source) return true;
+    if (typeof CalendarCandidateBrain !== 'undefined') {
+      const ns = CalendarCandidateBrain.normalizeDedupeText(service);
+      const nss = CalendarCandidateBrain.normalizeDedupeText(recService);
+      const nsrc = CalendarCandidateBrain.normalizeDedupeText(source);
+      const nrsrc = CalendarCandidateBrain.normalizeDedupeText(recSource);
+      if (ns && nss && ns === nss) return true;
+      if (nsrc && nrsrc && nsrc === nrsrc) return true;
+    }
+    if (service && recService && (recService.includes(service) || service.includes(recService))) return true;
+    if (source && recSource && (recSource.includes(source) || source.includes(recSource))) return true;
+    return false;
+  },
+
+  findStrongRevenueMatchForIntake(intake, revenues) {
+    const normalized = typeof ReceptionBrain !== 'undefined'
+      ? ReceptionBrain.normalizeIntake(intake)
+      : (intake || {});
+    const workDate = typeof ReceptionBrain !== 'undefined'
+      ? ReceptionBrain.extractWorkDate(normalized)
+      : String(normalized.scheduledDate || normalized.workDate || '').slice(0, 10);
+    const amount = Number(normalized.estimateAmount || 0);
+    if (!workDate || !amount || !normalized.customerName) return null;
+
+    let best = null;
+    (revenues || []).forEach(record => {
+      if (!record || record.status === 'キャンセル') return;
+      if (Number(record.amount || 0) !== amount) return;
+      if (String(record.workDate || '').slice(0, 10) !== workDate) return;
+      if (!this.isCustomerNameStrongMatch(normalized.customerName, record.customerName)) return;
+      if (!this.isServiceOrSourceNearForIntake(normalized, record)) return;
+      if (!best) best = record;
+    });
+    return best;
+  },
+
+  resolveRevenueForIntake(intake, context) {
+    const ctx = context || {};
+    const normalized = typeof ReceptionBrain !== 'undefined'
+      ? ReceptionBrain.normalizeIntake(intake)
+      : (intake || {});
+    const revenues = Array.isArray(ctx.revenues) ? ctx.revenues : [];
+    const workOrders = Array.isArray(ctx.workOrders) ? ctx.workOrders : [];
+
+    if (normalized.relatedRevenueId) {
+      const linked = revenues.find(r => r && r.id === normalized.relatedRevenueId);
+      if (linked) {
+        return { revenue: linked, resolvedRevenue: null, linkSource: 'relatedRevenueId' };
+      }
+    }
+
+    const workIds = [
+      normalized.relatedWorkOrderId,
+      ...(Array.isArray(normalized.relatedWorkOrderIds) ? normalized.relatedWorkOrderIds : [])
+    ].filter(Boolean);
+    for (let i = 0; i < workIds.length; i++) {
+      const wo = workOrders.find(w => w && w.id === workIds[i]);
+      if (wo && wo.actualRevenueId) {
+        const linked = revenues.find(r => r && r.id === wo.actualRevenueId);
+        if (linked) {
+          return { revenue: linked, resolvedRevenue: null, linkSource: 'workOrder' };
+        }
+      }
+    }
+
+    const byIntakeLink = revenues.find(r => {
+      if (!r) return false;
+      const ids = [r.intakeId, r.receptionIntakeId, r.sourceIntakeId].map(v => String(v || '').trim());
+      return normalized.id && ids.includes(normalized.id);
+    });
+    if (byIntakeLink) {
+      return { revenue: byIntakeLink, resolvedRevenue: null, linkSource: 'intakeLink' };
+    }
+
+    const strong = this.findStrongRevenueMatchForIntake(normalized, revenues);
+    if (strong) {
+      return { revenue: strong, resolvedRevenue: strong, linkSource: 'strongMatch' };
+    }
+
+    return { revenue: null, resolvedRevenue: null, linkSource: null };
+  },
+
   getCustomerFacingServiceLabel(record) {
     const rec = record && typeof record === 'object' ? record : {};
     return String(rec.service || rec.serviceName || rec.serviceText || '').trim();
