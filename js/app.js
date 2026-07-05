@@ -15151,6 +15151,8 @@
     document.getElementById('revenue-mark-won').checked = false;
     toggleRevenueLeadOptions();
     document.getElementById('revenue-form-title').textContent = '売上編集';
+    setRevenueFormIntakeNote('');
+    setRevenueFormSubmitLabel('保存');
     document.getElementById('btn-revenue-cancel').classList.remove('hidden');
     document.getElementById('revenue-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
