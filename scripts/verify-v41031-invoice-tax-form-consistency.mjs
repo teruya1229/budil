@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.33 - invoice form tax consistency verification.
+ * Budil v4.10.34 - invoice form tax consistency verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/app.js', 'js/documents-brain.js', 'js/revenue-brain.js',
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.33 invoice-tax-form-consistency ==');
+console.log('== v4.10.34 invoice-tax-form-consistency ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -28,10 +28,10 @@ const dataBackupJs = load('js/data-backup.js');
 const css = load('css/style.css');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.33'), 'index.html should show v4.10.33');
-assert(indexHtml.includes('js/app.js?v=4.10.33'), 'app.js cache buster should be v4.10.33');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.33'"), 'storage.js version should be v4.10.33');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.33'"), 'data-backup version should be v4.10.33');
+assert(indexHtml.includes('v4.10.34'), 'index.html should show v4.10.34');
+assert(indexHtml.includes('js/app.js?v=4.10.34'), 'app.js cache buster should be v4.10.34');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.34'"), 'storage.js version should be v4.10.34');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.34'"), 'data-backup version should be v4.10.34');
 
 console.log('== form consistency helpers ==');
 assert(documentsJs.includes('getFormItemsFromDocument'), 'documents brain should expose getFormItemsFromDocument');
@@ -40,8 +40,8 @@ assert(documentsJs.includes('detectItemsTaxBasis'), 'documents brain should dete
 assert(appJs.includes('calcFromFormItems'), 'app.js should use calcFromFormItems for form tax preview');
 assert(appJs.includes('getFormItemsFromDocument'), 'app.js should use getFormItemsFromDocument when opening form');
 assert(documentsJs.includes('sanitizeDocumentForCustomerDisplay'), 'v4.10.30 sanitizing must remain');
-assert(indexHtml.includes('css/style.css?v=4.10.33'), 'style.css cache buster should be v4.10.33');
-assert(css.includes('v4.10.33'), 'v4.10.33 print layout marker should exist in css');
+assert(indexHtml.includes('css/style.css?v=4.10.34'), 'style.css cache buster should be v4.10.34');
+assert(css.includes('v4.10.34'), 'v4.10.34 print layout marker should exist in css');
 
 function createSandbox() {
   const ctx = createContext({
@@ -169,7 +169,7 @@ console.log('== buildInvoiceFromRevenue uses tax-exclusive form items ==');
   assert(result.formCalc.subtotal === 20000, 'form calc from draft should have subtotal 20000');
 }
 
-console.log('== v4.10.33 sanitizing maintained ==');
+console.log('== v4.10.34 sanitizing maintained ==');
 {
   const ctx = createSandbox();
   const revenue = {
@@ -230,4 +230,4 @@ console.log('== non-taxable regression ==');
   assert(result.subtotal === 5000, 'non-taxable subtotal should remain 5000');
 }
 
-console.log('\nAll v4.10.33 invoice-tax-form-consistency checks passed.');
+console.log('\nAll v4.10.34 invoice-tax-form-consistency checks passed.');

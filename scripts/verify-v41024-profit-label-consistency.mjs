@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.33 — 利益ラベル整合性 verification.
+ * Budil v4.10.34 — 利益ラベル整合性 verification.
  *
  * 確認内容:
  * - 見込み利益 = 予定売上見込み × 粗利率 になっていること
@@ -37,10 +37,10 @@ const storageJs = load('js/storage.js');
 const dataBackupJs = load('js/data-backup.js');
 
 // --- バージョン確認 ---
-assert(indexHtml.includes('v4.10.33'), 'index.html should show v4.10.33');
-assert(indexHtml.includes('js/app.js?v=4.10.33'), 'app.js cache buster should be v4.10.33');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.33'"), 'storage.js version should be v4.10.33');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.33'"), 'data-backup version should be v4.10.33');
+assert(indexHtml.includes('v4.10.34'), 'index.html should show v4.10.34');
+assert(indexHtml.includes('js/app.js?v=4.10.34'), 'app.js cache buster should be v4.10.34');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.34'"), 'storage.js version should be v4.10.34');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.34'"), 'data-backup version should be v4.10.34');
 
 // --- ProfitBrain の見込み利益フォールバック修正確認 ---
 console.log('== ProfitBrain plannedForecastProfit fallback check ==');

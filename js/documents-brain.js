@@ -655,33 +655,42 @@ const DocumentsBrain = {
         <td class="doc-col-amount num">${esc(this.formatYen(it.amount))}</td>
       </tr>`).join('');
 
-    const issuerLines = [
-      esc(d.issuer.name),
-      isInvoice && d.issuer.registrationNumber ? '登録番号：' + esc(d.issuer.registrationNumber) : '',
-      esc(d.issuer.postalCode),
-      esc((d.issuer.address || '').replace(/\n/g, ' ')),
-      'TEL: ' + esc(d.issuer.tel),
-      d.issuer.fax ? 'FAX: ' + esc(d.issuer.fax) : ''
-    ].filter(Boolean).join('<br>');
+    const metaRow = (label, value) => `
+      <div class="doc-meta-row">
+        <span class="doc-meta-label">${label}</span><span class="doc-meta-sep">：</span><span class="doc-meta-value">${esc(value)}</span>
+      </div>`;
 
     const metaRows = isInvoice ? `
-      <div class="doc-meta-row"><span class="doc-meta-label">請求書番号</span><span class="doc-meta-value">${esc(d.number)}</span></div>
-      <div class="doc-meta-row"><span class="doc-meta-label">請求日</span><span class="doc-meta-value">${esc(d.issueDate)}</span></div>
-      <div class="doc-meta-row"><span class="doc-meta-label">お支払期限</span><span class="doc-meta-value">${esc(d.dueDate)}</span></div>
-      <div class="doc-meta-row"><span class="doc-meta-label">件名</span><span class="doc-meta-value">${esc(d.title)}</span></div>`
+      ${metaRow('請求書番号', d.number)}
+      ${metaRow('請求日', d.issueDate)}
+      ${metaRow('お支払期限', d.dueDate)}
+      ${metaRow('件名', d.title)}`
       : `
-      <div class="doc-meta-row"><span class="doc-meta-label">見積書番号</span><span class="doc-meta-value">${esc(d.number)}</span></div>
-      <div class="doc-meta-row"><span class="doc-meta-label">発行日</span><span class="doc-meta-value">${esc(d.issueDate)}</span></div>
-      <div class="doc-meta-row"><span class="doc-meta-label">件名</span><span class="doc-meta-value">${esc(d.title)}</span></div>`;
+      ${metaRow('見積書番号', d.number)}
+      ${metaRow('発行日', d.issueDate)}
+      ${metaRow('件名', d.title)}`;
+
+    const issuerBlock = `
+            <div class="doc-company doc-issuer-block">
+              <img class="doc-seal" src="${esc(d.issuer.sealImage)}" alt="印影" width="64" height="64">
+              <div class="doc-company-text doc-issuer-text">
+                <div class="doc-company-name">${esc(d.issuer.name)}</div>
+                ${isInvoice && d.issuer.registrationNumber ? `<div class="doc-company-line">登録番号：${esc(d.issuer.registrationNumber)}</div>` : ''}
+                <div class="doc-company-line">${esc(d.issuer.postalCode)}</div>
+                <div class="doc-company-line">${esc((d.issuer.address || '').replace(/\n/g, ' '))}</div>
+                <div class="doc-company-line">TEL: ${esc(d.issuer.tel)}</div>
+                ${d.issuer.fax ? `<div class="doc-company-line">FAX: ${esc(d.issuer.fax)}</div>` : ''}
+              </div>
+            </div>`;
 
     const bankBlock = isInvoice && d.bankInfo ? `
-      <div class="doc-bank">
+      <div class="doc-bank doc-framed-block">
         <h3 class="doc-section-title">振込先</h3>
         <div class="doc-bank-body">${this.nl2br(d.bankInfo)}</div>
       </div>` : '';
 
     const noteBlock = d.note ? `
-      <div class="doc-note">
+      <div class="doc-note doc-framed-block">
         <h3 class="doc-section-title">備考</h3>
         <div class="doc-note-body">${this.nl2br(d.note)}</div>
       </div>` : '';
@@ -713,13 +722,10 @@ const DocumentsBrain = {
             <p class="doc-customer">${esc(this.customerDisplay(d))}</p>
           </div>
           <div class="doc-sheet-right">
-            <div class="doc-issuer-block">
-              <div class="doc-issuer-text">${issuerLines}</div>
-              <img class="doc-seal" src="${esc(d.issuer.sealImage)}" alt="印影" width="72" height="72">
-            </div>
+            ${issuerBlock}
           </div>
         </div>
-        <div class="doc-meta">${metaRows}</div>
+        <div class="doc-meta doc-meta-info">${metaRows}</div>
         <div class="doc-total-banner">
           <span class="doc-total-label">${amountLabel}</span>
           <span class="doc-total-amount">${esc(this.formatYen(d.total))}</span>
@@ -739,8 +745,10 @@ const DocumentsBrain = {
           <tbody>${itemRows}</tbody>
         </table>
         ${totalsBlock}
-        ${bankBlock}
-        ${noteBlock}
+        <div class="doc-sheet-footer">
+          ${bankBlock}
+          ${noteBlock}
+        </div>
       </div>`;
   },
 
