@@ -717,5 +717,37 @@ const RevenueBrain = {
     ];
     if (comment) lines.push('', comment);
     return lines.join('\n');
+  },
+
+  // v4.10.28: 受付/フォローからの例外補助入力用
+  buildExceptionRevenueFormFromIntake(intake) {
+    const candidate = typeof ReceptionBrain !== 'undefined'
+      ? ReceptionBrain.buildRevenueCandidate(intake)
+      : {};
+    const workDate = typeof ReceptionBrain !== 'undefined'
+      ? ReceptionBrain.extractWorkDate(intake)
+      : '';
+    return {
+      workDate: workDate || '',
+      customerName: candidate.customerName || '',
+      service: candidate.service || '',
+      source: candidate.source || '',
+      amount: candidate.amount || 0,
+      memo: candidate.memo || '',
+      leadId: candidate.leadId || '',
+      intakeId: candidate.intakeId || ''
+    };
+  },
+
+  warnExceptionRevenueDuplicate(formData, revenues) {
+    if (typeof CalendarCandidateBrain === 'undefined') {
+      return { hasDuplicate: false, matches: [] };
+    }
+    const matches = CalendarCandidateBrain.findRevenueDuplicateMatches(
+      formData,
+      revenues || [],
+      {}
+    );
+    return { hasDuplicate: matches.length > 0, matches };
   }
 };

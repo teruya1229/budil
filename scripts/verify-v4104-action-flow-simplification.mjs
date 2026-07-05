@@ -24,7 +24,7 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.27'), 'index.html should show v4.10.27');
+assert(indexHtml.includes('v4.10.28'), 'index.html should show v4.10.28');
 assert(!indexHtml.includes('<option value="完了">完了</option>'), 'revenue status select should not include 完了');
 assert(
   revenueBrain.includes('displayRevenueStatus') && revenueBrain.includes("status === '完了'"),

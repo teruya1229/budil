@@ -56,6 +56,7 @@ const ReceptionBrain = {
       preferredDatesText: String(item.preferredDatesText || '').trim(),
       memo: String(item.memo || '').trim(),
       estimateAmount,
+      scheduledDate: String(item.scheduledDate || item.workDate || item.preferredDate || '').slice(0, 10),
       handlingStatus: String(item.handlingStatus || '').trim(),
       status,
       relatedLeadId: String(item.relatedLeadId || '').trim(),
@@ -332,6 +333,17 @@ const ReceptionBrain = {
     };
   },
 
+  extractWorkDate(intake) {
+    const normalized = this.normalizeIntake(intake);
+    if (normalized.scheduledDate) return normalized.scheduledDate;
+    const pref = String(normalized.preferredDatesText || '');
+    const m = pref.match(/(20\d{2})[\/\-年](\d{1,2})[\/\-月](\d{1,2})/);
+    if (m) {
+      return `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
+    }
+    return '';
+  },
+
   buildRevenueCandidate(intake) {
     const normalized = this.normalizeIntake(intake);
     return {
@@ -339,6 +351,7 @@ const ReceptionBrain = {
       service: normalized.serviceText,
       source: normalized.source,
       amount: normalized.estimateAmount,
+      workDate: this.extractWorkDate(intake),
       memo: [normalized.memo, normalized.preferredDatesText ? '希望日：' + normalized.preferredDatesText : '']
         .filter(Boolean).join(' / '),
       leadId: normalized.relatedLeadId || '',
@@ -399,6 +412,10 @@ const ReceptionBrain = {
     } else if (completedNoRevenue) {
       primaryAction = 'fillRevenue';
       primaryLabel = '売上確定へ進む';
+    } else if (!hasWorkOrder && Number(normalized.estimateAmount || 0) > 0) {
+      // v4.10.28: カレンダー未反映・作業予定なしでも例外補助で売上明細へ
+      primaryAction = 'fillRevenue';
+      primaryLabel = '売上確定へ（例外）';
     } else if (hasWorkOrder) {
       primaryAction = 'openWorkOrder';
       primaryLabel = '作業予定を開く';

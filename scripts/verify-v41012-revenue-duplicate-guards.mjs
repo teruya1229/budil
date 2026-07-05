@@ -53,10 +53,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.27'), 'index.html should show v4.10.27');
-assert(indexHtml.includes('js/app.js?v=4.10.27'), 'app.js cache buster should be v4.10.27');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.27'"), 'storage.js version should be v4.10.27');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.27'"), 'data-backup version should be v4.10.27');
+assert(indexHtml.includes('v4.10.28'), 'index.html should show v4.10.28');
+assert(indexHtml.includes('js/app.js?v=4.10.28'), 'app.js cache buster should be v4.10.28');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.28'"), 'storage.js version should be v4.10.28');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.28'"), 'data-backup version should be v4.10.28');
 
 assert(calendarBrain.includes('findRevenueDuplicateMatches'), 'calendar brain should expose duplicate match helper');
 assert(calendarBrain.includes('findRevenueLinkCandidatesForDocument'), 'calendar brain should find invoice link candidates');

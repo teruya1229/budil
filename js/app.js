@@ -880,6 +880,9 @@
     const taskBtn = p.taskId
       ? `<button type="button" class="btn btn-sm btn-primary" data-exec-priority-done="${esc(p.taskId)}">完了</button>`
       : `<button type="button" class="btn btn-sm btn-primary" data-exec-priority-add-task="${esc(p.id)}">毎日やることに追加</button>`;
+    const intakeRevenueBtn = p.intakeId
+      ? `<button type="button" class="btn btn-sm btn-secondary" data-exec-priority-fill-revenue="${esc(p.intakeId)}" title="カレンダー未反映の例外導線">売上確定へ（例外）</button>`
+      : '';
     return `
       <div class="exec-priority-item" data-priority-id="${esc(p.id)}">
         <div class="exec-priority-header">
@@ -890,6 +893,7 @@
         <p class="exec-priority-reason">${esc(p.reason)}</p>
         <div class="exec-priority-actions">
           ${taskBtn}
+          ${intakeRevenueBtn}
           <button type="button" class="btn btn-sm btn-not-needed" data-exec-priority-not-needed="${esc(p.dedupeKey || p.id)}" data-exec-priority-title="${esc(p.title)}" data-exec-priority-source="${esc(p.source)}" data-exec-priority-source-key="${esc(p.sourceKey)}">必要無し</button>
           <button type="button" class="btn btn-sm btn-secondary" data-exec-priority-nav="${esc(p.sourceKey)}">詳細へ</button>
         </div>
@@ -1321,10 +1325,15 @@
       actions.querySelectorAll('[data-exec-intake-lead], [data-exec-intake-wo], [data-exec-intake-task]').forEach(btn => {
         btn.classList.add('hidden');
       });
+      // v4.10.28: 売上未確定の受付には例外補助導線ボタンを追加する
+      const revenueExceptionBtn = !state.hasRevenue
+        ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(intake.id)}">売上確定へ（例外）</button>`
+        : '';
       actions.insertAdjacentHTML('afterbegin', `
         <span class="exec-reception-actions-v484">
           ${renderReceptionPrimaryAction(intake.id, state, { compact: true })}
           <button type="button" class="btn btn-sm btn-secondary" data-reception-open="${esc(intake.id)}">受付を開く</button>
+          ${revenueExceptionBtn}
         </span>`);
       item.insertAdjacentHTML('beforeend', renderReceptionStateLabels(state));
     });
@@ -1354,6 +1363,11 @@
       if (btn.dataset.bound) return;
       btn.dataset.bound = '1';
       btn.addEventListener('click', () => navigateExecutivePriority(btn.dataset.execPriorityNav));
+    });
+    root.querySelectorAll('[data-exec-priority-fill-revenue]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => openRevenueFromReceptionIntake(btn.dataset.execPriorityFillRevenue));
     });
     root.querySelectorAll('[data-exec-priority-not-needed]').forEach(btn => {
       if (btn.dataset.bound) return;
@@ -12601,7 +12615,7 @@
       : `<button type="button" class="btn btn-sm btn-secondary" data-reception-create-work-order="${esc(id)}">この受付から作業予定を作る</button>`;
     const revenueAction = state.hasRevenue
       ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-revenue="${esc(id)}">売上を開く</button>`
-      : `<button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(id)}">売上フォームに反映</button>`;
+      : `<button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(id)}">売上確定へ（例外）</button>`;
     return `
       <details class="reception-detail-actions">
         <summary>詳細操作</summary>
@@ -13033,25 +13047,50 @@
     const intake = Storage.getReceptionIntakes().find(i => i.id === intakeId);
     if (!intake) return;
     const candidate = ReceptionBrain.buildRevenueCandidate(intake);
+    const workDate = candidate.workDate || ReceptionBrain.extractWorkDate(intake) || TODAY();
+    const serviceVal = ReceptionBrain.matchRevenueService(candidate.service);
+    const sourceVal = ReceptionBrain.matchRevenueSource(candidate.source);
+    const prefillForm = {
+      workDate,
+      customerName: candidate.customerName || '',
+      service: serviceVal,
+      source: sourceVal,
+      amount: candidate.amount || 0
+    };
+    // v4.10.28: 既存重複ガード（日付・顧客名・金額）で二重作成を警告
+    if (typeof RevenueBrain !== 'undefined' && RevenueBrain.warnExceptionRevenueDuplicate) {
+      const dup = RevenueBrain.warnExceptionRevenueDuplicate(prefillForm, Storage.getRevenueRecords());
+      if (dup.hasDuplicate) {
+        const labels = dup.matches.slice(0, 2).map(m => {
+          const r = m.revenue;
+          return `${r.workDate || '—'} ${r.customerName || '—'} ${RevenueBrain.formatYen(r.amount)}`;
+        }).join(', ');
+        if (!window.confirm(`同じ日付・顧客名・金額に近い売上明細が既にあります（${labels}）。\n二重作成に注意してください。それでもフォームに補助入力しますか？`)) return;
+      }
+    }
     pendingRevenueIntakeId = intakeId;
     fillRevenueSelects();
     navigateToView('revenue');
     resetRevenueForm();
+    document.getElementById('revenue-work-date').value = workDate;
     document.getElementById('revenue-customer').value = candidate.customerName || '';
     const serviceEl = document.getElementById('revenue-service');
-    const serviceVal = ReceptionBrain.matchRevenueService(candidate.service);
     if (serviceEl) serviceEl.value = serviceVal;
     const sourceEl = document.getElementById('revenue-source');
-    const sourceVal = ReceptionBrain.matchRevenueSource(candidate.source);
     if (sourceEl) fillSourceSelectOptions(sourceEl, sourceVal);
     applyRevenueGrossMarginDefault({ force: true });
     document.getElementById('revenue-amount').value = candidate.amount || '';
-    document.getElementById('revenue-memo').value = candidate.memo || '';
+    // v4.10.28: 例外補助入力メモを追加する（カレンダー予定未反映の案件を明示）
+    const exceptionNote = '受付/フォローから例外補助入力。カレンダー予定未反映。';
+    document.getElementById('revenue-memo').value = candidate.memo
+      ? candidate.memo + '\n' + exceptionNote
+      : exceptionNote;
     document.getElementById('revenue-status').value = '予定';
+    document.getElementById('revenue-form-title').textContent = '売上明細を手入力（受付から例外補助入力）';
     fillRevenueLeadSelect(candidate.leadId || '');
     toggleRevenueLeadOptions();
     setTimeout(() => scrollToElement('#revenue-form'), 120);
-    alert('売上フォームに反映しました。内容を確認して保存してください。');
+    showAppToast('売上明細フォームに受付情報を補助入力しました（例外導線）。内容を確認して保存してください。');
   }
 
   function markReceptionRevenueCandidate(intakeId) {
