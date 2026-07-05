@@ -749,5 +749,10 @@ const RevenueBrain = {
       {}
     );
     return { hasDuplicate: matches.length > 0, matches };
+  },
+
+  getCustomerFacingServiceLabel(record) {
+    const rec = record && typeof record === 'object' ? record : {};
+    return String(rec.service || rec.serviceName || rec.serviceText || '').trim();
   }
 };

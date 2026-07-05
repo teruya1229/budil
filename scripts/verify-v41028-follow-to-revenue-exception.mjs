@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.29 緊急修正 — 受付/フォローから売上明細例外補助導線 verification.
+ * Budil v4.10.30 緊急修正 — 受付/フォローから売上明細例外補助導線 verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/app.js', 'js/reception-brain.js', 'js/revenue-brain.js',
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.29 follow-to-revenue-exception ==');
+console.log('== v4.10.30 follow-to-revenue-exception ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -29,10 +29,10 @@ const dataBackupJs = load('js/data-backup.js');
 const css = load('css/style.css');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.29'), 'index.html should show v4.10.29');
-assert(indexHtml.includes('js/app.js?v=4.10.29'), 'app.js cache buster should be v4.10.29');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.29'"), 'storage.js version should be v4.10.29');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.29'"), 'data-backup version should be v4.10.29');
+assert(indexHtml.includes('v4.10.30'), 'index.html should show v4.10.30');
+assert(indexHtml.includes('js/app.js?v=4.10.30'), 'app.js cache buster should be v4.10.30');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.30'"), 'storage.js version should be v4.10.30');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.30'"), 'data-backup version should be v4.10.30');
 
 console.log('== exception UI wiring ==');
 assert(appJs.includes('data-exec-priority-fill-revenue'), 'priority card should expose exception revenue button');
@@ -44,7 +44,7 @@ assert(!appJs.includes('売上登録'), 'NG term 売上登録 must not appear in
 assert(receptionJs.includes('extractWorkDate'), 'reception brain should extract work date');
 assert(revenueJs.includes('buildExceptionRevenueFormFromIntake'), 'revenue brain should build exception prefill');
 assert(revenueJs.includes('warnExceptionRevenueDuplicate'), 'revenue brain should warn duplicates');
-assert(!css.includes('v4.10.29'), 'css must not be changed for v4.10.29');
+assert(!css.includes('v4.10.30'), 'css must not be changed for v4.10.30');
 
 console.log('== v4.10.27 regression markers ==');
 assert(calBrainJs.includes('c.startTime || \'\''), 'v4.10.27 dedupe startTime must remain');
@@ -136,4 +136,4 @@ console.log('== no auto work-order / calendar creation ==');
 assert(!appJs.includes('Storage.addWorkOrder') || !appJs.match(/fillRevenueFromReceptionIntake[\s\S]{0,800}Storage\.addWorkOrder/), 'exception fill must not auto-create work orders');
 assert(!receptionJs.includes('Googleカレンダー') || true, 'reception brain should not auto-create calendar events');
 
-console.log('\nAll v4.10.29 follow-to-revenue-exception checks passed.');
+console.log('\nAll v4.10.30 follow-to-revenue-exception checks passed.');

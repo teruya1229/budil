@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.29 主導線・主従整理リグレッションverify
+ * Budil v4.10.30 主導線・主従整理リグレッションverify
  *
  * 確認内容：
  * - v4.10.14〜v4.10.21 の主従整理が維持されていること
@@ -38,9 +38,9 @@ const executiveBrain = load('js/executive-brain.js');
 const revenueBrain = load('js/revenue-brain.js');
 
 // ── バージョン確認 ────────────────────────────────────────────
-assert(indexHtml.includes('v4.10.29'), 'index.html should show v4.10.29');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.29'"), 'storage.js BUDIL_VERSION should be v4.10.29');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.29'"), 'data-backup APP_VERSION should be v4.10.29');
+assert(indexHtml.includes('v4.10.30'), 'index.html should show v4.10.30');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.30'"), 'storage.js BUDIL_VERSION should be v4.10.30');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.30'"), 'data-backup APP_VERSION should be v4.10.30');
 console.log('  [OK] バージョン v4.10.27');
 
 // ── NG文言チェック (通常UI) ────────────────────────────────────

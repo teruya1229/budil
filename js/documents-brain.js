@@ -146,6 +146,109 @@ const DocumentsBrain = {
     return Number.isFinite(n) ? n : 0;
   },
 
+  CUSTOMER_INVOICE_BLOCKED_PATTERNS: [
+    /https?:\/\/[^\s]+/i,
+    /drive\.google\.com/i,
+    /docs\.google\.com/i,
+    /GPT補助/i,
+    /rawDescription/i,
+    /receiptImage/i,
+    /受付画像/i,
+    /000[-−]0000[-−]0000/,
+    /090[-−]0000[-−]0000/,
+    /0{2,}[-−]0{4,}[-−]0{4,}/,
+    /受付\/フォローから例外/i,
+    /カレンダー予定未反映/i,
+    /受付\/フォローから/i
+  ],
+
+  isDummyPhoneText(text) {
+    const s = String(text || '').trim();
+    if (!s) return false;
+    return /^0[-−]?0[-−]?0+$/.test(s.replace(/\s/g, ''))
+      || /^000[-−]?0000[-−]?0000$/.test(s)
+      || /^090[-−]?0000[-−]?0000$/.test(s)
+      || /^0{3,}[-−]?0{4,}[-−]?0{4,}$/.test(s);
+  },
+
+  containsBlockedInvoiceContent(text) {
+    const s = String(text || '');
+    if (!s.trim()) return false;
+    return this.CUSTOMER_INVOICE_BLOCKED_PATTERNS.some(pat => pat.test(s));
+  },
+
+  sanitizeCustomerFacingText(text, options) {
+    const opts = options || {};
+    const maxLen = opts.maxLen != null ? opts.maxLen : 80;
+    let s = String(text || '')
+      .replace(/https?:\/\/[^\s]+/gi, ' ')
+      .replace(/\b(?:drive|docs)\.google\.com[^\s]*/gi, ' ')
+      .replace(/000[-−]?0000[-−]?0000/g, ' ')
+      .replace(/090[-−]?0000[-−]?0000/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!s) return '';
+    if (this.isDummyPhoneText(s)) return '';
+    if (this.containsBlockedInvoiceContent(s)) return '';
+    if (s.length > maxLen) return '';
+    if (/^[0-9\-−()\s（）]+$/.test(s)) return '';
+    if (/^(?:〒?\d{3}-?\d{4}\s*)?[^\s]{2,}(?:都|道|府|県).+(?:丁目|番地|号|\d+[-−]\d+)/.test(s) && s.length > 24) return '';
+    return s;
+  },
+
+  buildServiceWorkLabel(rev) {
+    const revObj = rev && typeof rev === 'object' ? rev : {};
+    const service = String(revObj.service || revObj.serviceName || revObj.serviceText || '').trim();
+    const cleaned = this.sanitizeCustomerFacingText(service, { maxLen: 48 });
+    if (cleaned) return cleaned;
+    return '';
+  },
+
+  buildInvoiceTitleFromRevenue(rev) {
+    const label = this.buildServiceWorkLabel(rev);
+    if (!label) return '作業代金';
+    if (/作業費|作業代|工事費|クリーニング費/.test(label)) return label;
+    if (/エアコン/.test(label)) return 'エアコンクリーニング作業費';
+    if (/ハウス|全体清掃|室内清掃/.test(label)) return 'ハウスクリーニング作業費';
+    if (/現地確認|現調/.test(label)) return '現地確認';
+    if (label.length <= 36) return label.includes('作業') ? label : label + '作業費';
+    return label.slice(0, 36);
+  },
+
+  buildInvoiceItemNameFromRevenue(rev) {
+    const label = this.buildServiceWorkLabel(rev);
+    if (label) return label;
+    return '作業一式';
+  },
+
+  sanitizeInvoiceNote(note) {
+    const cleaned = this.sanitizeCustomerFacingText(note, { maxLen: 240 });
+    if (!cleaned) return this.INVOICE_DEFAULTS.note;
+    if (/受付|GPT|Drive|docs\.google|カレンダー|例外補助|型番|写真/i.test(cleaned)) {
+      return this.INVOICE_DEFAULTS.note;
+    }
+    return cleaned;
+  },
+
+  sanitizeDocumentForCustomerDisplay(doc) {
+    const d = doc && typeof doc === 'object' ? { ...doc } : {};
+    const fallbackTitle = d.type === 'estimate' ? this.ESTIMATE_DEFAULTS.title : this.INVOICE_DEFAULTS.title;
+    const title = this.sanitizeCustomerFacingText(d.title, { maxLen: 48 });
+    d.title = title || fallbackTitle;
+    d.items = (d.items || []).map(it => {
+      const item = it && typeof it === 'object' ? { ...it } : {};
+      const name = this.sanitizeCustomerFacingText(item.name, { maxLen: 48 });
+      return { ...item, name: name || '作業一式' };
+    });
+    if (d.type === 'invoice') {
+      d.note = this.sanitizeInvoiceNote(d.note);
+    } else {
+      const note = this.sanitizeCustomerFacingText(d.note, { maxLen: 400 });
+      d.note = note || String(d.note || '').trim();
+    }
+    return d;
+  },
+
   todayISO() {
     const d = new Date();
     const y = d.getFullYear();
@@ -218,6 +321,7 @@ const DocumentsBrain = {
       const total = subtotal + tax;
       return {
         items: normalized,
+        displayItems: normalized,
         subtotal,
         tax,
         total,
@@ -231,13 +335,37 @@ const DocumentsBrain = {
     const tax = rate > 0
       ? this.roundBySetting(total * rate / (100 + rate), ts.taxRounding)
       : 0;
-    const taxExcluded = total - tax;
+    const subtotal = total - tax;
+    let allocatedSubtotal = 0;
+    const displayItems = normalized.map((it, index) => {
+      const lineInclusive = it.amount;
+      let lineExclusive = 0;
+      if (rate <= 0) {
+        lineExclusive = lineInclusive;
+      } else if (index === normalized.length - 1) {
+        lineExclusive = subtotal - allocatedSubtotal;
+      } else if (total > 0) {
+        lineExclusive = this.roundBySetting(subtotal * lineInclusive / total, ts.lineRounding);
+        allocatedSubtotal += lineExclusive;
+      }
+      const qty = Math.max(1, it.quantity || 1);
+      const unitExclusive = this.roundBySetting(lineExclusive / qty, ts.lineRounding);
+      const amountExclusive = this.roundBySetting(unitExclusive * qty, ts.lineRounding);
+      return {
+        ...it,
+        unitPrice: unitExclusive,
+        quantity: qty,
+        amount: amountExclusive
+      };
+    });
+    const displaySubtotal = displayItems.reduce((sum, it) => sum + it.amount, 0);
     return {
       items: normalized,
-      subtotal: taxExcluded,
-      tax,
+      displayItems,
+      subtotal: displaySubtotal,
+      tax: total - displaySubtotal,
       total,
-      taxExcluded,
+      taxExcluded: displaySubtotal,
       taxIncluded: total,
       taxSettings: ts
     };
@@ -380,8 +508,14 @@ const DocumentsBrain = {
 
   renderDocumentSheet(doc, escFn) {
     const esc = escFn || (s => String(s || ''));
-    const d = this.normalizeDocument(doc);
+    const normalized = this.normalizeDocument(doc);
+    const d = this.sanitizeDocumentForCustomerDisplay(normalized);
     const ts = d.taxSettings;
+    const sheetCalc = this.calcFromItems(normalized.items, ts);
+    const sheetItems = sheetCalc.displayItems || sheetCalc.items;
+    d.subtotal = sheetCalc.subtotal;
+    d.tax = sheetCalc.tax;
+    d.total = sheetCalc.total;
     const isInvoice = d.type === 'invoice';
     const title = isInvoice ? '請求書' : '見積書';
     const amountLabel = isInvoice ? 'ご請求金額' : '御見積金額';
@@ -390,7 +524,7 @@ const DocumentsBrain = {
     const showTaxRow = ts.showZeroTax || d.tax > 0;
 
     const unitHeader = showUnit ? '<th class="doc-col-unit">単位</th>' : '';
-    const itemRows = d.items.map(it => `
+    const itemRows = sheetItems.map(it => `
       <tr>
         ${isInvoice ? `<td class="doc-col-date">${esc(it.date || '')}</td>` : ''}
         <td class="doc-col-name">${esc(it.name)}</td>
@@ -575,19 +709,13 @@ const DocumentsBrain = {
     const amount = this.parseAmount(rev.amount);
     if (amount <= 0) return null;
 
-    const subject = [
-      rev.memo,
-      rev.description,
-      rev.title,
-      rev.serviceName,
-      rev.service,
-      '作業代金'
-    ].map(s => String(s || '').trim()).find(Boolean) || '作業代金';
+    const title = this.buildInvoiceTitleFromRevenue(rev);
+    const itemName = this.buildInvoiceItemNameFromRevenue(rev);
     const customerRaw = String(rev.customerName || rev.leadName || '').trim();
     const taxSettings = { ...this.defaultTaxSettings(), taxDisplayMode: 'taxIncluded' };
     const items = [{
       date: rev.workDate || today,
-      name: subject,
+      name: itemName,
       unitPrice: amount,
       quantity: 1,
       amount
@@ -621,14 +749,14 @@ const DocumentsBrain = {
       dueDate: expectedDate || this.defaultDueDate(issueDate),
       customerName: customerRaw.replace(/\s*(様|御中)$/, ''),
       customerHonorific: customerRaw.endsWith('御中') ? '御中' : '様',
-      title: subject,
+      title,
       status: 'draft',
       items: calc.items,
       subtotal: calc.subtotal,
       tax: calc.tax,
       total: calc.total,
       taxSettings: calc.taxSettings,
-      note: String(rev.memo || '').trim(),
+      note: this.INVOICE_DEFAULTS.note,
       bankInfo: this.DEFAULT_BANK_INFO,
       issuer: this.defaultIssuer(),
       ...payment,

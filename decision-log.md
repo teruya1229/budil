@@ -2,6 +2,22 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.10.30 請求書出力サニタイズ・内税明細 緊急修正（2026-07-05）
+
+**日付**: 2026-07-05
+
+**判断内容**:
+- 請求書に受付原文・内部メモ・Drive URL・ダミー電話番号が出る問題を、お客様向け表示サニタイズで解消
+- 売上→請求書作成時の件名/品目は service ベース短文に限定（memo/description 優先をやめる）
+- 内税10%・合計22,000円時、明細単価/価格を税抜20,000円表示に修正し小計/税額/合計の矛盾を解消
+- 売上正本・Googleカレンダー正本ルールは変更しない
+
+**変更ファイル**:
+- js/documents-brain.js（サニタイズ、内税 displayItems、buildInvoiceFromRevenue）
+- js/revenue-brain.js（getCustomerFacingServiceLabel）
+- index.html, js/storage.js, js/data-backup.js（バージョン更新）
+- scripts/verify-v41030-invoice-output-sanitizing-tax.mjs（新規）
+
 ## v4.10.29 今日の最優先から受付売上確定導線 UX修正（2026-07-05）
 
 **日付**: 2026-07-05
