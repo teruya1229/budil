@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.28 緊急修正 — カレンダー重複判定・売上確定待ち表示 verification.
+ * Budil v4.10.29 緊急修正 — カレンダー重複判定・売上確定待ち表示 verification.
  *
  * 確認内容:
  * - v4.10.27 表示に更新されていること
@@ -56,10 +56,10 @@ const css = load('css/style.css');
 
 // --- バージョン確認 ---
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.28'), 'index.html should show v4.10.28');
-assert(indexHtml.includes('js/app.js?v=4.10.28'), 'app.js cache buster should be v4.10.28');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.28'"), 'storage.js version should be v4.10.28');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.28'"), 'data-backup version should be v4.10.28');
+assert(indexHtml.includes('v4.10.29'), 'index.html should show v4.10.29');
+assert(indexHtml.includes('js/app.js?v=4.10.29'), 'app.js cache buster should be v4.10.29');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.29'"), 'storage.js version should be v4.10.29');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.29'"), 'data-backup version should be v4.10.29');
 
 // --- v4.10.26 今日判定が維持されていること ---
 console.log('== TODAY() local date regression ==');

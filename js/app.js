@@ -13125,7 +13125,7 @@
     fillRevenueLeadSelect(candidate.leadId || '');
     toggleRevenueLeadOptions();
     setTimeout(() => scrollToElement('#revenue-form'), 120);
-    showAppToast('受付内容を売上明細フォームに反映しました。内容を確認して保存してください。');
+    showAppToast('受付内容を売上明細フォームに補助入力しました。内容を確認して保存してください。');
   }
 
   function markReceptionRevenueCandidate(intakeId) {

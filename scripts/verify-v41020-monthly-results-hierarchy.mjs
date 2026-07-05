@@ -29,10 +29,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.28'), 'index.html should show v4.10.28');
-assert(indexHtml.includes('js/app.js?v=4.10.28'), 'app.js cache buster should be v4.10.28');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.28'"), 'storage.js version should be v4.10.28');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.28'"), 'data-backup version should be v4.10.28');
+assert(indexHtml.includes('v4.10.29'), 'index.html should show v4.10.29');
+assert(indexHtml.includes('js/app.js?v=4.10.29'), 'app.js cache buster should be v4.10.29');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.29'"), 'storage.js version should be v4.10.29');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.29'"), 'data-backup version should be v4.10.29');
 
 const monthlyViewStart = indexHtml.indexOf('id="view-monthly-results"');
 const monthlyViewEnd = indexHtml.indexOf('<!-- フォロー -->', monthlyViewStart) || indexHtml.indexOf('section id="view-follow', monthlyViewStart);
