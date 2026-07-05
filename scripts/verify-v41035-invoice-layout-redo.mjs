@@ -39,12 +39,12 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.5'), 'index.html should show v4.11.5');
-assert(indexHtml.includes('js/app.js?v=4.11.5'), 'app.js cache buster should be v4.11.5');
-assert(indexHtml.includes('css/style.css?v=4.10.41'), 'style.css cache buster should be v4.10.41');
+assert(indexHtml.includes('v4.11.6'), 'index.html should show v4.11.6');
+assert(indexHtml.includes('js/app.js?v=4.11.6'), 'app.js cache buster should be v4.11.6');
+assert(indexHtml.includes('css/style.css?v=4.11.6'), 'style.css cache buster should be v4.10.41');
 assert(indexHtml.includes('js/documents-brain.js?v=4.10.41'), 'documents-brain cache buster should be v4.10.41');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.5'"), 'storage.js version should be v4.11.5');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.5'"), 'data-backup version should be v4.11.5');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.6'"), 'storage.js version should be v4.11.6');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.6'"), 'data-backup version should be v4.11.6');
 
 console.log('== layout structure ==');
 assert(documentsJs.includes('doc-issuer-block'), 'issuer block should exist');

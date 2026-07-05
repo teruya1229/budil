@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.10.41">
+  <link rel="stylesheet" href="css/style.css?v=4.11.6">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.11.5</small>
+          <small>AI経営脳みそ v4.11.6</small>
         </div>
       </div>
       <nav class="nav">
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.11.5</small>
+        <small>Budil v4.11.6</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の優先 → 今月の数字 → 次にやること</p>
             </div>
-            <span class="exec-home-version">v4.11.5</span>
+            <span class="exec-home-version">v4.11.6</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
 
@@ -595,7 +595,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.11.5</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.11.6</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -2594,21 +2594,28 @@
       <section id="view-profit" class="view">
         <header class="view-header">
           <h1>利益管理</h1>
-          <p class="view-subtitle">売上確定→経費入力→利益集計→経費内訳の流れで、合計利益などの月次数字を確認します。月次実績がある月は月次実績ベースを優先表示します。</p>
+          <p class="view-subtitle">利益状態→今月の数字→売上予定（未確定）→経費入力の順で確認します。詳細分析は必要なときだけ開いてください。</p>
         </header>
 
-        <div class="card card-wide card-profit-comment">
-          <h2>経営サマリー（今月）</h2>
-          <div id="profit-monthly-closing-check" class="monthly-closing-check-block" aria-live="polite"></div>
+        <div class="card card-wide card-profit-status">
+          <h2>利益状態（今月）</h2>
           <div id="profit-operations-diagnostics" class="profit-operations-diagnostics-block" aria-live="polite"></div>
-          <details class="profit-expense-breakdown-collapse">
-            <summary>経費内訳（詳細）</summary>
-            <div id="profit-expense-breakdown" class="profit-expense-breakdown-block" aria-live="polite"></div>
-          </details>
+          <div class="profit-quick-actions">
+            <button type="button" class="btn btn-sm btn-primary" id="profit-open-expense-form">経費入力</button>
+          </div>
+        </div>
+
+        <div class="card card-wide card-profit-monthly-numbers">
+          <h2>今月の数字</h2>
           <div id="profit-summary" class="profit-summary-grid"></div>
         </div>
 
-        <details class="card card-wide profit-expense-form-collapse">
+        <div class="card card-wide card-profit-upcoming">
+          <h2>売上予定（未確定）</h2>
+          <div id="profit-upcoming-schedule" class="profit-upcoming-schedule-block" aria-live="polite"></div>
+        </div>
+
+        <details class="card card-wide profit-expense-form-collapse" id="profit-expense-form-section">
           <summary>経費入力</summary>
           <form id="profit-expense-form" class="profit-expense-form">
             <input type="hidden" id="profit-expense-edit-id" value="">
@@ -2685,30 +2692,36 @@
           <div id="profit-revenue-rows" class="profit-table-wrap"></div>
         </div>
 
-        <div class="card card-wide">
-          <h2>作業予定別の粗利試算</h2>
-          <div id="profit-work-order-rows" class="profit-table-wrap"></div>
-        </div>
-
-        <div class="card card-wide">
-          <h2>サービス別利益</h2>
-          <div id="profit-service-rows" class="profit-table-wrap"></div>
-        </div>
-
-        <div class="card card-wide">
-          <h2>エリア別利益</h2>
-          <div id="profit-area-rows" class="profit-table-wrap"></div>
-        </div>
-
-        <div class="card card-wide">
-          <h2>集客経路別利益</h2>
-          <div id="profit-source-rows" class="profit-table-wrap"></div>
-        </div>
-
-        <div class="card card-wide card-profit-hints">
-          <h2>利益改善ヒント</h2>
-          <div id="profit-hints" class="profit-hints-list"></div>
-        </div>
+        <details class="card card-wide profit-detail-analysis-collapse">
+          <summary>詳細分析（作業予定別・サービス別・エリア別・依頼元別・ヒント）</summary>
+          <div class="profit-detail-analysis-body">
+            <div id="profit-monthly-closing-check" class="monthly-closing-check-block" aria-live="polite"></div>
+            <details class="profit-expense-breakdown-collapse">
+              <summary>経費内訳（詳細）</summary>
+              <div id="profit-expense-breakdown" class="profit-expense-breakdown-block" aria-live="polite"></div>
+            </details>
+            <div class="profit-detail-analysis-section">
+              <h3 class="profit-detail-analysis-heading">作業予定別の粗利試算</h3>
+              <div id="profit-work-order-rows" class="profit-table-wrap"></div>
+            </div>
+            <div class="profit-detail-analysis-section">
+              <h3 class="profit-detail-analysis-heading">サービス別利益</h3>
+              <div id="profit-service-rows" class="profit-table-wrap"></div>
+            </div>
+            <div class="profit-detail-analysis-section">
+              <h3 class="profit-detail-analysis-heading">エリア別利益</h3>
+              <div id="profit-area-rows" class="profit-table-wrap"></div>
+            </div>
+            <div class="profit-detail-analysis-section">
+              <h3 class="profit-detail-analysis-heading">依頼元別利益</h3>
+              <div id="profit-source-rows" class="profit-table-wrap"></div>
+            </div>
+            <div class="profit-detail-analysis-section card-profit-hints">
+              <h3 class="profit-detail-analysis-heading">利益改善ヒント</h3>
+              <div id="profit-hints" class="profit-hints-list"></div>
+            </div>
+          </div>
+        </details>
       </section>
 
       <!-- 月次実績入力 -->
@@ -3589,14 +3602,14 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.11.5"></script>
+  <script src="js/storage.js?v=4.11.6"></script>
   <script src="js/messages.js?v=4.10.22"></script>
   <script src="js/demand-brain.js?v=4.10.22"></script>
   <script src="js/demand-radar.js?v=4.10.22"></script>
   <script src="js/sales-brain.js?v=4.10.22"></script>
   <script src="js/management-brain.js?v=4.10.22"></script>
   <script src="js/payment-brain.js?v=4.10.22"></script>
-  <script src="js/revenue-brain.js?v=4.11.5"></script>
+  <script src="js/revenue-brain.js?v=4.11.6"></script>
   <script src="js/revenue-summary-brain.js?v=4.10.22"></script>
   <script src="js/reception-brain.js?v=4.11.0"></script>
   <script src="js/map-brain.js?v=4.10.22"></script>
@@ -3606,13 +3619,13 @@
   <script src="js/work-order-brain.js?v=4.10.22"></script>
   <script src="js/follow-up-brain.js?v=4.10.22"></script>
   <script src="js/work-completion-brain.js?v=4.10.22"></script>
-  <script src="js/profit-brain.js?v=4.11.5"></script>
+  <script src="js/profit-brain.js?v=4.11.6"></script>
   <script src="js/analytics-brain.js?v=4.10.22"></script>
   <script src="js/monthly-results-brain.js?v=4.10.22"></script>
   <script src="js/documents-brain.js?v=4.10.41"></script>
-  <script src="js/executive-brain.js?v=4.11.5"></script>
+  <script src="js/executive-brain.js?v=4.11.6"></script>
   <script src="js/card-ocr.js?v=4.10.22"></script>
-  <script src="js/data-backup.js?v=4.11.5"></script>
-  <script src="js/app.js?v=4.11.5"></script>
+  <script src="js/data-backup.js?v=4.11.6"></script>
+  <script src="js/app.js?v=4.11.6"></script>
 </body>
 </html>

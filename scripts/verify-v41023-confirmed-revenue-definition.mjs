@@ -46,10 +46,10 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 // --- バージョン確認 ---
-assert(indexHtml.includes('v4.11.5'), 'index.html should show v4.11.5');
-assert(indexHtml.includes('js/app.js?v=4.11.5'), 'app.js cache buster should be v4.11.5');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.5'"), 'storage.js version should be v4.11.5');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.5'"), 'data-backup version should be v4.11.5');
+assert(indexHtml.includes('v4.11.6'), 'index.html should show v4.11.6');
+assert(indexHtml.includes('js/app.js?v=4.11.6'), 'app.js cache buster should be v4.11.6');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.6'"), 'storage.js version should be v4.11.6');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.6'"), 'data-backup version should be v4.11.6');
 assert(statusMd.includes('v4.10.25'), 'status.md should document v4.10.25');
 assert(handoffMd.includes('v4.10.25'), 'handoff.md should document v4.10.25');
 assert(decisionLog.includes('v4.10.25'), 'decision-log.md should record v4.10.25');

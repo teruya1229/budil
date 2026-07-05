@@ -1,5 +1,5 @@
 /**
- * Budil v4.11.5 - unify monthly metric labels across screens verification.
+ * Budil v4.11.6 - unify monthly metric labels across screens verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -25,7 +25,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.11.5 unify-monthly-metric-labels ==');
+console.log('== v4.11.6 unify-monthly-metric-labels ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -64,15 +64,15 @@ const forbiddenLabels = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.5'), 'index.html should show v4.11.5');
-assert(indexHtml.includes('js/app.js?v=4.11.5'), 'app.js cache buster should be v4.11.5');
-assert(indexHtml.includes('js/revenue-brain.js?v=4.11.5'), 'revenue-brain cache buster should be v4.11.5');
-assert(indexHtml.includes('js/executive-brain.js?v=4.11.5'), 'executive-brain cache buster should be v4.11.5');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.5'"), 'storage.js version should be v4.11.5');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.5'"), 'data-backup version should be v4.11.5');
-assert(statusMd.includes('v4.11.5'), 'status.md should document v4.11.5');
-assert(handoffMd.includes('v4.11.5'), 'handoff.md should document v4.11.5');
-assert(decisionLog.includes('v4.11.5'), 'decision-log.md should record v4.11.5');
+assert(indexHtml.includes('v4.11.6'), 'index.html should show v4.11.6');
+assert(indexHtml.includes('js/app.js?v=4.11.6'), 'app.js cache buster should be v4.11.6');
+assert(indexHtml.includes('js/revenue-brain.js?v=4.11.6'), 'revenue-brain cache buster should be v4.11.6');
+assert(indexHtml.includes('js/executive-brain.js?v=4.11.6'), 'executive-brain cache buster should be v4.11.6');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.6'"), 'storage.js version should be v4.11.6');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.6'"), 'data-backup version should be v4.11.6');
+assert(statusMd.includes('v4.11.6'), 'status.md should document v4.11.6');
+assert(handoffMd.includes('v4.11.6'), 'handoff.md should document v4.11.6');
+assert(decisionLog.includes('v4.11.6'), 'decision-log.md should record v4.11.6');
 
 console.log('== executive home / morning report ==');
 assert(appJs.includes('<span>合計売上</span>'), 'executive home should show 合計売上');
@@ -113,11 +113,11 @@ for (const term of ['見込み金額（円）', '見込み利益', '予定売上
 }
 
 console.log('== untouched files ==');
-assert(!css.includes('v4.11.5'), 'css must not change for v4.11.5');
-assert(!receptionJs.includes('buildSharedMonthlyMetrics'), 'reception-brain must not change for v4.11.5');
-assert(!documentsJs.includes('buildSharedMonthlyMetrics'), 'documents-brain must not change for v4.11.5');
-assert(!followJs.includes('buildSharedMonthlyMetrics'), 'follow-up-brain must not change for v4.11.5');
+assert(!css.includes('v4.11.6'), 'css must not change for v4.11.6');
+assert(!receptionJs.includes('buildSharedMonthlyMetrics'), 'reception-brain must not change for v4.11.6');
+assert(!documentsJs.includes('buildSharedMonthlyMetrics'), 'documents-brain must not change for v4.11.6');
+assert(!followJs.includes('buildSharedMonthlyMetrics'), 'follow-up-brain must not change for v4.11.6');
 
 execSync('node scripts/verify-v4113-clarify-monthly-total-scheduled-metrics.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('\nAll v4.11.5 unify-monthly-metric-labels checks passed.');
+console.log('\nAll v4.11.6 unify-monthly-metric-labels checks passed.');

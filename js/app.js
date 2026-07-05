@@ -2789,14 +2789,20 @@
       ? `<p class="upcoming-revenue-schedule-flow">${esc(summary.flowNote)}</p>`
       : '';
     const list = upcoming.length
-      ? `<ul class="upcoming-revenue-schedule-list">${upcoming.map(item => `
-          <li class="upcoming-revenue-schedule-item">
+      ? `<ul class="upcoming-revenue-schedule-list">${upcoming.map(item => {
+          const editAction = opts.showEditButtons && item.id
+            ? buildUpcomingScheduleEditAction(item, opts)
+            : '';
+          return `
+          <li class="upcoming-revenue-schedule-item${editAction ? ' has-edit-action' : ''}">
             <span class="upcoming-revenue-schedule-date">${esc(item.dateLabel || '—')}</span>
             <span class="upcoming-revenue-schedule-name">${esc(item.customerName || '—')}</span>
             <span class="upcoming-revenue-schedule-service">${esc((item.serviceText || '').slice(0, 24))}</span>
             <span class="upcoming-revenue-schedule-amount">${esc(WorkOrderBrain.formatYen(item.amount))}</span>
             <span class="upcoming-revenue-schedule-status">${esc(item.statusLabel || '予定')}</span>
-          </li>`).join('')}</ul>`
+            ${editAction}
+          </li>`;
+        }).join('')}</ul>`
       : '';
     const nearest = upcoming[0]
       ? `<p class="upcoming-revenue-schedule-nearest">直近予定：${esc(upcoming[0].dateLabel)} ${esc((upcoming[0].serviceText || '').slice(0, 20))} ${esc(WorkOrderBrain.formatYen(upcoming[0].amount))}</p>`
@@ -2810,6 +2816,66 @@
         ? `<button type="button" class="btn btn-sm btn-secondary daily-go-calendar">受付・予定確認を見る</button>`
         : '');
     return `${head}${note}${scope}${hint}${flow}${nearest}${list}${more}${actions}`;
+  }
+
+  function buildUpcomingScheduleEditAction(item, options) {
+    const opts = options || {};
+    const woRaw = (Storage.getWorkOrders() || []).find(w => w.id === item.id);
+    if (!woRaw) return '';
+    const wo = WorkOrderBrain.normalizeWorkOrder(woRaw);
+    const cal = WorkOrderBrain.buildGoogleCalendarUrl(wo);
+    const calendarLink = cal.ready
+      ? `<a href="${esc(cal.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary profit-schedule-calendar-link" data-profit-schedule-calendar="${esc(wo.id)}">Googleカレンダー</a>`
+      : '';
+    const editLabel = opts.editLabel || '編集';
+    return `<span class="upcoming-revenue-schedule-actions">
+      ${calendarLink}
+      <button type="button" class="btn btn-sm btn-secondary profit-schedule-edit" data-profit-schedule-edit="${esc(wo.id)}">${esc(editLabel)}</button>
+    </span>`;
+  }
+
+  function openWorkOrderEditFromProfit(workOrderId) {
+    const wo = (Storage.getWorkOrders() || []).find(w => w.id === workOrderId);
+    if (!wo) return;
+    navigateToView('calendar-registration');
+    setTimeout(() => {
+      setWorkOrderFormData(wo);
+      scrollToElement('#work-order-form');
+    }, 120);
+  }
+
+  function bindProfitUpcomingScheduleEvents(container) {
+    if (!container) return;
+    container.querySelectorAll('[data-profit-schedule-edit]').forEach(btn => {
+      if (btn.dataset.boundProfitScheduleEdit) return;
+      btn.dataset.boundProfitScheduleEdit = '1';
+      btn.addEventListener('click', () => openWorkOrderEditFromProfit(btn.dataset.profitScheduleEdit));
+    });
+    container.querySelectorAll('[data-profit-schedule-calendar]').forEach(link => {
+      if (link.dataset.boundProfitScheduleCalendar) return;
+      link.dataset.boundProfitScheduleCalendar = '1';
+      link.addEventListener('click', () => {
+        Storage.updateWorkOrder(link.dataset.profitScheduleCalendar, { calendarAdded: true });
+      });
+    });
+  }
+
+  function renderProfitUpcomingSchedule() {
+    const el = document.getElementById('profit-upcoming-schedule');
+    if (!el) return;
+    const summary = getUpcomingRevenueScheduleSummary();
+    const limit = Math.max(summary.upcomingCount || 0, 20);
+    el.innerHTML = renderUpcomingRevenueScheduleHtml({
+      summary,
+      limit,
+      showEditButtons: true,
+      emptyText: '今日以降の売上予定はありません。予定取り込みから読み込めます。'
+    });
+    bindProfitUpcomingScheduleEvents(el);
+  }
+
+  function openProfitExpenseFormSection() {
+    navigateToView('profit', '#profit-expense-form-section');
   }
 
   function renderDailyUpcomingScheduleHtml(options) {
@@ -3406,7 +3472,7 @@
         <button type="button" class="btn btn-sm btn-secondary" data-daily-expense-stay>この画面に残る</button>
       </div>`;
     el.querySelector('[data-daily-expense-go-profit]').addEventListener('click', () => {
-      navigateToView('profit', '#profit-expense-form');
+      navigateToView('profit', '#profit-expense-form-section');
     });
     el.querySelector('[data-daily-expense-stay]').addEventListener('click', () => {
       el.classList.add('hidden');
@@ -10754,19 +10820,25 @@
     });
   }
 
-  function renderProfitSummary(ctx) {
+  function renderProfitSummary(ctx, options) {
+    const opts = options || {};
     const el = document.getElementById('profit-summary');
     if (!el) return;
     const s = ctx.summary;
     const m = getSharedMonthlyMetrics({ monthKey: s.monthKey });
     const expenseCount = ProfitBrain.filterMonthExpenses(ctx.expenses || [], s.monthKey).length;
-    const monthlyNote = s.usesMonthlyResult && s.aggregationSourceNote
+    const workflowMode = !!opts.workflowMode;
+    const monthlyNote = !workflowMode && s.usesMonthlyResult && s.aggregationSourceNote
       ? `<p class="profit-monthly-source-note">${esc(s.aggregationSourceNote)}</p>`
       : '';
-    const flowNote = `<p class="profit-flow-note">利益は「確定粗利＋予定粗利 − 今月経費」で確認します。依頼元別の取り分率を反映しています。月次実績がある月は月次実績ベースの経営数字を優先表示します。日々の経費入力は支出明細として保存されます。</p>`;
-    const aggBadge = `<p class="profit-aggregation-label">集計：<strong>${esc(s.usesMonthlyResult ? '月次実績ベース' : '明細ベース')}</strong></p>`;
+    const flowNote = workflowMode
+      ? ''
+      : `<p class="profit-flow-note">利益は「確定粗利＋予定粗利 − 今月経費」で確認します。依頼元別の取り分率を反映しています。月次実績がある月は月次実績ベースの経営数字を優先表示します。日々の経費入力は支出明細として保存されます。</p>`;
+    const aggBadge = workflowMode
+      ? ''
+      : `<p class="profit-aggregation-label">集計：<strong>${esc(s.usesMonthlyResult ? '月次実績ベース' : '明細ベース')}</strong></p>`;
     let monthlyBrief = '';
-    if (!s.usesMonthlyResult && typeof RevenueSummaryBrain !== 'undefined') {
+    if (!workflowMode && !s.usesMonthlyResult && typeof RevenueSummaryBrain !== 'undefined') {
       const monthly = RevenueSummaryBrain.buildMonthlySummary(
         RevenueSummaryBrain.confirmedRecords(Storage.getRevenueRecords())
       ).slice(0, 3);
@@ -10776,20 +10848,37 @@
         ).join('')}</div>`;
       }
     }
-    const baseItems = [
-      { label: '確定売上', value: RevenueBrain.formatYen(m.confirmedRevenue), extraClass: 'profit-summary-highlight' },
-      { label: '予定売上', value: RevenueBrain.formatYen(m.scheduledRevenue ?? m.plannedAdditionalRevenue ?? 0) },
-      { label: '合計売上', value: RevenueBrain.formatYen(m.totalRevenue ?? m.plannedRevenue ?? 0) },
-      { label: '今月経費', value: RevenueBrain.formatYen(m.monthExpense) },
-      { label: '確定利益', value: RevenueBrain.formatYen(m.confirmedProfit) },
-      { label: '予定利益', value: RevenueBrain.formatYen(m.scheduledProfit ?? 0) },
-      { label: '合計利益', value: RevenueBrain.formatYen(m.totalProfit ?? m.plannedProfit ?? 0), extraClass: 'profit-summary-total-profit' }
-    ];
-    el.innerHTML = `
-      ${flowNote}
-      ${aggBadge}
-      ${monthlyNote}
-      ${s.usesMonthlyResult && typeof MonthlyResultsBrain !== 'undefined'
+    const baseItems = workflowMode
+      ? [
+        { label: '合計売上', value: RevenueBrain.formatYen(m.totalRevenue ?? m.plannedRevenue ?? 0), extraClass: 'profit-summary-highlight' },
+        { label: '合計利益', value: RevenueBrain.formatYen(m.totalProfit ?? m.plannedProfit ?? 0), extraClass: 'profit-summary-total-profit' },
+        { label: '確定売上', value: RevenueBrain.formatYen(m.confirmedRevenue) },
+        { label: '予定売上', value: RevenueBrain.formatYen(m.scheduledRevenue ?? m.plannedAdditionalRevenue ?? 0) },
+        { label: '確定利益', value: RevenueBrain.formatYen(m.confirmedProfit) },
+        { label: '予定利益', value: RevenueBrain.formatYen(m.scheduledProfit ?? 0) },
+        { label: '今月経費', value: RevenueBrain.formatYen(m.monthExpense) }
+      ]
+      : [
+        { label: '確定売上', value: RevenueBrain.formatYen(m.confirmedRevenue), extraClass: 'profit-summary-highlight' },
+        { label: '予定売上', value: RevenueBrain.formatYen(m.scheduledRevenue ?? m.plannedAdditionalRevenue ?? 0) },
+        { label: '合計売上', value: RevenueBrain.formatYen(m.totalRevenue ?? m.plannedRevenue ?? 0) },
+        { label: '今月経費', value: RevenueBrain.formatYen(m.monthExpense) },
+        { label: '確定利益', value: RevenueBrain.formatYen(m.confirmedProfit) },
+        { label: '予定利益', value: RevenueBrain.formatYen(m.scheduledProfit ?? 0) },
+        { label: '合計利益', value: RevenueBrain.formatYen(m.totalProfit ?? m.plannedProfit ?? 0), extraClass: 'profit-summary-total-profit' }
+      ];
+    const secondaryGrid = workflowMode
+      ? ''
+      : `<div class="profit-summary-grid profit-summary-secondary">
+      <div class="profit-summary-item"><span>仲介料・控除（粗利率）</span><strong>${esc(ProfitBrain.formatYen(s.marginDeductionTotal || 0))}</strong></div>
+      <div class="profit-summary-item"><span>広告費</span><strong>${esc(ProfitBrain.formatYen(s.adExpense))}</strong></div>
+      <div class="profit-summary-item"><span>仲介料・手数料</span><strong>${esc(ProfitBrain.formatYen(s.feeExpense))}</strong></div>
+      <div class="profit-summary-item"><span>外注費</span><strong>${esc(ProfitBrain.formatYen(s.outsourceExpense))}</strong></div>
+      <div class="profit-summary-item"><span>未紐付け支出</span><strong>${s.usesMonthlyResult ? '—' : `${s.unlinkedCount}件（${esc(ProfitBrain.formatYen(s.unlinkedTotal))}）`}</strong></div>
+      </div>`;
+    const reconciliationBlock = workflowMode
+      ? ''
+      : (s.usesMonthlyResult && typeof MonthlyResultsBrain !== 'undefined'
         ? renderCurrentMonthReconciliationBrief(s.monthKey, {
           usesMonthlyResult: true,
           monthlySales: s.monthRevenue,
@@ -10802,20 +10891,19 @@
             MonthlyResultsBrain.sumDetailRevenueForMonth(Storage.getRevenueRecords(), s.monthKey).count > 0
           )
         })
-        : ''}
+        : '');
+    el.innerHTML = `
+      ${flowNote}
+      ${aggBadge}
+      ${monthlyNote}
+      ${reconciliationBlock}
       <div class="profit-summary-grid">
       ${baseItems.map(item => `
       <div class="profit-summary-item ${item.extraClass || ''}"><span>${esc(item.label)}</span><strong>${esc(item.value)}</strong></div>`).join('')}
-      <div class="profit-summary-item"><span>経費入力</span><strong>今月${expenseCount}件</strong></div>
+      ${workflowMode ? '' : `<div class="profit-summary-item"><span>経費入力</span><strong>今月${expenseCount}件</strong></div>`}
       </div>
       ${monthlyBrief}
-      <div class="profit-summary-grid profit-summary-secondary">
-      <div class="profit-summary-item"><span>仲介料・控除（粗利率）</span><strong>${esc(ProfitBrain.formatYen(s.marginDeductionTotal || 0))}</strong></div>
-      <div class="profit-summary-item"><span>広告費</span><strong>${esc(ProfitBrain.formatYen(s.adExpense))}</strong></div>
-      <div class="profit-summary-item"><span>仲介料・手数料</span><strong>${esc(ProfitBrain.formatYen(s.feeExpense))}</strong></div>
-      <div class="profit-summary-item"><span>外注費</span><strong>${esc(ProfitBrain.formatYen(s.outsourceExpense))}</strong></div>
-      <div class="profit-summary-item"><span>未紐付け支出</span><strong>${s.usesMonthlyResult ? '—' : `${s.unlinkedCount}件（${esc(ProfitBrain.formatYen(s.unlinkedTotal))}）`}</strong></div>
-      </div>`;
+      ${secondaryGrid}`;
   }
 
   function renderProfitExpenseBreakdown(ctx, options) {
@@ -11111,6 +11199,7 @@
     const el = document.getElementById(opts.targetId || 'profit-operations-diagnostics');
     if (!el || typeof ProfitBrain === 'undefined') return;
     const isCompact = !!opts.compact;
+    const workflowMode = !!opts.workflowMode;
     const diagnostics = ProfitBrain.buildProfitOperationsDiagnostics(ctx, {
       today: TODAY(),
       monthlyResults: Storage.getMonthlyResults(),
@@ -11129,11 +11218,11 @@
     const actionBtn = !suppressAction && action && !hideRevenueCta
       ? `<div class="revenue-flow-diagnostics-action-wrap"><button type="button" class="btn btn-sm btn-primary profit-operations-diagnostics-action">${esc(action.label)}</button></div>`
       : '';
-    const titleBlock = isCompact ? '' : '<h3 class="revenue-flow-diagnostics-title">利益状態</h3>';
-    const noteBlock = isCompact
+    const titleBlock = (isCompact || workflowMode) ? '' : '<h3 class="revenue-flow-diagnostics-title">利益状態</h3>';
+    const noteBlock = (isCompact || workflowMode)
       ? ''
       : '<p class="revenue-flow-diagnostics-note">読み取り専用です。データの修正・削除・自動同期は行いません。</p>';
-    const defsBlock = isCompact ? '' : `
+    const defsBlock = (isCompact || workflowMode) ? '' : `
         <dl class="revenue-flow-diagnostics-defs">
           <div><dt>合計売上</dt><dd>確定売上明細と予定売上の合計、または月次実績の合計売上です。</dd></div>
           <div><dt>今月経費</dt><dd>経費入力で保存した支出明細の当月合計です。</dd></div>
@@ -11144,11 +11233,11 @@
       ? `<p class="revenue-flow-diagnostics-status ${statusClass}">状態：${esc(diagnostics.statusMessage)}</p>`
       : `<p class="revenue-flow-diagnostics-status ${statusClass}">状態：${esc(diagnostics.statusMessage)}</p>
         <p class="revenue-flow-diagnostics-next">次にやること：${esc(diagnostics.nextAction)}</p>`;
-    const flowBlock = isCompact
+    const flowBlock = (isCompact || workflowMode)
       ? ''
       : `<p class="revenue-flow-diagnostics-flow">${esc(diagnostics.flowNote)}</p>`;
     el.innerHTML = `
-      <div class="revenue-flow-diagnostics profit-operations-diagnostics${isCompact ? ' profit-operations-diagnostics-compact' : ''}">
+      <div class="revenue-flow-diagnostics profit-operations-diagnostics${isCompact ? ' profit-operations-diagnostics-compact' : ''}${workflowMode ? ' profit-operations-diagnostics-workflow' : ''}">
         ${titleBlock}
         ${noteBlock}
         <ul class="revenue-flow-diagnostics-stats">
@@ -11157,7 +11246,7 @@
           <li><span>合計売上：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthRevenue))}</strong></li>
           <li><span>今月経費：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthExpense))}</strong></li>
           <li><span>経費入力：</span><strong>今月${expenseCount}件</strong></li>
-          ${isCompact ? '' : `<li><span>集計：</span><strong>${esc(diagnostics.aggregationLabel)}</strong></li>
+          ${(isCompact || workflowMode) ? '' : `<li><span>集計：</span><strong>${esc(diagnostics.aggregationLabel)}</strong></li>
           <li><span>整合チェック：</span><strong>${esc(diagnostics.reconciliationLabel)}</strong></li>`}
         </ul>
         ${defsBlock}
@@ -11425,7 +11514,7 @@
     set('profit-expense-memo', record.memo);
     const recurringEl = document.getElementById('profit-expense-recurring');
     if (recurringEl) recurringEl.checked = !!record.isRecurring;
-    scrollToElement('#profit-expense-form');
+    scrollToElement('#profit-expense-form-section');
   }
 
   function saveProfitExpenseFromForm(e) {
@@ -11462,12 +11551,13 @@
       const dateEl = document.getElementById('profit-expense-date');
       if (dateEl && !dateEl.value) dateEl.value = TODAY();
       const ctx = getProfitContext();
-      renderMonthlyClosingCheck('profit-monthly-closing-check');
-      renderProfitOperationsDiagnostics(ctx, { suppressRevenueLink: true });
-      renderProfitExpenseBreakdown(ctx);
-      renderProfitSummary(ctx);
+      renderProfitOperationsDiagnostics(ctx, { suppressRevenueLink: true, workflowMode: true });
+      renderProfitSummary(ctx, { workflowMode: true });
+      renderProfitUpcomingSchedule();
       renderProfitExpenseList(ctx);
       renderProfitRevenueRows(ctx);
+      renderMonthlyClosingCheck('profit-monthly-closing-check', { compact: true, suppressAction: true });
+      renderProfitExpenseBreakdown(ctx);
       renderProfitWorkOrderRows(ctx);
       renderProfitServiceRows(ctx);
       renderProfitAreaRows(ctx);
@@ -11488,6 +11578,11 @@
     if (clearBtn && !clearBtn.dataset.bound) {
       clearBtn.dataset.bound = '1';
       clearBtn.addEventListener('click', clearProfitExpenseForm);
+    }
+    const expenseOpenBtn = document.getElementById('profit-open-expense-form');
+    if (expenseOpenBtn && !expenseOpenBtn.dataset.bound) {
+      expenseOpenBtn.dataset.bound = '1';
+      expenseOpenBtn.addEventListener('click', openProfitExpenseFormSection);
     }
   }
 

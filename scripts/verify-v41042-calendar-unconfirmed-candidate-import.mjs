@@ -1,5 +1,5 @@
 /**
- * Budil v4.11.5 - calendar unconfirmed candidate import verification.
+ * Budil v4.11.6 - calendar unconfirmed candidate import verification.
  *
  * 玉澤 真理子様ケース:
  * - confirmationStatus: 未確定 でも候補から落とさない
@@ -30,7 +30,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.11.5 calendar-unconfirmed-candidate-import ==');
+console.log('== v4.11.6 calendar-unconfirmed-candidate-import ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -65,13 +65,13 @@ const tamazawaItem = {
 };
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.5'), 'index.html should show v4.11.5');
-assert(indexHtml.includes('js/app.js?v=4.11.5'), 'app.js cache buster should be v4.11.5');
+assert(indexHtml.includes('v4.11.6'), 'index.html should show v4.11.6');
+assert(indexHtml.includes('js/app.js?v=4.11.6'), 'app.js cache buster should be v4.11.6');
 assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.11.1'), 'calendar brain cache buster should remain v4.11.1');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.5'"), 'storage.js version should be v4.11.5');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.5'"), 'data-backup version should be v4.11.5');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.6'"), 'storage.js version should be v4.11.6');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.6'"), 'data-backup version should be v4.11.6');
 
-console.log('== v4.11.5 brain markers ==');
+console.log('== v4.11.6 brain markers ==');
 assert(calBrainJs.includes('v4.11.1'), 'calendar-candidate-brain.js should include v4.11.1 marker');
 assert(calBrainJs.includes('NON_EXCLUSION_CONFIRMATION_STATUSES'), 'non-exclusion confirmation statuses should exist');
 assert(calBrainJs.includes('resolveConfirmationStatus'), 'resolveConfirmationStatus should exist');
@@ -80,7 +80,7 @@ assert(calBrainJs.includes("if (!c.startTime) reasons.push('時間なし')"), 'f
 assert(calBrainJs.includes("if (!String(c.serviceText || '').trim()) reasons.push('作業内容なし')"), 'future import should require service text');
 
 console.log('== CSS unchanged ==');
-assert(!css.includes('v4.11.5'), 'css/style.css must not change for v4.11.5');
+assert(!css.includes('v4.11.6'), 'css/style.css must not change for v4.11.6');
 assert(css.includes('v4.10.41 follow card actions'), 'v4.10.41 follow css marker should remain');
 
 console.log('== v4.10.27 dedupe maintained ==');
@@ -241,4 +241,4 @@ console.log('== exclusion controls ==');
   assert(results.holiday.status === 'excluded', 'holiday should be excluded');
 }
 
-console.log('\nAll v4.11.5 calendar-unconfirmed-candidate-import checks passed.');
+console.log('\nAll v4.11.6 calendar-unconfirmed-candidate-import checks passed.');
