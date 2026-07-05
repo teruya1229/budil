@@ -2,6 +2,7 @@
  * Budil v4.3 - カレンダー/予定候補取り込み番頭
  * カレンダー予定は作業予定候補として扱い、売上確定にはしない。
  * v4.11.0: 予定取り込みロジック維持（cache buster更新のみ）
+ * v4.11.1: 予定取り込み結果画面に候補内訳一覧を表示
  */
 const CalendarCandidateBrain = {
   IMPORT_SOURCE: 'calendar-paste',
@@ -958,8 +959,25 @@ const CalendarCandidateBrain = {
       duplicateCount,
       excludedCount,
       savableCount,
+      eligibleCount: savableCount,
       revenueRegistered: false
     };
+  },
+
+  // v4.11.1: 予定取り込み結果画面用の内訳バケット（表示のみ）
+  bucketFutureImportPreviewItems(preview) {
+    const buckets = { savable: [], duplicate: [], excluded: [] };
+    ((preview && preview.items) || []).forEach((item, index) => {
+      const entry = { item, index };
+      if (item.futureImport && item.futureImport.status === 'excluded') {
+        buckets.excluded.push(entry);
+      } else if (item.isDuplicate) {
+        buckets.duplicate.push(entry);
+      } else {
+        buckets.savable.push(entry);
+      }
+    });
+    return buckets;
   },
 
   attachFutureImportPreview(preview, today) {

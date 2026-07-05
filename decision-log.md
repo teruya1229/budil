@@ -2,6 +2,22 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.11.1 予定取り込み結果画面に候補一覧表示（2026-07-05）
+
+**日付**: 2026-07-05
+
+**判断内容**:
+- budil-calendar-events.json に玉澤真理子様が存在するのに、予定取り込み結果画面で確認できない問題を修正
+- 原因: 候補一覧が「貼り付けで取り込む（サブ）」折りたたみ内のみに描画され、JSON取り込み結果（保存予定：N件）だけが見えていた
+- 予定取り込み結果画面に保存予定/重複/対象外の内訳一覧を表示
+- 未確定は除外しない（v4.10.42 維持）、二重追加はしない
+
+**変更ファイル**:
+- js/app.js（import result breakdown UI）
+- js/calendar-candidate-brain.js（bucketFutureImportPreviewItems）
+- index.html, js/storage.js, js/data-backup.js（v4.11.1）
+- scripts/verify-v4111-calendar-import-result-shows-tamazawa.mjs（新規）
+
 ## v4.11.0 受付一覧の売上確定済み表示同期（2026-07-05）
 
 **日付**: 2026-07-05

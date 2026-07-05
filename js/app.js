@@ -8336,7 +8336,7 @@
         TODAY()
       );
       const summary = getCalendarFutureImportSummary(lastCalendarCandidatePreview);
-      renderCalendarCandidateImportResult(summary, { phase: 'preview' });
+      renderCalendarCandidateImportResult(summary, { phase: 'preview', preview: lastCalendarCandidatePreview });
     }
     renderCalendarCandidatePreview();
   }
@@ -8363,6 +8363,125 @@
     reader.readAsText(file, 'utf-8');
   }
 
+  function sortCalendarPreviewEntries(items) {
+    return (items || [])
+      .map((item, originalIndex) => ({ item, originalIndex }))
+      .sort((a, b) => {
+        const ca = (a.item.candidate || {});
+        const cb = (b.item.candidate || {});
+        return WorkOrderBrain.compareScheduledDateTimeAsc(
+          { scheduledDate: ca.scheduledDate, startTime: ca.startTime, endTime: ca.endTime, createdAt: ca.createdAt },
+          { scheduledDate: cb.scheduledDate, startTime: cb.startTime, endTime: cb.endTime, createdAt: cb.createdAt }
+        );
+      });
+  }
+
+  function renderCalendarImportCandidateItemHtml(item, originalIndex, options) {
+    const opts = options || {};
+    const c = item.candidate || {};
+    const past = getCalendarPastRecoveryOptions();
+    const isExcluded = item.futureImport && item.futureImport.status === 'excluded';
+    const dup = item.isDuplicate
+      ? `<p class="calendar-candidate-dup">${esc((item.duplicates[0] && item.duplicates[0].reason) || '重複の可能性')}</p>`
+      : '';
+    const excluded = isExcluded
+      ? `<p class="calendar-candidate-dup">${esc((item.futureImport.reasons || []).join(' / '))}（保存対象外）</p>`
+      : '';
+    const pastRecovery = item.pastRecovery;
+    const pastStatus = pastRecovery
+      ? `<span class="calendar-past-recovery-badge">${esc(pastRecovery.label)}</span>
+         ${(pastRecovery.reasons || []).length ? `<p class="calendar-candidate-dup">${esc(pastRecovery.reasons.join(' / '))}</p>` : ''}`
+      : '';
+    const notice = pastRecovery && pastRecovery.status === CalendarCandidateBrain.PAST_RECOVERY_REVENUE_CANDIDATE
+      ? '過去分復元モード：売上実績候補です（一括登録前は売上ではありません）'
+      : (item.isDuplicate
+        ? '同じ予定が作業予定に追加済みです（二重追加しません）'
+        : '作業予定として保存されます（売上確定は作業後）');
+    const statusLabel = c.confirmationStatus || c.confidence || '';
+    const statusNote = statusLabel
+      ? `<p class="calendar-candidate-preview-meta">確認Status：${esc(statusLabel)}</p>`
+      : '';
+    const itemWarnings = (item.warnings || []).length
+      ? `<p class="calendar-candidate-dup">${esc(item.warnings.join(' / '))}</p>`
+      : '';
+    const saveDisabled = item.isDuplicate || isExcluded;
+    const saveBtn = opts.showSaveButton === false
+      ? ''
+      : `<button type="button" class="btn btn-sm btn-primary" data-cal-save-one="${originalIndex}"${saveDisabled ? ' disabled' : ''}>作業予定として保存</button>`;
+    const bucketLabel = opts.bucketLabel
+      ? `<p class="calendar-import-result-item-badge">${esc(opts.bucketLabel)}</p>`
+      : '';
+    return `<div class="calendar-candidate-preview-item calendar-import-result-item${item.isDuplicate ? ' is-duplicate' : ''}${isExcluded ? ' is-excluded' : ''}">
+      ${bucketLabel}
+      <p class="calendar-candidate-preview-title"><strong>${esc(c.customerName || '（名前なし）')}</strong> / ${esc(c.serviceText || '—')}</p>
+      <p class="calendar-candidate-preview-meta">${esc(c.scheduledDate || '日付不明')} ${esc(c.startTime || '')}〜${esc(c.endTime || '')} / ${esc(c.source || '—')} / 見込み ${esc(WorkOrderBrain.formatYen(c.estimateAmount))}</p>
+      ${statusNote}
+      <p class="calendar-candidate-not-sale">${esc(notice)}</p>
+      ${pastStatus}
+      ${itemWarnings}
+      ${excluded}
+      ${dup}
+      ${saveBtn}
+    </div>`;
+  }
+
+  function renderCalendarImportResultBreakdownHtml(preview, options) {
+    if (!preview || !(preview.items || []).length || typeof CalendarCandidateBrain === 'undefined') return '';
+    const opts = options || {};
+    const past = getCalendarPastRecoveryOptions();
+    if (past.enabled) {
+      const sorted = sortCalendarPreviewEntries(preview.items);
+      return `
+        <div class="calendar-import-result-breakdown">
+          <h4 class="calendar-import-result-section-title">取り込み候補一覧（${preview.items.length}件）</h4>
+          <div class="calendar-import-result-list calendar-candidate-preview-list">
+            ${sorted.map(({ item, originalIndex }) => renderCalendarImportCandidateItemHtml(item, originalIndex, {
+              showSaveButton: opts.phase !== 'result',
+              bucketLabel: item.pastRecovery ? item.pastRecovery.label : '候補'
+            })).join('')}
+          </div>
+        </div>`;
+    }
+    const buckets = CalendarCandidateBrain.bucketFutureImportPreviewItems(preview);
+    const renderBucket = (title, entries, bucketLabel) => {
+      if (!entries.length) return '';
+      const sorted = entries.slice().sort((a, b) => {
+        const ca = (a.item.candidate || {});
+        const cb = (b.item.candidate || {});
+        return WorkOrderBrain.compareScheduledDateTimeAsc(
+          { scheduledDate: ca.scheduledDate, startTime: ca.startTime, endTime: ca.endTime, createdAt: ca.createdAt },
+          { scheduledDate: cb.scheduledDate, startTime: cb.startTime, endTime: cb.endTime, createdAt: cb.createdAt }
+        );
+      });
+      return `
+        <div class="calendar-import-result-bucket">
+          <h4 class="calendar-import-result-section-title">${esc(title)}（${entries.length}件）</h4>
+          <div class="calendar-import-result-list calendar-candidate-preview-list">
+            ${sorted.map(({ item, index }) => renderCalendarImportCandidateItemHtml(item, index, {
+              showSaveButton: opts.phase !== 'result' && bucketLabel === '保存予定',
+              bucketLabel
+            })).join('')}
+          </div>
+        </div>`;
+    };
+    return `
+      <div class="calendar-import-result-breakdown">
+        <p class="calendar-import-result-breakdown-lead">読み取った予定の内訳です。保存予定候補から作業予定に追加できます。</p>
+        ${renderBucket('保存予定', buckets.savable, '保存予定')}
+        ${renderBucket('重複', buckets.duplicate, '重複')}
+        ${renderBucket('対象外', buckets.excluded, '対象外')}
+      </div>`;
+  }
+
+  function bindCalendarImportResultItemActions(root) {
+    if (!root) return;
+    root.querySelectorAll('[data-cal-save-one]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => saveCalendarCandidateOne(Number(btn.dataset.calSaveOne)));
+    });
+  }
+
   function renderCalendarCandidatePreview() {
     const previewPanel = document.getElementById('calendar-candidate-preview');
     const errorsEl = document.getElementById('calendar-candidate-errors');
@@ -8381,54 +8500,10 @@
         : '';
     }
     if (listEl) {
-      const previewItems = (preview.items || [])
-        .map((item, originalIndex) => ({ item, originalIndex }))
-        .sort((a, b) => {
-          const ca = (a.item.candidate || {});
-          const cb = (b.item.candidate || {});
-          return WorkOrderBrain.compareScheduledDateTimeAsc(
-            { scheduledDate: ca.scheduledDate, startTime: ca.startTime, endTime: ca.endTime, createdAt: ca.createdAt },
-            { scheduledDate: cb.scheduledDate, startTime: cb.startTime, endTime: cb.endTime, createdAt: cb.createdAt }
-          );
-        });
+      // compareScheduledDateTimeAsc — originalIndex preserved for data-cal-save-one
+      const previewItems = sortCalendarPreviewEntries(preview.items || []);
       listEl.innerHTML = previewItems.length
-        ? previewItems.map(({ item, originalIndex }) => {
-          const c = item.candidate;
-          const isExcluded = item.futureImport && item.futureImport.status === 'excluded';
-          const dup = item.isDuplicate
-            ? `<p class="calendar-candidate-dup">${esc((item.duplicates[0] && item.duplicates[0].reason) || '重複の可能性')}</p>`
-            : '';
-          const excluded = isExcluded
-            ? `<p class="calendar-candidate-dup">${esc((item.futureImport.reasons || []).join(' / '))}（保存対象外）</p>`
-            : '';
-          const past = item.pastRecovery;
-          const pastStatus = past
-            ? `<span class="calendar-past-recovery-badge">${esc(past.label)}</span>
-              ${(past.reasons || []).length ? `<p class="calendar-candidate-dup">${esc(past.reasons.join(' / '))}</p>` : ''}`
-            : '';
-          const notice = past && past.status === CalendarCandidateBrain.PAST_RECOVERY_REVENUE_CANDIDATE
-            ? '過去分復元モード：売上実績候補です（一括登録前は売上ではありません）'
-            : '作業予定として保存されます（売上確定は作業後）';
-          const statusLabel = c.confirmationStatus || c.confidence || '';
-          const statusNote = statusLabel
-            ? `<p class="calendar-candidate-preview-meta">確認Status：${esc(statusLabel)}</p>`
-            : '';
-          const itemWarnings = (item.warnings || []).length
-            ? `<p class="calendar-candidate-dup">${esc(item.warnings.join(' / '))}</p>`
-            : '';
-          const saveDisabled = item.isDuplicate || isExcluded;
-          return `<div class="calendar-candidate-preview-item${item.isDuplicate ? ' is-duplicate' : ''}${isExcluded ? ' is-excluded' : ''}">
-            <p class="calendar-candidate-preview-title"><strong>${esc(c.customerName || '（名前なし）')}</strong> / ${esc(c.serviceText || '—')}</p>
-            <p class="calendar-candidate-preview-meta">${esc(c.scheduledDate || '日付不明')} ${esc(c.startTime || '')}〜${esc(c.endTime || '')} / ${esc(c.source || '—')} / 見込み ${esc(WorkOrderBrain.formatYen(c.estimateAmount))}</p>
-            ${statusNote}
-            <p class="calendar-candidate-not-sale">${esc(notice)}</p>
-            ${pastStatus}
-            ${itemWarnings}
-            ${excluded}
-            ${dup}
-            <button type="button" class="btn btn-sm btn-primary" data-cal-save-one="${originalIndex}"${saveDisabled ? ' disabled' : ''}>作業予定として保存</button>
-          </div>`;
-        }).join('')
+        ? previewItems.map(({ item, originalIndex }) => renderCalendarImportCandidateItemHtml(item, originalIndex)).join('')
         : '<p class="placeholder-text">解析結果がありません</p>';
       listEl.querySelectorAll('[data-cal-save-one]').forEach(btn => {
         btn.addEventListener('click', () => saveCalendarCandidateOne(Number(btn.dataset.calSaveOne)));
@@ -8697,7 +8772,10 @@
     if (lastCalendarCandidateImportResult) {
       renderCalendarCandidateImportResult(lastCalendarCandidateImportResult, { phase: 'result' });
     } else if (lastCalendarCandidatePreview && !getCalendarPastRecoveryOptions().enabled) {
-      renderCalendarCandidateImportResult(getCalendarFutureImportSummary(lastCalendarCandidatePreview), { phase: 'preview' });
+      renderCalendarCandidateImportResult(getCalendarFutureImportSummary(lastCalendarCandidatePreview), {
+        phase: 'preview',
+        preview: lastCalendarCandidatePreview
+      });
     } else {
       renderCalendarCandidateImportResult(null);
     }
@@ -11773,6 +11851,7 @@
   function renderCalendarCandidateImportSummaryHtml(summary, options) {
     const opts = options || {};
     const phase = opts.phase || 'result';
+    const preview = opts.preview || null;
     const zeroGuidance = `
           <ul class="calendar-import-result-checks">
             <li>今日以降の予定が含まれていますか？</li>
@@ -11802,10 +11881,16 @@
            <button type="button" class="btn btn-sm btn-secondary calendar-import-go-daily">毎日やることを見る</button>
          </div>`
       : `<p class="calendar-import-result-hint">※予定取り込みだけでは売上明細には登録されません。作業後に「売上確定待ち」から確定してください。</p>`;
-    const zeroSavableHint = summary.savableCount === 0
+    const zeroSavableHint = summary.savableCount === 0 && !preview
       ? `<p class="calendar-import-result-warn">${phase === 'result' ? '作業予定に保存できる候補がありませんでした。' : '保存できる候補がありません。'}重複・対象外・金額なし・過去日付を確認してください。</p>
          <p class="calendar-import-result-checks-title">確認してください：</p>
          ${zeroGuidance}`
+      : '';
+    const breakdownHtml = renderCalendarImportResultBreakdownHtml(preview, { phase });
+    const saveAllBlock = phase === 'preview' && summary.savableCount > 0
+      ? `<div class="calendar-import-result-actions">
+           <button type="button" class="btn btn-sm btn-primary" data-calendar-import-save-all>すべて作業予定として保存（${summary.savableCount}件）</button>
+         </div>`
       : '';
     return `
       <div class="calendar-import-result">
@@ -11819,6 +11904,8 @@
         ${revenueNote}
         <p class="calendar-import-result-separation">予定取り込みは作業予定への保存です。確定売上にはまだ反映されません。</p>
         ${zeroSavableHint}
+        ${breakdownHtml}
+        ${saveAllBlock}
         ${nextBlock}
       </div>`;
   }
@@ -11839,6 +11926,12 @@
         navigateToView('dashboard', '.card-daily-action-tasks');
       });
     }
+    const saveAllBtn = root.querySelector('[data-calendar-import-save-all]');
+    if (saveAllBtn && !saveAllBtn.dataset.bound) {
+      saveAllBtn.dataset.bound = '1';
+      saveAllBtn.addEventListener('click', () => saveAllCalendarCandidates());
+    }
+    bindCalendarImportResultItemActions(root);
   }
 
   function renderCalendarCandidateImportResult(summary, options) {
@@ -11849,7 +11942,9 @@
       el.classList.add('hidden');
       return;
     }
-    el.innerHTML = renderCalendarCandidateImportSummaryHtml(summary, options);
+    const opts = options || {};
+    const preview = opts.preview || (opts.phase === 'preview' ? lastCalendarCandidatePreview : null);
+    el.innerHTML = renderCalendarCandidateImportSummaryHtml(summary, { ...opts, preview });
     el.classList.remove('hidden');
     bindCalendarImportResultActions(el);
   }
