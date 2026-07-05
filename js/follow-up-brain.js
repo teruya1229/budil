@@ -499,5 +499,25 @@ const FollowUpBrain = {
         return f.thanksStatus === 'done' || f.reviewStatus === 'done' || f.repeatStatus === 'planned' || f.repeatStatus === 'done';
       })
       .slice(0, 20);
+  },
+
+  normalizeCustomerNameForMatch(name) {
+    return String(name || '').replace(/様$/, '').trim();
+  },
+
+  findThanksTargetByCustomerName(targets, customerName) {
+    const needle = this.normalizeCustomerNameForMatch(customerName);
+    if (!needle) return null;
+    return (targets || []).find(t =>
+      t && t.needsThanks && this.normalizeCustomerNameForMatch(t.customerName) === needle
+    ) || null;
+  },
+
+  buildPriorityThanksDedupeKey(targetId, type, today) {
+    return ['exec-priority', today || new Date().toISOString().slice(0, 10), 'follow', targetId || '', type || 'thanks'].join('|');
+  },
+
+  buildPrioritySalesDedupeKey(taskType, leadId, taskId, today) {
+    return ['exec-priority', today || new Date().toISOString().slice(0, 10), 'sales', taskType || 'next-action', leadId || taskId || ''].join('|');
   }
 };

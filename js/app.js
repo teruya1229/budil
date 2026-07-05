@@ -2827,6 +2827,188 @@
     return false;
   }
 
+  function isPriorityItemDismissed(item) {
+    if (!item) return false;
+    const keys = [item.dedupeKey, item.pickupDedupeKey].filter(Boolean);
+    return keys.some(key => {
+      const state = Storage.getActionCandidateState(key);
+      return !!(state && state.state === 'not_needed');
+    });
+  }
+
+  function isDailyPriorityThanksLineItem(item) {
+    if (!item) return false;
+    if (item.followType === 'thanks') return true;
+    return /^お礼LINE：/.test(String(item.title || ''));
+  }
+
+  function isDailyPrioritySalesActionItem(item) {
+    if (!item) return false;
+    if (item.taskType === 'next-action' || item.taskType === 'next-sales') return true;
+    const title = String(item.title || '');
+    return title === '予定していた営業アクションを実行' || title === 'お礼連絡・次回提案';
+  }
+
+  function resolveDailyPriorityFollowTargetId(item) {
+    if (!item) return '';
+    if (item.followTargetId) return item.followTargetId;
+    const match = /^お礼LINE：(.+)$/.exec(String(item.title || ''));
+    if (!match || typeof FollowUpBrain === 'undefined') return '';
+    const target = FollowUpBrain.findThanksTargetByCustomerName(getFollowUpContext().targets, match[1]);
+    return target ? target.id : '';
+  }
+
+  function buildDailyPrioritySkipMeta(item) {
+    const today = TODAY();
+    if (item.dedupeKey) return item.dedupeKey;
+    if (item.pickupDedupeKey) return item.pickupDedupeKey;
+    if (isDailyPriorityThanksLineItem(item)) {
+      const followTargetId = resolveDailyPriorityFollowTargetId(item);
+      if (followTargetId && typeof FollowUpBrain !== 'undefined') {
+        return FollowUpBrain.buildPriorityThanksDedupeKey(followTargetId, 'thanks', today);
+      }
+    }
+    if (isDailyPrioritySalesActionItem(item) && typeof FollowUpBrain !== 'undefined') {
+      return FollowUpBrain.buildPrioritySalesDedupeKey(item.taskType, item.leadId, item.taskId, today);
+    }
+    return '';
+  }
+
+  function openFollowUpFromPriority(followTargetId, title) {
+    let targetId = followTargetId || '';
+    if (!targetId && title && typeof FollowUpBrain !== 'undefined') {
+      const match = /^お礼LINE：(.+)$/.exec(String(title));
+      if (match) {
+        const target = FollowUpBrain.findThanksTargetByCustomerName(getFollowUpContext().targets, match[1]);
+        targetId = target ? target.id : '';
+      }
+    }
+    selectedFollowUpTargetId = targetId || null;
+    navigateToView('follow-up');
+    setTimeout(() => {
+      scrollToElement('#follow-up-targets-list');
+      renderFollowUpView();
+    }, 120);
+  }
+
+  function openSalesActionFromPriority(leadId) {
+    if (!leadId) {
+      navigateToView('sales');
+      setTimeout(() => scrollToElement('#sales-list'), 120);
+      return;
+    }
+    openSalesDetail(leadId, { navigate: true });
+  }
+
+  function snoozeDailyPriorityTask(taskId, memo) {
+    if (!taskId) return;
+    const task = getDailyActionTasksWithState().find(t => t.id === taskId);
+    if (!task) return;
+    const note = memo || '今回はスルー';
+    if (task.type === 'manual') snoozeManualTaskToday(task.id, note);
+    else updateDailyActionTaskState(task.id, 'snoozed', note, { snoozedUntil: '' });
+  }
+
+  function skipDailyPriorityItem(item) {
+    if (!item) return;
+    const skipKey = buildDailyPrioritySkipMeta(item);
+    if (skipKey) {
+      Storage.setActionCandidateState(skipKey, 'not_needed', {
+        title: item.title || '',
+        source: item.source || '',
+        sourceKey: item.sourceKey || ''
+      });
+    }
+    snoozeDailyPriorityTask(item.taskId, '今回はスルー');
+    if (isDailyPriorityThanksLineItem(item)) {
+      const followTargetId = resolveDailyPriorityFollowTargetId(item);
+      const target = followTargetId ? findFollowUpTarget(followTargetId) : null;
+      getDailyActionTasksWithState().forEach(task => {
+        if (task.status === 'done') return;
+        const sameTitle = item.title && task.title === item.title;
+        const sameFollow = task.followUpType === 'thanks' && target && (
+          (task.revenueId && task.revenueId === target.revenueId)
+          || (task.workOrderId && task.workOrderId === target.workOrderId)
+        );
+        if (!sameTitle && !sameFollow) return;
+        snoozeDailyPriorityTask(task.id, '今回はスルー');
+      });
+    }
+    if (isDailyPrioritySalesActionItem(item) && item.leadId) {
+      getDailyActionTasksWithState().forEach(task => {
+        if (task.status === 'done') return;
+        if (task.leadId !== item.leadId) return;
+        if (!isDailyPrioritySalesActionItem({ title: task.title, taskType: task.type, leadId: task.leadId })) return;
+        snoozeDailyPriorityTask(task.id, '今回はスルー');
+      });
+    }
+    renderDailyPrioritySection();
+    renderDailyActionTasks();
+    renderExecutiveHome();
+    renderMorningExecutiveSections();
+    showAppToast('今日の最優先から外しました');
+  }
+
+  function renderDailyPriorityActionButtons(item) {
+    const parts = [];
+    if (item.viewRevenueAction && item.revenueId) {
+      parts.push(`<button type="button" class="btn btn-sm btn-secondary" data-daily-priority-view-revenue="${esc(item.revenueId)}">関連売上を見る</button>`);
+    } else if (item.fillRevenueAction && item.intakeId && !isReceptionIntakeRevenueResolved(item.intakeId)) {
+      parts.push(`<button type="button" class="btn btn-sm btn-secondary" data-daily-priority-fill-revenue="${esc(item.intakeId)}">この受付から売上確定する</button>`);
+    }
+    if (isDailyPriorityThanksLineItem(item)) {
+      const followTargetId = resolveDailyPriorityFollowTargetId(item);
+      parts.push(`<button type="button" class="btn btn-sm btn-primary" data-daily-priority-follow-open="${esc(followTargetId)}" data-daily-priority-follow-title="${esc(item.title)}">お礼LINEを作る/確認</button>`);
+      parts.push(`<button type="button" class="btn btn-sm btn-not-needed" data-daily-priority-skip="${esc(buildDailyPrioritySkipMeta(item))}" data-daily-priority-skip-task="${esc(item.taskId || '')}" data-daily-priority-skip-kind="thanks" data-daily-priority-skip-follow="${esc(followTargetId)}" data-daily-priority-skip-title="${esc(item.title)}" data-daily-priority-skip-source="${esc(item.source || '')}" data-daily-priority-skip-source-key="${esc(item.sourceKey || '')}">今回はスルー</button>`);
+    } else if (isDailyPrioritySalesActionItem(item)) {
+      parts.push(`<button type="button" class="btn btn-sm btn-primary" data-daily-priority-sales-open="${esc(item.leadId || '')}">営業アクションを確認</button>`);
+      parts.push(`<button type="button" class="btn btn-sm btn-not-needed" data-daily-priority-skip="${esc(buildDailyPrioritySkipMeta(item))}" data-daily-priority-skip-task="${esc(item.taskId || '')}" data-daily-priority-skip-kind="sales" data-daily-priority-skip-lead="${esc(item.leadId || '')}" data-daily-priority-skip-task-type="${esc(item.taskType || 'next-action')}" data-daily-priority-skip-title="${esc(item.title)}" data-daily-priority-skip-source="${esc(item.source || '')}" data-daily-priority-skip-source-key="${esc(item.sourceKey || 'sales')}">今回はスルー</button>`);
+    }
+    return parts.length ? `<span class="daily-priority-actions">${parts.join(' ')}</span>` : '';
+  }
+
+  function bindDailyPriorityActionEvents(root) {
+    if (!root) return;
+    root.querySelectorAll('[data-daily-priority-fill-revenue]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => fillRevenueFromReceptionIntake(btn.dataset.dailyPriorityFillRevenue));
+    });
+    root.querySelectorAll('[data-daily-priority-view-revenue]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => {
+        navigateToView('revenue');
+        openRevenueEdit(btn.dataset.dailyPriorityViewRevenue);
+      });
+    });
+    root.querySelectorAll('[data-daily-priority-follow-open]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => openFollowUpFromPriority(btn.dataset.dailyPriorityFollowOpen, btn.dataset.dailyPriorityFollowTitle));
+    });
+    root.querySelectorAll('[data-daily-priority-sales-open]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => openSalesActionFromPriority(btn.dataset.dailyPrioritySalesOpen));
+    });
+    root.querySelectorAll('[data-daily-priority-skip]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => skipDailyPriorityItem({
+        dedupeKey: btn.dataset.dailyPrioritySkip || '',
+        taskId: btn.dataset.dailyPrioritySkipTask || '',
+        followTargetId: btn.dataset.dailyPrioritySkipFollow || '',
+        leadId: btn.dataset.dailyPrioritySkipLead || '',
+        title: btn.dataset.dailyPrioritySkipTitle || '',
+        source: btn.dataset.dailyPrioritySkipSource || '',
+        sourceKey: btn.dataset.dailyPrioritySkipSourceKey || '',
+        taskType: btn.dataset.dailyPrioritySkipTaskType || (btn.dataset.dailyPrioritySkipKind === 'sales' ? 'next-action' : ''),
+        followType: btn.dataset.dailyPrioritySkipKind === 'thanks' ? 'thanks' : ''
+      }));
+    });
+  }
+
   function collectDailyPriorityItems() {
     const today = TODAY();
     const items = [];
@@ -2847,14 +3029,22 @@
       const fillRevenueAction = p.fillRevenueAction
         && p.intakeId
         && !isReceptionIntakeRevenueResolved(p.intakeId);
-      push(p.title, p.reason, 'priority', {
+      const meta = {
         priorityId: p.id,
         taskId: p.taskId,
         intakeId: p.intakeId,
         fillRevenueAction,
         viewRevenueAction: p.viewRevenueAction,
-        revenueId: p.revenueId
-      });
+        revenueId: p.revenueId,
+        sourceKey: p.sourceKey || '',
+        source: p.source || '',
+        dedupeKey: p.dedupeKey || '',
+        followTargetId: p.followTargetId || '',
+        followType: p.followType || '',
+        leadId: p.leadId || ''
+      };
+      if (isPriorityItemDismissed(meta)) return;
+      push(p.title, p.reason, 'priority', meta);
     });
 
     if (typeof ActionBrain !== 'undefined') {
@@ -2874,7 +3064,46 @@
       if (isDailyTaskLinkedToRevenueQueueWorkOrder(t, revenueConfirmWoIds)) return;
       const resolvedIntakeId = getResolvedReceptionDailyTaskIntakeId(t);
       if (resolvedIntakeId && isReceptionIntakeRevenueResolved(resolvedIntakeId)) return;
-      push(t.title, t.reason || t.targetName || '緊急確認', 'task', { taskId: t.id });
+      let dedupeKey = t.pickupDedupeKey || '';
+      if (!dedupeKey && typeof FollowUpBrain !== 'undefined') {
+        if (t.followUpType === 'thanks' || /^お礼LINE：/.test(String(t.title || ''))) {
+          const thanksTarget = getFollowUpContext().targets.find(x =>
+            x.needsThanks && (
+              (t.revenueId && x.revenueId === t.revenueId)
+              || (t.workOrderId && x.workOrderId === t.workOrderId)
+              || (t.title && x.customerName && String(t.title).includes(x.customerName.replace(/様$/, '')))
+            )
+          );
+          dedupeKey = FollowUpBrain.buildPriorityThanksDedupeKey(thanksTarget ? thanksTarget.id : (t.revenueId || t.workOrderId || t.id), 'thanks', today);
+        } else if (t.type === 'next-action' || t.type === 'next-sales') {
+          dedupeKey = FollowUpBrain.buildPrioritySalesDedupeKey(t.type, t.leadId, t.id, today);
+        }
+      }
+      const meta = {
+        taskId: t.id,
+        taskType: t.type || '',
+        leadId: t.leadId || '',
+        pickupDedupeKey: t.pickupDedupeKey || '',
+        followUpType: t.followUpType || '',
+        revenueId: t.revenueId || '',
+        workOrderId: t.workOrderId || '',
+        sourceKey: (t.type === 'next-action' || t.type === 'next-sales') ? 'sales' : (t.followUpType ? 'follow-up' : ''),
+        source: t.reason || '',
+        dedupeKey,
+        followTargetId: (() => {
+          if (t.followUpType !== 'thanks' && !/^お礼LINE：/.test(String(t.title || ''))) return '';
+          const thanksTarget = getFollowUpContext().targets.find(x =>
+            x.needsThanks && (
+              (t.revenueId && x.revenueId === t.revenueId)
+              || (t.workOrderId && x.workOrderId === t.workOrderId)
+            )
+          );
+          return thanksTarget ? thanksTarget.id : '';
+        })(),
+        followType: (t.followUpType === 'thanks' || /^お礼LINE：/.test(String(t.title || ''))) ? 'thanks' : ''
+      };
+      if (isPriorityItemDismissed(meta)) return;
+      push(t.title, t.reason || t.targetName || '緊急確認', 'task', meta);
     });
 
     return items;
@@ -3090,32 +3319,17 @@
     }
     const visible = items.slice(0, 3);
     const hidden = items.slice(3);
-    el.innerHTML = `
-      <ul class="daily-priority-items">
-        ${visible.map(it => `<li class="daily-priority-item daily-priority-${esc(it.kind)}">
+    const renderItem = it => `<li class="daily-priority-item daily-priority-${esc(it.kind)}">
           <strong>${esc(it.title)}</strong>
           <span class="daily-priority-reason">${esc(it.reason)}</span>
-          ${it.viewRevenueAction && it.revenueId
-            ? `<button type="button" class="btn btn-sm btn-secondary" data-daily-priority-view-revenue="${esc(it.revenueId)}">関連売上を見る</button>`
-            : (it.fillRevenueAction && it.intakeId && !isReceptionIntakeRevenueResolved(it.intakeId)
-              ? `<button type="button" class="btn btn-sm btn-secondary" data-daily-priority-fill-revenue="${esc(it.intakeId)}">この受付から売上確定する</button>`
-              : '')}
-        </li>`).join('')}
+          ${renderDailyPriorityActionButtons(it)}
+        </li>`;
+    el.innerHTML = `
+      <ul class="daily-priority-items">
+        ${visible.map(renderItem).join('')}
       </ul>
-      ${hidden.length ? `<details class="daily-priority-more"><summary>ほか${hidden.length}件</summary><ul class="daily-priority-items">${hidden.map(it => `<li class="daily-priority-item"><strong>${esc(it.title)}</strong> — ${esc(it.reason)}${it.viewRevenueAction && it.revenueId ? ` <button type="button" class="btn btn-sm btn-secondary" data-daily-priority-view-revenue="${esc(it.revenueId)}">関連売上を見る</button>` : (it.fillRevenueAction && it.intakeId && !isReceptionIntakeRevenueResolved(it.intakeId) ? ` <button type="button" class="btn btn-sm btn-secondary" data-daily-priority-fill-revenue="${esc(it.intakeId)}">この受付から売上確定する</button>` : '')}</li>`).join('')}</ul></details>` : ''}`;
-    el.querySelectorAll('[data-daily-priority-fill-revenue]').forEach(btn => {
-      if (btn.dataset.bound) return;
-      btn.dataset.bound = '1';
-      btn.addEventListener('click', () => fillRevenueFromReceptionIntake(btn.dataset.dailyPriorityFillRevenue));
-    });
-    el.querySelectorAll('[data-daily-priority-view-revenue]').forEach(btn => {
-      if (btn.dataset.bound) return;
-      btn.dataset.bound = '1';
-      btn.addEventListener('click', () => {
-        navigateToView('revenue');
-        openRevenueEdit(btn.dataset.dailyPriorityViewRevenue);
-      });
-    });
+      ${hidden.length ? `<details class="daily-priority-more"><summary>ほか${hidden.length}件</summary><ul class="daily-priority-items">${hidden.map(renderItem).join('')}</ul></details>` : ''}`;
+    bindDailyPriorityActionEvents(el);
   }
 
   function renderDailyImprovementSection() {

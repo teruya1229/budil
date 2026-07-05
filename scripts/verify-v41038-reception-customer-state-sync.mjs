@@ -41,10 +41,10 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.39'), 'index.html should show v4.10.39');
-assert(indexHtml.includes('js/app.js?v=4.10.39'), 'app.js cache buster should be v4.10.39');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.39'"), 'storage.js version should be v4.10.39');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.39'"), 'data-backup version should be v4.10.39');
+assert(indexHtml.includes('v4.10.40'), 'index.html should show v4.10.40');
+assert(indexHtml.includes('js/app.js?v=4.10.40'), 'app.js cache buster should be v4.10.40');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.40'"), 'storage.js version should be v4.10.40');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.40'"), 'data-backup version should be v4.10.40');
 
 console.log('== resolve helpers ==');
 assert(revenueJs.includes('resolveRevenueForIntake'), 'resolveRevenueForIntake should exist');
@@ -64,7 +64,7 @@ assert(executiveJs.includes('viewRevenueAction'), 'executive priorities should p
 
 console.log('== no CSS change ==');
 assert(css.includes('v4.10.37'), 'invoice layout marker should remain v4.10.37');
-assert(!css.includes('v4.10.39'), 'css must not change for v4.10.39');
+assert(!css.includes('v4.10.40'), 'css must not change for v4.10.40');
 
 console.log('== storage keys unchanged ==');
 assert(storageJs.includes("RECEPTION_INTAKES: 'budil_reception_intakes'"), 'reception storage key must remain');

@@ -28,10 +28,10 @@ const dataBackupJs = load('js/data-backup.js');
 const css = load('css/style.css');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.39'), 'index.html should show v4.10.39');
-assert(indexHtml.includes('js/app.js?v=4.10.39'), 'app.js cache buster should be v4.10.39');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.39'"), 'storage.js version should be v4.10.39');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.39'"), 'data-backup version should be v4.10.39');
+assert(indexHtml.includes('v4.10.40'), 'index.html should show v4.10.40');
+assert(indexHtml.includes('js/app.js?v=4.10.40'), 'app.js cache buster should be v4.10.40');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.40'"), 'storage.js version should be v4.10.40');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.40'"), 'data-backup version should be v4.10.40');
 
 console.log('== form consistency helpers ==');
 assert(documentsJs.includes('getFormItemsFromDocument'), 'documents brain should expose getFormItemsFromDocument');
@@ -40,7 +40,7 @@ assert(documentsJs.includes('detectItemsTaxBasis'), 'documents brain should dete
 assert(appJs.includes('calcFromFormItems'), 'app.js should use calcFromFormItems for form tax preview');
 assert(appJs.includes('getFormItemsFromDocument'), 'app.js should use getFormItemsFromDocument when opening form');
 assert(documentsJs.includes('sanitizeDocumentForCustomerDisplay'), 'v4.10.30 sanitizing must remain');
-assert(indexHtml.includes('css/style.css?v=4.10.39'), 'style.css cache buster should be v4.10.39');
+assert(indexHtml.includes('css/style.css?v=4.10.40'), 'style.css cache buster should be v4.10.40');
 assert(css.includes('v4.10.37'), 'v4.10.38 print layout marker should exist in css');
 
 function createSandbox() {
