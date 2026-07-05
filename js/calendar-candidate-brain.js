@@ -1,6 +1,7 @@
 /**
  * Budil v4.3 - カレンダー/予定候補取り込み番頭
  * カレンダー予定は作業予定候補として扱い、売上確定にはしない。
+ * v4.11.0: 予定取り込みロジック維持（cache buster更新のみ）
  */
 const CalendarCandidateBrain = {
   IMPORT_SOURCE: 'calendar-paste',

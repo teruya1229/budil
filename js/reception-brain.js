@@ -1,5 +1,6 @@
 /**
- * Budil v4.8.13 - 受付・予約番頭（AI番頭連携入口）
+ * Budil v4.11.0 - 受付・予約番頭（AI番頭連携入口）
+ * v4.10.38〜39: 既存売上強一致を表示のみで売上確定済み扱い（relatedRevenueId 自動保存なし）
  */
 const ReceptionBrain = {
   STATUSES: ['new', 'lead_created', 'task_created', 'work_scheduled', 'revenue_candidate', 'done', 'archived'],

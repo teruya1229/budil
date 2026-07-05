@@ -22,8 +22,8 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.42'), 'index.html should show v4.10.42');
-assert(indexHtml.includes('js/app.js?v=4.10.42'), 'app.js cache buster should be v4.10.42');
+assert(indexHtml.includes('v4.11.0'), 'index.html should show v4.11.0');
+assert(indexHtml.includes('js/app.js?v=4.11.0'), 'app.js cache buster should be v4.11.0');
 
 const forbiddenUiTerms = ['売上登録', '作業後確定待ち', '作業後売上確定'];
 for (const term of forbiddenUiTerms) {

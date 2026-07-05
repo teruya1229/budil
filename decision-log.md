@@ -2,6 +2,25 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.11.0 受付一覧の売上確定済み表示同期（2026-07-05）
+
+**日付**: 2026-07-05
+
+**判断内容**:
+- v4.10.38〜39 で実装済みの `resolveRevenueForIntake` 強一致解決が、受付一覧で反映されない問題を修正
+- 原因: `reception-brain.js` / `revenue-brain.js` の cache buster が v4.10.22 のままで、ブラウザが旧JSを保持していた
+- 受付一覧の表示判定を workflow state 基準に統一し、強一致時は「関連売上を見る」のみ表示
+- relatedRevenueId の自動保存はしない（表示と導線のみ同期）
+- 今日の最優先・フォロー・請求書・予定取り込みは変更しない
+
+**変更ファイル**:
+- js/app.js（受付一覧表示ヘルパー `isReceptionWorkflowRevenueResolved`）
+- js/reception-brain.js（コメント更新のみ）
+- index.html（v4.11.0 + cache buster更新）
+- js/storage.js, js/data-backup.js（v4.11.0）
+- scripts/verify-v4110-reception-list-revenue-resolved.mjs（新規）
+- scripts/verify-v410*.mjs（バージョン文字列更新）
+
 ## v4.10.42 未確定カレンダー予定の取り込み候補修正（2026-07-05）
 
 **日付**: 2026-07-05

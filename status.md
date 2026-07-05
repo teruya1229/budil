@@ -1,5 +1,16 @@
 ﻿# Budil status
 
+## v4.11.0 実装内容（受付一覧の売上確定済み表示同期）
+
+- 表示バージョンを v4.11.0 に更新
+- 受付一覧で relatedRevenueId が無くても、v4.10.38〜39 の `resolveRevenueForIntake` 強一致結果を売上確定済み扱いに反映
+- 強一致受付は「売上未確定」ラベルと「この受付から売上確定する」を出さず「関連売上を見る」のみ
+- `reception-brain.js` / `revenue-brain.js` の cache buster を v4.11.0 に更新（旧 v4.10.22 キャッシュで一覧が未同期になる問題を修正）
+- relatedRevenueId 自動保存なし / localStorage キー変更なし / データ削除なし
+- v4.10.39 今日の最優先除外 / v4.10.41 フォロー導線 / v4.10.42 予定取り込みロジック維持
+- CSS変更なし
+- 新規 verify-v4110-reception-list-revenue-resolved.mjs 追加
+
 ## v4.10.42 実装内容（未確定カレンダー予定の取り込み候補修正 緊急）
 
 - 表示バージョンを v4.10.42 に更新

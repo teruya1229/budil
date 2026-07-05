@@ -1330,9 +1330,9 @@
         btn.classList.add('hidden');
       });
       // v4.10.28: 売上未確定の受付には例外補助導線ボタンを追加する
-      const revenueExceptionBtn = state.primaryAction === 'fillRevenue' && !isReceptionIntakeRevenueResolved(intake)
+      const revenueExceptionBtn = state.primaryAction === 'fillRevenue' && !isReceptionWorkflowRevenueResolved(state)
         ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(intake.id)}">この受付から売上確定する</button>`
-        : (isReceptionIntakeRevenueResolved(intake)
+        : (isReceptionWorkflowRevenueResolved(state)
           ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-revenue="${esc(intake.id)}">関連売上を見る</button>`
           : '');
       actions.insertAdjacentHTML('afterbegin', `
@@ -13104,6 +13104,11 @@
     });
   }
 
+  // v4.11.0: 受付一覧は workflow state の解決結果を正本にする（relatedRevenueId 無し強一致も含む）
+  function isReceptionWorkflowRevenueResolved(state) {
+    return !!(state && (state.hasRevenue || state.resolvedRevenue));
+  }
+
   function getResolvedReceptionDailyTaskIntakeId(task) {
     if (!task) return '';
     if (task.intakeId) return task.intakeId;
@@ -13121,7 +13126,10 @@
   }
 
   function renderReceptionStateLabels(state) {
-    const labels = state && state.labels ? state.labels : [];
+    const resolved = isReceptionWorkflowRevenueResolved(state);
+    const labels = (state && state.labels ? state.labels : []).filter(label =>
+      !(resolved && label === '売上未確定')
+    );
     return `<div class="reception-state-labels">${labels.map(label =>
       `<span class="reception-state-label">${esc(label)}</span>`
     ).join('')}</div>`;
@@ -13129,7 +13137,7 @@
 
   function renderReceptionPrimaryAction(intakeId, state, options) {
     const opts = options || {};
-    if (state && (state.hasRevenue || state.resolvedRevenue)) {
+    if (isReceptionWorkflowRevenueResolved(state)) {
       return `<button type="button" class="btn btn-sm btn-secondary reception-primary-action" data-reception-open-revenue="${esc(intakeId)}">関連売上を見る</button>`;
     }
     const action = state && state.primaryAction || 'case';
@@ -13153,7 +13161,7 @@
     const workAction = state.hasWorkOrder
       ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-work-order="${esc(id)}">作業予定を開く</button>`
       : `<button type="button" class="btn btn-sm btn-secondary" data-reception-create-work-order="${esc(id)}">この受付から作業予定を作る</button>`;
-    const revenueAction = isReceptionIntakeRevenueResolved(intake)
+    const revenueAction = isReceptionWorkflowRevenueResolved(state)
       ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-revenue="${esc(id)}">関連売上を見る</button>`
       : `<button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(id)}">この受付から売上確定する</button>`;
     return `
