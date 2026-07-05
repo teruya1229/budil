@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.10.25.1">
+  <link rel="stylesheet" href="css/style.css?v=4.10.32">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.10.31</small>
+          <small>AI経営脳みそ v4.10.32</small>
         </div>
       </div>
       <nav class="nav">
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.10.31</small>
+        <small>Budil v4.10.32</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の優先 → 今月の数字 → 次にやること</p>
             </div>
-            <span class="exec-home-version">v4.10.31</span>
+            <span class="exec-home-version">v4.10.32</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
 
@@ -595,7 +595,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.31</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.10.32</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -2399,7 +2399,7 @@
           <h1>請求書・見積書</h1>
           <p class="view-subtitle">書類の作成・保存・印刷/PDF。売上の正本は売上明細（budil_revenue_records）です。請求書は補助書類です。</p>
         </header>
-        <p class="documents-purpose-note field-hint">請求書・見積書は書類管理の補助です。通常：作業予定から売上確定 ／ 請求書は既存売上と紐付けが優先 ／ 売上を新規作成する場合は売上確定待ちまたは売上明細を手入力 ／ 入金確認：入金予定</p>
+        <p class="documents-purpose-note field-hint no-print">請求書・見積書は書類管理の補助です。通常：作業予定から売上確定 ／ 請求書は既存売上と紐付けが優先 ／ 売上を新規作成する場合は売上確定待ちまたは売上明細を手入力 ／ 入金確認：入金予定</p>
 
         <div class="doc-toolbar no-print">
           <button type="button" class="btn btn-primary btn-sm" id="btn-doc-new-invoice">新規請求書</button>
@@ -2577,13 +2577,14 @@
         </div>
 
         <div id="documents-preview-panel" class="card card-wide hidden">
-          <h2 class="doc-preview-heading">書類プレビュー<span class="doc-preview-heading-note">（確認用・印刷/PDFは下のボタン）</span></h2>
+          <h2 class="doc-preview-heading no-print">書類プレビュー<span class="doc-preview-heading-note">（確認用・印刷/PDFは下のボタン）</span></h2>
           <div class="doc-preview-toolbar no-print">
             <button type="button" class="btn btn-primary btn-sm" id="btn-doc-print">印刷 / PDF</button>
             <button type="button" class="btn btn-secondary btn-sm" id="btn-doc-edit-from-preview">編集</button>
             <button type="button" class="btn btn-secondary btn-sm hidden" id="btn-doc-convert-invoice">見積書を請求書に変換</button>
             <button type="button" class="btn btn-secondary btn-sm hidden" id="btn-doc-reflect-revenue">売上明細に反映</button>
             <button type="button" class="btn btn-secondary btn-sm" id="btn-doc-back-from-preview">一覧に戻る</button>
+            <p class="doc-print-browser-hint field-hint">印刷時はブラウザ設定で「ヘッダーとフッター」をOFF推奨</p>
           </div>
           <div id="documents-preview-body" class="documents-preview-body doc-print-area"></div>
         </div>
@@ -3612,6 +3613,6 @@
   <script src="js/executive-brain.js?v=4.10.22"></script>
   <script src="js/card-ocr.js?v=4.10.22"></script>
   <script src="js/data-backup.js?v=4.10.22"></script>
-  <script src="js/app.js?v=4.10.31"></script>
+  <script src="js/app.js?v=4.10.32"></script>
 </body>
 </html>

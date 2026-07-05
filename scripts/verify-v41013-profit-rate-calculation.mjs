@@ -53,10 +53,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.31'), 'index.html should show v4.10.31');
-assert(indexHtml.includes('js/app.js?v=4.10.31'), 'app.js cache buster should be v4.10.31');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.31'"), 'storage.js version should be v4.10.31');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.31'"), 'data-backup version should be v4.10.31');
+assert(indexHtml.includes('v4.10.32'), 'index.html should show v4.10.32');
+assert(indexHtml.includes('js/app.js?v=4.10.32'), 'app.js cache buster should be v4.10.32');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.32'"), 'storage.js version should be v4.10.32');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.32'"), 'data-backup version should be v4.10.32');
 
 assert(revenueJs.includes('resolveGrossMarginRate'), 'revenue brain should resolve gross margin rate');
 assert(revenueJs.includes('computeMarginProfit'), 'revenue brain should compute margin profit');

@@ -9471,8 +9471,16 @@ body.sales-page {
 .doc-preview-toolbar {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.doc-print-browser-hint {
+  flex: 1 1 100%;
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+  color: #94a3b8;
 }
 
 .documents-list-wrap {
@@ -9833,10 +9841,26 @@ body.sales-page {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 10mm;
+    margin: 8mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #111 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  body.doc-printing .app {
+    display: block !important;
+    min-height: 0 !important;
   }
 
   body.doc-printing .sidebar,
+  body.doc-printing .sidebar-footer,
   body.doc-printing .view-header,
   body.doc-printing .no-print,
   body.doc-printing .card:not(#documents-preview-panel),
@@ -9844,6 +9868,10 @@ body.sales-page {
   body.doc-printing #documents-form-panel,
   body.doc-printing .doc-toolbar,
   body.doc-printing .doc-preview-toolbar,
+  body.doc-printing .doc-print-browser-hint,
+  body.doc-printing .doc-preview-heading,
+  body.doc-printing .doc-preview-heading-note,
+  body.doc-printing .documents-purpose-note,
   body.doc-printing .app-toast {
     display: none !important;
   }
@@ -9856,30 +9884,137 @@ body.sales-page {
     display: block !important;
   }
 
-  body.doc-printing #documents-preview-panel {
-    display: block !important;
-    border: none;
-    box-shadow: none;
-    padding: 0;
-    margin: 0;
-    background: #fff;
+  body.doc-printing .main {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
   }
 
-  body.doc-printing .documents-preview-body {
-    padding: 0;
-    background: #fff;
+  body.doc-printing #documents-preview-panel {
+    display: block !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+  }
+
+  body.doc-printing .documents-preview-body,
+  body.doc-printing .doc-print-area {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+    border: none !important;
+    border-radius: 0 !important;
   }
 
   body.doc-printing .doc-sheet {
-    box-shadow: none;
-    max-width: none;
-    margin: 0;
-    padding: 0;
+    box-shadow: none !important;
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 9.5pt !important;
+    line-height: 1.35 !important;
+    page-break-inside: avoid;
+    break-inside: avoid-page;
+  }
+
+  body.doc-printing .doc-sheet-header {
+    margin-bottom: 0.55rem !important;
+    gap: 0.65rem !important;
+  }
+
+  body.doc-printing .doc-title {
+    font-size: 1.25rem !important;
+    letter-spacing: 0.12em !important;
+    margin: 0 0 0.3rem !important;
+  }
+
+  body.doc-printing .doc-customer {
+    font-size: 0.95rem !important;
+  }
+
+  body.doc-printing .doc-issuer-block {
+    font-size: 0.74rem !important;
+    line-height: 1.35 !important;
+    min-width: 9rem !important;
+    padding-right: 3.1rem !important;
   }
 
   body.doc-printing .doc-seal {
+    width: 52px !important;
+    height: 52px !important;
+    top: 0 !important;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+  }
+
+  body.doc-printing .doc-meta {
+    margin-bottom: 0.4rem !important;
+  }
+
+  body.doc-printing .doc-meta-row {
+    margin-bottom: 0.12rem !important;
+    font-size: 0.82rem !important;
+  }
+
+  body.doc-printing .doc-total-banner {
+    margin: 0.4rem 0 0.5rem !important;
+    padding: 0.35rem 0.5rem !important;
+  }
+
+  body.doc-printing .doc-total-amount {
+    font-size: 1.15rem !important;
+  }
+
+  body.doc-printing .doc-table {
+    margin-bottom: 0.35rem !important;
+    font-size: 0.78rem !important;
+  }
+
+  body.doc-printing .doc-table th,
+  body.doc-printing .doc-table td {
+    padding: 0.18rem 0.28rem !important;
+  }
+
+  body.doc-printing .doc-totals {
+    margin-bottom: 0.35rem !important;
+    width: min(100%, 14rem) !important;
+  }
+
+  body.doc-printing .doc-totals-row {
+    padding: 0.12rem 0 !important;
+  }
+
+  body.doc-printing .doc-section-title {
+    font-size: 0.82rem !important;
+    margin: 0 0 0.2rem !important;
+  }
+
+  body.doc-printing .doc-tax-breakdown,
+  body.doc-printing .doc-bank,
+  body.doc-printing .doc-note {
+    margin-top: 0.35rem !important;
+    page-break-inside: avoid;
+    break-inside: avoid-page;
+  }
+
+  body.doc-printing .doc-bank {
+    page-break-before: avoid;
+    break-before: avoid-page;
+  }
+
+  body.doc-printing .doc-bank-body,
+  body.doc-printing .doc-note-body {
+    font-size: 0.76rem !important;
+    line-height: 1.35 !important;
+  }
+
+  body.doc-printing .doc-table-compact th,
+  body.doc-printing .doc-table-compact td {
+    font-size: 0.74rem !important;
   }
 }
 
@@ -11354,5 +11489,7 @@ body.sales-page {
     max-width: 100%;
   }
 }
+
+/* v4.10.32 請求書・見積書 A4印刷レイアウト（@media print は doc-printing ブロック参照） */
 
 /* v4.10.22 主導線・主従整理最終監査 */
