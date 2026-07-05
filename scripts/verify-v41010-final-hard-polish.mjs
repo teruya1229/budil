@@ -24,9 +24,9 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.10.38'), 'index.html should show v4.10.38');
-assert(indexHtml.includes('js/app.js?v=4.10.38'), 'app.js cache buster should be v4.10.38');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.38'"), 'storage.js version should be v4.10.38');
+assert(indexHtml.includes('v4.10.39'), 'index.html should show v4.10.39');
+assert(indexHtml.includes('js/app.js?v=4.10.39'), 'app.js cache buster should be v4.10.39');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.39'"), 'storage.js version should be v4.10.39');
 
 const forbiddenUiTerms = [
   '売上登録',

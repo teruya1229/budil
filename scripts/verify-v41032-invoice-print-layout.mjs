@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Budil v4.10.38 - invoice/estimate print layout verification.
  */
 import { readFileSync } from 'node:fs';
@@ -27,11 +27,11 @@ const storageJs = load('js/storage.js');
 const dataBackupJs = load('js/data-backup.js');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.38'), 'index.html should show v4.10.38');
-assert(indexHtml.includes('js/app.js?v=4.10.38'), 'app.js cache buster should be v4.10.38');
-assert(indexHtml.includes('css/style.css?v=4.10.38'), 'style.css cache buster should be v4.10.38');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.38'"), 'storage.js version should be v4.10.38');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.38'"), 'data-backup version should be v4.10.38');
+assert(indexHtml.includes('v4.10.39'), 'index.html should show v4.10.39');
+assert(indexHtml.includes('js/app.js?v=4.10.39'), 'app.js cache buster should be v4.10.39');
+assert(indexHtml.includes('css/style.css?v=4.10.39'), 'style.css cache buster should be v4.10.39');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.39'"), 'storage.js version should be v4.10.39');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.39'"), 'data-backup version should be v4.10.39');
 
 console.log('== print CSS ==');
 assert(css.includes('@media print'), 'print media query should exist');
