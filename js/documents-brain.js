@@ -14,7 +14,7 @@ const DocumentsBrain = {
     lineRounding: 'floor',
     showUnit: false,
     showZeroTax: false,
-    showTaxBreakdown: true
+    showTaxBreakdown: false
   },
 
   TAX_CATEGORY_OPTIONS: [
@@ -91,6 +91,36 @@ const DocumentsBrain = {
   taxCategoryLabel(category) {
     const hit = this.TAX_CATEGORY_OPTIONS.find(o => o.value === category);
     return hit ? hit.label : String(category || '');
+  },
+
+  isNonTaxableCategory(taxSettings) {
+    const ts = this.normalizeTaxSettings({ taxSettings });
+    return ts.taxCategory === 'nonTaxable';
+  },
+
+  formTaxDisplayModeValue(taxSettings) {
+    const ts = this.normalizeTaxSettings({ taxSettings });
+    if (this.isNonTaxableCategory(ts)) return 'nonTaxable';
+    return ts.taxDisplayMode;
+  },
+
+  taxSettingsFromFormDisplayMode(mode, prevSettings) {
+    const prev = this.normalizeTaxSettings({ taxSettings: prevSettings });
+    if (mode === 'nonTaxable') {
+      return {
+        ...prev,
+        taxDisplayMode: 'taxExcluded',
+        taxCategory: 'nonTaxable',
+        showTaxBreakdown: false
+      };
+    }
+    const taxCategory = prev.taxCategory === 'nonTaxable' ? 'taxable10' : prev.taxCategory;
+    return {
+      ...prev,
+      taxDisplayMode: mode === 'taxIncluded' ? 'taxIncluded' : 'taxExcluded',
+      taxCategory,
+      showTaxBreakdown: false
+    };
   },
 
   defaultTaxSettings() {
@@ -587,10 +617,10 @@ const DocumentsBrain = {
   },
 
   taxDisplayNote(ts) {
-    const cat = this.taxCategoryLabel(ts.taxCategory);
+    if (this.isNonTaxableCategory(ts)) return '（非課税）';
     const mode = ts.taxDisplayMode === 'taxIncluded' ? '内税' : '外税';
-    if (ts.taxRate === 0) return `（${mode}・${cat}）`;
-    return `（${mode}・${ts.taxRate}%・${cat}）`;
+    if (ts.taxRate === 0) return `（${mode}）`;
+    return `（${mode}・${ts.taxRate}%）`;
   },
 
   renderDocumentSheet(doc, escFn) {
@@ -611,7 +641,8 @@ const DocumentsBrain = {
     const amountLabel = isInvoice ? 'ご請求金額' : '御見積金額';
     const taxModeNote = this.taxDisplayNote(ts);
     const showUnit = ts.showUnit;
-    const showTaxRow = ts.showZeroTax || d.tax > 0;
+    const isNonTaxable = this.isNonTaxableCategory(ts);
+    const showTaxRow = isNonTaxable || ts.showZeroTax || d.tax > 0;
 
     const unitHeader = showUnit ? '<th class="doc-col-unit">単位</th>' : '';
     const itemRows = sheetItems.map(it => `
@@ -643,38 +674,6 @@ const DocumentsBrain = {
       <div class="doc-meta-row"><span class="doc-meta-label">発行日</span><span class="doc-meta-value">${esc(d.issueDate)}</span></div>
       <div class="doc-meta-row"><span class="doc-meta-label">件名</span><span class="doc-meta-value">${esc(d.title)}</span></div>`;
 
-    let taxBreakdown = '';
-    if (ts.showTaxBreakdown) {
-      if (ts.taxDisplayMode === 'taxIncluded') {
-        taxBreakdown = `
-      <div class="doc-tax-breakdown">
-        <h3 class="doc-section-title">税率別内訳（${ts.taxRate > 0 ? ts.taxRate + '%' : this.taxCategoryLabel(ts.taxCategory)}）</h3>
-        <table class="doc-table doc-table-compact">
-          <thead><tr><th>税抜金額</th><th>消費税額</th><th>税込金額</th></tr></thead>
-          <tbody><tr>
-            <td class="num">${esc(this.formatYen(d.subtotal))}</td>
-            <td class="num">${esc(this.formatYen(d.tax))}</td>
-            <td class="num">${esc(this.formatYen(d.total))}</td>
-          </tr></tbody>
-        </table>
-      </div>`;
-      } else {
-        const rateLabel = ts.taxRate > 0 ? `${ts.taxRate}%対象` : this.taxCategoryLabel(ts.taxCategory);
-        taxBreakdown = `
-      <div class="doc-tax-breakdown">
-        <h3 class="doc-section-title">内訳 ${rateLabel}</h3>
-        <table class="doc-table doc-table-compact">
-          <thead><tr><th>小計（税抜）</th>${showTaxRow ? '<th>消費税</th>' : ''}<th>合計（税込）</th></tr></thead>
-          <tbody><tr>
-            <td class="num">${esc(this.formatYen(d.subtotal))}</td>
-            ${showTaxRow ? `<td class="num">${esc(this.formatYen(d.tax))}</td>` : ''}
-            <td class="num">${esc(this.formatYen(d.total))}</td>
-          </tr></tbody>
-        </table>
-      </div>`;
-      }
-    }
-
     const bankBlock = isInvoice && d.bankInfo ? `
       <div class="doc-bank">
         <h3 class="doc-section-title">振込先</h3>
@@ -690,11 +689,11 @@ const DocumentsBrain = {
     const dateHeader = isInvoice ? '<th class="doc-col-date">納品日</th>' : '';
 
     let totalsBlock;
-    if (ts.taxDisplayMode === 'taxIncluded') {
+    if (ts.taxDisplayMode === 'taxIncluded' && !isNonTaxable) {
       totalsBlock = `
         <div class="doc-totals">
           <div class="doc-totals-row"><span>小計</span><span class="num">${esc(this.formatYen(d.subtotal))}</span></div>
-          ${showTaxRow ? `<div class="doc-totals-row"><span>うち消費税額合計</span><span class="num">${esc(this.formatYen(d.tax))}</span></div>` : ''}
+          ${showTaxRow ? `<div class="doc-totals-row"><span>うち消費税額</span><span class="num">${esc(this.formatYen(d.tax))}</span></div>` : ''}
           <div class="doc-totals-row doc-totals-grand"><span>合計</span><span class="num">${esc(this.formatYen(d.total))}</span></div>
         </div>`;
     } else {
@@ -740,7 +739,6 @@ const DocumentsBrain = {
           <tbody>${itemRows}</tbody>
         </table>
         ${totalsBlock}
-        ${taxBreakdown}
         ${bankBlock}
         ${noteBlock}
       </div>`;

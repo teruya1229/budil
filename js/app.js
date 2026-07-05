@@ -16157,17 +16157,27 @@
   }
 
   function readTaxSettingsFromForm() {
+    const modeEl = document.getElementById('doc-tax-display-mode');
+    const modeValue = modeEl?.value || 'taxExcluded';
+    const prev = {
+      taxDisplayMode: modeValue === 'nonTaxable' ? 'taxExcluded' : modeValue,
+      taxCategory: document.getElementById('doc-tax-category')?.value || 'taxable10',
+      taxRounding: document.getElementById('doc-tax-rounding')?.value || 'floor',
+      lineRounding: document.getElementById('doc-line-rounding')?.value || 'floor',
+      showUnit: document.getElementById('doc-show-unit')?.checked === true,
+      showZeroTax: document.getElementById('doc-show-zero-tax')?.checked === true,
+      showTaxBreakdown: false
+    };
     return DocumentsBrain.normalizeTaxSettings({
-      taxSettings: {
-        taxDisplayMode: document.getElementById('doc-tax-display-mode')?.value || 'taxExcluded',
-        taxCategory: document.getElementById('doc-tax-category')?.value || 'taxable10',
-        taxRounding: document.getElementById('doc-tax-rounding')?.value || 'floor',
-        lineRounding: document.getElementById('doc-line-rounding')?.value || 'floor',
-        showUnit: document.getElementById('doc-show-unit')?.checked === true,
-        showZeroTax: document.getElementById('doc-show-zero-tax')?.checked === true,
-        showTaxBreakdown: document.getElementById('doc-show-tax-breakdown')?.checked !== false
-      }
+      taxSettings: DocumentsBrain.taxSettingsFromFormDisplayMode(modeValue, prev)
     });
+  }
+
+  function syncDocTaxCategoryFieldVisibility(ts) {
+    const catGroup = document.getElementById('doc-tax-category-group');
+    if (catGroup) {
+      catGroup.classList.toggle('hidden', DocumentsBrain.isNonTaxableCategory(ts));
+    }
   }
 
   function fillTaxSettingsForm(taxSettings) {
@@ -16177,15 +16187,14 @@
       const el = document.getElementById(id);
       if (el) el.value = val;
     };
-    set('doc-tax-display-mode', ts.taxDisplayMode);
+    set('doc-tax-display-mode', DocumentsBrain.formTaxDisplayModeValue(ts));
     set('doc-tax-rounding', ts.taxRounding);
     set('doc-line-rounding', ts.lineRounding);
     const showUnit = document.getElementById('doc-show-unit');
     const showZeroTax = document.getElementById('doc-show-zero-tax');
-    const showBreakdown = document.getElementById('doc-show-tax-breakdown');
     if (showUnit) showUnit.checked = ts.showUnit;
     if (showZeroTax) showZeroTax.checked = ts.showZeroTax;
-    if (showBreakdown) showBreakdown.checked = ts.showTaxBreakdown;
+    syncDocTaxCategoryFieldVisibility(ts);
     const panel = document.getElementById('doc-tax-settings-panel');
     if (panel && !documentsFormDirty) panel.open = false;
   }
@@ -16222,9 +16231,16 @@
     const ts = readTaxSettingsFromForm();
     const items = readDocItemsFromForm();
     const calc = DocumentsBrain.calcFromFormItems(items, ts);
-    const modeLabel = ts.taxDisplayMode === 'taxIncluded' ? '内税' : '外税';
-    const catLabel = DocumentsBrain.taxCategoryLabel(ts.taxCategory);
-    preview.textContent = `${modeLabel} / ${catLabel} / 小計 ${DocumentsBrain.formatYen(calc.subtotal)} / 税 ${DocumentsBrain.formatYen(calc.tax)} / 合計 ${DocumentsBrain.formatYen(calc.total)}`;
+    const subtotal = DocumentsBrain.formatYen(calc.subtotal);
+    const tax = DocumentsBrain.formatYen(calc.tax);
+    const total = DocumentsBrain.formatYen(calc.total);
+    if (DocumentsBrain.isNonTaxableCategory(ts)) {
+      preview.textContent = `非課税 / 小計 ${subtotal} / 消費税 ${tax} / 合計 ${total}`;
+    } else if (ts.taxDisplayMode === 'taxIncluded') {
+      preview.textContent = `内税 / 小計 ${subtotal} / うち消費税額 ${tax} / 合計 ${total}`;
+    } else {
+      preview.textContent = `外税 / 小計 ${subtotal} / 消費税 ${tax} / 合計 ${total}`;
+    }
     updateDocFromRevenueAmountWarn();
   }
 
@@ -16267,6 +16283,14 @@
 
   function onDocTaxSettingsChange() {
     documentsFormDirty = true;
+    const modeEl = document.getElementById('doc-tax-display-mode');
+    const modeValue = modeEl?.value || 'taxExcluded';
+    if (modeValue === 'nonTaxable') {
+      fillDocTaxCategoryOptions('nonTaxable');
+    } else if (document.getElementById('doc-tax-category')?.value === 'nonTaxable') {
+      fillDocTaxCategoryOptions('taxable10');
+    }
+    syncDocTaxCategoryFieldVisibility(readTaxSettingsFromForm());
     const type = document.getElementById('doc-type')?.value || 'invoice';
     renderDocItemsEditor(readDocItemsFromForm(), type);
   }
@@ -16601,7 +16625,7 @@
     ['doc-tax-display-mode', 'doc-tax-category', 'doc-tax-rounding', 'doc-line-rounding'].forEach(id => {
       document.getElementById(id)?.addEventListener('change', onDocTaxSettingsChange);
     });
-    ['doc-show-unit', 'doc-show-zero-tax', 'doc-show-tax-breakdown'].forEach(id => {
+    ['doc-show-unit', 'doc-show-zero-tax'].forEach(id => {
       document.getElementById(id)?.addEventListener('change', onDocTaxSettingsChange);
     });
     document.getElementById('doc-type')?.addEventListener('change', (e) => {

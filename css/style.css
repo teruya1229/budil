@@ -11297,6 +11297,21 @@ body.sales-page {
   accent-color: var(--primary);
 }
 
+#view-documents .doc-tax-mode-group {
+  margin-bottom: 0.75rem;
+}
+
+#view-documents .doc-tax-mode-select {
+  max-width: 16rem;
+  font-weight: 600;
+}
+
+#view-documents .doc-tax-mode-hint {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  margin-top: 0.35rem;
+}
+
 #view-documents .doc-tax-preview {
   background: var(--doc-panel-bg);
   border-color: var(--doc-panel-border);
@@ -11490,6 +11505,6 @@ body.sales-page {
   }
 }
 
-/* v4.10.32 請求書・見積書 A4印刷レイアウト（@media print は doc-printing ブロック参照） */
+/* v4.10.33 請求書・見積書 A4印刷レイアウト（@media print は doc-printing ブロック参照） */
 
 /* v4.10.22 主導線・主従整理最終監査 */
