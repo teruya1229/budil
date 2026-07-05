@@ -27,11 +27,11 @@ const storageJs = load('js/storage.js');
 const dataBackupJs = load('js/data-backup.js');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.1'), 'index.html should show v4.11.1');
-assert(indexHtml.includes('js/app.js?v=4.11.1'), 'app.js cache buster should be v4.11.1');
+assert(indexHtml.includes('v4.11.2'), 'index.html should show v4.11.2');
+assert(indexHtml.includes('js/app.js?v=4.11.2'), 'app.js cache buster should be v4.11.2');
 assert(indexHtml.includes('css/style.css?v=4.10.41'), 'style.css cache buster should be v4.10.41');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.1'"), 'storage.js version should be v4.11.1');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.1'"), 'data-backup version should be v4.11.1');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.2'"), 'storage.js version should be v4.11.2');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.2'"), 'data-backup version should be v4.11.2');
 
 console.log('== print CSS ==');
 assert(css.includes('@media print'), 'print media query should exist');

@@ -1,5 +1,5 @@
 /**
- * Budil v4.11.1 - calendar import result shows tamazawa candidate verification.
+ * Budil v4.11.2 - calendar import result shows tamazawa candidate verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/calendar-candidate-brain.js', 'js/app.js', 'js/storage.j
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.11.1 calendar-import-result-shows-tamazawa ==');
+console.log('== v4.11.2 calendar-import-result-shows-tamazawa ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -52,11 +52,11 @@ const tamazawaItem = {
 };
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.1'), 'index.html should show v4.11.1');
-assert(indexHtml.includes('js/app.js?v=4.11.1'), 'app.js cache buster should be v4.11.1');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.11.1'), 'calendar brain cache buster should be v4.11.1');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.1'"), 'storage.js version should be v4.11.1');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.1'"), 'data-backup version should be v4.11.1');
+assert(indexHtml.includes('v4.11.2'), 'index.html should show v4.11.2');
+assert(indexHtml.includes('js/app.js?v=4.11.2'), 'app.js cache buster should be v4.11.2');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.11.1'), 'calendar brain cache buster should remain v4.11.1');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.2'"), 'storage.js version should be v4.11.2');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.2'"), 'data-backup version should be v4.11.2');
 
 console.log('== import result UI wiring ==');
 assert(appJs.includes('renderCalendarImportResultBreakdownHtml'), 'import result breakdown renderer should exist');
@@ -75,7 +75,7 @@ assert(receptionJs.includes('isIntakeRevenueResolved'), 'reception sync should r
 assert(appJs.includes('isReceptionWorkflowRevenueResolved'), 'reception list helper should remain');
 
 console.log('== CSS unchanged ==');
-assert(!css.includes('v4.11.1'), 'css must not change for v4.11.1');
+assert(!css.includes('v4.11.2'), 'css must not change for v4.11.2');
 
 console.log('== storage keys unchanged ==');
 assert(!storageJs.includes('localStorage.clear'), 'must not clear localStorage');
@@ -170,4 +170,4 @@ console.log('== excluded controls remain ==');
   assert(preview.items.every(i => i.futureImport.status === 'excluded'), 'holiday/no-amount should stay excluded');
 }
 
-console.log('\nAll v4.11.1 calendar-import-result-shows-tamazawa checks passed.');
+console.log('\nAll v4.11.2 calendar-import-result-shows-tamazawa checks passed.');

@@ -982,7 +982,7 @@
       : '';
     const summaryBlock = isCompact ? '' : `
       <div class="exec-home-revenue-summary">
-        <p class="exec-home-revenue-scope">売上集計${aggCompact.usesMonthlyResultThisMonth ? '（月次実績を優先）' : '（確定売上のみ）'}</p>
+        <p class="exec-home-revenue-scope">売上集計（確定売上のみ）</p>
         <p>${esc(thisMonthLabel)}：${esc(RevenueBrain.formatYen(aggCompact.thisMonthTotal || 0))}</p>
         ${breakdownNote}
         ${breakdownWarn}
@@ -1002,12 +1002,13 @@
     return `
       ${monthlyNote}
       <div class="exec-home-revenue-grid${isCompact ? ' exec-home-revenue-grid-compact' : ''}">
-        <div><span>${esc(s.monthRevenueLabel || '今月売上')}</span><strong>${esc(RevenueBrain.formatYen(s.monthRevenue))}</strong></div>
+        <div><span>今月予定売上</span><strong>${esc(RevenueBrain.formatYen(s.plannedRevenue != null ? s.plannedRevenue : s.monthRevenue))}</strong></div>
+        <div><span>今月予定利益</span><strong>${esc(ProfitBrain.formatYen(s.plannedProfit != null ? s.plannedProfit : s.grossProfit))}</strong></div>
+        <div><span>今月確定売上</span><strong>${esc(RevenueBrain.formatYen(s.confirmedRevenue || 0))}</strong></div>
+        <div><span>今月確定利益</span><strong>${esc(ProfitBrain.formatYen(s.confirmedProfit || 0))}</strong></div>
         ${isCompact ? '' : `<div><span>月間目標</span><strong>${esc(RevenueBrain.formatYen(s.monthlyTarget))}</strong></div>
         <div><span>達成率</span><strong>${s.achievementRate}%</strong></div>`}
         <div><span>今月経費</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
-        <div><span>今月利益</span><strong>${esc(ProfitBrain.formatYen(s.grossProfit))}</strong></div>
-        <div><span>利益率</span><strong>${esc(ProfitBrain.formatRate(s.grossRate))}</strong></div>
         ${isCompact ? '' : `<div><span>今週見込み</span><strong>${esc(WorkOrderBrain.formatYen(s.weekForecast))}</strong></div>
         <div><span>売上未登録</span><strong>${s.completedNoRevenue || 0}件</strong></div>`}
       </div>
@@ -1670,8 +1671,9 @@
         ${monthlyNote}
         <p class="mgmt-profit-label">売上・利益：</p>
         <ul class="mgmt-profit-list">
-          <li>今月売上 ${esc(RevenueBrain.formatYen(rp.monthRevenue))} / 目標 ${esc(RevenueBrain.formatYen(rp.monthlyTarget))}（${rp.achievementRate}%）</li>
-          <li>支出 ${esc(ProfitBrain.formatYen(rp.monthExpense))} / 粗利 ${esc(ProfitBrain.formatYen(rp.grossProfit))}（${esc(ProfitBrain.formatRate(rp.grossRate))}）</li>
+          <li>今月予定売上 ${esc(RevenueBrain.formatYen(rp.plannedRevenue != null ? rp.plannedRevenue : rp.monthRevenue))} / 目標 ${esc(RevenueBrain.formatYen(rp.monthlyTarget))}（${rp.achievementRate}%）</li>
+          <li>今月予定利益 ${esc(ProfitBrain.formatYen(rp.plannedProfit != null ? rp.plannedProfit : rp.grossProfit))} / 今月確定利益 ${esc(ProfitBrain.formatYen(rp.confirmedProfit || 0))}</li>
+          <li>支出 ${esc(ProfitBrain.formatYen(rp.monthExpense))}</li>
           ${rp.completedNoRevenue ? `<li>作業日経過・売上未確定 ${rp.completedNoRevenue}件</li>` : ''}
         </ul>`;
     }
@@ -1679,12 +1681,8 @@
     const revenueMorningEl = document.getElementById('mgmt-revenue');
     if (revenueMorningEl) {
       const rev = getRevenueContext();
-      const overlay = rev.monthlyOverlay;
-      const monthlyNote = overlay && overlay.usesMonthlyResult
-        ? ' <span class="revenue-monthly-badge">月次実績ベース</span>'
-        : '';
-      const morningTotal = rev.summary.total != null ? rev.summary.total : (rev.summary.confirmed + rev.summary.planned);
-      revenueMorningEl.innerHTML = `<p>今月売上：${esc(RevenueBrain.formatYen(morningTotal))}${monthlyNote} / 達成率 ${rev.summary.achievementRate}%</p>`;
+      const m = rev.sharedMonthlyMetrics || getSharedMonthlyMetrics();
+      revenueMorningEl.innerHTML = `<p>今月予定売上：${esc(RevenueBrain.formatYen(m.plannedRevenue))} / 達成率 ${m.achievementRate}%</p>`;
     }
 
     const followUpMorningEl = document.getElementById('mgmt-follow-up');
@@ -1898,6 +1896,19 @@
     return renderMonthlyReconciliationActionCard(monthKey, monthlyOverlay);
   }
 
+  function getSharedMonthlyMetrics(opts) {
+    const today = TODAY();
+    const monthKey = (opts && opts.monthKey) || RevenueBrain.currentMonthKey(today);
+    return RevenueBrain.buildSharedMonthlyMetrics({
+      records: RevenueBrain.normalizeRevenueRecords(Storage.getRevenueRecords()),
+      settings: Storage.getRevenueSettings(),
+      workOrders: Storage.getWorkOrders(),
+      expenses: Storage.getExpenseRecords(),
+      today,
+      monthKey
+    });
+  }
+
   function getRevenueContext() {
     const today = TODAY();
     const records = RevenueBrain.normalizeRevenueRecords(Storage.getRevenueRecords());
@@ -1917,10 +1928,11 @@
     const revenueSummary = typeof RevenueSummaryBrain !== 'undefined'
       ? RevenueSummaryBrain.buildFullSummary(records, getRevenueAggregationFilter(), today, getRevenueSummaryExtra())
       : null;
+    const sharedMonthlyMetrics = getSharedMonthlyMetrics({ monthKey });
     return {
       today, records, settings, leads, monthKey, summary, comment, salesOutcome,
       nextSalesCandidates, salesHoldCandidates, managementComment, revenueSummary,
-      monthlyOverlay, monthlyResults
+      monthlyOverlay, monthlyResults, sharedMonthlyMetrics
     };
   }
 
@@ -3781,24 +3793,25 @@
   function renderRevenueSummaryHtml(summary, comment, options) {
     const opts = options || {};
     const overlay = opts.monthlyOverlay;
+    const m = opts.sharedMonthlyMetrics || {};
     const monthlyBrief = overlay && overlay.usesMonthlyResult
       ? renderCurrentMonthReconciliationBrief(summary.monthKey, overlay)
       : '';
-    const plannedLabel = overlay && overlay.usesMonthlyResult ? '今月実績' : '確定売上';
-    const plannedDisplayValue = (overlay && overlay.usesMonthlyResult) ? summary.planned : summary.confirmed;
     const lines = [
       monthlyBrief,
-      `<p class="revenue-summary-line">${plannedLabel}：<strong>${esc(RevenueBrain.formatYen(plannedDisplayValue))}</strong>${overlay && overlay.usesMonthlyResult ? ' <span class="revenue-monthly-badge">月次実績ベース</span>' : ''}</p>`,
-      `<p class="revenue-summary-line">入金済み：${esc(RevenueBrain.formatYen(summary.paid))}</p>`,
-      `<p class="revenue-summary-line">入金待ち：${esc(RevenueBrain.formatYen(summary.unpaid))}</p>`,
-      `<p class="revenue-summary-line">月間目標：${esc(RevenueBrain.formatYen(summary.monthlyTarget))}</p>`,
-      `<p class="revenue-summary-line">目標まで残り：${esc(RevenueBrain.formatYen(summary.remainingToTarget))}</p>`,
-      `<p class="revenue-summary-line">達成率：${summary.achievementRate}%</p>`
+      `<p class="revenue-summary-line">確定売上：<strong>${esc(RevenueBrain.formatYen(m.confirmedRevenue ?? summary.confirmed))}</strong></p>`,
+      `<p class="revenue-summary-line">確定利益：${esc(RevenueBrain.formatYen(m.confirmedProfit ?? 0))}</p>`,
+      `<p class="revenue-summary-line">予定売上：${esc(RevenueBrain.formatYen(m.plannedRevenue ?? summary.confirmed))}</p>`,
+      `<p class="revenue-summary-line">予定利益：${esc(RevenueBrain.formatYen(m.plannedProfit ?? 0))}</p>`,
+      `<p class="revenue-summary-line">入金済み：${esc(RevenueBrain.formatYen(m.paidAmount ?? summary.paid))}</p>`,
+      `<p class="revenue-summary-line">入金待ち：${esc(RevenueBrain.formatYen(m.unpaidAmount ?? summary.unpaid))}</p>`,
+      `<p class="revenue-summary-line">月間目標：${esc(RevenueBrain.formatYen(m.monthlyTarget ?? summary.monthlyTarget))}</p>`,
+      `<p class="revenue-summary-line">目標まで残り：${esc(RevenueBrain.formatYen(m.remainingToTarget ?? summary.remainingToTarget))}</p>`,
+      `<p class="revenue-summary-line">達成率：${m.achievementRate ?? summary.achievementRate}%</p>`
     ];
     if (opts.showExtra) {
       lines.push(
-        `<p class="revenue-summary-line">確定：${esc(RevenueBrain.formatYen(summary.confirmed))}</p>`,
-        `<p class="revenue-summary-line">残り日数：${summary.daysLeft}日 / 1日あたり必要：${esc(RevenueBrain.formatYen(summary.dailyNeeded))}</p>`
+        `<p class="revenue-summary-line">残り日数：${m.remainingDays ?? summary.daysLeft}日 / 1日あたり必要：${esc(RevenueBrain.formatYen(m.dailyNeeded ?? summary.dailyNeeded))}</p>`
       );
     }
     if (comment) {
@@ -3813,8 +3826,8 @@
   function renderDashRevenueSummary() {
     const el = document.getElementById('dash-revenue-summary');
     if (!el) return;
-    const { summary, comment, salesOutcome, monthlyOverlay } = getRevenueContext();
-    el.innerHTML = renderRevenueSummaryHtml(summary, comment, { showLink: true, monthlyOverlay });
+    const { summary, comment, salesOutcome, monthlyOverlay, sharedMonthlyMetrics } = getRevenueContext();
+    el.innerHTML = renderRevenueSummaryHtml(summary, comment, { showLink: true, monthlyOverlay, sharedMonthlyMetrics });
     const btn = el.querySelector('#btn-go-revenue');
     if (btn) btn.addEventListener('click', () => navigateToView('revenue'));
     const scheduleEl = document.getElementById('dash-upcoming-revenue-schedule');
@@ -16396,7 +16409,7 @@
   }
 
   function renderRevenueSummaryPanel() {
-    const { summary, comment, settings, salesOutcome, leads, monthlyOverlay } = getRevenueContext();
+    const { summary, comment, settings, salesOutcome, leads, monthlyOverlay, sharedMonthlyMetrics } = getRevenueContext();
     const summaryEl = document.getElementById('revenue-summary');
     const commentEl = document.getElementById('revenue-bantou-comment');
     const targetEl = document.getElementById('revenue-monthly-target');
@@ -16414,18 +16427,19 @@
     }
 
     if (summaryEl) {
-      const plannedLabel = monthlyOverlay && monthlyOverlay.usesMonthlyResult ? '今月実績' : '確定売上';
-      const plannedPanelValue = (monthlyOverlay && monthlyOverlay.usesMonthlyResult) ? summary.planned : summary.confirmed;
+      const m = sharedMonthlyMetrics || getSharedMonthlyMetrics();
       const baseItems = [
-        { label: plannedLabel, value: RevenueBrain.formatYen(plannedPanelValue) + (monthlyOverlay && monthlyOverlay.usesMonthlyResult ? '（月次実績）' : '') },
-        { label: '確定', value: RevenueBrain.formatYen(summary.confirmed) },
-        { label: '入金済み', value: RevenueBrain.formatYen(summary.paid) },
-        { label: '入金待ち', value: RevenueBrain.formatYen(summary.unpaid) },
-        { label: '月間目標', value: RevenueBrain.formatYen(summary.monthlyTarget) },
-        { label: '目標まで残り', value: RevenueBrain.formatYen(summary.remainingToTarget) },
-        { label: '達成率', value: summary.achievementRate + '%' },
-        { label: '残り日数', value: summary.daysLeft + '日' },
-        { label: '1日あたり必要', value: RevenueBrain.formatYen(summary.dailyNeeded) }
+        { label: '確定売上', value: RevenueBrain.formatYen(m.confirmedRevenue) },
+        { label: '確定利益', value: RevenueBrain.formatYen(m.confirmedProfit) },
+        { label: '予定売上', value: RevenueBrain.formatYen(m.plannedRevenue) },
+        { label: '予定利益', value: RevenueBrain.formatYen(m.plannedProfit) },
+        { label: '入金済み', value: RevenueBrain.formatYen(m.paidAmount) },
+        { label: '入金待ち', value: RevenueBrain.formatYen(m.unpaidAmount) },
+        { label: '月間目標', value: RevenueBrain.formatYen(m.monthlyTarget) },
+        { label: '目標まで残り', value: RevenueBrain.formatYen(m.remainingToTarget) },
+        { label: '達成率', value: m.achievementRate + '%' },
+        { label: '残り日数', value: m.remainingDays + '日' },
+        { label: '1日あたり必要', value: RevenueBrain.formatYen(m.dailyNeeded) }
       ];
       summaryEl.innerHTML = baseItems.map(item => `
         <div class="revenue-summary-item ${item.extraClass || ''}">

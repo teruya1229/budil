@@ -467,6 +467,98 @@ const RevenueBrain = {
       .map(([name, amount]) => ({ name, amount }));
   },
 
+  getWorkOrderPlannedAmount(workOrder) {
+    if (typeof ProfitBrain !== 'undefined') {
+      return ProfitBrain.getWorkOrderEstimateAmount(workOrder);
+    }
+    const wo = workOrder && typeof workOrder === 'object' ? workOrder : {};
+    const top = Number(wo.estimateAmount || 0);
+    if (Number.isFinite(top) && top > 0) return top;
+    const meta = wo.candidateMeta;
+    if (meta && meta.estimatedAmount != null && meta.estimatedAmount !== '') {
+      const parsed = parseInt(String(meta.estimatedAmount).replace(/[^\d]/g, ''), 10);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  },
+
+  isPlannedAdditionalWorkOrder(workOrder, monthKey) {
+    if (!workOrder) return false;
+    const wo = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.normalizeWorkOrder(workOrder)
+      : workOrder;
+    const scheduledDate = String(wo.scheduledDate || '').slice(0, 10);
+    if (!scheduledDate || !scheduledDate.startsWith(monthKey)) return false;
+    if (wo.actualRevenueId) return false;
+    if (wo.status === 'cancelled' || wo.status === 'archived' || wo.status === 'completed') return false;
+    const amt = this.getWorkOrderPlannedAmount(wo);
+    return Number.isFinite(amt) && amt > 0;
+  },
+
+  buildSharedMonthlyMetrics(ctx) {
+    const today = (ctx && ctx.today) || new Date().toISOString().slice(0, 10);
+    const monthKey = (ctx && ctx.monthKey) || this.currentMonthKey(today);
+    const records = this.normalizeRevenueRecords((ctx && ctx.records) || []);
+    const settings = (ctx && ctx.settings) || {};
+    const workOrders = (ctx && ctx.workOrders) || [];
+    const expenses = (ctx && ctx.expenses) || [];
+
+    const monthAll = this.filterMonthRecords(records, monthKey);
+    const active = this.activeRecords(monthAll);
+    const confirmedList = active.filter(r => this.isConfirmedRevenueStatus(r.status));
+    const confirmedRevenue = this.sumAmount(confirmedList);
+
+    const plannedWorkOrders = workOrders.filter(w => this.isPlannedAdditionalWorkOrder(w, monthKey));
+    const plannedAdditionalRevenue = plannedWorkOrders.reduce(
+      (sum, w) => sum + this.getWorkOrderPlannedAmount(w), 0
+    );
+    const plannedRevenue = confirmedRevenue + plannedAdditionalRevenue;
+
+    const monthExpense = typeof ProfitBrain !== 'undefined'
+      ? ProfitBrain.sumAmount(ProfitBrain.filterMonthExpenses(expenses, monthKey))
+      : (expenses || []).filter(e => e.date && e.date.startsWith(monthKey))
+        .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+
+    const confirmedProfit = confirmedRevenue - monthExpense;
+    const plannedProfit = plannedRevenue - monthExpense;
+
+    const paidAmount = confirmedList.reduce((sum, r) => {
+      if (typeof PaymentBrain !== 'undefined') return sum + PaymentBrain.getPaidAmount(r);
+      return sum + (this.isPaidPaymentStatus(r.paymentStatus) ? Number(r.amount || 0) : 0);
+    }, 0);
+    const unpaidAmount = Math.max(0, confirmedRevenue - paidAmount);
+
+    const monthlyTarget = Number(settings.monthlyTarget) || 0;
+    const remainingToTarget = Math.max(0, monthlyTarget - plannedRevenue);
+    const achievementRate = monthlyTarget > 0 ? Math.round((plannedRevenue / monthlyTarget) * 100) : 0;
+
+    const parts = monthKey.split('-');
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const isCurrentMonth = monthKey === this.currentMonthKey(today);
+    const todayDay = new Date(today).getDate();
+    const remainingDays = isCurrentMonth ? Math.max(1, lastDay - todayDay + 1) : lastDay;
+    const dailyNeeded = remainingDays > 0 ? Math.ceil(remainingToTarget / remainingDays) : 0;
+
+    return {
+      monthKey,
+      confirmedRevenue,
+      plannedAdditionalRevenue,
+      plannedRevenue,
+      monthExpense,
+      confirmedProfit,
+      plannedProfit,
+      paidAmount,
+      unpaidAmount,
+      monthlyTarget,
+      remainingToTarget,
+      achievementRate,
+      remainingDays,
+      dailyNeeded
+    };
+  },
+
   summarize(records, settings, targetMonth) {
     const monthKey = targetMonth || this.currentMonthKey();
     const monthAll = this.filterMonthRecords(records, monthKey);

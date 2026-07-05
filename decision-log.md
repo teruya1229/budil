@@ -2,6 +2,25 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.11.2 経営ホーム・売上サマリー月次数字の共通定義統一（2026-07-05）
+
+**日付**: 2026-07-05
+
+**判断内容**:
+- 月次数字の計算元が RevenueBrain.summarize / RevenueSummaryBrain.buildFullSummary / ExecutiveBrain+ProfitBrain に分かれ、画面ごとに売上・利益の意味がズレていた
+- 最優先は数字の整合性。同じ月の同じ数字は経営ホームと売上サマリーで同じ定義・同じ値にする
+- `RevenueBrain.buildSharedMonthlyMetrics()` を正本にし、経営ホーム・売上サマリーはこれを参照
+- 売上サマリーの「確定」（誤表示）を「確定利益」に変更
+- 月次実績は共通月次数字に混ぜない（既存機能は削除しない）
+- 粗利率ベース利益（ProfitBrain）と「売上−経費」利益を経営ホームで混ぜない
+
+**変更ファイル**:
+- js/revenue-brain.js（buildSharedMonthlyMetrics 追加）
+- js/executive-brain.js（共通メトリクス参照）
+- js/app.js（売上サマリー・経営ホーム表示）
+- index.html, js/storage.js, js/data-backup.js（v4.11.2）
+- scripts/verify-v4112-unified-monthly-metrics.mjs（新規）
+
 ## v4.11.1 予定取り込み結果画面に候補一覧表示（2026-07-05）
 
 **日付**: 2026-07-05

@@ -53,10 +53,10 @@ const dataBackupJs = load('js/data-backup.js');
 
 // --- バージョン確認 ---
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.1'), 'index.html should show v4.11.1');
-assert(indexHtml.includes('js/app.js?v=4.11.1'), 'app.js cache buster should be v4.11.1');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.1'"), 'storage.js version should be v4.11.1');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.1'"), 'data-backup version should be v4.11.1');
+assert(indexHtml.includes('v4.11.2'), 'index.html should show v4.11.2');
+assert(indexHtml.includes('js/app.js?v=4.11.2'), 'app.js cache buster should be v4.11.2');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.2'"), 'storage.js version should be v4.11.2');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.2'"), 'data-backup version should be v4.11.2');
 
 // --- TODAY() がローカル日付基準であること ---
 console.log('== TODAY() local date check ==');
@@ -87,31 +87,34 @@ assert(
   'executive-brain.js should have monthRevenueLabel field'
 );
 assert(
-  execBrainJs.includes('今月の合計売上（予定含む）') || execBrainJs.includes('今月売上見込み（予定含む）'),
-  'executive-brain.js should have a label that includes 予定含む'
+  execBrainJs.includes('今月予定売上') || execBrainJs.includes('今月の合計売上（予定含む）') || execBrainJs.includes('今月売上見込み（予定含む）'),
+  'executive-brain.js should have a clear scheduled revenue label'
 );
 assert(
-  execBrainJs.includes('今月の確定売上'),
-  'executive-brain.js should have 今月の確定売上 label for confirmed-only case'
+  appJs.includes('今月確定売上'),
+  'app.js should show 今月確定売上 on executive home'
 );
-// 「今月売上」のみの曖昧ラベルが経営ホームの動的ラベルとして使われないこと
 assert(
   !execBrainJs.match(/monthRevenueLabel[^=]*=.*'今月売上'[^（]/),
   'executive-brain.js monthRevenueLabel should not be just 今月売上 without qualifier'
 );
 
-// --- 経営ホームで ps.totalRevenue を使っていること ---
-console.log('== executive home monthRevenue uses totalRevenue ==');
+// --- 経営ホームで共通月次メトリクスを使っていること ---
+console.log('== executive home monthRevenue uses shared metrics ==');
 assert(
-  execBrainJs.includes('ps.totalRevenue'),
-  'executive-brain.js should use ps.totalRevenue for monthRevenue calculation'
+  execBrainJs.includes('buildSharedMonthlyMetrics'),
+  'executive-brain.js should use buildSharedMonthlyMetrics for monthRevenue calculation'
+);
+assert(
+  execBrainJs.includes('plannedRevenue'),
+  'executive-brain.js should expose plannedRevenue from shared metrics'
 );
 
-// --- app.jsで monthRevenueLabel を使っていること ---
-console.log('== app.js uses monthRevenueLabel ==');
+// --- app.jsで予定売上ラベルを使っていること ---
+console.log('== app.js uses scheduled revenue label ==');
 assert(
-  appJs.includes("s.monthRevenueLabel || '今月売上'"),
-  'app.js should use s.monthRevenueLabel with fallback in revenue grid'
+  appJs.includes('今月予定売上') || appJs.includes("s.monthRevenueLabel || '今月売上'"),
+  'app.js should show clear scheduled revenue label in revenue grid'
 );
 // 曖昧な「今月売上」がグリッドにハードコードされていないこと
 assert(
@@ -426,8 +429,8 @@ console.log('== buildRevenueProfitSection monthRevenue label ==');
   assert(result.monthRevenue === 57090, `section.monthRevenue should be 57090, got ${result.monthRevenue}`);
   assert(result.monthRevenueLabel !== '今月売上', `section.monthRevenueLabel must not be plain 今月売上`);
   assert(
-    result.monthRevenueLabel.includes('予定含む') || result.monthRevenueLabel.includes('合計'),
-    `section.monthRevenueLabel should indicate it includes scheduled, got "${result.monthRevenueLabel}"`
+    result.monthRevenueLabel.includes('予定含む') || result.monthRevenueLabel.includes('合計') || result.monthRevenueLabel.includes('予定売上'),
+    `section.monthRevenueLabel should indicate scheduled revenue, got "${result.monthRevenueLabel}"`
   );
   console.log(`  monthRevenue=${result.monthRevenue} label="${result.monthRevenueLabel}" OK`);
 }

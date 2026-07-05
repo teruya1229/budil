@@ -383,32 +383,31 @@ const ExecutiveBrain = {
     const summary = rev.summary || {};
     const ps = (ctx.profitCtx && ctx.profitCtx.summary) || {};
     const forecast = ctx.forecast || {};
-    const usesMonthly = !!ps.usesMonthlyResult;
-    const scheduledEstimate = ps.plannedRevenueEstimate || 0;
-    const monthRevenue = usesMonthly
-      ? (ps.monthRevenue || 0)
-      : (ps.totalRevenue || summary.planned || 0);
-    const monthRevenueLabel = usesMonthly
-      ? '今月売上（月次実績）'
-      : (scheduledEstimate > 0 ? '今月の合計売上（予定含む）' : '今月の確定売上');
-    const achievementRate = summary.monthlyTarget > 0
-      ? Math.round((monthRevenue / summary.monthlyTarget) * 1000) / 10
-      : (summary.achievementRate || 0);
+    const shared = typeof RevenueBrain !== 'undefined'
+      ? RevenueBrain.buildSharedMonthlyMetrics({
+        records: rev.records || ctx.revenues || [],
+        settings: rev.settings || {},
+        workOrders: ctx.workOrders || [],
+        expenses: ctx.expenses || [],
+        today: ctx.today,
+        monthKey: RevenueBrain.currentMonthKey(ctx.today)
+      })
+      : {};
+    const monthRevenue = shared.plannedRevenue || 0;
+    const monthRevenueLabel = '今月予定売上';
+    const achievementRate = shared.achievementRate || 0;
     const cautions = [];
-    if (!usesMonthly && summary.monthlyTarget > 0 && summary.achievementRate < 50) {
+    if (shared.monthlyTarget > 0 && achievementRate < 50) {
       cautions.push('月間目標に対して不足気味です');
     }
-    if (usesMonthly && summary.monthlyTarget > 0 && achievementRate < 50) {
-      cautions.push('月間目標に対して不足気味です');
+    if ((shared.monthExpense || 0) > 0 && (shared.plannedProfit || 0) < 0) {
+      cautions.push('今月は赤字注意です');
     }
-    if (ps.monthExpense > 0 && ps.monthGrossProfit < 0) cautions.push('今月は赤字注意です');
-    if (!usesMonthly && ps.adExpense > 0 && summary.planned < ps.adExpense * 4) cautions.push('広告費注意');
-    if (!usesMonthly && ps.unlinkedCount > 0) cautions.push(`未紐付け支出${ps.unlinkedCount}件`);
-    if (!usesMonthly) {
-      const deficitCount = ((ctx.profitCtx && ctx.profitCtx.revenueRows) || [])
-        .filter(r => r.label === '赤字注意').length;
-      if (deficitCount) cautions.push(`赤字注意の売上${deficitCount}件`);
-    }
+    if (ps.adExpense > 0 && (shared.plannedRevenue || 0) < ps.adExpense * 4) cautions.push('広告費注意');
+    if (ps.unlinkedCount > 0) cautions.push(`未紐付け支出${ps.unlinkedCount}件`);
+    const deficitCount = ((ctx.profitCtx && ctx.profitCtx.revenueRows) || [])
+      .filter(r => r.label === '赤字注意').length;
+    if (deficitCount) cautions.push(`赤字注意の売上${deficitCount}件`);
     const revenueAggregation = rev.revenueSummary || (typeof RevenueSummaryBrain !== 'undefined'
       ? RevenueSummaryBrain.buildFullSummary(rev.records || [], { year: (ctx.today || '').slice(0, 4) }, ctx.today, {
         workOrders: ctx.workOrders || [],
@@ -425,18 +424,23 @@ const ExecutiveBrain = {
     return {
       monthRevenue,
       monthRevenueLabel,
-      monthlyTarget: summary.monthlyTarget || 0,
+      confirmedRevenue: shared.confirmedRevenue || 0,
+      confirmedProfit: shared.confirmedProfit || 0,
+      plannedRevenue: shared.plannedRevenue || 0,
+      plannedProfit: shared.plannedProfit || 0,
+      monthlyTarget: shared.monthlyTarget || summary.monthlyTarget || 0,
       achievementRate,
-      monthExpense: ps.monthExpense || 0,
-      grossProfit: ps.monthGrossProfit || 0,
+      monthExpense: shared.monthExpense || ps.monthExpense || 0,
+      grossProfit: shared.plannedProfit || 0,
       grossRate: ps.monthGrossRate || 0,
       weekForecast: forecast.weekAmount || 0,
       completedNoRevenue: forecast.completedNoRevenueCount || 0,
       cautions,
       revenueAggregation,
       receivables,
-      usesMonthlyResult: usesMonthly,
-      aggregationSourceNote: ps.aggregationSourceNote || ''
+      sharedMonthlyMetrics: shared,
+      usesMonthlyResult: false,
+      aggregationSourceNote: ''
     };
   },
 
