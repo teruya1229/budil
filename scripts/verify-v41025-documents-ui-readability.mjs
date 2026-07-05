@@ -28,20 +28,20 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 // --- バージョン ---
-assert(indexHtml.includes('v4.10.34'), 'index.html should show v4.10.34');
-assert(indexHtml.includes('js/app.js?v=4.10.34'), 'app.js cache buster should be v4.10.34');
-assert(indexHtml.includes('css/style.css?v=4.10.34'), 'css cache buster should be v4.10.34');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.34'"), 'storage.js version should be v4.10.34');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.34'"), 'data-backup version should be v4.10.34');
+assert(indexHtml.includes('v4.10.35'), 'index.html should show v4.10.35');
+assert(indexHtml.includes('js/app.js?v=4.10.35'), 'app.js cache buster should be v4.10.35');
+assert(indexHtml.includes('css/style.css?v=4.10.35'), 'css cache buster should be v4.10.35');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.35'"), 'storage.js version should be v4.10.35');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.35'"), 'data-backup version should be v4.10.35');
 assert(statusMd.includes('v4.10.25'), 'status.md should document v4.10.25');
 assert(statusMd.includes('v4.10.26'), 'status.md should document v4.10.26');
-assert(statusMd.includes('v4.10.34'), 'status.md should document v4.10.27');
+assert(statusMd.includes('v4.10.35'), 'status.md should document v4.10.27');
 assert(handoffMd.includes('v4.10.25'), 'handoff.md should document v4.10.25');
 assert(handoffMd.includes('v4.10.26'), 'handoff.md should document v4.10.26');
-assert(handoffMd.includes('v4.10.34'), 'handoff.md should document v4.10.27');
+assert(handoffMd.includes('v4.10.35'), 'handoff.md should document v4.10.27');
 assert(decisionLog.includes('v4.10.25'), 'decision-log.md should record v4.10.25');
 assert(decisionLog.includes('v4.10.26'), 'decision-log.md should record v4.10.26');
-assert(decisionLog.includes('v4.10.34'), 'decision-log.md should record v4.10.27');
+assert(decisionLog.includes('v4.10.35'), 'decision-log.md should record v4.10.27');
 
 // --- CSS 対象限定 ---
 console.log('== CSS scope check ==');

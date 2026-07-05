@@ -53,10 +53,10 @@ const dataBackupJs = load('js/data-backup.js');
 
 // --- バージョン確認 ---
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.34'), 'index.html should show v4.10.34');
-assert(indexHtml.includes('js/app.js?v=4.10.34'), 'app.js cache buster should be v4.10.34');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.34'"), 'storage.js version should be v4.10.34');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.34'"), 'data-backup version should be v4.10.34');
+assert(indexHtml.includes('v4.10.35'), 'index.html should show v4.10.35');
+assert(indexHtml.includes('js/app.js?v=4.10.35'), 'app.js cache buster should be v4.10.35');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.35'"), 'storage.js version should be v4.10.35');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.35'"), 'data-backup version should be v4.10.35');
 
 // --- TODAY() がローカル日付基準であること ---
 console.log('== TODAY() local date check ==');
@@ -471,7 +471,7 @@ assert(profitBrainJs.includes('totalRevenue'), 'ProfitBrain should have totalRev
 console.log('== v4.10.25 documents-ui regression ==');
 const css = load('css/style.css');
 assert(css.includes('v4.10.25 請求書・見積書'), 'css should still include v4.10.25 documents marker');
-assert(indexHtml.includes('css/style.css?v=4.10.34'), 'css cache buster should remain v4.10.25.1');
+assert(indexHtml.includes('css/style.css?v=4.10.35'), 'css cache buster should remain v4.10.25.1');
 
 // --- NG文言確認 ---
 console.log('== NG term check ==');

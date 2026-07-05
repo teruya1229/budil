@@ -1,5 +1,5 @@
 /**
- * Budil v4.10.34 - invoice/estimate print layout verification.
+ * Budil v4.10.35 - invoice/estimate print layout verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/app.js', 'js/documents-brain.js', 'js/storage.js']) {
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.10.34 invoice-print-layout ==');
+console.log('== v4.10.35 invoice-print-layout ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -27,11 +27,11 @@ const storageJs = load('js/storage.js');
 const dataBackupJs = load('js/data-backup.js');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.10.34'), 'index.html should show v4.10.34');
-assert(indexHtml.includes('js/app.js?v=4.10.34'), 'app.js cache buster should be v4.10.34');
-assert(indexHtml.includes('css/style.css?v=4.10.34'), 'style.css cache buster should be v4.10.34');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.10.34'"), 'storage.js version should be v4.10.34');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.10.34'"), 'data-backup version should be v4.10.34');
+assert(indexHtml.includes('v4.10.35'), 'index.html should show v4.10.35');
+assert(indexHtml.includes('js/app.js?v=4.10.35'), 'app.js cache buster should be v4.10.35');
+assert(indexHtml.includes('css/style.css?v=4.10.35'), 'style.css cache buster should be v4.10.35');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.10.35'"), 'storage.js version should be v4.10.35');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.10.35'"), 'data-backup version should be v4.10.35');
 
 console.log('== print CSS ==');
 assert(css.includes('@media print'), 'print media query should exist');
@@ -46,7 +46,7 @@ assert(css.includes('body.doc-printing .documents-preview-body'), 'preview frame
 assert(css.includes('body.doc-printing .doc-sheet'), 'doc-sheet print compaction should exist');
 assert(css.includes('body.doc-printing .doc-bank'), 'bank block print rule should exist');
 assert(css.includes('page-break-before: avoid'), 'bank should avoid page break before');
-assert(css.includes('v4.10.34'), 'v4.10.34 print layout marker should exist in css');
+assert(css.includes('v4.10.35'), 'v4.10.35 print layout marker should exist in css');
 
 console.log('== screen UI preserved ==');
 assert(indexHtml.includes('doc-print-browser-hint'), 'browser print hint should exist on screen');
@@ -55,7 +55,7 @@ assert(css.includes('--doc-preview-frame'), 'v4.10.25 screen preview frame vars 
 assert(css.includes('#view-documents .documents-preview-body'), 'v4.10.25 screen preview body styles should remain');
 assert(appJs.includes('doc-printing'), 'app.js should toggle doc-printing for print');
 
-console.log('== v4.10.34 tax consistency maintained ==');
+console.log('== v4.10.35 tax consistency maintained ==');
 assert(documentsJs.includes('calcFromFormItems'), 'calcFromFormItems must remain');
 assert(documentsJs.includes('getFormItemsFromDocument'), 'getFormItemsFromDocument must remain');
 assert(appJs.includes('calcFromFormItems'), 'app.js must still use calcFromFormItems');
@@ -128,4 +128,4 @@ console.log('== v4.10.30 sanitizing maintained ==');
   assert(!result.html.includes('internal-only memo'), 'internal memo must not appear');
 }
 
-console.log('\nAll v4.10.34 invoice-print-layout checks passed.');
+console.log('\nAll v4.10.35 invoice-print-layout checks passed.');
