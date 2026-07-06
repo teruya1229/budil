@@ -25,6 +25,7 @@
   let currentDocPreviewId = null;
   let documentsFormDirty = false;
   let receivablesFilter = 'all';
+  const expandedMonthlyBillingGroups = new Set();
 
   const PAST_RECOVERY_UI_ENABLED = false;
   const SCHEDULE_IMPORT_VIEW = 'calendar-candidate';
@@ -15781,6 +15782,161 @@
     });
   }
 
+  function setRevenueBillingMonth(revenueId, billingMonth) {
+    if (!revenueId || !billingMonth) return;
+    Storage.updateRevenueRecord(revenueId, { billingMonth: String(billingMonth).trim() });
+    renderReceivablesView();
+    renderRevenueView();
+    showAppToast('請求月を設定しました');
+  }
+
+  function getMonthlyBillingGroupRecords(sourceGroup, billingMonth) {
+    return RevenueBrain.collectMonthlyBillingRecords(Storage.getRevenueRecords()).filter(r => {
+      return RevenueBrain.getMonthlyBillingSourceGroup(RevenueBrain.resolveRecordSourceText(r)) === sourceGroup
+        && RevenueBrain.resolveBillingMonth(r) === billingMonth;
+    });
+  }
+
+  function markMonthlyBillingGroupBilled(groupKey) {
+    const { sourceGroup, billingMonth } = RevenueBrain.parseMonthlyBillingGroupKey(groupKey);
+    if (!sourceGroup || !billingMonth) return;
+    if (!confirm('この月次請求グループを請求済みにしますか？（入金済みにはしません）')) return;
+    getMonthlyBillingGroupRecords(sourceGroup, billingMonth).forEach(r => {
+      Storage.updateRevenueRecord(r.id, { monthlyBillingStatus: 'billed' });
+    });
+    renderReceivablesView();
+    renderRevenueView();
+    renderDashboard();
+    showAppToast('請求済みにしました');
+  }
+
+  function markMonthlyBillingGroupPaid(groupKey) {
+    const { sourceGroup, billingMonth } = RevenueBrain.parseMonthlyBillingGroupKey(groupKey);
+    if (!sourceGroup || !billingMonth) return;
+    if (!confirm('この月次請求グループを入金済みにしますか？')) return;
+    const today = TODAY();
+    getMonthlyBillingGroupRecords(sourceGroup, billingMonth).forEach(r => {
+      const status = PaymentBrain.migratePaymentStatus(r.paymentStatus, 'pending');
+      if (status === 'paid' || status === 'cancelled') return;
+      const patch = PaymentBrain.buildPaidPatch(r.amount, today);
+      Storage.updateRevenueRecord(r.id, { ...patch, monthlyBillingStatus: 'paid' });
+      PaymentBrain.syncLinkedPayment({
+        sourceType: 'revenue',
+        sourceId: r.id,
+        paymentPatch: patch,
+        storage: Storage
+      });
+    });
+    renderReceivablesView();
+    renderRevenueView();
+    renderDocumentsView();
+    renderDashboard();
+    showAppToast('入金済みにしました');
+  }
+
+  function renderReceivablesMonthEndReview(today) {
+    const card = document.getElementById('receivables-month-end-review-card');
+    const listEl = document.getElementById('receivables-month-end-review-list');
+    if (!card || !listEl) return;
+    const items = RevenueBrain.collectMonthEndBillingReviewRecords(Storage.getRevenueRecords(), today);
+    if (!items.length) {
+      card.classList.add('hidden');
+      listEl.innerHTML = '';
+      return;
+    }
+    card.classList.remove('hidden');
+    listEl.innerHTML = items.map(record => {
+      const workDate = String(record.workDate || '');
+      const md = workDate.length >= 10
+        ? `${parseInt(workDate.slice(5, 7), 10)}/${parseInt(workDate.slice(8, 10), 10)}`
+        : '—';
+      const sourceLabel = RevenueBrain.getMonthlyBillingSourceLabel(
+        RevenueBrain.getMonthlyBillingSourceGroup(RevenueBrain.resolveRecordSourceText(record))
+      );
+      const workMonth = workDate.slice(0, 7);
+      const nextMonth = RevenueBrain.addMonthToMonthKey(workMonth);
+      return `<div class="receivables-month-end-review-item">
+        <div class="receivables-month-end-review-meta">
+          <span>${esc(md)}</span>
+          <span>${esc(sourceLabel)}</span>
+          <span>${esc(record.customerName || '—')}</span>
+          <span class="num">${esc(RevenueBrain.formatYen(record.amount))}</span>
+        </div>
+        <div class="receivables-month-end-review-actions">
+          <button type="button" class="btn btn-sm btn-primary" data-billing-month-this="${esc(record.id)}" data-billing-month-value="${esc(workMonth)}">今月請求</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-billing-month-next="${esc(record.id)}" data-billing-month-value="${esc(nextMonth)}">翌月請求</button>
+        </div>
+      </div>`;
+    }).join('');
+    listEl.querySelectorAll('[data-billing-month-this]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setRevenueBillingMonth(btn.dataset.billingMonthThis, btn.dataset.billingMonthValue);
+      });
+    });
+    listEl.querySelectorAll('[data-billing-month-next]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setRevenueBillingMonth(btn.dataset.billingMonthNext, btn.dataset.billingMonthValue);
+      });
+    });
+  }
+
+  function renderReceivablesMonthlyBillingGroups() {
+    const container = document.getElementById('receivables-monthly-billing-groups');
+    if (!container) return;
+    const groups = RevenueBrain.buildMonthlyBillingGroups(Storage.getRevenueRecords());
+    if (!groups.length) {
+      container.innerHTML = '<p class="placeholder-text">月次請求の対象はありません。</p>';
+      return;
+    }
+    container.innerHTML = groups.map(group => {
+      const sourceLabel = RevenueBrain.getMonthlyBillingSourceLabel(group.sourceGroup);
+      const monthLabel = RevenueBrain.formatBillingMonthLabel(group.billingMonth);
+      const expanded = expandedMonthlyBillingGroups.has(group.key);
+      const recordsId = 'monthly-billing-records-' + group.key.replace(/\|/g, '--');
+      const rows = group.records.map(r => `
+        <div class="receivables-monthly-billing-record">
+          <span>${esc(String(r.workDate || '').slice(5).replace('-', '/'))}</span>
+          <span>${esc(r.customerName || '—')}</span>
+          <span>${esc(RevenueBrain.getCustomerFacingServiceLabel(r))}</span>
+          <span class="num">${esc(RevenueBrain.formatYen(r.amount))}</span>
+          <span>${renderPaymentStatusBadge(r)}</span>
+        </div>`).join('');
+      return `<article class="receivables-monthly-billing-group" data-monthly-billing-group="${esc(group.key)}">
+        <div class="receivables-monthly-billing-group-head">
+          <h3>${esc(sourceLabel)} ${esc(monthLabel)}</h3>
+          <span class="receivables-monthly-billing-status">${esc(group.status)}</span>
+        </div>
+        <div class="receivables-monthly-billing-metrics">
+          <span>対象：${group.count}件</span>
+          <span>請求額：${esc(RevenueBrain.formatYen(group.totalRevenue))}</span>
+          <span>予定利益：${esc(RevenueBrain.formatYen(group.totalProfit))}</span>
+        </div>
+        <div class="receivables-monthly-billing-actions">
+          <button type="button" class="btn btn-sm btn-secondary" data-monthly-billing-toggle="${esc(group.key)}">${expanded ? '対象を閉じる' : '対象を見る'}</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-monthly-billing-billed="${esc(group.key)}">請求済みにする</button>
+          <button type="button" class="btn btn-sm btn-primary" data-monthly-billing-paid="${esc(group.key)}">入金済みにする</button>
+        </div>
+        <div class="receivables-monthly-billing-records${expanded ? '' : ' hidden'}" id="${esc(recordsId)}">
+          ${rows}
+        </div>
+      </article>`;
+    }).join('');
+    container.querySelectorAll('[data-monthly-billing-toggle]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.monthlyBillingToggle;
+        if (expandedMonthlyBillingGroups.has(key)) expandedMonthlyBillingGroups.delete(key);
+        else expandedMonthlyBillingGroups.add(key);
+        renderReceivablesMonthlyBillingGroups();
+      });
+    });
+    container.querySelectorAll('[data-monthly-billing-billed]').forEach(btn => {
+      btn.addEventListener('click', () => markMonthlyBillingGroupBilled(btn.dataset.monthlyBillingBilled));
+    });
+    container.querySelectorAll('[data-monthly-billing-paid]').forEach(btn => {
+      btn.addEventListener('click', () => markMonthlyBillingGroupPaid(btn.dataset.monthlyBillingPaid));
+    });
+  }
+
   function renderReceivablesView() {
     try {
       const today = TODAY();
@@ -15801,14 +15957,26 @@
             <span>${esc(item.label)}</span>
             <strong>${esc(item.value)}</strong>
           </div>`).join('');
+        const monthlyGroups = RevenueBrain.buildMonthlyBillingGroups(Storage.getRevenueRecords());
+        if (monthlyGroups.length) {
+          summaryEl.innerHTML += `
+            <div class="receivables-summary-item">
+              <span>月次請求グループ</span>
+              <strong>${monthlyGroups.length}件</strong>
+            </div>`;
+        }
       }
+
+      renderReceivablesMonthEndReview(today);
+      renderReceivablesMonthlyBillingGroups();
 
       document.querySelectorAll('[data-receivables-filter]').forEach(btn => {
         btn.classList.toggle('active', (btn.dataset.receivablesFilter || 'all') === receivablesFilter);
       });
 
       const allItems = summary.items || [];
-      const items = PaymentBrain.filterReceivables(allItems, receivablesFilter, today);
+      const filteredItems = PaymentBrain.filterReceivables(allItems, receivablesFilter, today);
+      const items = RevenueBrain.filterReceivableItemsForIndividualBilling(filteredItems);
 
       const tbody = document.getElementById('receivables-tbody');
       const cardList = document.getElementById('receivables-card-list');

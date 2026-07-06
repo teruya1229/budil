@@ -2,6 +2,24 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.11.9 コープ・ヤマダ月次請求管理（2026-07-06）
+
+**日付**: 2026-07-06
+
+**判断内容**:
+- コープ・ヤマダは作業・売上・利益は1件ごと、請求・入金確認は月末まとめ請求のため月次請求グループで管理
+- 新画面は作らず入金予定画面内に「月末請求確認」「月次請求」「1件ごと入金確認」を追加
+- `billingMonth` / `monthlyBillingStatus` は売上明細の補助フィールド（localStorageキー変更なし）
+- workDate・売上月・利益計算は変更しない。請求月だけ補助管理
+- 片付け110番・くらしのマーケットは月次請求対象外
+- 請求済みと入金済みは分離（請求済みにしても入金済み扱いにしない）
+
+**変更ファイル**:
+- js/revenue-brain.js, js/app.js, css/style.css
+- index.html, js/storage.js, js/data-backup.js（v4.11.9）
+- scripts/verify-v4119-monthly-billing-workflow.mjs
+- status.md, handoff.md, decision-log.md
+
 ## v4.11.8 売上管理画面の実務導線整理（2026-07-06）
 
 **日付**: 2026-07-06

@@ -21,7 +21,7 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.11.8'), 'index.html should show v4.11.8');
+assert(indexHtml.includes('v4.11.9'), 'index.html should show v4.11.9');
 assert(indexHtml.includes('受付・予定確認'), 'calendar registration view should be renamed');
 assert(
   indexHtml.includes('Googleカレンダー登録後の予定をBudilで確認'),

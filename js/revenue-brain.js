@@ -1061,5 +1061,167 @@ const RevenueBrain = {
   getCustomerFacingServiceLabel(record) {
     const rec = record && typeof record === 'object' ? record : {};
     return String(rec.service || rec.serviceName || rec.serviceText || '').trim();
+  },
+
+  isMonthlyBillingSource(sourceText) {
+    return this.getMonthlyBillingSourceGroup(sourceText) != null;
+  },
+
+  getMonthlyBillingSourceGroup(sourceText) {
+    const s = String(sourceText || '').trim();
+    if (!s) return null;
+    if (/110番|片付け110|エアコン110番|生活110番/.test(s)) return null;
+    if (s === 'くらしのマーケット' || /くらしのマーケット|くらマ|くらし/.test(s)) return null;
+    if (s === 'コープ' || s === 'コープハウジング') return 'coop';
+    if (/コープハウジング/i.test(s)) return 'coop';
+    if (/^コープ$|生協|\bcoop\b|COOP/i.test(s)) return 'coop';
+    if (s === 'ヤマダ' || s === 'ヤマダ電機' || s === 'YAMADA') return 'yamada';
+    if (/ヤマダ電機|ヤマダ|YAMADA/i.test(s)) return 'yamada';
+    return null;
+  },
+
+  getMonthlyBillingSourceLabel(group) {
+    if (group === 'coop') return 'コープ';
+    if (group === 'yamada') return 'ヤマダ';
+    return '—';
+  },
+
+  resolveBillingMonth(record) {
+    const item = record && typeof record === 'object' ? record : {};
+    const explicit = String(item.billingMonth || '').trim();
+    if (/^\d{4}-\d{2}$/.test(explicit)) return explicit;
+    const workDate = String(item.workDate || '').trim();
+    if (workDate.length >= 7) return workDate.slice(0, 7);
+    return '';
+  },
+
+  addMonthToMonthKey(monthKey) {
+    const m = String(monthKey || '').trim();
+    if (!/^\d{4}-\d{2}$/.test(m)) return '';
+    const [y, mo] = m.split('-').map(Number);
+    const date = new Date(y, mo - 1, 1);
+    date.setMonth(date.getMonth() + 1);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  },
+
+  formatBillingMonthLabel(monthKey) {
+    const m = String(monthKey || '').trim();
+    if (!/^\d{4}-\d{2}$/.test(m)) return '—';
+    const [y, mo] = m.split('-').map(Number);
+    return `${y}年${mo}月請求分`;
+  },
+
+  isMonthlyBillingRevenueRecord(record) {
+    const item = this.normalizeRevenueRecord(record);
+    if (!item || item.status === 'キャンセル') return false;
+    return this.isMonthlyBillingSource(this.resolveRecordSourceText(item));
+  },
+
+  isMonthlyBillingPaymentOpen(record) {
+    if (!record || typeof PaymentBrain === 'undefined') return false;
+    const status = PaymentBrain.migratePaymentStatus(record.paymentStatus, 'pending');
+    return status === 'pending' || status === 'partial' || status === 'uncollected';
+  },
+
+  isMonthEndBillingReviewCandidate(record, today) {
+    if (!this.isMonthlyBillingRevenueRecord(record)) return false;
+    if (!this.isMonthlyBillingPaymentOpen(record)) return false;
+    const item = record && typeof record === 'object' ? record : {};
+    if (String(item.billingMonth || '').trim()) return false;
+    const workDate = String(item.workDate || '').trim();
+    if (!workDate || workDate.length < 10) return false;
+    const day = parseInt(workDate.slice(8, 10), 10);
+    if (!Number.isFinite(day)) return false;
+    const year = parseInt(workDate.slice(0, 4), 10);
+    const month = parseInt(workDate.slice(5, 7), 10);
+    const lastDay = new Date(year, month, 0).getDate();
+    const daysToEnd = lastDay - day;
+    return day >= 25 || daysToEnd < 5;
+  },
+
+  collectMonthEndBillingReviewRecords(records, today) {
+    return this.normalizeRevenueRecords(records)
+      .filter(r => this.isMonthEndBillingReviewCandidate(r, today))
+      .sort((a, b) => String(a.workDate || '').localeCompare(String(b.workDate || '')));
+  },
+
+  collectMonthlyBillingRecords(records) {
+    return this.normalizeRevenueRecords(records).filter(r => {
+      if (!this.isMonthlyBillingRevenueRecord(r)) return false;
+      return this.isMonthlyBillingPaymentOpen(r);
+    });
+  },
+
+  buildMonthlyBillingGroupKey(sourceGroup, billingMonth) {
+    return `${String(sourceGroup || '')}|${String(billingMonth || '')}`;
+  },
+
+  parseMonthlyBillingGroupKey(key) {
+    const parts = String(key || '').split('|');
+    return { sourceGroup: parts[0] || '', billingMonth: parts[1] || '' };
+  },
+
+  resolveMonthlyBillingGroupStatus(group) {
+    const records = group.records || [];
+    if (!records.length) return '未請求';
+    const paymentStatuses = records.map(r => PaymentBrain.migratePaymentStatus(r.paymentStatus, 'pending'));
+    const allPaid = paymentStatuses.every(s => s === 'paid');
+    if (allPaid) return '入金済み';
+    const somePaid = paymentStatuses.some(s => s === 'paid' || s === 'partial');
+    if (somePaid) return '一部入金';
+    const billedCount = records.filter(r => r.monthlyBillingStatus === 'billed' || r.monthlyBillingStatus === 'paid').length;
+    if (billedCount > 0) return '請求済み';
+    return '未請求';
+  },
+
+  buildMonthlyBillingGroups(records) {
+    const groups = new Map();
+    this.collectMonthlyBillingRecords(records).forEach(record => {
+      const sourceGroup = this.getMonthlyBillingSourceGroup(this.resolveRecordSourceText(record));
+      const billingMonth = this.resolveBillingMonth(record);
+      if (!sourceGroup || !billingMonth) return;
+      const key = this.buildMonthlyBillingGroupKey(sourceGroup, billingMonth);
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          sourceGroup,
+          billingMonth,
+          records: [],
+          count: 0,
+          totalRevenue: 0,
+          totalProfit: 0,
+          paidAmount: 0,
+          unpaidAmount: 0,
+          status: '未請求'
+        });
+      }
+      const group = groups.get(key);
+      const amount = Number(record.amount) || 0;
+      const paymentStatus = PaymentBrain.migratePaymentStatus(record.paymentStatus, 'pending');
+      const paidPart = paymentStatus === 'paid'
+        ? amount
+        : Math.max(0, Number(record.paidAmount) || 0);
+      group.records.push(record);
+      group.count += 1;
+      group.totalRevenue += amount;
+      group.totalProfit += this.computeRecordGrossShare(record);
+      group.paidAmount += paidPart;
+    });
+    return [...groups.values()].map(group => {
+      group.unpaidAmount = Math.max(0, group.totalRevenue - group.paidAmount);
+      group.status = this.resolveMonthlyBillingGroupStatus(group);
+      return group;
+    }).sort((a, b) => {
+      if (a.billingMonth !== b.billingMonth) return b.billingMonth.localeCompare(a.billingMonth);
+      return a.sourceGroup.localeCompare(b.sourceGroup);
+    });
+  },
+
+  filterReceivableItemsForIndividualBilling(items) {
+    return (items || []).filter(item => {
+      const rev = item.revenue || (item.primaryKind === 'revenue' ? item.record : null);
+      if (!rev) return true;
+      return !this.isMonthlyBillingSource(this.resolveRecordSourceText(rev));
+    });
   }
 };

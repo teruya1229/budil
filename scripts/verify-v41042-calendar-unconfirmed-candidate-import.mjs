@@ -1,5 +1,5 @@
 /**
- * Budil v4.11.8 - calendar unconfirmed candidate import verification.
+ * Budil v4.11.9 - calendar unconfirmed candidate import verification.
  *
  * 玉澤 真理子様ケース:
  * - confirmationStatus: 未確定 でも候補から落とさない
@@ -30,7 +30,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.11.8 calendar-unconfirmed-candidate-import ==');
+console.log('== v4.11.9 calendar-unconfirmed-candidate-import ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -65,13 +65,13 @@ const tamazawaItem = {
 };
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.8'), 'index.html should show v4.11.8');
-assert(indexHtml.includes('js/app.js?v=4.11.8'), 'app.js cache buster should be v4.11.8');
+assert(indexHtml.includes('v4.11.9'), 'index.html should show v4.11.9');
+assert(indexHtml.includes('js/app.js?v=4.11.9'), 'app.js cache buster should be v4.11.9');
 assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.11.1'), 'calendar brain cache buster should remain v4.11.1');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.8'"), 'storage.js version should be v4.11.8');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.8'"), 'data-backup version should be v4.11.8');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.9'"), 'storage.js version should be v4.11.9');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.9'"), 'data-backup version should be v4.11.9');
 
-console.log('== v4.11.8 brain markers ==');
+console.log('== v4.11.9 brain markers ==');
 assert(calBrainJs.includes('v4.11.1'), 'calendar-candidate-brain.js should include v4.11.1 marker');
 assert(calBrainJs.includes('NON_EXCLUSION_CONFIRMATION_STATUSES'), 'non-exclusion confirmation statuses should exist');
 assert(calBrainJs.includes('resolveConfirmationStatus'), 'resolveConfirmationStatus should exist');
@@ -240,4 +240,4 @@ console.log('== exclusion controls ==');
   assert(results.holiday.status === 'excluded', 'holiday should be excluded');
 }
 
-console.log('\nAll v4.11.8 calendar-unconfirmed-candidate-import checks passed.');
+console.log('\nAll v4.11.9 calendar-unconfirmed-candidate-import checks passed.');

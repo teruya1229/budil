@@ -10300,6 +10300,106 @@ body.sales-page {
   color: var(--text-muted, #94a3b8);
 }
 
+/* v4.11.9 入金予定：月次請求（コープ・ヤマダ） */
+#view-receivables .receivables-month-end-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+#view-receivables .receivables-month-end-review-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #334155);
+  background: rgba(30, 41, 59, 0.45);
+}
+
+#view-receivables .receivables-month-end-review-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.85rem;
+  font-size: 0.9rem;
+}
+
+#view-receivables .receivables-month-end-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+#view-receivables .receivables-monthly-billing-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+
+#view-receivables .receivables-monthly-billing-group {
+  padding: 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #334155);
+  background: rgba(30, 41, 59, 0.45);
+}
+
+#view-receivables .receivables-monthly-billing-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+#view-receivables .receivables-monthly-billing-group-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+#view-receivables .receivables-monthly-billing-status {
+  font-size: 0.82rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+#view-receivables .receivables-monthly-billing-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.65rem;
+}
+
+#view-receivables .receivables-monthly-billing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+#view-receivables .receivables-monthly-billing-records {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border, #334155);
+}
+
+#view-receivables .receivables-monthly-billing-record {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr 1fr auto auto;
+  gap: 0.35rem 0.5rem;
+  font-size: 0.82rem;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  #view-receivables .receivables-monthly-billing-record {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 @media (min-width: 900px) {
   .receivables-table-wrap {
     display: block;

@@ -40,10 +40,10 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.8'), 'index.html should show v4.11.8');
-assert(indexHtml.includes('js/app.js?v=4.11.8'), 'app.js cache buster should be v4.11.8');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.8'"), 'storage.js version should be v4.11.8');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.8'"), 'data-backup version should be v4.11.8');
+assert(indexHtml.includes('v4.11.9'), 'index.html should show v4.11.9');
+assert(indexHtml.includes('js/app.js?v=4.11.9'), 'app.js cache buster should be v4.11.9');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.9'"), 'storage.js version should be v4.11.9');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.9'"), 'data-backup version should be v4.11.9');
 
 console.log('== follow card action wiring ==');
 assert(appJs.includes('renderFollowUpCardActionSection'), 'card action sections should exist');

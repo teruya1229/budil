@@ -30,10 +30,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.11.8'), 'index.html should show v4.11.8');
-assert(indexHtml.includes('js/app.js?v=4.11.8'), 'app.js cache buster should be v4.11.8');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.8'"), 'storage.js version should be v4.11.8');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.8'"), 'data-backup version should be v4.11.8');
+assert(indexHtml.includes('v4.11.9'), 'index.html should show v4.11.9');
+assert(indexHtml.includes('js/app.js?v=4.11.9'), 'app.js cache buster should be v4.11.9');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.9'"), 'storage.js version should be v4.11.9');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.9'"), 'data-backup version should be v4.11.9');
 
 const receivablesStart = indexHtml.indexOf('id="view-receivables"');
 const receivablesEnd = indexHtml.indexOf('id="view-follow-up"');
@@ -42,7 +42,7 @@ const receivablesChunk = indexHtml.slice(receivablesStart, receivablesEnd);
 assert(receivablesChunk.includes('主入口'), '入金予定 view subtitle should declare it as main entry');
 assert(receivablesChunk.includes('入金確認'), '入金予定 view should mention 入金確認');
 assert(receivablesChunk.includes('入金待ちサマリー'), 'receivables summary card should remain');
-assert(receivablesChunk.includes('入金予定一覧'), 'receivables list card should remain');
+assert(receivablesChunk.includes('1件ごと入金確認'), 'individual receivables list card should remain');
 assert(receivablesChunk.includes('receivables-filter-btn'), 'receivables filter buttons should remain');
 assert(receivablesChunk.includes('入金済み'), '入金済み button should remain in receivables');
 assert(
