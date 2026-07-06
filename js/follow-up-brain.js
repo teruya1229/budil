@@ -582,5 +582,214 @@ const FollowUpBrain = {
       return '対応不要';
     }
     return '';
+  },
+
+  // v4.11.13: フォロー一覧用（売上確定済みも含む広い対象）
+  buildFollowUpListRecordFromWorkOrder(workOrder, revenue, lead, today) {
+    const wo = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.normalizeWorkOrder(workOrder)
+      : workOrder;
+    const rev = revenue ? (typeof RevenueBrain !== 'undefined' ? RevenueBrain.normalizeRevenueRecord(revenue) : revenue) : null;
+    const workDate = this.resolveWorkDate(wo, rev);
+    const followUp = this.mergeFollowUp(wo, rev);
+    const daysSince = this.daysBetween(workDate, today);
+    const amount = rev ? Number(rev.amount) || 0 : Number(wo.estimateAmount) || 0;
+    const hasRevenue = !!(rev || wo.actualRevenueId);
+    const nextMaint = followUp.nextMaintenanceDate || this.estimateNextMaintenanceDate({
+      workDate,
+      serviceText: wo.serviceText,
+      followUp
+    }, today);
+    const daysToMaint = this.daysBetween(today, nextMaint);
+    const maintenanceNear = daysToMaint != null && daysToMaint >= 0 && daysToMaint <= 14;
+    const needsThanks = followUp.thanksStatus === 'pending';
+    const needsReview = !!hasRevenue && followUp.reviewStatus === 'pending';
+    const needsRepeat = followUp.repeatStatus === 'pending' || followUp.repeatStatus === 'planned';
+    return {
+      id: 'fu-wo-' + wo.id,
+      workOrderId: wo.id,
+      revenueId: rev ? rev.id : (wo.actualRevenueId || ''),
+      leadId: wo.leadId || (rev ? rev.leadId : '') || (lead ? lead.id : ''),
+      customerName: wo.customerName || (rev ? rev.customerName : '') || (lead ? lead.company : ''),
+      workDate,
+      serviceText: wo.serviceText || (rev ? rev.service : ''),
+      amount,
+      source: wo.source || (rev ? rev.source : ''),
+      leadName: lead ? lead.company : '',
+      followUp: { ...followUp, nextMaintenanceDate: nextMaint },
+      daysSinceWork: daysSince,
+      needsThanks,
+      needsReview,
+      needsRepeat,
+      maintenanceNear,
+      maintenanceLabel: this.getMaintenanceRule(wo.serviceText || (rev && rev.service)).label,
+      hasRevenue,
+      inWindow: daysSince != null && daysSince >= 1 && daysSince <= 7
+    };
+  },
+
+  buildFollowUpListRecordFromRevenue(revenue, lead, today) {
+    const rev = typeof RevenueBrain !== 'undefined'
+      ? RevenueBrain.normalizeRevenueRecord(revenue)
+      : revenue;
+    if (!rev || rev.status === 'キャンセル' || !rev.workDate) return null;
+    const workDate = rev.workDate || '';
+    const daysSince = this.daysBetween(workDate, today);
+    const followUp = this.normalizeFollowUp(rev.followUp);
+    const nextMaint = followUp.nextMaintenanceDate || this.estimateNextMaintenanceDate({
+      workDate,
+      serviceText: rev.service,
+      followUp
+    }, today);
+    const daysToMaint = this.daysBetween(today, nextMaint);
+    const maintenanceNear = daysToMaint != null && daysToMaint >= 0 && daysToMaint <= 14;
+    const needsThanks = followUp.thanksStatus === 'pending';
+    const needsReview = followUp.reviewStatus === 'pending';
+    const needsRepeat = followUp.repeatStatus === 'pending' || followUp.repeatStatus === 'planned';
+    return {
+      id: 'fu-rev-' + rev.id,
+      workOrderId: '',
+      revenueId: rev.id,
+      leadId: rev.leadId || '',
+      customerName: rev.customerName || '',
+      workDate,
+      serviceText: rev.service || '',
+      amount: Number(rev.amount) || 0,
+      source: rev.source || '',
+      leadName: lead ? lead.company : '',
+      followUp: { ...followUp, nextMaintenanceDate: nextMaint },
+      daysSinceWork: daysSince,
+      needsThanks,
+      needsReview,
+      needsRepeat,
+      maintenanceNear,
+      maintenanceLabel: this.getMaintenanceRule(rev.service).label,
+      hasRevenue: true,
+      inWindow: daysSince != null && daysSince >= 1 && daysSince <= 7
+    };
+  },
+
+  getFollowUpRecordsForList(ctx) {
+    const today = ctx.today || new Date().toISOString().slice(0, 10);
+    const workOrders = ctx.workOrders || [];
+    const revenues = ctx.revenues || [];
+    const leads = ctx.leads || [];
+    const revMap = new Map(revenues.filter(r => r && r.id).map(r => [r.id, r]));
+    const leadMap = new Map(leads.filter(l => l && l.id).map(l => [l.id, l]));
+    const records = [];
+    const seen = new Set();
+
+    workOrders.forEach(raw => {
+      const wo = typeof WorkOrderBrain !== 'undefined'
+        ? WorkOrderBrain.normalizeWorkOrder(raw)
+        : raw;
+      if (wo.status !== 'completed' && !wo.actualRevenueId) return;
+      const rev = wo.actualRevenueId ? revMap.get(wo.actualRevenueId) : null;
+      const lead = wo.leadId ? leadMap.get(wo.leadId) : (rev && rev.leadId ? leadMap.get(rev.leadId) : null);
+      const record = this.buildFollowUpListRecordFromWorkOrder(wo, rev, lead, today);
+      if (!record || seen.has(record.id)) return;
+      seen.add(record.id);
+      records.push(record);
+    });
+
+    revenues.forEach(raw => {
+      const rev = typeof RevenueBrain !== 'undefined'
+        ? RevenueBrain.normalizeRevenueRecord(raw)
+        : raw;
+      if (!rev || rev.status === 'キャンセル' || !rev.workDate) return;
+      const key = 'fu-rev-' + rev.id;
+      if (seen.has(key)) return;
+      const linkedWo = workOrders.find(w => w && w.actualRevenueId === rev.id);
+      if (linkedWo) return;
+      const lead = rev.leadId ? leadMap.get(rev.leadId) : null;
+      const record = this.buildFollowUpListRecordFromRevenue(rev, lead, today);
+      if (!record) return;
+      seen.add(key);
+      records.push(record);
+    });
+
+    return records;
+  },
+
+  isFollowUpRecordCompleted(record) {
+    const f = this.normalizeFollowUp(record.followUp);
+    if (f.thanksStatus === 'skipped' && f.reviewStatus === 'skipped' && f.repeatStatus === 'skipped') return true;
+    const thanksResolved = f.thanksStatus !== 'pending';
+    const reviewResolved = !record.hasRevenue || f.reviewStatus !== 'pending';
+    const repeatResolved = f.repeatStatus === 'done' || f.repeatStatus === 'skipped'
+      || (f.repeatStatus === 'planned' && !record.needsRepeat);
+    return thanksResolved && reviewResolved && repeatResolved;
+  },
+
+  isFollowUpTodayAction(record, ctx) {
+    if (this.isFollowUpRecordCompleted(record)) return false;
+    const rows = this.buildFollowCardStatusRows(record, ctx || {});
+    const f = this.normalizeFollowUp(record.followUp);
+    if (record.needsThanks && !rows.thanksSkipped) {
+      if (record.daysSinceWork == null || record.daysSinceWork >= 1) return true;
+    }
+    if (record.needsReview && !rows.reviewSkipped && f.thanksStatus === 'done') return true;
+    if (record.needsRepeat && record.maintenanceNear && !rows.repeatSkipped) return true;
+    if (f.thanksStatus === 'pending' && record.daysSinceWork != null && record.daysSinceWork > 7) return true;
+    if (f.reviewStatus === 'pending' && f.thanksStatus === 'done'
+      && record.daysSinceWork != null && record.daysSinceWork > 14) return true;
+    if (record.amount >= 30000 && record.daysSinceWork != null && record.daysSinceWork <= 14) return true;
+    return false;
+  },
+
+  getFollowUpPriorityScore(record) {
+    const f = this.normalizeFollowUp(record.followUp);
+    if (f.thanksStatus === 'pending' && record.hasRevenue) {
+      if (record.daysSinceWork != null && record.daysSinceWork > 7) return 5;
+      return 10;
+    }
+    if (f.thanksStatus === 'done' && f.reviewStatus === 'pending') return 20;
+    if (f.reviewStatus === 'done' && record.needsRepeat && record.maintenanceNear) return 30;
+    if (record.amount >= 30000) return 35;
+    return 50;
+  },
+
+  getFollowUpNextActionLabel(record, ctx) {
+    if (this.isFollowUpRecordCompleted(record)) return 'フォロー済み';
+    const f = this.normalizeFollowUp(record.followUp);
+    if (f.thanksStatus === 'pending') return 'お礼LINE';
+    if (f.reviewStatus === 'pending') return '口コミ依頼';
+    if (record.needsRepeat && record.maintenanceNear) return 'リピート案内';
+    return '要確認';
+  },
+
+  getFollowUpPrimaryActionType(record) {
+    const f = this.normalizeFollowUp(record.followUp);
+    if (f.thanksStatus === 'pending') return 'thanks';
+    if (f.reviewStatus === 'pending') return 'review';
+    if (record.needsRepeat && record.maintenanceNear) return 'repeat';
+    return 'thanks';
+  },
+
+  groupFollowUpTargetsForList(records, ctx) {
+    const buckets = {
+      todayAction: [],
+      pending: [],
+      completed: []
+    };
+    (records || []).forEach(record => {
+      const item = { ...record };
+      if (this.isFollowUpRecordCompleted(record)) {
+        item.bucket = 'completed';
+        buckets.completed.push(item);
+      } else {
+        item.bucket = 'pending';
+        buckets.pending.push(item);
+        if (this.isFollowUpTodayAction(record, ctx)) {
+          item.bucket = 'todayAction';
+          buckets.todayAction.push(item);
+        }
+      }
+    });
+    const sortFn = (a, b) => this.getFollowUpPriorityScore(a) - this.getFollowUpPriorityScore(b);
+    buckets.todayAction.sort(sortFn);
+    buckets.pending.sort(sortFn);
+    buckets.completed.sort((a, b) => (b.workDate || '').localeCompare(a.workDate || ''));
+    return buckets;
   }
 };

@@ -1,5 +1,5 @@
 /**
- * Budil v4.11.12 - unify monthly metric labels across screens verification.
+ * Budil v4.11.13 - unify monthly metric labels across screens verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -25,7 +25,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.11.12 unify-monthly-metric-labels ==');
+console.log('== v4.11.13 unify-monthly-metric-labels ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -62,15 +62,15 @@ const forbiddenLabels = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.12'), 'index.html should show v4.11.12');
-assert(indexHtml.includes('js/app.js?v=4.11.12'), 'app.js cache buster should be v4.11.12');
-assert(indexHtml.includes('js/revenue-brain.js?v=4.11.12'), 'revenue-brain cache buster should be v4.11.12');
-assert(indexHtml.includes('js/executive-brain.js?v=4.11.12'), 'executive-brain cache buster should be v4.11.12');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.12'"), 'storage.js version should be v4.11.12');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.12'"), 'data-backup version should be v4.11.12');
-assert(statusMd.includes('v4.11.12'), 'status.md should document v4.11.12');
-assert(handoffMd.includes('v4.11.12'), 'handoff.md should document v4.11.12');
-assert(decisionLog.includes('v4.11.12'), 'decision-log.md should record v4.11.12');
+assert(indexHtml.includes('v4.11.13'), 'index.html should show v4.11.13');
+assert(indexHtml.includes('js/app.js?v=4.11.13'), 'app.js cache buster should be v4.11.13');
+assert(indexHtml.includes('js/revenue-brain.js?v=4.11.13'), 'revenue-brain cache buster should be v4.11.13');
+assert(indexHtml.includes('js/executive-brain.js?v=4.11.13'), 'executive-brain cache buster should be v4.11.13');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.13'"), 'storage.js version should be v4.11.13');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.13'"), 'data-backup version should be v4.11.13');
+assert(statusMd.includes('v4.11.13'), 'status.md should document v4.11.13');
+assert(handoffMd.includes('v4.11.13'), 'handoff.md should document v4.11.13');
+assert(decisionLog.includes('v4.11.13'), 'decision-log.md should record v4.11.13');
 
 console.log('== executive home / morning report ==');
 assert(appJs.includes('<span>合計売上</span>'), 'executive home should show 合計売上');
@@ -111,10 +111,10 @@ for (const term of ['見込み金額（円）', '見込み利益', '予定売上
 }
 
 console.log('== untouched files ==');
-assert(!receptionJs.includes('buildSharedMonthlyMetrics'), 'reception-brain must not change for v4.11.12');
-assert(!documentsJs.includes('buildSharedMonthlyMetrics'), 'documents-brain must not change for v4.11.12');
-assert(!followJs.includes('buildSharedMonthlyMetrics'), 'follow-up-brain must not change for v4.11.12');
+assert(!receptionJs.includes('buildSharedMonthlyMetrics'), 'reception-brain must not change for v4.11.13');
+assert(!documentsJs.includes('buildSharedMonthlyMetrics'), 'documents-brain must not change for v4.11.13');
+assert(!followJs.includes('buildSharedMonthlyMetrics'), 'follow-up-brain must not change for v4.11.13');
 
 execSync('node scripts/verify-v4113-clarify-monthly-total-scheduled-metrics.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('\nAll v4.11.12 unify-monthly-metric-labels checks passed.');
+console.log('\nAll v4.11.13 unify-monthly-metric-labels checks passed.');

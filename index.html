@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.11.12">
+  <link rel="stylesheet" href="css/style.css?v=4.11.13">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.11.12</small>
+          <small>AI経営脳みそ v4.11.13</small>
         </div>
       </div>
       <nav class="nav">
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.11.12</small>
+        <small>Budil v4.11.13</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の最優先 → 今日やること → 今月の数字</p>
             </div>
-            <span class="exec-home-version">v4.11.12</span>
+            <span class="exec-home-version">v4.11.13</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden exec-tower-span-full"></div>
 
@@ -594,7 +594,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.11.12</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.11.13</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -2422,28 +2422,37 @@
       <section id="view-follow-up" class="view">
         <header class="view-header">
           <h1>フォロー</h1>
-          <p class="view-subtitle">売上確定後のお礼・口コミ依頼・リピート提案をつなぐ</p>
+          <p class="view-subtitle">売上確定後のお礼LINE・口コミ依頼・リピート案内を処理する（自動送信はしません）</p>
         </header>
 
-        <div class="card card-wide card-follow-up-comment">
-          <h2>フォローが必要な作業</h2>
+        <div class="card card-wide card-follow-up-today">
+          <h2>今日やるフォロー</h2>
+          <div id="follow-up-today-list" class="follow-up-today-list"></div>
+        </div>
+
+        <div class="card card-wide card-follow-up-pending">
+          <h2>未対応フォロー</h2>
+          <p class="follow-up-list-flow-note">文面をコピーしてLINE送信後、「済みにする」で状態を更新します。送信はご自身で行ってください。</p>
           <div id="follow-up-targets-list" class="follow-up-targets-list"></div>
         </div>
 
         <div class="card card-wide hidden" id="follow-up-detail-panel">
-          <h2>フォロー文面・操作</h2>
+          <h2>文面プレビュー</h2>
           <div id="follow-up-detail" class="follow-up-detail"></div>
         </div>
 
-        <div class="card card-wide">
-          <h2>リピート候補</h2>
-          <div id="follow-up-repeat-list" class="follow-up-repeat-list"></div>
-        </div>
+        <details class="card card-wide card-follow-up-collapsed">
+          <summary>フォロー済み / 対応不要</summary>
+          <div id="follow-up-completed-list" class="follow-up-completed-list"></div>
+        </details>
 
-        <div class="card card-wide">
-          <h2>フォロー履歴</h2>
+        <details class="card card-wide card-follow-up-collapsed">
+          <summary>詳細・履歴・補足</summary>
+          <h3 class="follow-up-subsection-title">リピート候補</h3>
+          <div id="follow-up-repeat-list" class="follow-up-repeat-list"></div>
+          <h3 class="follow-up-subsection-title">フォロー履歴</h3>
           <div id="follow-up-history-list" class="follow-up-history-list"></div>
-        </div>
+        </details>
       </section>
 
       <!-- 請求書・見積書 -->
@@ -3655,30 +3664,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.11.12"></script>
+  <script src="js/storage.js?v=4.11.13"></script>
   <script src="js/messages.js?v=4.10.22"></script>
   <script src="js/demand-brain.js?v=4.10.22"></script>
   <script src="js/demand-radar.js?v=4.10.22"></script>
   <script src="js/sales-brain.js?v=4.10.22"></script>
   <script src="js/management-brain.js?v=4.10.22"></script>
   <script src="js/payment-brain.js?v=4.10.22"></script>
-  <script src="js/revenue-brain.js?v=4.11.12"></script>
+  <script src="js/revenue-brain.js?v=4.11.13"></script>
   <script src="js/revenue-summary-brain.js?v=4.10.22"></script>
-  <script src="js/reception-brain.js?v=4.11.12"></script>
+  <script src="js/reception-brain.js?v=4.11.13"></script>
   <script src="js/map-brain.js?v=4.10.22"></script>
   <script src="js/calendar-candidate-brain.js?v=4.11.1"></script>
   <script src="js/external-check-brain.js?v=4.10.22"></script>
   <script src="js/action-brain.js?v=4.10.22"></script>
   <script src="js/work-order-brain.js?v=4.10.22"></script>
-  <script src="js/follow-up-brain.js?v=4.10.22"></script>
+  <script src="js/follow-up-brain.js?v=4.11.13"></script>
   <script src="js/work-completion-brain.js?v=4.10.22"></script>
-  <script src="js/profit-brain.js?v=4.11.12"></script>
+  <script src="js/profit-brain.js?v=4.11.13"></script>
   <script src="js/analytics-brain.js?v=4.10.22"></script>
   <script src="js/monthly-results-brain.js?v=4.10.22"></script>
   <script src="js/documents-brain.js?v=4.10.41"></script>
-  <script src="js/executive-brain.js?v=4.11.12"></script>
+  <script src="js/executive-brain.js?v=4.11.13"></script>
   <script src="js/card-ocr.js?v=4.10.22"></script>
-  <script src="js/data-backup.js?v=4.11.12"></script>
-  <script src="js/app.js?v=4.11.12"></script>
+  <script src="js/data-backup.js?v=4.11.13"></script>
+  <script src="js/app.js?v=4.11.13"></script>
 </body>
 </html>

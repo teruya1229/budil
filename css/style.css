@@ -6453,6 +6453,117 @@ body {
   padding-left: 1.1rem;
 }
 
+/* v4.11.13 フォロー画面：実務処理順レイアウト */
+.follow-up-list-flow-note,
+.follow-up-list-overview,
+.follow-up-today-overview {
+  margin: 0 0 0.65rem;
+  font-size: 0.9rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+.follow-up-today-list,
+.follow-up-completed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.follow-up-list-row {
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  background: var(--bg-card);
+}
+
+.follow-up-list-row.selected,
+.follow-up-list-row.priority-focus {
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.15);
+}
+
+.follow-up-bucket-todayAction {
+  border-left: 3px solid #f59e0b;
+}
+
+.follow-up-bucket-pending {
+  border-left: 3px solid #38bdf8;
+}
+
+.follow-up-bucket-completed {
+  border-left: 3px solid #94a3b8;
+  opacity: 0.88;
+}
+
+.follow-up-row-grid {
+  display: grid;
+  grid-template-columns: minmax(5rem, 0.75fr) minmax(5rem, 1fr) minmax(4rem, 0.7fr) minmax(6rem, 1.3fr) minmax(4.5rem, 0.7fr) minmax(6rem, 1.1fr) minmax(5rem, 0.85fr);
+  gap: 0.35rem 0.5rem;
+  align-items: start;
+  margin-bottom: 0.45rem;
+  font-size: 0.86rem;
+}
+
+.follow-up-row-grid-compact {
+  grid-template-columns: minmax(5rem, 0.8fr) minmax(5rem, 1.2fr) minmax(4rem, 0.7fr) minmax(5rem, 1fr) minmax(4.5rem, 0.7fr) minmax(5.5rem, 0.9fr) minmax(5rem, 0.85fr);
+}
+
+.follow-up-row-grid .follow-up-row-name {
+  margin: 0;
+}
+
+.follow-up-row-source,
+.follow-up-row-service,
+.follow-up-row-amount,
+.follow-up-row-status,
+.follow-up-row-date {
+  color: var(--text-muted, #94a3b8);
+  word-break: break-word;
+}
+
+.follow-up-row-next {
+  color: #38bdf8;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.follow-up-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.follow-up-copy-mark-actions {
+  margin-top: 0.35rem;
+}
+
+.card-follow-up-collapsed > summary {
+  cursor: pointer;
+  font-weight: 600;
+  list-style: disclosure-closed;
+}
+
+.follow-up-subsection-title {
+  margin: 0.75rem 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 900px) {
+  .follow-up-row-grid,
+  .follow-up-row-grid-compact {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .follow-up-row-grid .follow-up-row-name,
+  .follow-up-row-grid-compact .follow-up-row-name {
+    grid-column: 1 / -1;
+  }
+
+  .follow-up-row-next {
+    grid-column: 1 / -1;
+  }
+}
+
 .onboarding-workflow-hint {
   margin-top: 1rem;
 }

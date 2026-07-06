@@ -1,5 +1,5 @@
 /**
- * Budil v4.11.12 - broker fees visibility and profit metrics layout verification.
+ * Budil v4.11.13 - broker fees visibility and profit metrics layout verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -24,7 +24,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.11.12 profit-broker-fees-layout ==');
+console.log('== v4.11.13 profit-broker-fees-layout ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -42,15 +42,15 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.12'), 'index.html should show v4.11.12');
-assert(indexHtml.includes('js/app.js?v=4.11.12'), 'app.js cache buster should be v4.11.12');
-assert(indexHtml.includes('css/style.css?v=4.11.12'), 'style.css cache buster should be v4.11.12');
-assert(indexHtml.includes('js/revenue-brain.js?v=4.11.12'), 'revenue-brain cache buster should be v4.11.12');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.12'"), 'storage.js version should be v4.11.12');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.12'"), 'data-backup version should be v4.11.12');
-assert(statusMd.includes('v4.11.12'), 'status.md should document v4.11.12');
-assert(handoffMd.includes('v4.11.12'), 'handoff.md should document v4.11.12');
-assert(decisionLog.includes('v4.11.12'), 'decision-log.md should record v4.11.12');
+assert(indexHtml.includes('v4.11.13'), 'index.html should show v4.11.13');
+assert(indexHtml.includes('js/app.js?v=4.11.13'), 'app.js cache buster should be v4.11.13');
+assert(indexHtml.includes('css/style.css?v=4.11.13'), 'style.css cache buster should be v4.11.13');
+assert(indexHtml.includes('js/revenue-brain.js?v=4.11.13'), 'revenue-brain cache buster should be v4.11.13');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.13'"), 'storage.js version should be v4.11.13');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.13'"), 'data-backup version should be v4.11.13');
+assert(statusMd.includes('v4.11.13'), 'status.md should document v4.11.13');
+assert(handoffMd.includes('v4.11.13'), 'handoff.md should document v4.11.13');
+assert(decisionLog.includes('v4.11.13'), 'decision-log.md should record v4.11.13');
 
 console.log('== shared fee metrics wiring ==');
 assert(revenueBrainJs.includes('confirmedFeeAmount'), 'revenue-brain should expose confirmedFeeAmount');
@@ -80,7 +80,7 @@ console.log('== revenue summary broker fees ==');
 assert(appJs.includes('確定仲介料：'), 'revenue summary html should show 確定仲介料');
 assert(appJs.includes('予定仲介料：'), 'revenue summary html should show 予定仲介料');
 
-console.log('== v4.11.12 workflow preserved ==');
+console.log('== v4.11.13 workflow preserved ==');
 assert(appJs.includes('data-profit-schedule-edit'), 'profit schedule edit button must remain');
 assert(appJs.includes('function openWorkOrderEditFromProfit'), 'profit edit helper must remain');
 assert(indexHtml.includes('profit-detail-analysis-collapse'), 'detail analysis collapse must remain');
@@ -92,9 +92,9 @@ for (const term of ['見込み利益', '見込み売上', '今月利益', '今�
 }
 
 console.log('== untouched modules ==');
-assert(!receptionJs.includes('confirmedFeeAmount'), 'reception-brain must not change for v4.11.12');
-assert(!documentsJs.includes('confirmedFeeAmount'), 'documents-brain must not change for v4.11.12');
-assert(!followJs.includes('confirmedFeeAmount'), 'follow-up-brain must not change for v4.11.12');
+assert(!receptionJs.includes('confirmedFeeAmount'), 'reception-brain must not change for v4.11.13');
+assert(!documentsJs.includes('confirmedFeeAmount'), 'documents-brain must not change for v4.11.13');
+assert(!followJs.includes('confirmedFeeAmount'), 'follow-up-brain must not change for v4.11.13');
 
 function createSandbox() {
   const sandbox = {
@@ -209,4 +209,4 @@ console.log('== screen consistency ==');
 
 execSync('node scripts/verify-v4116-profit-page-workflow.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('\nAll v4.11.12 profit-broker-fees-layout checks passed.');
+console.log('\nAll v4.11.13 profit-broker-fees-layout checks passed.');

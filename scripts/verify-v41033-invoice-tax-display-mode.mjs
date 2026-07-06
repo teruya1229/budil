@@ -39,11 +39,11 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.12'), 'index.html should show v4.11.12');
-assert(indexHtml.includes('js/app.js?v=4.11.12'), 'app.js cache buster should be v4.11.12');
-assert(indexHtml.includes('css/style.css?v=4.11.12'), 'style.css cache buster should be v4.10.41');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.12'"), 'storage.js version should be v4.11.12');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.12'"), 'data-backup version should be v4.11.12');
+assert(indexHtml.includes('v4.11.13'), 'index.html should show v4.11.13');
+assert(indexHtml.includes('js/app.js?v=4.11.13'), 'app.js cache buster should be v4.11.13');
+assert(indexHtml.includes('css/style.css?v=4.11.13'), 'style.css cache buster should be v4.10.41');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.13'"), 'storage.js version should be v4.11.13');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.13'"), 'data-backup version should be v4.11.13');
 
 console.log('== tax display mode UI ==');
 assert(indexHtml.includes('id="doc-tax-display-mode"'), 'tax display mode select should exist');

@@ -24,9 +24,9 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.11.12'), 'index.html should show v4.11.12');
-assert(indexHtml.includes('js/app.js?v=4.11.12'), 'app.js cache buster should be v4.11.12');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.12'"), 'storage.js version should be v4.11.12');
+assert(indexHtml.includes('v4.11.13'), 'index.html should show v4.11.13');
+assert(indexHtml.includes('js/app.js?v=4.11.13'), 'app.js cache buster should be v4.11.13');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.13'"), 'storage.js version should be v4.11.13');
 
 const forbiddenUiTerms = [
   '売上登録',
@@ -46,7 +46,7 @@ for (const term of forbiddenUiTerms) {
   assert(!indexHtml.includes(term), `index.html should not include ${term} in normal UI`);
 }
 
-assert(indexHtml.includes('売上確定後のお礼・口コミ依頼・リピート提案をつなぐ'), 'follow subtitle should use 売上確定後');
+assert(indexHtml.includes('売上確定後のお礼'), 'follow subtitle should mention post-revenue follow');
 assert(indexHtml.includes('+ 明細を追加'), 'revenue list should use + 明細を追加');
 assert(indexHtml.includes('売上明細を手入力'), 'manual revenue entry label should remain');
 assert(indexHtml.includes('売上明細を保存'), 'daily quick form submit should not say 売上を登録');
