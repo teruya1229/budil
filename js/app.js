@@ -719,6 +719,8 @@
       pickups: Storage.getDemandPickups(),
       analyticsRecords: Storage.getAnalyticsRecords(),
       dailyTasks: getDailyActionTasksWithState(),
+      expenses: Storage.getExpenseRecords(),
+      monthlyResults: Storage.getMonthlyResults(),
       revCtx: getRevenueContext(),
       profitCtx: getProfitContext(),
       analyticsCtx: getAnalyticsContext(),
@@ -958,6 +960,7 @@
   function renderExecutiveRevenueProfitHtml(section, options) {
     const opts = options || {};
     const isCompact = !!opts.compact;
+    const isMinimal = !!opts.minimal;
     const s = section || {};
     const agg = s.revenueAggregation || {};
     const shared = s.sharedMonthlyMetrics || {};
@@ -997,15 +1000,30 @@
         <p>今月の主力：${esc(topSource ? topSource.name : '—')} / ${esc(topService ? topService.name : '—')}</p>
         ${sourceBreakdownNote}
       </div>`;
-    const receivablesBlock = isCompact || !s.receivables ? '' : `
+    const receivablesBlock = isCompact || isMinimal || !s.receivables ? '' : `
       <div class="exec-home-receivables">
         <div><span>入金待ち合計</span><strong>${esc(PaymentBrain.formatYen(s.receivables.pendingTotal || 0))}</strong></div>
         <div><span>今月入金予定</span><strong>${esc(PaymentBrain.formatYen(s.receivables.thisMonthExpected || 0))}</strong></div>
         <div><span>来月入金予定</span><strong>${esc(PaymentBrain.formatYen(s.receivables.nextMonthExpected || 0))}</strong></div>
         <div class="${s.receivables.overdueCount ? 'exec-home-receivables-warn' : ''}"><span>入金遅れ</span><strong>${s.receivables.overdueCount || 0}件</strong></div>
       </div>`;
-    const cautionsBlock = isCompact ? '' : (s.cautions || []).map(c => `<p class="exec-work-warn">${esc(c)}</p>`).join('');
-    return `
+    const cautionsBlock = isCompact || isMinimal ? '' : (s.cautions || []).map(c => `<p class="exec-work-warn">${esc(c)}</p>`).join('');
+    const pendingTotal = s.receivables ? (s.receivables.pendingTotal || 0) : 0;
+    const minimalMetrics = isMinimal ? `
+      <div class="exec-home-revenue-grid exec-home-revenue-grid-minimal">
+        <div><span>合計売上</span><strong>${esc(RevenueBrain.formatYen(s.totalRevenue != null ? s.totalRevenue : s.monthRevenue))}</strong></div>
+        <div><span>合計利益</span><strong>${esc(ProfitBrain.formatYen(s.totalProfit != null ? s.totalProfit : s.grossProfit))}</strong></div>
+        <div><span>確定売上</span><strong>${esc(RevenueBrain.formatYen(s.confirmedRevenue || 0))}</strong></div>
+        <div><span>予定売上</span><strong>${esc(RevenueBrain.formatYen(s.scheduledRevenue || 0))}</strong></div>
+        <div><span>入金待ち</span><strong>${esc(PaymentBrain.formatYen(pendingTotal))}</strong></div>
+        <div><span>今月経費</span><strong>${esc(ProfitBrain.formatYen(s.monthExpense))}</strong></div>
+      </div>
+      <div class="exec-work-actions exec-home-minimal-links">
+        <button type="button" class="btn btn-sm btn-secondary exec-home-revenue-link">売上管理</button>
+        <button type="button" class="btn btn-sm btn-secondary exec-home-receivables-link">入金予定</button>
+        <button type="button" class="btn btn-sm btn-secondary exec-home-profit-link">利益管理</button>
+      </div>` : '';
+    return isMinimal ? minimalMetrics : `
       ${monthlyNote}
       <div class="exec-home-revenue-grid${isCompact ? ' exec-home-revenue-grid-compact' : ''}">
         <div><span>合計売上</span><strong>${esc(RevenueBrain.formatYen(s.totalRevenue != null ? s.totalRevenue : s.monthRevenue))}</strong></div>
@@ -1026,7 +1044,7 @@
       ${receivablesBlock}
       <div class="exec-work-actions">
         <button type="button" class="btn btn-sm btn-secondary exec-home-revenue-link">売上管理</button>
-        ${isCompact ? '' : '<button type="button" class="btn btn-sm btn-secondary exec-home-receivables-link">入金予定</button>'}
+        ${isCompact ? '<button type="button" class="btn btn-sm btn-secondary exec-home-receivables-link">入金予定</button>' : '<button type="button" class="btn btn-sm btn-secondary exec-home-receivables-link">入金予定</button>'}
         <button type="button" class="btn btn-sm btn-secondary exec-home-profit-link">利益管理</button>
       </div>`;
   }
@@ -1543,6 +1561,90 @@
     }
   }
 
+  function handleExecutiveTaskAction(action) {
+    if (!action) return;
+    if (action.kind === 'external' && action.url) {
+      window.open(action.url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (action.view) {
+      navigateToView(action.view, action.scrollSelector || null);
+    }
+  }
+
+  function renderExecutiveTodayTaskCategory(cat) {
+    const c = cat || {};
+    const itemsHtml = (c.items || []).map(item => `
+      <li class="exec-today-task-item">
+        <strong>${esc(item.label)}</strong>
+        ${item.sub ? `<span class="exec-today-task-sub">${esc(item.sub)}</span>` : ''}
+      </li>`).join('');
+    const moreHtml = c.moreCount
+      ? `<p class="exec-today-task-more">ほか${c.moreCount}件</p>`
+      : '';
+    const secondaryBtn = c.secondaryAction
+      ? `<button type="button" class="btn btn-sm btn-secondary" data-exec-today-action="${esc(c.id)}-secondary">${esc(c.secondaryAction.label)}</button>`
+      : '';
+    return `
+      <div class="exec-today-task-category" data-exec-today-cat="${esc(c.id)}">
+        <div class="exec-today-task-category-header">
+          <h4 class="exec-today-task-category-title">${esc(c.title)}</h4>
+          ${c.count ? `<span class="exec-today-task-count">${c.count}件</span>` : ''}
+        </div>
+        ${itemsHtml ? `<ul class="exec-today-task-items">${itemsHtml}</ul>` : ''}
+        ${moreHtml}
+        <div class="exec-today-task-actions">
+          ${c.action ? `<button type="button" class="btn btn-sm btn-primary" data-exec-today-action="${esc(c.id)}">${esc(c.action.label)}</button>` : ''}
+          ${secondaryBtn}
+        </div>
+      </div>`;
+  }
+
+  function renderExecutiveTodayTasks(ctx) {
+    const el = document.getElementById('exec-home-today-tasks-list');
+    if (!el) return;
+    const categories = (ctx && ctx.todayTaskCategories) || [];
+    if (!categories.length) {
+      el.innerHTML = '<p class="placeholder-text">今日の処理はありません。</p>';
+      return;
+    }
+    el.innerHTML = `<div class="exec-today-task-categories">${categories.map(renderExecutiveTodayTaskCategory).join('')}</div>`;
+    categories.forEach(cat => {
+      const primaryBtn = el.querySelector(`[data-exec-today-action="${cat.id}"]`);
+      if (primaryBtn && cat.action) {
+        primaryBtn.addEventListener('click', () => handleExecutiveTaskAction(cat.action));
+      }
+      const secondaryBtn = el.querySelector(`[data-exec-today-action="${cat.id}-secondary"]`);
+      if (secondaryBtn && cat.secondaryAction) {
+        secondaryBtn.addEventListener('click', () => handleExecutiveTaskAction(cat.secondaryAction));
+      }
+    });
+  }
+
+  function renderExecutiveAttention(ctx) {
+    const sectionEl = document.getElementById('exec-home-attention-section');
+    const el = document.getElementById('exec-home-attention-list');
+    if (!el) return;
+    const items = (ctx && ctx.attentionItems) || [];
+    if (!items.length) {
+      if (sectionEl) sectionEl.classList.add('hidden');
+      el.innerHTML = '';
+      return;
+    }
+    if (sectionEl) sectionEl.classList.remove('hidden');
+    el.innerHTML = `<ul class="exec-attention-items">${items.map((item, i) => `
+      <li class="exec-attention-item">
+        <span class="exec-attention-text">${esc(item.text)}</span>
+        ${item.action ? `<button type="button" class="btn btn-sm btn-secondary" data-exec-attention-action="${i}">${esc(item.action.label)}</button>` : ''}
+      </li>`).join('')}</ul>`;
+    items.forEach((item, i) => {
+      const btn = el.querySelector(`[data-exec-attention-action="${i}"]`);
+      if (btn && item.action) {
+        btn.addEventListener('click', () => navigateToView(item.action.view, item.action.scrollSelector || null));
+      }
+    });
+  }
+
   function renderExecutiveHome() {
     const ctx = buildExecutiveContext();
     lastExecutiveContext = ctx;
@@ -1562,8 +1664,9 @@
     renderExecutiveHomeQuickActions();
     updateExecutiveSectionBadges(ctx);
 
-    renderExecutivePriorityAction();
-    renderExecutiveNextAction();
+    renderExecutivePriorityAction(ctx);
+    renderExecutiveTodayTasks(ctx);
+    renderExecutiveAttention(ctx);
 
     const conclusionEl = document.getElementById('exec-home-conclusion');
     if (conclusionEl) {
@@ -1594,7 +1697,7 @@
     if (receptionEl) receptionEl.innerHTML = renderExecutiveReceptionHtml(ctx.receptionSection);
 
     const revenueEl = document.getElementById('exec-home-revenue-profit');
-    if (revenueEl) revenueEl.innerHTML = renderExecutiveRevenueProfitHtml(ctx.revenueProfitSection, { compact: true });
+    if (revenueEl) revenueEl.innerHTML = renderExecutiveRevenueProfitHtml(ctx.revenueProfitSection, { minimal: true });
 
     const followEl = document.getElementById('exec-home-follow-up');
     if (followEl) followEl.innerHTML = renderExecutiveFollowUpHtml(ctx.followUpSection);
@@ -11132,20 +11235,14 @@
     }
   }
 
-  function renderExecutivePriorityAction() {
+  function renderExecutivePriorityAction(ctx) {
     const el = document.getElementById('exec-home-priority-action');
-    if (!el || typeof ProfitBrain === 'undefined') return;
-    const today = TODAY();
-    const priority = ProfitBrain.buildExecutivePriorityAction({
-      today,
-      workOrders: Storage.getWorkOrders(),
-      revenues: Storage.getRevenueRecords(),
-      monthlyResults: Storage.getMonthlyResults(),
-      expenses: Storage.getExpenseRecords()
-    });
+    if (!el || typeof ExecutiveBrain === 'undefined') return;
+    const context = ctx || buildExecutiveContext();
+    const priority = ExecutiveBrain.buildTodayPriorityAction(context);
     const statusClass = priority.statusKey === 'ok'
       ? 'is-ok'
-      : (priority.statusKey === 'reconciliation_gap' || priority.statusKey === 'revenue_queue' ? 'is-warn' : 'is-info');
+      : (priority.statusKey === 'revenue_queue' || priority.statusKey === 'payment_overdue' || priority.statusKey === 'month_end_billing' ? 'is-warn' : 'is-info');
     const action = priority.primaryAction;
     const actionBtn = action
       ? `<div class="exec-home-priority-action-btn-wrap"><button type="button" class="btn btn-sm btn-primary exec-home-priority-action-btn">${esc(action.label)}</button></div>`
@@ -11153,13 +11250,18 @@
     el.innerHTML = `
       <div class="exec-home-priority-action ${statusClass}">
         <h3 class="exec-home-priority-action-title">今日の最優先アクション</h3>
-        <p class="exec-home-priority-action-lead">今すぐ確認する項目です。</p>
         <p class="exec-home-priority-action-message">${esc(priority.message)}</p>
         ${actionBtn}
       </div>`;
     const btn = el.querySelector('.exec-home-priority-action-btn');
     if (btn && action) {
-      btn.addEventListener('click', () => handleExecutivePriorityAction(action));
+      btn.addEventListener('click', () => {
+        if (action.externalUrl) {
+          window.open(action.externalUrl, '_blank', 'noopener,noreferrer');
+          return;
+        }
+        handleExecutivePriorityAction(action);
+      });
     }
   }
 

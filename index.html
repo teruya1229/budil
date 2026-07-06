@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.11.9">
+  <link rel="stylesheet" href="css/style.css?v=4.11.10">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.11.9</small>
+          <small>AI経営脳みそ v4.11.10</small>
         </div>
       </div>
       <nav class="nav">
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.11.9</small>
+        <small>Budil v4.11.10</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -167,37 +167,36 @@
           <a href="sales.html" class="view-header-link">Budilについて</a>
         </header>
 
-        <div id="executive-home" class="card card-wide card-executive-home card-command-tower">
-          <div class="exec-home-header">
+        <div id="executive-home" class="card card-wide card-executive-home card-command-tower exec-tower-grid">
+          <div class="exec-home-header exec-tower-span-full">
             <div>
               <h2>経営ホーム</h2>
-              <p class="exec-home-subtitle">今日の優先 → 今月の数字 → 次にやること</p>
+              <p class="exec-home-subtitle">今日の最優先 → 今日やること → 今月の数字</p>
             </div>
-            <span class="exec-home-version">v4.11.9</span>
+            <span class="exec-home-version">v4.11.10</span>
           </div>
-          <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
+          <div id="exec-home-empty-guide" class="exec-home-empty hidden exec-tower-span-full"></div>
 
-          <section class="exec-home-revenue-queue exec-tower-span-full">
-            <h3 class="exec-home-section-title">売上確定待ち</h3>
-            <div id="exec-home-revenue-queue-list" class="daily-revenue-queue-list" aria-live="polite"></div>
+          <div id="exec-home-priority-action" class="exec-home-priority-action-block exec-tower-span-full" aria-live="polite"></div>
+
+          <section class="exec-home-today-tasks exec-tower-span-full">
+            <h3 class="exec-home-section-title">今日やること</h3>
+            <div id="exec-home-today-tasks-list" class="exec-home-today-tasks-list" aria-live="polite"></div>
+            <div id="exec-home-revenue-queue-list" class="hidden" aria-hidden="true"></div>
           </section>
-
-          <div id="exec-home-priority-action" class="exec-home-priority-action-block" aria-live="polite"></div>
 
           <section class="exec-home-daily-core exec-tower-span-full">
             <h3 class="exec-home-section-title">今月の数字</h3>
             <div id="exec-home-revenue-profit" class="exec-home-revenue-profit"></div>
           </section>
 
-          <section class="exec-home-upcoming exec-tower-span-full">
-            <h3 class="exec-home-section-title">直近予定</h3>
-            <div id="exec-home-upcoming-schedule-main" class="exec-home-upcoming-schedule"></div>
+          <section class="exec-home-attention exec-tower-span-full" id="exec-home-attention-section">
+            <h3 class="exec-home-section-title">直近の注意</h3>
+            <div id="exec-home-attention-list" class="exec-home-attention-list" aria-live="polite"></div>
           </section>
 
-          <section class="exec-home-daily-next exec-tower-span-full">
-            <h3 class="exec-home-section-title">次にやること</h3>
-            <div id="exec-home-next-action" class="exec-home-next-action" aria-live="polite"></div>
-          </section>
+          <div id="exec-home-upcoming-schedule-main" class="hidden" aria-hidden="true"></div>
+          <div id="exec-home-next-action" class="hidden" aria-hidden="true"></div>
 
           <details class="exec-collapse exec-home-detail-collapse exec-tower-span-full">
             <summary>詳細チェック・運用状況</summary>
@@ -595,7 +594,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.11.9</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.11.10</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -3635,14 +3634,14 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.11.9"></script>
+  <script src="js/storage.js?v=4.11.10"></script>
   <script src="js/messages.js?v=4.10.22"></script>
   <script src="js/demand-brain.js?v=4.10.22"></script>
   <script src="js/demand-radar.js?v=4.10.22"></script>
   <script src="js/sales-brain.js?v=4.10.22"></script>
   <script src="js/management-brain.js?v=4.10.22"></script>
   <script src="js/payment-brain.js?v=4.10.22"></script>
-  <script src="js/revenue-brain.js?v=4.11.9"></script>
+  <script src="js/revenue-brain.js?v=4.11.10"></script>
   <script src="js/revenue-summary-brain.js?v=4.10.22"></script>
   <script src="js/reception-brain.js?v=4.11.0"></script>
   <script src="js/map-brain.js?v=4.10.22"></script>
@@ -3652,13 +3651,13 @@
   <script src="js/work-order-brain.js?v=4.10.22"></script>
   <script src="js/follow-up-brain.js?v=4.10.22"></script>
   <script src="js/work-completion-brain.js?v=4.10.22"></script>
-  <script src="js/profit-brain.js?v=4.11.9"></script>
+  <script src="js/profit-brain.js?v=4.11.10"></script>
   <script src="js/analytics-brain.js?v=4.10.22"></script>
   <script src="js/monthly-results-brain.js?v=4.10.22"></script>
   <script src="js/documents-brain.js?v=4.10.41"></script>
-  <script src="js/executive-brain.js?v=4.11.9"></script>
+  <script src="js/executive-brain.js?v=4.11.10"></script>
   <script src="js/card-ocr.js?v=4.10.22"></script>
-  <script src="js/data-backup.js?v=4.11.9"></script>
-  <script src="js/app.js?v=4.11.9"></script>
+  <script src="js/data-backup.js?v=4.11.10"></script>
+  <script src="js/app.js?v=4.11.10"></script>
 </body>
 </html>

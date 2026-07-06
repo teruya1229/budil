@@ -54,10 +54,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.11.9'), 'index.html should show v4.11.9');
-assert(indexHtml.includes('js/app.js?v=4.11.9'), 'app.js cache buster should be v4.11.9');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.9'"), 'storage.js version should be v4.11.9');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.9'"), 'data-backup version should be v4.11.9');
+assert(indexHtml.includes('v4.11.10'), 'index.html should show v4.11.10');
+assert(indexHtml.includes('js/app.js?v=4.11.10'), 'app.js cache buster should be v4.11.10');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.10'"), 'storage.js version should be v4.11.10');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.10'"), 'data-backup version should be v4.11.10');
 
 assert(profitJs.includes('plannedRevenueEstimate'), 'profit brain should expose plannedRevenueEstimate');
 assert(profitJs.includes('plannedForecastProfit'), 'profit brain should expose plannedForecastProfit');
@@ -124,7 +124,7 @@ console.log('== breakdown math (v4.10.13 regression sample) ==');
   assert(result.summary.confirmedRevenue === 25300, `confirmed revenue should be 25300, got ${result.summary.confirmedRevenue}`);
   assert(result.summary.confirmedProfit === 15180, `confirmed profit should be 15180, got ${result.summary.confirmedProfit}`);
   assert(result.summary.plannedRevenueEstimate === 65800, `planned revenue should be 65800, got ${result.summary.plannedRevenueEstimate}`);
-  // v4.11.9: コープ案件は依頼元別80%を反映。直安は不明のため monthGrossRate(60%) フォールバック
+  // v4.11.10: コープ案件は依頼元別80%を反映。直安は不明のため monthGrossRate(60%) フォールバック
   assert(result.summary.plannedForecastProfit === 43180, `planned forecast profit should be 43180 (coop 80% + genchi fallback), got ${result.summary.plannedForecastProfit}`);
   assert(result.summary.totalRevenue === 91100, `total revenue should be 91100, got ${result.summary.totalRevenue}`);
   assert(result.summary.totalProfit === 58360, `total profit should be 58360 (43180+15180), got ${result.summary.totalProfit}`);

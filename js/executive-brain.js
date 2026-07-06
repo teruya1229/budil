@@ -84,7 +84,9 @@ const ExecutiveBrain = {
       settings: raw.settings || {},
       checkState: raw.checkState || null,
       diagnosticLevels: raw.diagnosticLevels || null,
-      perfCtx: raw.perfCtx || {}
+      perfCtx: raw.perfCtx || {},
+      expenses: raw.expenses || [],
+      monthlyResults: raw.monthlyResults || (raw.profitCtx && raw.profitCtx.monthlyResults) || []
     };
     ctx.summary = this.buildExecutiveSummary(ctx);
     ctx.topPriorities = this.buildTopPriorities(ctx);
@@ -94,8 +96,361 @@ const ExecutiveBrain = {
     ctx.followUpSection = this.buildFollowUpSection(ctx);
     ctx.analyticsDemandSection = this.buildAnalyticsDemandSection(ctx);
     ctx.warnings = this.buildWarnings(ctx);
+    ctx.todayPriorityAction = this.buildTodayPriorityAction(ctx);
+    ctx.todayTaskCategories = this.buildTodayTaskCategories(ctx);
+    ctx.attentionItems = this.buildAttentionItems(ctx);
     ctx.morningReport = this.buildMorningExecutiveReport(ctx);
     return ctx;
+  },
+
+  getRevenueQueueCount(ctx) {
+    const c = ctx || {};
+    if (typeof RevenueSummaryBrain !== 'undefined') {
+      return RevenueSummaryBrain.countRevenueConfirmationQueue(c.workOrders || [], c.today);
+    }
+    return (c.completionSummary && c.completionSummary.pendingConfirmCount) || 0;
+  },
+
+  getMonthEndBillingReviewCount(ctx) {
+    const c = ctx || {};
+    if (typeof RevenueBrain === 'undefined') return 0;
+    const records = c.revenues || (c.revCtx && c.revCtx.records) || [];
+    return RevenueBrain.collectMonthEndBillingReviewRecords(records, c.today).length;
+  },
+
+  buildTodayPriorityAction(ctx) {
+    const c = ctx || {};
+    const today = c.today;
+    const queueCount = this.getRevenueQueueCount(c);
+    const todayWork = c.todayWork || [];
+    const recv = (c.revenueProfitSection && c.revenueProfitSection.receivables) || {};
+    const monthEndCount = this.getMonthEndBillingReviewCount(c);
+    const fu = c.followUpSection || {};
+    const followCount = (fu.thanksCount || 0) + (fu.reviewCount || 0);
+    const pendingReceptions = c.pendingReceptions || [];
+    const monthExpense = (c.revenueProfitSection && c.revenueProfitSection.monthExpense) || 0;
+    const expenseCount = (c.profitCtx && c.profitCtx.summary && c.profitCtx.summary.monthExpenseCount) || 0;
+    const needsExpense = expenseCount === 0 && monthExpense === 0;
+
+    if (queueCount > 0) {
+      return {
+        statusKey: 'revenue_queue',
+        message: `作業後の売上確定待ちが${queueCount}件あります。`,
+        primaryAction: {
+          id: 'revenue_queue',
+          label: '売上管理へ',
+          view: 'revenue',
+          scrollSelector: '#revenue-confirmation-queue-list'
+        }
+      };
+    }
+
+    if (todayWork.length > 0) {
+      const first = todayWork[0];
+      const cal = typeof WorkOrderBrain !== 'undefined'
+        ? WorkOrderBrain.buildGoogleCalendarUrl(first)
+        : { ready: false };
+      return {
+        statusKey: 'today_work',
+        message: `今日の作業予定が${todayWork.length}件あります。`,
+        primaryAction: cal.ready
+          ? {
+            id: 'today_calendar',
+            label: 'Googleカレンダー確認',
+            externalUrl: cal.url
+          }
+          : {
+            id: 'today_work',
+            label: 'カレンダー登録へ',
+            view: 'calendar-registration',
+            scrollSelector: '#work-order-form'
+          }
+      };
+    }
+
+    if ((recv.pendingTotal || 0) > 0 || (recv.overdueCount || 0) > 0) {
+      const overdue = recv.overdueCount || 0;
+      return {
+        statusKey: overdue > 0 ? 'payment_overdue' : 'payment_pending',
+        message: overdue > 0
+          ? `入金遅れが${overdue}件あります。`
+          : `入金待ち合計 ${typeof PaymentBrain !== 'undefined' ? PaymentBrain.formatYen(recv.pendingTotal) : recv.pendingTotal} です。`,
+        primaryAction: {
+          id: 'receivables',
+          label: '入金予定へ',
+          view: 'receivables',
+          scrollSelector: '#view-receivables'
+        }
+      };
+    }
+
+    if (monthEndCount > 0) {
+      return {
+        statusKey: 'month_end_billing',
+        message: `コープ・ヤマダの月末請求確認が${monthEndCount}件あります。`,
+        primaryAction: {
+          id: 'month_end_billing',
+          label: '入金予定へ',
+          view: 'receivables',
+          scrollSelector: '#receivables-month-end-review-card'
+        }
+      };
+    }
+
+    if (followCount > 0) {
+      return {
+        statusKey: 'follow_up',
+        message: `フォロー未対応が${followCount}件あります。`,
+        primaryAction: {
+          id: 'follow_up',
+          label: 'フォローへ',
+          view: 'follow-up',
+          scrollSelector: '#follow-up-targets-list'
+        }
+      };
+    }
+
+    if (needsExpense) {
+      return {
+        statusKey: 'no_expense',
+        message: '今月の経費入力がまだありません。',
+        primaryAction: {
+          id: 'expense',
+          label: '経費入力へ',
+          view: 'profit',
+          scrollSelector: '#profit-expense-form-section'
+        }
+      };
+    }
+
+    if (pendingReceptions.length > 0) {
+      const intake = pendingReceptions[0];
+      return {
+        statusKey: 'reception',
+        message: `未対応の受付が${pendingReceptions.length}件あります。`,
+        primaryAction: {
+          id: 'reception',
+          label: '受付を確認',
+          view: 'calendar-registration',
+          scrollSelector: '#reception-paste-area'
+        },
+        intakeId: intake && intake.id
+      };
+    }
+
+    const inClosingPeriod = typeof ProfitBrain !== 'undefined'
+      && ProfitBrain.isMonthlyClosingPeriod(today);
+    const monthlyClosing = typeof ProfitBrain !== 'undefined'
+      ? ProfitBrain.buildMonthlyClosingCheck({
+        today,
+        profitCtx: c.profitCtx,
+        workOrders: c.workOrders,
+        revenues: c.revenues || (c.revCtx && c.revCtx.records) || [],
+        monthlyResults: c.monthlyResults || [],
+        expenses: c.expenses || []
+      })
+      : null;
+    if (inClosingPeriod && monthlyClosing && (monthlyClosing.hasReconciliationGap || !monthlyClosing.hasMonthlyResult)) {
+      return {
+        statusKey: 'monthly_closing',
+        message: '月次締めの確認が必要です。',
+        primaryAction: monthlyClosing.primaryAction || {
+          id: 'monthly_closing',
+          label: '月次締めチェックを見る',
+          view: 'dashboard',
+          scrollSelector: '#exec-home-monthly-closing-check'
+        }
+      };
+    }
+
+    const analyticsLines = (c.analyticsDemandSection && c.analyticsDemandSection.lines || []).length;
+    if (analyticsLines > 0) {
+      return {
+        statusKey: 'analytics',
+        message: '集客・需要の確認があります。',
+        primaryAction: {
+          id: 'analytics',
+          label: '集客チェックへ',
+          view: 'analytics',
+          scrollSelector: '#analytics-summary'
+        }
+      };
+    }
+
+    return {
+      statusKey: 'ok',
+      message: '今日の処理は大きな滞りがありません。',
+      primaryAction: null
+    };
+  },
+
+  buildTodayTaskCategories(ctx) {
+    const c = ctx || {};
+    const categories = [];
+    const add = cat => {
+      if (!cat || (!cat.count && !cat.alwaysShow)) return;
+      categories.push(cat);
+    };
+
+    const workItems = (c.todayWork || []).map(wo => ({
+      id: wo.id,
+      label: `${wo.startTime || '—'} ${wo.customerName || 'お客様'}`,
+      sub: wo.serviceText || ''
+    }));
+    if (workItems.length) {
+      const firstWo = (c.todayWork || [])[0];
+      const cal = firstWo && typeof WorkOrderBrain !== 'undefined'
+        ? WorkOrderBrain.buildGoogleCalendarUrl(firstWo)
+        : { ready: false };
+      add({
+        id: 'today-work',
+        title: '今日の作業予定',
+        count: workItems.length,
+        items: workItems.slice(0, 3),
+        moreCount: Math.max(0, workItems.length - 3),
+        action: cal.ready
+          ? { label: 'Googleカレンダー確認', kind: 'external', url: cal.url }
+          : { label: 'カレンダー登録へ', kind: 'nav', view: 'calendar-registration', scrollSelector: '#work-order-form' }
+      });
+    }
+
+    const queueCount = this.getRevenueQueueCount(c);
+    if (queueCount > 0) {
+      let queueItems = [];
+      if (typeof WorkCompletionBrain !== 'undefined') {
+        queueItems = WorkCompletionBrain.getCompletionTargets(
+          c.workOrders,
+          c.revenues || (c.revCtx && c.revCtx.records) || [],
+          c.today
+        ).slice(0, 3).map(t => ({
+          id: t.workOrder && t.workOrder.id,
+          label: (t.workOrder && t.workOrder.customerName) || 'お客様',
+          sub: (t.workOrder && t.workOrder.serviceText) || '売上確定待ち'
+        }));
+      }
+      add({
+        id: 'revenue-queue',
+        title: '作業後の売上確定待ち',
+        count: queueCount,
+        items: queueItems,
+        moreCount: Math.max(0, queueCount - queueItems.length),
+        action: { label: '売上管理へ', kind: 'nav', view: 'revenue', scrollSelector: '#revenue-confirmation-queue-list' },
+        secondaryAction: { label: '売上確定へ', kind: 'nav', view: 'revenue', scrollSelector: '#revenue-confirmation-queue-list' }
+      });
+    }
+
+    const recv = (c.revenueProfitSection && c.revenueProfitSection.receivables) || {};
+    if ((recv.count || 0) > 0 || (recv.pendingTotal || 0) > 0) {
+      add({
+        id: 'payment-pending',
+        title: recv.overdueCount ? '入金待ち / 入金遅れ' : '入金待ち / 入金確認',
+        count: recv.count || recv.overdueCount || 0,
+        items: [{
+          label: `入金待ち合計 ${typeof PaymentBrain !== 'undefined' ? PaymentBrain.formatYen(recv.pendingTotal || 0) : '—'}`,
+          sub: recv.overdueCount ? `入金遅れ ${recv.overdueCount}件` : ''
+        }],
+        action: { label: '入金予定へ', kind: 'nav', view: 'receivables', scrollSelector: '#view-receivables' }
+      });
+    }
+
+    const monthEndCount = this.getMonthEndBillingReviewCount(c);
+    if (monthEndCount > 0) {
+      add({
+        id: 'month-end-billing',
+        title: '月末請求確認',
+        count: monthEndCount,
+        items: [{ label: `コープ・ヤマダ ${monthEndCount}件`, sub: '月次請求の確認' }],
+        action: { label: '月次請求を見る', kind: 'nav', view: 'receivables', scrollSelector: '#receivables-month-end-review-card' }
+      });
+    }
+
+    const fu = c.followUpSection || {};
+    const followCount = (fu.thanksCount || 0) + (fu.reviewCount || 0);
+    if (followCount > 0) {
+      const followItems = (fu.todayItems || []).slice(0, 3).map(t => ({
+        id: t.id,
+        label: t.customerName || t.leadName || 'お客様',
+        sub: t.needsThanks ? 'お礼未送信' : (t.needsReview ? '口コミ依頼未送信' : 'フォロー')
+      }));
+      add({
+        id: 'follow-up',
+        title: 'フォロー未対応',
+        count: followCount,
+        items: followItems,
+        moreCount: Math.max(0, followCount - followItems.length),
+        action: { label: 'フォローへ', kind: 'nav', view: 'follow-up', scrollSelector: '#follow-up-targets-list' }
+      });
+    }
+
+    const expenseCount = (c.profitCtx && c.profitCtx.summary && c.profitCtx.summary.monthExpenseCount) || 0;
+    const monthExpense = (c.revenueProfitSection && c.revenueProfitSection.monthExpense) || 0;
+    if (expenseCount === 0 && monthExpense === 0) {
+      add({
+        id: 'expense',
+        title: '経費入力',
+        count: 0,
+        alwaysShow: true,
+        items: [{ label: '今月の経費が未入力です', sub: '' }],
+        action: { label: '経費入力へ', kind: 'nav', view: 'profit', scrollSelector: '#profit-expense-form-section' }
+      });
+    }
+
+    return categories;
+  },
+
+  buildAttentionItems(ctx) {
+    const c = ctx || {};
+    const items = [];
+    const push = (text, action) => {
+      if (!text) return;
+      items.push({ text, action });
+    };
+
+    const queueCount = this.getRevenueQueueCount(c);
+    if (queueCount > 0) {
+      push(`売上確定待ち ${queueCount}件`, {
+        label: '売上管理へ',
+        view: 'revenue',
+        scrollSelector: '#revenue-confirmation-queue-list'
+      });
+    }
+
+    const recv = (c.revenueProfitSection && c.revenueProfitSection.receivables) || {};
+    if ((recv.pendingTotal || 0) > 0) {
+      push(`入金待ち ${typeof PaymentBrain !== 'undefined' ? PaymentBrain.formatYen(recv.pendingTotal) : recv.pendingTotal}`, {
+        label: '入金予定へ',
+        view: 'receivables',
+        scrollSelector: '#view-receivables'
+      });
+    }
+    if (recv.overdueCount > 0) {
+      push(`入金遅れ ${recv.overdueCount}件`, {
+        label: '入金予定へ',
+        view: 'receivables',
+        scrollSelector: '#view-receivables'
+      });
+    }
+
+    const monthEndCount = this.getMonthEndBillingReviewCount(c);
+    if (monthEndCount > 0) {
+      push(`月末請求確認 ${monthEndCount}件`, {
+        label: '入金予定へ',
+        view: 'receivables',
+        scrollSelector: '#receivables-month-end-review-card'
+      });
+    }
+
+    const fu = c.followUpSection || {};
+    const followCount = (fu.thanksCount || 0) + (fu.reviewCount || 0);
+    if (followCount > 0) {
+      push(`フォロー未対応 ${followCount}件`, {
+        label: 'フォローへ',
+        view: 'follow-up',
+        scrollSelector: '#follow-up-targets-list'
+      });
+    }
+
+    return items.slice(0, 6);
   },
 
   buildExecutiveSummary(ctx) {

@@ -22,15 +22,15 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.11.9'), 'index.html should show v4.11.9');
-assert(indexHtml.includes('js/app.js?v=4.11.9'), 'app.js cache buster should be v4.11.9');
+assert(indexHtml.includes('v4.11.10'), 'index.html should show v4.11.10');
+assert(indexHtml.includes('js/app.js?v=4.11.10'), 'app.js cache buster should be v4.11.10');
 
 assert(indexHtml.includes('id="exec-home-revenue-queue-list"'), 'executive home should show revenue queue');
 assert(indexHtml.includes('id="exec-home-upcoming-schedule-main"'), 'executive home should show upcoming schedule');
 assert(indexHtml.includes('id="revenue-confirmation-queue-list"'), 'revenue view should show revenue queue');
 assert(
-  indexHtml.indexOf('exec-home-revenue-queue-list') < indexHtml.indexOf('exec-home-priority-action'),
-  'executive home revenue queue should appear before priority action'
+  indexHtml.indexOf('exec-home-priority-action') < indexHtml.indexOf('exec-home-today-tasks-list'),
+  'executive home priority action should appear before today tasks'
 );
 assert(
   indexHtml.indexOf('daily-section-revenue-queue') < indexHtml.indexOf('daily-section-priority'),

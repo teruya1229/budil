@@ -10967,6 +10967,140 @@ body.sales-page {
   max-width: 100%;
 }
 
+.exec-home-today-tasks {
+  margin: 0 0 1rem;
+}
+
+.exec-home-today-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.exec-today-task-category {
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.3);
+}
+
+.exec-today-task-category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.exec-today-task-category-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.exec-today-task-count {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.15);
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+}
+
+.exec-today-task-items {
+  list-style: none;
+  margin: 0 0 0.35rem;
+  padding: 0;
+}
+
+.exec-today-task-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.86rem;
+  color: #cbd5e1;
+  padding: 0.2rem 0;
+}
+
+.exec-today-task-sub {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.exec-today-task-more {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.exec-today-task-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.exec-home-attention {
+  margin: 0 0 1rem;
+}
+
+.exec-home-attention.hidden {
+  display: none;
+}
+
+.exec-attention-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.exec-attention-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  font-size: 0.86rem;
+  color: #e2e8f0;
+}
+
+.exec-attention-item:last-child {
+  border-bottom: none;
+}
+
+.exec-home-revenue-grid-minimal {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.exec-home-minimal-links {
+  margin-top: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .exec-home-today-tasks-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .exec-home-revenue-grid-minimal {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 390px) {
+  .exec-home-revenue-grid-minimal {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .exec-today-task-actions .btn,
+  .exec-attention-item .btn {
+    width: 100%;
+  }
+}
+
 .monthly-closing-check-status-list {
   margin: 0.5rem 0;
   padding: 0.5rem 0.75rem;
