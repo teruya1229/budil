@@ -28,10 +28,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.11.7'), 'index.html should show v4.11.7');
-assert(indexHtml.includes('js/app.js?v=4.11.7'), 'app.js cache buster should be v4.11.7');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.7'"), 'storage.js version should be v4.11.7');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.7'"), 'data-backup version should be v4.11.7');
+assert(indexHtml.includes('v4.11.8'), 'index.html should show v4.11.8');
+assert(indexHtml.includes('js/app.js?v=4.11.8'), 'app.js cache buster should be v4.11.8');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.8'"), 'storage.js version should be v4.11.8');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.8'"), 'data-backup version should be v4.11.8');
 
 const revenueViewStart = indexHtml.indexOf('id="view-revenue"');
 const revenueViewEnd = indexHtml.indexOf('id="view-revenue-analysis"');
@@ -41,10 +41,14 @@ assert(revenueChunk.includes('revenue-flow-hint'), 'revenue view should include 
 assert(revenueChunk.includes('id="revenue-list-section"'), 'revenue list should exist');
 assert(revenueChunk.includes('id="revenue-manual-input-details"'), 'manual input should be in details');
 assert(
-  revenueChunk.indexOf('id="revenue-list-section"') < revenueChunk.indexOf('id="revenue-manual-input-details"'),
-  'revenue list should appear before manual input details'
+  revenueChunk.indexOf('id="revenue-manual-input-details"') < revenueChunk.indexOf('id="revenue-list-section"'),
+  'manual input should appear before revenue list in v4.11.8 workflow'
 );
-assert(revenueChunk.includes('売上明細を手入力（例外）'), 'manual input summary should mark exception');
+assert(
+  revenueChunk.includes('売上明細を手入力（例外）') ||
+  revenueChunk.includes('売上登録（手入力・例外）'),
+  'manual input summary should mark exception'
+);
 assert(!revenueChunk.includes('id="btn-revenue-new" class="btn btn-primary'), 'add button must not be primary');
 assert(revenueChunk.includes('id="btn-revenue-new" class="btn btn-secondary'), 'add button should be secondary');
 

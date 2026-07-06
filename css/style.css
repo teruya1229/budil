@@ -11738,6 +11738,94 @@ body.sales-page {
   }
 }
 
+/* v4.11.8 売上管理 実務導線整理 */
+#view-revenue .revenue-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 10px;
+}
+
+#view-revenue .revenue-workflow-queue-card .revenue-workflow-queue-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 6px 10px;
+  align-items: center;
+}
+
+#view-revenue .revenue-workflow-queue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+#view-revenue .revenue-row-workflow-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 280px;
+}
+
+#view-revenue .revenue-actions-cell {
+  min-width: 200px;
+}
+
+#view-revenue .revenue-payment-pending-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+}
+
+#view-revenue .revenue-payment-pending-item {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+#view-revenue .revenue-payment-pending-item:last-child {
+  border-bottom: none;
+}
+
+#view-revenue .revenue-payment-pending-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+#view-revenue .revenue-payment-pending-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+#view-revenue .revenue-workflow-secondary-collapse .revenue-workflow-secondary-body {
+  display: grid;
+  gap: 12px;
+}
+
+#view-revenue .revenue-workflow-secondary-body > .card {
+  margin-bottom: 0;
+}
+
+#view-revenue .card-revenue-aggregation-link h3,
+#view-revenue .card-revenue-upcoming h3 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+  #view-revenue .revenue-row-workflow-actions {
+    max-width: 100%;
+  }
+}
+
 /* v4.10.37 請求書・見積書 A4余白調整（v4.10.36 A4固定を維持） */
 
 /* v4.10.22 主導線・主従整理最終監査 */

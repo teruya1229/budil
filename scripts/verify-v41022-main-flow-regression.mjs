@@ -38,9 +38,9 @@ const executiveBrain = load('js/executive-brain.js');
 const revenueBrain = load('js/revenue-brain.js');
 
 // ── バージョン確認 ────────────────────────────────────────────
-assert(indexHtml.includes('v4.11.7'), 'index.html should show v4.11.7');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.7'"), 'storage.js BUDIL_VERSION should be v4.10.41');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.7'"), 'data-backup APP_VERSION should be v4.10.41');
+assert(indexHtml.includes('v4.11.8'), 'index.html should show v4.11.8');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.8'"), 'storage.js BUDIL_VERSION should be v4.10.41');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.8'"), 'data-backup APP_VERSION should be v4.10.41');
 console.log('  [OK] バージョン v4.10.27');
 
 // ── NG文言チェック (通常UI) ────────────────────────────────────
@@ -86,12 +86,21 @@ console.log('  [OK] はじめてガイド calendar-first 主3ステップ維持'
 
 // ── 売上明細手入力が補助扱いであること ──────────────────────────
 // details 内に配置されていること
-assert(indexHtml.includes('売上明細を手入力（例外！）') || indexHtml.includes('売上明細を手入力（例外'), 'manual revenue entry should be labeled as exception');
+assert(
+  indexHtml.includes('売上登録（手入力・例外）') ||
+  indexHtml.includes('売上明細を手入力（例外！）') ||
+  indexHtml.includes('売上明細を手入力（例外'),
+  'manual revenue entry should be labeled as exception'
+);
 // 主入口ボタン（btn-primary）として単独で前面表示していないことを確認
 // → details collapse内に存在すること
 assert(indexHtml.includes('class="card card-wide revenue-manual-entry-collapse"') ||
        indexHtml.includes('revenue-manual-entry-collapse') ||
-       indexHtml.includes('summary>売上明細を手入力'), 'manual revenue entry should be in details collapse');
+       indexHtml.includes('card-revenue-manual-input') ||
+       indexHtml.includes('revenue-manual-input-details') ||
+       indexHtml.includes('summary>売上明細を手入力') ||
+       indexHtml.includes('summary>売上登録'),
+  'manual revenue entry should be in details collapse');
 console.log('  [OK] 売上明細手入力が例外・補助として配置');
 
 // ── 月次実績：通常売上入力に見えないこと ─────────────────────────

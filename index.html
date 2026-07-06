@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.11.7">
+  <link rel="stylesheet" href="css/style.css?v=4.11.8">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.11.7</small>
+          <small>AI経営脳みそ v4.11.8</small>
         </div>
       </div>
       <nav class="nav">
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.11.7</small>
+        <small>Budil v4.11.8</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の優先 → 今月の数字 → 次にやること</p>
             </div>
-            <span class="exec-home-version">v4.11.7</span>
+            <span class="exec-home-version">v4.11.8</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden"></div>
 
@@ -595,7 +595,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.11.7</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.11.8</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -2049,7 +2049,7 @@
         <header class="view-header view-header-with-link">
           <div>
             <h1>売上管理</h1>
-            <p class="view-subtitle">作業予定から売上確定が通常。手入力・月次調整は例外です。</p>
+            <p class="view-subtitle">作業予定から売上確定が通常。作業後は上から順に、売上確定・入金確認・請求書・フォローへ進めます。手入力・月次調整は例外です。</p>
           </div>
           <button type="button" class="btn btn-sm btn-secondary view-header-link nav-item" data-view="revenue-analysis">売上分析を見る</button>
         </header>
@@ -2057,22 +2057,6 @@
         <p class="revenue-flow-hint">通常：作業予定から売上確定 ／ 例外：売上明細を手入力 ／ 書類：請求書は既存売上と紐付け ／ 調整：月次差額は月次調整 ／ 入金確認：入金予定</p>
 
         <div id="revenue-unlinked-banner" class="revenue-unlinked-banner hidden" role="alert" hidden aria-hidden="true"></div>
-
-        <div class="card card-wide card-revenue-queue">
-          <h2>売上確定待ち</h2>
-          <p class="calendar-source-hint">作業日当日以降で、まだ売上確定していない予定です。</p>
-          <div id="revenue-confirmation-queue-list" class="daily-revenue-queue-list"></div>
-        </div>
-
-        <div class="card card-wide card-revenue-upcoming">
-          <h2>売上予定（未確定）</h2>
-          <div id="revenue-upcoming-schedule" class="upcoming-revenue-schedule-block"></div>
-        </div>
-
-        <details class="card card-wide card-management-comment card-collapsible">
-          <summary>経営番頭コメント</summary>
-          <div id="revenue-management-comment" class="management-comment-body"></div>
-        </details>
 
         <div class="card card-wide card-revenue-daily">
           <h2>今月サマリー</h2>
@@ -2087,59 +2071,10 @@
           </details>
         </div>
 
-        <div class="card card-wide hidden" id="revenue-sales-outcome-card">
-          <h2>営業成果（今月）</h2>
-          <div id="revenue-sales-outcome" class="revenue-sales-outcome"></div>
-        </div>
-
-        <div class="card card-wide hidden" id="revenue-next-sales-card">
-          <h2>次に売るべき営業先</h2>
-          <div id="revenue-next-sales" class="next-sales-list"></div>
-        </div>
-
-        <div class="card card-wide hidden" id="revenue-sales-hold-card">
-          <h2>営業保留・入金確認</h2>
-          <div id="revenue-sales-hold" class="next-sales-list"></div>
-        </div>
-
-        <details class="card card-wide card-collapsible">
-          <summary>月間目標設定</summary>
-          <div class="form-row form-row-2 revenue-target-row">
-            <div class="form-group">
-              <label for="revenue-monthly-target">月間目標（円）</label>
-              <input type="number" id="revenue-monthly-target" min="0" step="1000" placeholder="例: 600000">
-            </div>
-            <div class="form-group revenue-target-actions">
-              <button type="button" id="btn-save-revenue-target" class="btn btn-primary btn-sm">目標を保存</button>
-            </div>
-          </div>
-        </details>
-
-        <div class="card card-wide" id="revenue-list-section">
-          <div class="card-header-row">
-            <h2>売上一覧（今月）</h2>
-            <button type="button" id="btn-revenue-new" class="btn btn-secondary btn-sm">+ 明細を追加</button>
-          </div>
-          <div class="table-wrap revenue-table-wrap">
-            <table class="data-table revenue-table" id="revenue-table">
-              <thead>
-                <tr>
-                  <th>作業日</th>
-                  <th>顧客名</th>
-                  <th class="hidden">紐付け営業先</th>
-                  <th>サービス</th>
-                  <th>依頼元</th>
-                  <th>金額</th>
-                  <th>ステータス</th>
-                  <th>支払方法</th>
-                  <th>入金</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody id="revenue-tbody"></tbody>
-            </table>
-          </div>
-          <div id="revenue-card-list" class="revenue-card-list"></div>
+        <div class="card card-wide card-revenue-queue">
+          <h2>作業後の売上確定待ち</h2>
+          <p class="calendar-source-hint">今日以前の作業予定で、まだ売上確定していないものです。Googleカレンダーが作業予定の正本です。</p>
+          <div id="revenue-confirmation-queue-list" class="daily-revenue-queue-list"></div>
         </div>
 
         <details class="card card-wide card-revenue-manual-input" id="revenue-manual-input-details">
@@ -2280,6 +2215,92 @@
                 <button type="button" id="btn-revenue-cancel" class="btn btn-secondary btn-sm hidden">キャンセル</button>
               </div>
             </form>
+          </div>
+        </details>
+
+        <div class="card card-wide" id="revenue-list-section">
+          <div class="card-header-row">
+            <h2>売上一覧（今月）</h2>
+            <button type="button" id="btn-revenue-new" class="btn btn-secondary btn-sm">+ 明細を追加</button>
+          </div>
+          <div class="table-wrap revenue-table-wrap">
+            <table class="data-table revenue-table" id="revenue-table">
+              <thead>
+                <tr>
+                  <th>作業日</th>
+                  <th>顧客名</th>
+                  <th class="hidden">紐付け営業先</th>
+                  <th>サービス</th>
+                  <th>依頼元</th>
+                  <th>金額</th>
+                  <th>ステータス</th>
+                  <th>支払方法</th>
+                  <th>入金</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="revenue-tbody"></tbody>
+            </table>
+          </div>
+          <div id="revenue-card-list" class="revenue-card-list"></div>
+        </div>
+
+        <div class="card card-wide card-revenue-payment-confirm" id="revenue-payment-confirm-section">
+          <h2>入金確認</h2>
+          <p class="field-hint">入金待ちの案件を確認します。直請け系は1件ごとに入金済みにできます。コープ・ヤマダの月次請求は入金予定画面で確認してください。</p>
+          <div id="revenue-payment-pending-summary" class="revenue-payment-pending-summary"></div>
+          <div id="revenue-payment-pending-list" class="revenue-payment-pending-list"></div>
+          <div class="revenue-payment-confirm-actions">
+            <button type="button" class="btn btn-sm btn-secondary" id="btn-revenue-go-receivables">入金予定を開く</button>
+          </div>
+        </div>
+
+        <details class="card card-wide revenue-workflow-secondary-collapse" id="revenue-workflow-secondary">
+          <summary>売上集計・営業成果・目標設定（詳細）</summary>
+          <div class="revenue-workflow-secondary-body">
+            <div class="card card-wide card-revenue-aggregation-link">
+              <h3>売上集計</h3>
+              <p class="field-hint">月別・年別・依頼元別の詳細集計は売上分析画面で確認できます。</p>
+              <button type="button" class="btn btn-sm btn-secondary nav-item" data-view="revenue-analysis">売上分析を見る</button>
+            </div>
+
+            <div class="card card-wide card-revenue-upcoming">
+              <h3>売上予定（未確定）</h3>
+              <div id="revenue-upcoming-schedule" class="upcoming-revenue-schedule-block"></div>
+            </div>
+
+            <details class="card card-wide card-management-comment card-collapsible">
+              <summary>経営番頭コメント</summary>
+              <div id="revenue-management-comment" class="management-comment-body"></div>
+            </details>
+
+            <div class="card card-wide" id="revenue-sales-outcome-card">
+              <h3>営業成果（今月）</h3>
+              <div id="revenue-sales-outcome" class="revenue-sales-outcome"></div>
+            </div>
+
+            <div class="card card-wide" id="revenue-next-sales-card">
+              <h3>次に売るべき営業先</h3>
+              <div id="revenue-next-sales" class="next-sales-list"></div>
+            </div>
+
+            <div class="card card-wide" id="revenue-sales-hold-card">
+              <h3>営業保留・入金確認</h3>
+              <div id="revenue-sales-hold" class="next-sales-list"></div>
+            </div>
+
+            <details class="card card-wide card-collapsible">
+              <summary>月間目標設定</summary>
+              <div class="form-row form-row-2 revenue-target-row">
+                <div class="form-group">
+                  <label for="revenue-monthly-target">月間目標（円）</label>
+                  <input type="number" id="revenue-monthly-target" min="0" step="1000" placeholder="例: 600000">
+                </div>
+                <div class="form-group revenue-target-actions">
+                  <button type="button" id="btn-save-revenue-target" class="btn btn-primary btn-sm">目標を保存</button>
+                </div>
+              </div>
+            </details>
           </div>
         </details>
       </section>
@@ -3602,14 +3623,14 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.11.7"></script>
+  <script src="js/storage.js?v=4.11.8"></script>
   <script src="js/messages.js?v=4.10.22"></script>
   <script src="js/demand-brain.js?v=4.10.22"></script>
   <script src="js/demand-radar.js?v=4.10.22"></script>
   <script src="js/sales-brain.js?v=4.10.22"></script>
   <script src="js/management-brain.js?v=4.10.22"></script>
   <script src="js/payment-brain.js?v=4.10.22"></script>
-  <script src="js/revenue-brain.js?v=4.11.7"></script>
+  <script src="js/revenue-brain.js?v=4.11.8"></script>
   <script src="js/revenue-summary-brain.js?v=4.10.22"></script>
   <script src="js/reception-brain.js?v=4.11.0"></script>
   <script src="js/map-brain.js?v=4.10.22"></script>
@@ -3619,13 +3640,13 @@
   <script src="js/work-order-brain.js?v=4.10.22"></script>
   <script src="js/follow-up-brain.js?v=4.10.22"></script>
   <script src="js/work-completion-brain.js?v=4.10.22"></script>
-  <script src="js/profit-brain.js?v=4.11.7"></script>
+  <script src="js/profit-brain.js?v=4.11.8"></script>
   <script src="js/analytics-brain.js?v=4.10.22"></script>
   <script src="js/monthly-results-brain.js?v=4.10.22"></script>
   <script src="js/documents-brain.js?v=4.10.41"></script>
-  <script src="js/executive-brain.js?v=4.11.7"></script>
+  <script src="js/executive-brain.js?v=4.11.8"></script>
   <script src="js/card-ocr.js?v=4.10.22"></script>
-  <script src="js/data-backup.js?v=4.11.7"></script>
-  <script src="js/app.js?v=4.11.7"></script>
+  <script src="js/data-backup.js?v=4.11.8"></script>
+  <script src="js/app.js?v=4.11.8"></script>
 </body>
 </html>
