@@ -21,10 +21,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.11.10'), 'index.html should show v4.11.10');
+assert(indexHtml.includes('v4.11.11'), 'index.html should show v4.11.11');
 assert(indexHtml.includes('受付・予定確認'), 'calendar registration view should be renamed');
 assert(
-  indexHtml.includes('Googleカレンダー登録後の予定をBudilで確認'),
+  indexHtml.includes('Googleカレンダーが作業予定の正本'),
   'subtitle should reflect Google Calendar source flow'
 );
 assert(
@@ -58,12 +58,19 @@ assert(!indexHtml.includes('id="work-order-forecast"'), 'sales forecast cards sh
 assert(indexHtml.includes('card-revenue-schedule-link'), 'revenue management link should replace forecast cards');
 assert(indexHtml.includes('売上管理を見る'), 'revenue management CTA should exist');
 
-assert(indexHtml.includes('card-work-order-week'), 'week schedule should be primary list');
-assert(indexHtml.includes('work-order-today-collapse'), 'today schedule should be collapsible');
+assert(indexHtml.includes('card-schedule-today'), 'today schedule section should be primary');
+assert(indexHtml.includes('schedule-today-list'), 'today schedule list should exist');
+assert(indexHtml.includes('card-schedule-upcoming'), 'upcoming schedule section should exist');
 assert(
-  indexHtml.indexOf('work-order-week-list') < indexHtml.indexOf('work-order-today-collapse'),
-  'week list should appear before today collapse'
+  indexHtml.indexOf('schedule-revenue-queue-list') < indexHtml.indexOf('schedule-today-list'),
+  'revenue queue should appear before today schedule'
 );
+assert(
+  indexHtml.indexOf('schedule-today-list') < indexHtml.indexOf('schedule-upcoming-list'),
+  'today schedule should appear before upcoming schedule'
+);
+assert(indexHtml.includes('card-schedule-import-collapse'), 'import section should be collapsible');
+assert(indexHtml.includes('card-schedule-past-collapse'), 'past/completed section should be collapsible');
 
 const calendarChunk = indexHtml.slice(
   indexHtml.indexOf('id="view-calendar-candidate"'),

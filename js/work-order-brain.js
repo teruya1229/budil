@@ -265,6 +265,17 @@ const WorkOrderBrain = {
     );
   },
 
+  getUpcomingWorkOrders(workOrders, today) {
+    const t = today || new Date().toISOString().slice(0, 10);
+    const tomorrow = this.addDays(t, 1);
+    return this.sortByScheduledDateTimeAsc(
+      this.filterActive(workOrders).filter(w =>
+        w.scheduledDate && w.scheduledDate >= tomorrow
+        && this.ACTIVE_STATUSES.includes(w.status)
+      )
+    );
+  },
+
   sumEstimate(workOrders) {
     return (workOrders || []).reduce((sum, w) => sum + (Number(w.estimateAmount) || 0), 0);
   },

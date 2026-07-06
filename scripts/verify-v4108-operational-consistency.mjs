@@ -22,8 +22,8 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.11.10'), 'index.html should show v4.11.10');
-assert(indexHtml.includes('js/app.js?v=4.11.10'), 'app.js cache buster should be v4.11.10');
+assert(indexHtml.includes('v4.11.11'), 'index.html should show v4.11.11');
+assert(indexHtml.includes('js/app.js?v=4.11.11'), 'app.js cache buster should be v4.11.11');
 
 assert(indexHtml.includes('id="exec-home-revenue-queue-list"'), 'executive home should show revenue queue');
 assert(indexHtml.includes('id="exec-home-upcoming-schedule-main"'), 'executive home should show upcoming schedule');
@@ -41,13 +41,18 @@ const receptionChunk = indexHtml.slice(
   indexHtml.indexOf('id="view-calendar-registration"'),
   indexHtml.indexOf('id="view-calendar-candidate"')
 );
-assert(receptionChunk.includes('売上確定待ち'), 'reception view should show 売上確定待ち');
+assert(receptionChunk.includes('作業後の売上確定待ち'), 'reception view should show post-work revenue queue');
+assert(receptionChunk.includes('売上確定待ち'), 'reception view should show revenue queue wording');
 assert(!receptionChunk.includes('作業後確定待ち'), 'reception view should not use 作業後確定待ち');
 assert(receptionChunk.includes('card-reception-input-collapse'), 'reception input should be collapsible');
 assert(receptionChunk.includes('card-reception-list-collapse'), 'reception list should be collapsible');
 assert(
-  receptionChunk.indexOf('work-order-pending-completion-list') < receptionChunk.indexOf('work-order-week-list'),
-  'reception revenue queue should appear before week schedule'
+  receptionChunk.indexOf('schedule-revenue-queue-list') < receptionChunk.indexOf('schedule-today-list'),
+  'reception revenue queue should appear before today schedule'
+);
+assert(
+  receptionChunk.indexOf('schedule-today-list') < receptionChunk.indexOf('schedule-upcoming-list'),
+  'today schedule should appear before upcoming schedule'
 );
 
 assert(indexHtml.includes('card-onboarding-guide-collapse'), 'onboarding guide should be collapsible');

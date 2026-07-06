@@ -28,10 +28,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.11.10'), 'index.html should show v4.11.10');
-assert(indexHtml.includes('js/app.js?v=4.11.10'), 'app.js cache buster should be v4.11.10');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.10'"), 'storage.js version should be v4.11.10');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.10'"), 'data-backup version should be v4.11.10');
+assert(indexHtml.includes('v4.11.11'), 'index.html should show v4.11.11');
+assert(indexHtml.includes('js/app.js?v=4.11.11'), 'app.js cache buster should be v4.11.11');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.11'"), 'storage.js version should be v4.11.11');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.11'"), 'data-backup version should be v4.11.11');
 
 const startGuideStart = indexHtml.indexOf('id="dash-start-guide"');
 const startGuideEnd = indexHtml.indexOf('dash-detail-sections');

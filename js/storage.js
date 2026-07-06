@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.11.10',
+  BUDIL_VERSION: 'v4.11.11',
 
   KEYS: {
     LEADS: 'budil_leads',

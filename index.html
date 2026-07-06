@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.11.10">
+  <link rel="stylesheet" href="css/style.css?v=4.11.11">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.11.10</small>
+          <small>AI経営脳みそ v4.11.11</small>
         </div>
       </div>
       <nav class="nav">
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.11.10</small>
+        <small>Budil v4.11.11</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の最優先 → 今日やること → 今月の数字</p>
             </div>
-            <span class="exec-home-version">v4.11.10</span>
+            <span class="exec-home-version">v4.11.11</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden exec-tower-span-full"></div>
 
@@ -594,7 +594,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.11.10</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.11.11</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -1641,29 +1641,142 @@
       <section id="view-calendar-registration" class="view">
         <header class="view-header">
           <h1>受付・予定確認</h1>
-          <p class="view-subtitle">受付内容を整理し、Googleカレンダー登録後の予定をBudilで確認します。</p>
+          <p class="view-subtitle">作業後は売上確定へ進みます。Googleカレンダーが作業予定の正本です。</p>
         </header>
 
-        <div class="card card-wide card-calendar-source-notice">
-          <p class="calendar-source-flow-note">正本フロー：Googleカレンダー → JSON取り込み → 作業予定確認 → 作業後に売上確定</p>
-          <button type="button" class="btn btn-sm btn-primary nav-item" data-view="calendar-candidate">予定取り込みを見る</button>
+        <div class="card card-wide card-schedule-revenue-queue card-work-order-pending-completion">
+          <h2>作業後の売上確定待ち</h2>
+          <p class="calendar-source-hint">今日以前の作業予定で、金額あり、まだ売上確定していないものです。</p>
+          <div id="schedule-revenue-queue-list" class="daily-revenue-queue-list schedule-revenue-queue-list"></div>
         </div>
 
-        <div class="card card-wide card-revenue-queue card-work-order-pending-completion">
-          <h2>売上確定待ち</h2>
-          <p class="calendar-source-hint">作業日当日以降で、まだ売上確定していない予定です。</p>
-          <div id="work-order-pending-completion-list" class="work-order-schedule-list daily-revenue-queue-list"></div>
+        <div class="card card-wide card-schedule-today">
+          <h2>今日の作業予定</h2>
+          <p class="calendar-source-hint">作業前・作業中に確認する予定です。</p>
+          <div id="schedule-today-list" class="schedule-work-order-list"></div>
         </div>
 
+        <div class="card card-wide card-schedule-upcoming">
+          <h2>直近の作業予定</h2>
+          <p class="calendar-source-hint">明日以降の予定です。</p>
+          <div id="schedule-upcoming-list" class="schedule-work-order-list"></div>
+          <div id="schedule-upcoming-more" class="schedule-upcoming-more"></div>
+        </div>
+
+        <details class="card card-wide card-schedule-import-collapse">
+          <summary>予定取り込み</summary>
+          <div class="schedule-import-collapse-body">
+            <p class="calendar-source-flow-note">正本フロー：Googleカレンダー → JSON取り込み → 作業予定確認 → 作業後に売上確定</p>
+            <div id="schedule-import-brief" class="work-order-calendar-candidates-brief"></div>
+            <div class="schedule-import-actions">
+              <button type="button" class="btn btn-sm btn-primary nav-item" data-view="calendar-candidate">予定取り込みを開く</button>
+            </div>
+            <div id="schedule-import-result" class="schedule-import-result" aria-live="polite"></div>
+          </div>
+        </details>
+
+        <details class="card card-wide work-order-manual-entry" id="work-order-manual-entry">
+          <summary>緊急手入力：カレンダーにない予定を追加する</summary>
+          <p class="work-order-manual-note">通常はGoogleカレンダーから読み込んでください。手入力は緊急時のみ使います。</p>
+          <form id="work-order-form">
+            <input type="hidden" id="work-order-edit-id">
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="work-order-customer">お客様名</label>
+                <input type="text" id="work-order-customer" placeholder="例：山田様">
+              </div>
+              <div class="form-group">
+                <label for="work-order-phone">電話番号</label>
+                <input type="tel" id="work-order-phone" placeholder="090-0000-0000">
+              </div>
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="work-order-address">住所</label>
+                <input type="text" id="work-order-address" placeholder="沖縄県南城市...">
+              </div>
+              <div class="form-group">
+                <label for="work-order-area">エリア</label>
+                <select id="work-order-area">
+                  <option value="">自動推定</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="work-order-source">依頼元</label>
+                <select id="work-order-source"></select>
+              </div>
+              <div class="form-group">
+                <label for="work-order-amount">予定売上（円）</label>
+                <input type="number" id="work-order-amount" min="0" step="1" placeholder="15000">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="work-order-service">作業内容</label>
+              <textarea id="work-order-service" rows="2" placeholder="作業内容・サービス"></textarea>
+            </div>
+            <div class="form-row form-row-3">
+              <div class="form-group">
+                <label for="work-order-date">予定日</label>
+                <input type="date" id="work-order-date">
+              </div>
+              <div class="form-group">
+                <label for="work-order-start">開始時間</label>
+                <input type="time" id="work-order-start">
+              </div>
+              <div class="form-group">
+                <label for="work-order-end">終了時間</label>
+                <input type="time" id="work-order-end">
+              </div>
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label for="work-order-status">状態</label>
+                <select id="work-order-status">
+                  <option value="tentative">仮予定</option>
+                  <option value="confirmed">確定</option>
+                  <option value="completed">対応済み</option>
+                  <option value="cancelled">キャンセル</option>
+                  <option value="archived">保管</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="work-order-intake">関連受付</label>
+                <select id="work-order-intake">
+                  <option value="">なし</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="work-order-lead">関連営業先</label>
+              <select id="work-order-lead">
+                <option value="">なし</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="work-order-memo">メモ</label>
+              <textarea id="work-order-memo" rows="2" placeholder="型番未確認など"></textarea>
+            </div>
+            <div id="work-order-form-map-actions" class="map-actions-row"></div>
+            <p id="work-order-calendar-hint" class="work-order-calendar-hint hidden"></p>
+            <div class="pickup-form-actions">
+              <button type="submit" class="btn btn-primary">保存</button>
+              <button type="button" id="btn-work-order-clear" class="btn btn-secondary btn-sm">クリア</button>
+              <button type="button" id="btn-work-order-gmap" class="btn btn-secondary btn-sm">Googleマップで開く</button>
+              <button type="button" id="btn-work-order-calendar" class="btn btn-secondary btn-sm">Googleカレンダーに追加</button>
+            </div>
+          </form>
+        </details>
+
+        <details class="card card-wide card-schedule-past-collapse">
+          <summary>過去・完了・詳細</summary>
+          <div class="schedule-past-collapse-body">
         <div class="card card-wide card-work-order-week">
           <h2>今週の作業予定</h2>
           <p class="calendar-source-hint">Googleカレンダーから読み込んだ予定をここで確認します。</p>
-          <p class="calendar-source-hint calendar-week-scope-note">今週分のみ表示しています。来週以降は売上予定で確認できます。</p>
+          <p class="calendar-source-hint calendar-week-scope-note">今週分のみ表示しています。来週以降は直近の作業予定で確認できます。</p>
           <div id="work-order-week-list" class="work-order-schedule-list"></div>
-          <details class="work-order-today-collapse">
-            <summary>今日の作業予定だけ見る</summary>
-            <div id="work-order-today-list" class="work-order-schedule-list"></div>
-          </details>
         </div>
 
         <div class="card card-wide card-revenue-schedule-link">
@@ -1770,104 +1883,12 @@
           <p class="work-completion-notice">作業予定は売上集計に含まれません。確定売上として登録されたものだけ集計されます。</p>
         </details>
 
-        <details class="card card-wide work-order-manual-entry" id="work-order-manual-entry">
-          <summary>緊急手入力：カレンダーにない予定を追加する</summary>
-          <p class="work-order-manual-note">通常はGoogleカレンダーから読み込んでください。手入力は緊急時のみ使います。</p>
-          <form id="work-order-form">
-            <input type="hidden" id="work-order-edit-id">
-            <div class="form-row form-row-2">
-              <div class="form-group">
-                <label for="work-order-customer">お客様名</label>
-                <input type="text" id="work-order-customer" placeholder="例：山田様">
-              </div>
-              <div class="form-group">
-                <label for="work-order-phone">電話番号</label>
-                <input type="tel" id="work-order-phone" placeholder="090-0000-0000">
-              </div>
-            </div>
-            <div class="form-row form-row-2">
-              <div class="form-group">
-                <label for="work-order-address">住所</label>
-                <input type="text" id="work-order-address" placeholder="沖縄県南城市...">
-              </div>
-              <div class="form-group">
-                <label for="work-order-area">エリア</label>
-                <select id="work-order-area">
-                  <option value="">自動推定</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-row form-row-2">
-              <div class="form-group">
-                <label for="work-order-source">依頼元</label>
-                <select id="work-order-source"></select>
-              </div>
-              <div class="form-group">
-                <label for="work-order-amount">予定売上（円）</label>
-                <input type="number" id="work-order-amount" min="0" step="1" placeholder="15000">
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="work-order-service">作業内容</label>
-              <textarea id="work-order-service" rows="2" placeholder="作業内容・サービス"></textarea>
-            </div>
-            <div class="form-row form-row-3">
-              <div class="form-group">
-                <label for="work-order-date">予定日</label>
-                <input type="date" id="work-order-date">
-              </div>
-              <div class="form-group">
-                <label for="work-order-start">開始時間</label>
-                <input type="time" id="work-order-start">
-              </div>
-              <div class="form-group">
-                <label for="work-order-end">終了時間</label>
-                <input type="time" id="work-order-end">
-              </div>
-            </div>
-            <div class="form-row form-row-2">
-              <div class="form-group">
-                <label for="work-order-status">状態</label>
-                <select id="work-order-status">
-                  <option value="tentative">仮予定</option>
-                  <option value="confirmed">確定</option>
-                  <option value="completed">対応済み</option>
-                  <option value="cancelled">キャンセル</option>
-                  <option value="archived">保管</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="work-order-intake">関連受付</label>
-                <select id="work-order-intake">
-                  <option value="">なし</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="work-order-lead">関連営業先</label>
-              <select id="work-order-lead">
-                <option value="">なし</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="work-order-memo">メモ</label>
-              <textarea id="work-order-memo" rows="2" placeholder="型番未確認など"></textarea>
-            </div>
-            <div id="work-order-form-map-actions" class="map-actions-row"></div>
-            <p id="work-order-calendar-hint" class="work-order-calendar-hint hidden"></p>
-            <div class="pickup-form-actions">
-              <button type="submit" class="btn btn-primary">保存</button>
-              <button type="button" id="btn-work-order-clear" class="btn btn-secondary btn-sm">クリア</button>
-              <button type="button" id="btn-work-order-gmap" class="btn btn-secondary btn-sm">Googleマップで開く</button>
-              <button type="button" id="btn-work-order-calendar" class="btn btn-secondary btn-sm">Googleカレンダーに追加</button>
-            </div>
-          </form>
-        </details>
-
         <details class="card card-wide work-order-from-intake-collapse">
           <summary>受付から作成した作業予定</summary>
           <p class="data-mgmt-desc">関連受付付きの作業予定一覧です。通常はGoogleカレンダー経由の予定をご利用ください。</p>
           <div id="work-order-from-intake-list" class="work-order-intake-list"></div>
+        </details>
+          </div>
         </details>
       </section>
 
@@ -3634,14 +3655,14 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.11.10"></script>
+  <script src="js/storage.js?v=4.11.11"></script>
   <script src="js/messages.js?v=4.10.22"></script>
   <script src="js/demand-brain.js?v=4.10.22"></script>
   <script src="js/demand-radar.js?v=4.10.22"></script>
   <script src="js/sales-brain.js?v=4.10.22"></script>
   <script src="js/management-brain.js?v=4.10.22"></script>
   <script src="js/payment-brain.js?v=4.10.22"></script>
-  <script src="js/revenue-brain.js?v=4.11.10"></script>
+  <script src="js/revenue-brain.js?v=4.11.11"></script>
   <script src="js/revenue-summary-brain.js?v=4.10.22"></script>
   <script src="js/reception-brain.js?v=4.11.0"></script>
   <script src="js/map-brain.js?v=4.10.22"></script>
@@ -3651,13 +3672,13 @@
   <script src="js/work-order-brain.js?v=4.10.22"></script>
   <script src="js/follow-up-brain.js?v=4.10.22"></script>
   <script src="js/work-completion-brain.js?v=4.10.22"></script>
-  <script src="js/profit-brain.js?v=4.11.10"></script>
+  <script src="js/profit-brain.js?v=4.11.11"></script>
   <script src="js/analytics-brain.js?v=4.10.22"></script>
   <script src="js/monthly-results-brain.js?v=4.10.22"></script>
   <script src="js/documents-brain.js?v=4.10.41"></script>
-  <script src="js/executive-brain.js?v=4.11.10"></script>
+  <script src="js/executive-brain.js?v=4.11.11"></script>
   <script src="js/card-ocr.js?v=4.10.22"></script>
-  <script src="js/data-backup.js?v=4.11.10"></script>
-  <script src="js/app.js?v=4.11.10"></script>
+  <script src="js/data-backup.js?v=4.11.11"></script>
+  <script src="js/app.js?v=4.11.11"></script>
 </body>
 </html>

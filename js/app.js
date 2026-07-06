@@ -1214,7 +1214,7 @@
 
   function goToWorkOrder() {
     navigateToView('calendar-registration');
-    setTimeout(() => scrollToElement('#work-order-form'), 120);
+    setTimeout(() => openWorkOrderFormPanel(), 120);
   }
 
   function goToFollowUp() {
@@ -2954,10 +2954,7 @@
     const wo = (Storage.getWorkOrders() || []).find(w => w.id === workOrderId);
     if (!wo) return;
     navigateToView('calendar-registration');
-    setTimeout(() => {
-      setWorkOrderFormData(wo);
-      scrollToElement('#work-order-form');
-    }, 120);
+    setTimeout(() => openWorkOrderFormPanel(wo), 120);
   }
 
   function bindProfitUpcomingScheduleEvents(container) {
@@ -3314,7 +3311,9 @@
     return items;
   }
 
-  function collectRevenueConfirmationQueue() {
+  function collectRevenueConfirmationQueue(options) {
+    const opts = options || {};
+    const scheduleMode = !!opts.scheduleMode;
     const today = TODAY();
     const workOrders = Storage.getWorkOrders();
     const revenues = Storage.getRevenueRecords();
@@ -3332,7 +3331,8 @@
           && !wo.actualRevenueId
           && wo.scheduledDate && wo.scheduledDate <= today
           && Number(wo.estimateAmount || 0) > 0
-          && wo.status !== 'cancelled' && wo.status !== 'archived') {
+          && wo.status !== 'cancelled' && wo.status !== 'archived'
+          && (!scheduleMode || wo.status !== 'completed')) {
           workOrderItems.push({
             type: 'work-order',
             id: wo.id,
@@ -3352,6 +3352,27 @@
       if (wo.status === 'cancelled' || wo.status === 'archived') return;
       if (wo.actualRevenueId) return;
       if (wo.scheduledDate && wo.scheduledDate > today) return;
+      if (scheduleMode) {
+        if (wo.status === 'completed') return;
+        if (Number(wo.estimateAmount || 0) <= 0) return;
+        const isPastScheduled = WorkCompletionBrain.isPastScheduledActive(wo, today);
+        const needsReview = !!(wo.completion && wo.completion.needsReview);
+        if (!isPastScheduled && !needsReview) return;
+        workOrderItems.push({
+          type: 'work-order',
+          id: wo.id,
+          scheduledDate: wo.scheduledDate || '',
+          startTime: wo.startTime || '',
+          endTime: wo.endTime || '',
+          createdAt: wo.createdAt || '',
+          customerName: wo.customerName || 'お客様',
+          serviceText: wo.serviceText || '',
+          source: wo.source || '',
+          amount: wo.estimateAmount,
+          statusLabel: needsReview ? '要確認' : '売上確定待ち'
+        });
+        return;
+      }
 
       const isCompleted = wo.status === 'completed';
       const isPastScheduled = WorkCompletionBrain.isPastScheduledActive(wo, today);
@@ -3394,6 +3415,7 @@
 
         const classification = CalendarCandidateBrain.classifyPastRecoveryCandidate(wo, revenues, options);
         if (classification.status !== CalendarCandidateBrain.PAST_RECOVERY_REVENUE_CANDIDATE) return;
+        if (scheduleMode) return;
 
         pastRecoveryItems.push({
           type: 'past-recovery',
@@ -3412,9 +3434,11 @@
     }
 
     const allItems = WorkOrderBrain.sortByScheduledDateTimeAsc([...workOrderItems, ...pastRecoveryItems]);
+    const previewLimit = opts.previewLimit != null ? opts.previewLimit : 3;
     return {
-      visible: allItems.slice(0, 3),
-      hiddenCount: Math.max(0, allItems.length - 3),
+      items: allItems,
+      visible: allItems.slice(0, previewLimit),
+      hiddenCount: Math.max(0, allItems.length - previewLimit),
       totalCount: allItems.length,
       workOrderCount: workOrderItems.length,
       pastRecoveryCount: pastRecoveryItems.length
@@ -3457,6 +3481,9 @@
 
   function renderRevenueWorkflowQueueCard(item, opts) {
     const amountLabel = item.amount ? WorkOrderBrain.formatYen(item.amount) : '—';
+    const timeLabel = item.startTime && item.endTime
+      ? `${item.startTime}〜${item.endTime}`
+      : (item.startTime || '');
     const woRaw = (Storage.getWorkOrders() || []).find(w => w.id === item.id);
     const wo = woRaw && typeof WorkOrderBrain !== 'undefined'
       ? WorkOrderBrain.normalizeWorkOrder(woRaw)
@@ -3479,6 +3506,7 @@
     return `<div class="daily-revenue-queue-card revenue-workflow-queue-card daily-revenue-queue-${esc(item.type)}">
       <div class="revenue-workflow-queue-meta daily-revenue-queue-meta">
         <span class="daily-revenue-queue-date">${esc(formatRevenueQueueDate(item.scheduledDate))}</span>
+        ${timeLabel ? `<span class="daily-revenue-queue-time">${esc(timeLabel)}</span>` : ''}
         <span class="daily-revenue-queue-name">${esc(item.customerName)}</span>
         <span class="daily-revenue-queue-service">${esc((item.serviceText || '').slice(0, 24))}</span>
         <span class="daily-revenue-queue-amount">${esc(amountLabel)}</span>
@@ -3541,20 +3569,26 @@
     if (!el) return;
     const opts = options || {};
     const limit = opts.limit || 3;
-    const queue = collectRevenueConfirmationQueue();
+    const queue = collectRevenueConfirmationQueue({ scheduleMode: !!opts.scheduleMode });
     if (!queue.totalCount) {
       el.innerHTML = `<p class="placeholder-text">${esc(opts.emptyText || '売上確定待ちはありません。作業日当日以降で、まだ売上確定していない予定がここに表示されます。')}</p>`;
       bindDailyRevenueQueueEvents(el);
       return;
     }
-    const visible = queue.visible.slice(0, limit);
-    const hiddenCount = Math.max(0, queue.totalCount - visible.length);
+    const items = queue.items || [];
+    const visible = items.slice(0, limit);
+    const hiddenCount = Math.max(0, items.length - visible.length);
     const cards = visible.map(item => renderRevenueConfirmationQueueCard(item, opts)).join('');
     const more = hiddenCount
-      ? `<p class="daily-revenue-queue-more">ほか${hiddenCount}件あります</p>
-         <div class="daily-revenue-queue-more-actions">
-           <button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-daily>毎日やることを見る</button>
-         </div>`
+      ? (opts.scheduleMode
+        ? `<p class="daily-revenue-queue-more">ほか${hiddenCount}件あります</p>
+           <div class="daily-revenue-queue-more-actions">
+             <button type="button" class="btn btn-sm btn-secondary nav-item" data-view="revenue">売上管理へ</button>
+           </div>`
+        : `<p class="daily-revenue-queue-more">ほか${hiddenCount}件あります</p>
+           <div class="daily-revenue-queue-more-actions">
+             <button type="button" class="btn btn-sm btn-secondary" data-daily-revenue-go-daily>毎日やることを見る</button>
+           </div>`)
       : '';
     el.innerHTML = `<div class="daily-revenue-queue-cards">${cards}</div>${more}`;
     bindDailyRevenueQueueEvents(el);
@@ -8488,8 +8522,7 @@
     const workOrder = Storage.addWorkOrder(payload);
     linkReceptionToWorkOrder(intakeId, workOrder.id);
     navigateToView('calendar-registration');
-    setTimeout(() => scrollToElement('#work-order-form'), 120);
-    setWorkOrderFormData(workOrder);
+    setTimeout(() => openWorkOrderFormPanel(workOrder), 120);
     clearReceptionDraftInputs({ renderNext: false });
     renderReceptionView();
     renderWorkOrderView();
@@ -8502,9 +8535,7 @@
     if (!lead) return;
     const payload = WorkOrderBrain.createFromLead(lead);
     navigateToView('calendar-registration');
-    setTimeout(() => scrollToElement('#work-order-form'), 120);
-    setWorkOrderFormData(payload);
-    scrollToElement('#work-order-form');
+    setTimeout(() => openWorkOrderFormPanel(payload), 120);
     alert('営業先の情報を作業予定フォームに反映しました。');
   }
 
@@ -10078,8 +10109,139 @@
     renderMorningExecutiveSections();
   }
 
+  function openWorkOrderFormPanel(workOrder) {
+    const details = document.getElementById('work-order-manual-entry');
+    if (details) details.open = true;
+    if (workOrder) setWorkOrderFormData(workOrder);
+    setTimeout(() => scrollToElement('#work-order-form'), 120);
+  }
+
+  function renderScheduleWorkOrderRow(workOrder, options) {
+    const opts = options || {};
+    const wo = WorkOrderBrain.normalizeWorkOrder(workOrder);
+    const timeLabel = wo.startTime && wo.endTime
+      ? `${wo.startTime}〜${wo.endTime}`
+      : (wo.startTime || '時間未設定');
+    const cal = WorkOrderBrain.buildGoogleCalendarUrl(wo);
+    const dateLabel = opts.showDate
+      ? formatUpcomingDayLabel(wo.scheduledDate, TODAY())
+      : '';
+    const calendarBtn = cal.ready
+      ? `<a href="${esc(cal.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary" data-schedule-wo-calendar="${esc(wo.id)}">Googleカレンダー確認</a>`
+      : '';
+    const editBtn = `<button type="button" class="btn btn-sm btn-secondary" data-schedule-wo-edit="${esc(wo.id)}">編集</button>`;
+    return `<div class="schedule-work-order-row" data-work-order-id="${esc(wo.id)}">
+      <div class="schedule-work-order-meta">
+        ${dateLabel ? `<span class="schedule-wo-date">${esc(dateLabel)}</span>` : ''}
+        <span class="schedule-wo-time">${esc(timeLabel)}</span>
+        <span class="schedule-wo-name">${esc(wo.customerName || '（名前なし）')}</span>
+        <span class="schedule-wo-service">${esc((wo.serviceText || '—').slice(0, 28))}</span>
+        <span class="schedule-wo-amount">${esc(WorkOrderBrain.formatYen(wo.estimateAmount))}</span>
+        <span class="schedule-wo-source">${esc(wo.source || '—')}</span>
+        <span class="schedule-wo-status">${esc(WorkOrderBrain.formatStatus(wo.status))}</span>
+      </div>
+      <div class="schedule-work-order-actions">
+        ${calendarBtn}
+        ${editBtn}
+      </div>
+    </div>`;
+  }
+
+  function bindScheduleWorkOrderRowEvents(container) {
+    if (!container) return;
+    container.querySelectorAll('[data-schedule-wo-edit]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const wo = Storage.getWorkOrders().find(w => w.id === btn.dataset.scheduleWoEdit);
+        if (wo) openWorkOrderFormPanel(wo);
+      });
+    });
+    container.querySelectorAll('[data-schedule-wo-calendar]').forEach(link => {
+      link.addEventListener('click', () => {
+        Storage.updateWorkOrder(link.dataset.scheduleWoCalendar, { calendarAdded: true });
+      });
+    });
+  }
+
+  function renderScheduleTodayList() {
+    const el = document.getElementById('schedule-today-list');
+    if (!el) return;
+    const today = TODAY();
+    const items = WorkOrderBrain.getTodayWorkOrders(Storage.getWorkOrders(), today);
+    if (!items.length) {
+      el.innerHTML = '<p class="placeholder-text">今日の作業予定はありません。</p>';
+      return;
+    }
+    el.innerHTML = items.map(wo => renderScheduleWorkOrderRow(wo)).join('');
+    bindScheduleWorkOrderRowEvents(el);
+  }
+
+  function renderScheduleUpcomingList() {
+    const el = document.getElementById('schedule-upcoming-list');
+    const moreEl = document.getElementById('schedule-upcoming-more');
+    if (!el) return;
+    const today = TODAY();
+    const limit = scheduleUpcomingExpanded ? 50 : 8;
+    const items = WorkOrderBrain.getUpcomingWorkOrders(Storage.getWorkOrders(), today);
+    if (!items.length) {
+      el.innerHTML = '<p class="placeholder-text">直近の作業予定はありません。</p>';
+      if (moreEl) moreEl.innerHTML = '';
+      return;
+    }
+    const visible = items.slice(0, limit);
+    const hiddenCount = Math.max(0, items.length - visible.length);
+    el.innerHTML = visible.map(wo => renderScheduleWorkOrderRow(wo, { showDate: true })).join('');
+    bindScheduleWorkOrderRowEvents(el);
+    if (moreEl) {
+      if (!hiddenCount && !scheduleUpcomingExpanded && items.length <= 8) {
+        moreEl.innerHTML = '';
+      } else if (hiddenCount > 0 && !scheduleUpcomingExpanded) {
+        moreEl.innerHTML = `<button type="button" class="btn btn-sm btn-secondary" id="btn-schedule-upcoming-more">さらに見る（あと${hiddenCount}件）</button>`;
+        const btn = document.getElementById('btn-schedule-upcoming-more');
+        if (btn) {
+          btn.addEventListener('click', () => {
+            scheduleUpcomingExpanded = true;
+            renderScheduleUpcomingList();
+          });
+        }
+      } else {
+        moreEl.innerHTML = '';
+      }
+    }
+  }
+
+  function renderScheduleImportBrief() {
+    const briefEl = document.getElementById('schedule-import-brief');
+    const resultEl = document.getElementById('schedule-import-result');
+    if (briefEl) {
+      const summary = getCalendarCandidateSummary();
+      if (!summary) {
+        briefEl.innerHTML = '<p class="placeholder-text">予定取り込みの状態を読み込めません。</p>';
+      } else if (!summary.pendingCount && !summary.reviewCount) {
+        briefEl.innerHTML = '<p class="placeholder-text">取り込み済みの未反映予定はありません。</p>';
+      } else {
+        briefEl.innerHTML = `<p>取り込み済み予定（未反映）：${summary.pendingCount}件 / 要確認：${summary.reviewCount}件</p>`;
+      }
+    }
+    if (resultEl) {
+      const importResultEl = document.getElementById('calendar-candidate-import-result');
+      const resultHtml = importResultEl && !importResultEl.classList.contains('hidden')
+        ? importResultEl.innerHTML
+        : '';
+      resultEl.innerHTML = resultHtml
+        ? `<div class="schedule-import-result-note">直近の取り込み結果（詳細は予定取り込み画面）</div>${resultHtml}`
+        : '<p class="placeholder-text schedule-import-result-empty">直近の取り込み結果は予定取り込み画面で確認できます。</p>';
+    }
+  }
+
+  let scheduleUpcomingExpanded = false;
+
   function renderWorkOrderPendingCompletionList() {
-    renderRevenueConfirmationQueueBlock('work-order-pending-completion-list', { limit: 5 });
+    renderRevenueConfirmationQueueBlock('schedule-revenue-queue-list', {
+      limit: 8,
+      workflowMode: true,
+      scheduleMode: true,
+      emptyText: '作業後の売上確定待ちはありません。今日以前で金額あり・売上未確定の予定がここに表示されます。'
+    });
   }
 
   function renderWorkOrderItemActions(workOrder) {
@@ -10174,10 +10336,7 @@
     container.querySelectorAll('[data-wo-edit]').forEach(btn => {
       btn.addEventListener('click', () => {
         const wo = Storage.getWorkOrders().find(w => w.id === btn.dataset.woEdit);
-        if (wo) {
-          setWorkOrderFormData(wo);
-          scrollToElement('#work-order-form');
-        }
+        if (wo) openWorkOrderFormPanel(wo);
       });
     });
   }
@@ -10306,12 +10465,14 @@
   function renderWorkOrderView() {
     try {
       safeRenderSection(null, () => renderWorkOrderCalendarBrief(), '過去売上復元');
-      safeRenderSection('work-order-pending-completion-list', () => renderWorkOrderPendingCompletionList(), '売上確定待ち');
+      safeRenderSection('schedule-revenue-queue-list', () => renderWorkOrderPendingCompletionList(), '作業後の売上確定待ち');
       if (document.getElementById('work-order-forecast')) {
         safeRenderSection('work-order-forecast', () => renderWorkOrderForecast(), '予定売上');
       }
+      safeRenderSection('schedule-today-list', () => renderScheduleTodayList(), '今日の作業予定');
+      safeRenderSection('schedule-upcoming-list', () => renderScheduleUpcomingList(), '直近の作業予定');
+      safeRenderSection(null, () => renderScheduleImportBrief(), '予定取り込み');
       safeRenderSection('work-order-week-list', () => renderWorkOrderWeekList(), '今週の作業予定');
-      safeRenderSection('work-order-today-list', () => renderWorkOrderTodayList(), '今日の作業予定');
       safeRenderSection('work-order-from-intake-list', () => renderWorkOrderFromIntakeList(), '受付から作業予定化');
       fillWorkOrderSelects();
       updateWorkOrderCalendarHint();
