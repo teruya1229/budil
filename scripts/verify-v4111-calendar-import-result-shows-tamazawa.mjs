@@ -1,5 +1,5 @@
 /**
- * Budil v4.11.11 - calendar import result shows tamazawa candidate verification.
+ * Budil v4.11.12 - calendar import result shows tamazawa candidate verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/calendar-candidate-brain.js', 'js/app.js', 'js/storage.j
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.11.11 calendar-import-result-shows-tamazawa ==');
+console.log('== v4.11.12 calendar-import-result-shows-tamazawa ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -52,11 +52,11 @@ const tamazawaItem = {
 };
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.11'), 'index.html should show v4.11.11');
-assert(indexHtml.includes('js/app.js?v=4.11.11'), 'app.js cache buster should be v4.11.11');
+assert(indexHtml.includes('v4.11.12'), 'index.html should show v4.11.12');
+assert(indexHtml.includes('js/app.js?v=4.11.12'), 'app.js cache buster should be v4.11.12');
 assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.11.1'), 'calendar brain cache buster should remain v4.11.1');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.11'"), 'storage.js version should be v4.11.11');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.11'"), 'data-backup version should be v4.11.11');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.12'"), 'storage.js version should be v4.11.12');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.12'"), 'data-backup version should be v4.11.12');
 
 console.log('== import result UI wiring ==');
 assert(appJs.includes('renderCalendarImportResultBreakdownHtml'), 'import result breakdown renderer should exist');
@@ -168,4 +168,4 @@ console.log('== excluded controls remain ==');
   assert(preview.items.every(i => i.futureImport.status === 'excluded'), 'holiday/no-amount should stay excluded');
 }
 
-console.log('\nAll v4.11.11 calendar-import-result-shows-tamazawa checks passed.');
+console.log('\nAll v4.11.12 calendar-import-result-shows-tamazawa checks passed.');

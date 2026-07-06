@@ -1,5 +1,5 @@
 /**
- * Budil v4.11.11 - monthly billing workflow for coop/yamada verification.
+ * Budil v4.11.12 - monthly billing workflow for coop/yamada verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -23,7 +23,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.11.11 monthly-billing-workflow ==');
+console.log('== v4.11.12 monthly-billing-workflow ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -39,14 +39,14 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.11'), 'index.html should show v4.11.11');
-assert(indexHtml.includes('js/app.js?v=4.11.11'), 'app.js cache buster should be v4.11.11');
-assert(indexHtml.includes('css/style.css?v=4.11.11'), 'style.css cache buster should be v4.11.11');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.11'"), 'storage.js version should be v4.11.11');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.11'"), 'data-backup version should be v4.11.11');
-assert(statusMd.includes('v4.11.11'), 'status.md should document v4.11.11');
-assert(handoffMd.includes('v4.11.11'), 'handoff.md should document v4.11.11');
-assert(decisionLog.includes('v4.11.11'), 'decision-log.md should record v4.11.11');
+assert(indexHtml.includes('v4.11.12'), 'index.html should show v4.11.12');
+assert(indexHtml.includes('js/app.js?v=4.11.12'), 'app.js cache buster should be v4.11.12');
+assert(indexHtml.includes('css/style.css?v=4.11.12'), 'style.css cache buster should be v4.11.12');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.12'"), 'storage.js version should be v4.11.12');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.12'"), 'data-backup version should be v4.11.12');
+assert(statusMd.includes('v4.11.12'), 'status.md should document v4.11.12');
+assert(handoffMd.includes('v4.11.12'), 'handoff.md should document v4.11.12');
+assert(decisionLog.includes('v4.11.12'), 'decision-log.md should record v4.11.12');
 
 console.log('== receivables layout ==');
 const viewReceivables = indexHtml.slice(
@@ -158,4 +158,4 @@ assert(!followJs.includes('buildMonthlyBillingGroups'), 'follow-up-brain must no
 
 assert(css.includes('#view-receivables .receivables-monthly-billing-groups'), 'receivables monthly billing CSS required');
 
-console.log('\nAll v4.11.11 monthly-billing-workflow checks passed.');
+console.log('\nAll v4.11.12 monthly-billing-workflow checks passed.');

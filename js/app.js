@@ -13713,6 +13713,9 @@
       return `<button type="button" class="btn btn-sm btn-secondary reception-primary-action" data-reception-open-revenue="${esc(intakeId)}">関連売上を見る</button>`;
     }
     const action = state && state.primaryAction || 'case';
+    if (action === 'createWorkOrder' || action === 'openWorkOrder') {
+      return '';
+    }
     const label = state && state.primaryLabel || '案件化する';
     const attr = {
       openRevenue: 'data-reception-open-revenue',
@@ -13725,6 +13728,35 @@
     return `<button type="button" class="${cls}" ${attr}="${esc(intakeId)}">${esc(label)}</button>`;
   }
 
+  function renderReceptionVisibleActions(intake, state) {
+    const id = intake.id;
+    const resolved = isReceptionWorkflowRevenueResolved(state);
+    const buttons = [
+      `<button type="button" class="btn btn-sm btn-secondary" data-reception-open="${esc(id)}">受付詳細</button>`
+    ];
+    if (resolved) {
+      buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-reception-open-revenue="${esc(id)}">関連売上を見る</button>`);
+    } else {
+      if (state.hasWorkOrder) {
+        const cal = WorkOrderBrain.buildGoogleCalendarUrl(state.workOrder);
+        if (cal.ready) {
+          buttons.push(`<a href="${esc(cal.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary" data-reception-gcal-link="${esc(id)}">Googleカレンダー確認</a>`);
+        } else {
+          buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-reception-gcal-check="${esc(id)}">Googleカレンダー確認</button>`);
+        }
+        buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-reception-schedule-check="${esc(id)}">予定確認</button>`);
+      } else {
+        buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-reception-gcal-check="${esc(id)}">Googleカレンダー確認</button>`);
+      }
+      if (state.completedNoRevenue || state.primaryAction === 'fillRevenue') {
+        buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-reception-nav-revenue="${esc(id)}">売上管理へ</button>`);
+      } else if (Number(intake.estimateAmount || 0) > 0 && !state.hasWorkOrder) {
+        buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-reception-nav-revenue="${esc(id)}">売上管理へ</button>`);
+      }
+    }
+    return `<div class="reception-visible-actions">${buttons.join('')}</div>`;
+  }
+
   function renderReceptionDetailActions(intake, state) {
     const id = intake.id;
     const leadAction = state.hasLead
@@ -13732,7 +13764,7 @@
       : `<button type="button" class="btn btn-sm btn-secondary" data-reception-create-lead="${esc(id)}">営業先を作成</button>`;
     const workAction = state.hasWorkOrder
       ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-work-order="${esc(id)}">作業予定を開く</button>`
-      : `<button type="button" class="btn btn-sm btn-secondary" data-reception-create-work-order="${esc(id)}">この受付から作業予定を作る</button>`;
+      : '';
     const revenueAction = isReceptionWorkflowRevenueResolved(state)
       ? `<button type="button" class="btn btn-sm btn-secondary" data-reception-open-revenue="${esc(id)}">関連売上を見る</button>`
       : `<button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(id)}">この受付から売上確定する</button>`;
@@ -13753,14 +13785,75 @@
 
   function renderReceptionActionBlock(intake, options) {
     const state = getReceptionWorkflowState(intake);
-    const action = state && state.primaryAction;
-    const hidePrimary = action === 'openWorkOrder' || action === 'createWorkOrder';
     return `
       <div class="reception-action-block">
-        ${hidePrimary ? '' : renderReceptionPrimaryAction(intake.id, state, options)}
-        ${hidePrimary ? '' : renderReceptionStateLabels(state)}
+        ${renderReceptionVisibleActions(intake, state)}
+        ${renderReceptionStateLabels(state)}
         ${renderReceptionDetailActions(intake, state)}
       </div>`;
+  }
+
+  function renderReceptionListItemRow(item) {
+    const intake = item.intake;
+    const state = item.state;
+    const workflow = state;
+    const scheduleLabel = state.workOrder && state.workOrder.scheduledDate
+      ? formatReceptionDate(state.workOrder.scheduledDate)
+      : (intake.preferredDatesText || '—');
+    const amountLabel = intake.estimateAmount
+      ? RevenueBrain.formatYen(intake.estimateAmount)
+      : '—';
+    const nextAction = ReceptionBrain.getReceptionNextActionLabel(intake, state, {
+      leads: Storage.getLeads(),
+      workOrders: Storage.getWorkOrders(),
+      revenues: Storage.getRevenueRecords()
+    });
+    const serviceSummary = (intake.serviceText || '—').slice(0, 48) + ((intake.serviceText || '').length > 48 ? '…' : '');
+    const resolved = isReceptionWorkflowRevenueResolved(state);
+    const statusLabels = (workflow.labels || []).filter(label => !(resolved && label === '売上未確定'));
+    const statusText = statusLabels.length ? statusLabels.join(' / ') : formatReceptionStatus(intake.status);
+    return `
+      <div class="reception-saved-item reception-saved-item-v41112 reception-bucket-${esc(item.bucket)}" data-intake-id="${esc(intake.id)}" data-reception-bucket="${esc(item.bucket)}">
+        <div class="reception-saved-grid">
+          <span class="reception-saved-date" title="受付日">${esc(formatReceptionDate(intake.createdAt))}</span>
+          <strong class="reception-saved-title" title="氏名">${esc(intake.customerName || '（名前なし）')}</strong>
+          <span class="reception-saved-source" title="依頼元">${esc(intake.source || '—')}</span>
+          <span class="reception-saved-service" title="作業内容">${esc(serviceSummary)}</span>
+          <span class="reception-saved-schedule" title="希望日/予定日">${esc(scheduleLabel)}</span>
+          <span class="reception-saved-amount" title="金額">${esc(amountLabel)}</span>
+          <span class="reception-saved-status" title="状態">${esc(statusText)}</span>
+          <span class="reception-saved-next" title="次アクション">次：${esc(nextAction)}</span>
+        </div>
+        ${renderReceptionActionBlock(intake)}
+        <div class="reception-saved-actions reception-legacy-actions hidden">
+          <button type="button" class="btn btn-sm btn-primary" data-reception-create-lead="${esc(intake.id)}">営業先を作成</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-create-work-order="${esc(intake.id)}">この受付から作業予定を作る</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-add-task="${esc(intake.id)}">毎日やることに追加</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(intake.id)}">売上フォームに反映</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-revenue-candidate="${esc(intake.id)}">売上候補にする</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-done="${esc(intake.id)}">対応済みにする</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-archive="${esc(intake.id)}">保管</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-reception-edit="${esc(intake.id)}">編集</button>
+        </div>
+      </div>`;
+  }
+
+  function renderReceptionListSection(title, items, options) {
+    const opts = options || {};
+    if (!items.length) return '';
+    const body = items.map(renderReceptionListItemRow).join('');
+    if (opts.collapsed) {
+      return `
+        <details class="reception-list-section reception-list-section-collapsed">
+          <summary class="reception-list-section-title">${esc(title)} <span class="reception-list-section-count">${items.length}件</span></summary>
+          <div class="reception-list-section-body">${body}</div>
+        </details>`;
+    }
+    return `
+      <section class="reception-list-section reception-list-section-open">
+        <h3 class="reception-list-section-title">${esc(title)} <span class="reception-list-section-count">${items.length}件</span></h3>
+        <div class="reception-list-section-body">${body}</div>
+      </section>`;
   }
 
   function renderReceptionNextActions() {
@@ -13869,58 +13962,33 @@
     const el = document.getElementById('reception-saved-list');
     if (!el) return;
     const intakes = Storage.getReceptionIntakes();
-    const leads = Storage.getLeads();
     if (!intakes.length) {
       el.innerHTML = '<p class="placeholder-text">保存済み受付はありません。</p>';
       return;
     }
-    el.innerHTML = intakes.map(intake => {
-      const lead = intake.relatedLeadId ? leads.find(l => l.id === intake.relatedLeadId) : null;
-      const leadLabel = lead ? lead.company : (intake.relatedLeadId ? '（削除済み）' : '—');
-      const workflow = getReceptionWorkflowState(intake);
-      const revLabel = workflow.hasRevenue
-        ? (intake.relatedRevenueId ? 'あり' : '一致')
-        : (intake.status === 'revenue_candidate' ? '候補' : '—');
-      const area = MapBrain.getIntakeArea(intake);
-      const addr = (intake.address || '').trim();
-      const hasWorkOrder = workflow.hasWorkOrder;
-      const handling = (intake.handlingStatus || intake.handling || '—').trim() || '—';
-      const serviceSummary = (intake.serviceText || '—').slice(0, 48) + ((intake.serviceText || '').length > 48 ? '…' : '');
-      return `
-      <div class="reception-saved-item reception-saved-item-compact" data-intake-id="${esc(intake.id)}">
-        <div class="reception-saved-header">
-          <span class="reception-saved-date">${esc(formatReceptionDate(intake.createdAt))}</span>
-          <span class="reception-status-badge reception-status-${esc(intake.status)}">${esc(formatReceptionStatus(intake.status))}</span>
-          ${hasWorkOrder ? '<span class="reception-work-order-badge">作業予定あり</span>' : ''}
-        </div>
-        <p class="reception-saved-title"><strong>${esc(intake.customerName || '（名前なし）')}</strong></p>
-        <p class="reception-saved-meta reception-saved-summary">${esc(serviceSummary)} / 対応：${esc(handling)}</p>
-        <details class="reception-item-details">
-          <summary>詳細を見る</summary>
-          <p class="reception-saved-meta">依頼元：${esc(intake.source || '—')}</p>
-          <p class="reception-saved-meta">電話：${esc(intake.phone || '—')}</p>
-          <p class="reception-saved-meta">住所：${esc(addr || '—')}</p>
-          <p class="reception-saved-meta">エリア：${esc(area)} ${renderAreaDistanceBadge(area, addr)}</p>
-          <p class="reception-saved-meta">希望日：${esc(intake.preferredDatesText || '—')}</p>
-          <p class="reception-saved-meta">概算金額：${intake.estimateAmount ? esc(RevenueBrain.formatYen(intake.estimateAmount)) : '—'}</p>
-          ${intake.memo ? `<p class="reception-saved-meta reception-saved-memo">受付メモ：${esc(intake.memo)}</p>` : ''}
-          <p class="reception-saved-meta">関連営業先：${esc(leadLabel)} / 売上：${esc(revLabel)}</p>
-          <p class="reception-calendar-note">日程確定後はGoogleカレンダーに登録し、予定取り込みから読み込んでください。</p>
-          <div class="reception-saved-map">${renderMapActionsHtml(addr, { area, showNoAddress: true })}</div>
-        </details>
-        ${renderReceptionActionBlock(intake)}
-        <div class="reception-saved-actions reception-legacy-actions hidden">
-          <button type="button" class="btn btn-sm btn-primary" data-reception-create-lead="${esc(intake.id)}">営業先を作成</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-reception-create-work-order="${esc(intake.id)}">この受付から作業予定を作る</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-reception-add-task="${esc(intake.id)}">毎日やることに追加</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-reception-fill-revenue="${esc(intake.id)}">売上フォームに反映</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-reception-revenue-candidate="${esc(intake.id)}">売上候補にする</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-reception-done="${esc(intake.id)}">対応済みにする</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-reception-archive="${esc(intake.id)}">保管</button>
-          <button type="button" class="btn btn-sm btn-secondary" data-reception-edit="${esc(intake.id)}">編集</button>
-        </div>
-      </div>`;
-    }).join('');
+    const ctx = {
+      leads: Storage.getLeads(),
+      workOrders: Storage.getWorkOrders(),
+      revenues: Storage.getRevenueRecords()
+    };
+    const buckets = ReceptionBrain.groupReceptionIntakesForList(intakes, ctx, TODAY());
+    const sections = [
+      { key: 'needsAction', title: '未処理・要対応の受付', collapsed: false },
+      { key: 'todayCheck', title: '今日確認する受付', collapsed: false },
+      { key: 'revenueResolved', title: '売上確定済み受付', collapsed: false },
+      { key: 'completed', title: '完了・対応不要・古い受付', collapsed: true }
+    ];
+    const html = sections.map(section => renderReceptionListSection(
+      section.title,
+      buckets[section.key] || [],
+      { collapsed: section.collapsed }
+    )).join('');
+    const total = intakes.length;
+    const activeCount = (buckets.needsAction || []).length + (buckets.todayCheck || []).length;
+    el.innerHTML = `
+      <p class="reception-list-overview">受付 ${total}件（要確認 ${activeCount}件 / 売上確定済み ${(buckets.revenueResolved || []).length}件）</p>
+      <p class="reception-list-flow-note">受付 → AI番頭/人間確認 → Googleカレンダー → Budil予定取り込み の順で進めます。</p>
+      ${html || '<p class="placeholder-text">表示できる受付がありません。</p>'}`;
     bindReceptionListEvents(el);
   }
 
@@ -13968,6 +14036,37 @@
           setReceptionFormData(intake);
           scrollToElement('#reception-form');
         }
+      });
+    });
+    container.querySelectorAll('[data-reception-gcal-check]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        window.open('https://calendar.google.com/calendar/u/0/r', '_blank', 'noopener,noreferrer');
+      });
+    });
+    container.querySelectorAll('[data-reception-schedule-check]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const intake = Storage.getReceptionIntakes().find(i => i.id === btn.dataset.receptionScheduleCheck);
+        navigateToView('calendar-registration');
+        const state = intake ? getReceptionWorkflowState(intake) : null;
+        const wo = state && state.workOrder;
+        const target = wo && wo.scheduledDate === TODAY()
+          ? '#schedule-today-list'
+          : '#schedule-upcoming-list';
+        setTimeout(() => scrollToElement(target), 160);
+      });
+    });
+    container.querySelectorAll('[data-reception-nav-revenue]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const intake = Storage.getReceptionIntakes().find(i => i.id === btn.dataset.receptionNavRevenue);
+        if (!intake) return;
+        const state = getReceptionWorkflowState(intake);
+        if (state.revenue) {
+          navigateToView('revenue');
+          openRevenueEdit(state.revenue.id);
+          return;
+        }
+        navigateToView('revenue');
+        setTimeout(() => scrollToElement('#revenue-queue-list'), 160);
       });
     });
   }

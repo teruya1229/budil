@@ -1,5 +1,5 @@
 /**
- * Budil v4.11.11 - clarify monthly total and scheduled metrics verification.
+ * Budil v4.11.12 - clarify monthly total and scheduled metrics verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -23,7 +23,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.11.11 clarify-monthly-total-scheduled-metrics ==');
+console.log('== v4.11.12 clarify-monthly-total-scheduled-metrics ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -41,15 +41,15 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.11'), 'index.html should show v4.11.11');
-assert(indexHtml.includes('js/app.js?v=4.11.11'), 'app.js cache buster should be v4.11.11');
-assert(indexHtml.includes('js/revenue-brain.js?v=4.11.11'), 'revenue-brain cache buster should be v4.11.11');
-assert(indexHtml.includes('js/executive-brain.js?v=4.11.11'), 'executive-brain cache buster should be v4.11.11');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.11'"), 'storage.js version should be v4.11.11');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.11'"), 'data-backup version should be v4.11.11');
-assert(statusMd.includes('v4.11.11'), 'status.md should document v4.11.11');
-assert(handoffMd.includes('v4.11.11'), 'handoff.md should document v4.11.11');
-assert(decisionLog.includes('v4.11.11'), 'decision-log.md should record v4.11.11');
+assert(indexHtml.includes('v4.11.12'), 'index.html should show v4.11.12');
+assert(indexHtml.includes('js/app.js?v=4.11.12'), 'app.js cache buster should be v4.11.12');
+assert(indexHtml.includes('js/revenue-brain.js?v=4.11.12'), 'revenue-brain cache buster should be v4.11.12');
+assert(indexHtml.includes('js/executive-brain.js?v=4.11.12'), 'executive-brain cache buster should be v4.11.12');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.12'"), 'storage.js version should be v4.11.12');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.12'"), 'data-backup version should be v4.11.12');
+assert(statusMd.includes('v4.11.12'), 'status.md should document v4.11.12');
+assert(handoffMd.includes('v4.11.12'), 'handoff.md should document v4.11.12');
+assert(decisionLog.includes('v4.11.12'), 'decision-log.md should record v4.11.12');
 
 console.log('== shared metrics fields ==');
 assert(revenueBrainJs.includes('scheduledRevenue = plannedAdditionalRevenue'), 'scheduledRevenue should alias plannedAdditionalRevenue');
@@ -82,9 +82,9 @@ assert(appJs.includes('<span>予定利益</span>'), 'executive home should show 
 assert(executiveBrainJs.includes("monthRevenueLabel = '合計売上'"), 'executive monthRevenueLabel should be 合計売上');
 
 console.log('== untouched files ==');
-assert(!receptionJs.includes('buildSharedMonthlyMetrics'), 'reception-brain must not change for v4.11.11');
-assert(!documentsJs.includes('buildSharedMonthlyMetrics'), 'documents-brain must not change for v4.11.11');
-assert(!followJs.includes('buildSharedMonthlyMetrics'), 'follow-up-brain must not change for v4.11.11');
+assert(!receptionJs.includes('buildSharedMonthlyMetrics'), 'reception-brain must not change for v4.11.12');
+assert(!documentsJs.includes('buildSharedMonthlyMetrics'), 'documents-brain must not change for v4.11.12');
+assert(!followJs.includes('buildSharedMonthlyMetrics'), 'follow-up-brain must not change for v4.11.12');
 assert(profitBrainJs.includes('getSharedMonthlyMetricsForProfit'), 'profit-brain should delegate to RevenueBrain shared metrics');
 assert(!profitBrainJs.includes('buildSharedMonthlyMetrics(ctx)'), 'profit-brain must not define its own buildSharedMonthlyMetrics');
 
@@ -165,4 +165,4 @@ console.log('== numeric definition tests ==');
 
 execSync('node scripts/verify-v4112-unified-monthly-metrics.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('\nAll v4.11.11 clarify-monthly-total-scheduled-metrics checks passed.');
+console.log('\nAll v4.11.12 clarify-monthly-total-scheduled-metrics checks passed.');

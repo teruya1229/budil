@@ -21,7 +21,7 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.11.11'), 'index.html should show v4.11.11');
+assert(indexHtml.includes('v4.11.12'), 'index.html should show v4.11.12');
 assert(indexHtml.includes('受付・予定確認'), 'calendar registration view should be renamed');
 assert(
   indexHtml.includes('Googleカレンダーが作業予定の正本'),
@@ -39,15 +39,21 @@ assert(
   'work order form should start in details (closed by default)'
 );
 
-const receptionListBlock = appJs.slice(
-  appJs.indexOf('function renderReceptionSavedList'),
-  appJs.indexOf('function bindReceptionListEvents')
-);
-assert(receptionListBlock.includes('reception-item-details'), 'reception cards should use detail collapse');
-assert(receptionListBlock.includes('reception-saved-summary'), 'reception cards should have compact summary');
 assert(
-  receptionListBlock.includes('hidePrimary') || appJs.includes("hidePrimary = action === 'openWorkOrder'"),
-  'work order primary actions should be hidden from reception card main row'
+  appJs.includes('reception-list-section') && appJs.includes('reception-detail-actions'),
+  'reception list should use section grouping and detail collapse'
+);
+assert(
+  appJs.includes('reception-saved-grid') && appJs.includes('reception-saved-next'),
+  'reception cards should show next-action summary grid'
+);
+assert(
+  appJs.includes('renderReceptionVisibleActions'),
+  'reception list should use visible next-action buttons without work-order creation'
+);
+assert(
+  !appJs.includes("hidePrimary = action === 'openWorkOrder'"),
+  'reception list should not use old work-order primary hide pattern'
 );
 assert(
   appJs.includes('作業予定を開く') && appJs.includes('reception-detail-actions'),

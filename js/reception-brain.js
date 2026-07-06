@@ -721,5 +721,127 @@ const ReceptionBrain = {
       });
     }
     return actions.slice(0, limit || 5);
+  },
+
+  addDaysIso(dateStr, days) {
+    const d = new Date(String(dateStr || '').slice(0, 10) + 'T12:00:00');
+    if (Number.isNaN(d.getTime())) return '';
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  },
+
+  isReceptionCompletedBucket(intake, state) {
+    const n = this.normalizeIntake(intake);
+    if (n.status === 'done' || n.status === 'archived') return true;
+    const handling = String(n.handlingStatus || '');
+    return /対応不要|完了済|不要|キャンセル/.test(handling);
+  },
+
+  needsReceptionAttention(intake, state, context) {
+    const n = this.normalizeIntake(intake);
+    if (n.status === 'done' || n.status === 'archived') return false;
+    if (this.isIntakeRevenueResolved(n, context)) return false;
+    if (!n.source || !n.serviceText || !n.customerName) return true;
+    if (!state.hasLead) return true;
+    if (n.status === 'new' || n.status === 'revenue_candidate') return true;
+    const scheduleUncertain = !state.hasWorkOrder && (
+      /日程|希望日/.test([n.preferredDatesText, n.handlingStatus, n.memo].join(''))
+    );
+    if (scheduleUncertain) return true;
+    if (state.hasWorkOrder) {
+      const wo = state.workOrder || {};
+      if (wo.status === 'tentative') return true;
+      if (wo.confirmationStatus && wo.confirmationStatus !== 'confirmed') return true;
+    }
+    if (/確認|写真|型番|未確定/.test([n.memo, n.handlingStatus].join(''))) return true;
+    if (state.completedNoRevenue || state.primaryAction === 'fillRevenue') return true;
+    return false;
+  },
+
+  isReceptionTodayRelated(intake, state, context, today) {
+    const n = this.normalizeIntake(intake);
+    const t = today || new Date().toISOString().slice(0, 10);
+    const workOrders = Array.isArray(context && context.workOrders) ? context.workOrders : [];
+    const related = Array.isArray(state.relatedWorkOrders) ? state.relatedWorkOrders : [];
+    if (related.some(w => w && w.scheduledDate === t)) return true;
+    const weekEnd = this.addDaysIso(t, 7);
+    if (weekEnd && related.some(w => w && w.scheduledDate >= t && w.scheduledDate <= weekEnd)) return true;
+    const nameKey = String(n.customerName || '').replace(/様$/g, '').trim();
+    if (nameKey && weekEnd) {
+      const matched = workOrders.some(w => {
+        if (!w || !w.scheduledDate || w.scheduledDate < t || w.scheduledDate > weekEnd) return false;
+        const woName = String(w.customerName || '').replace(/様$/g, '').trim();
+        return woName && (woName.includes(nameKey) || nameKey.includes(woName));
+      });
+      if (matched) return true;
+    }
+    if (n.preferredDatesText && /今日|本日/.test(n.preferredDatesText)) return true;
+    return false;
+  },
+
+  getReceptionListBucket(intake, context, today) {
+    const n = this.normalizeIntake(intake);
+    const ctx = context || {};
+    const state = this.getWorkflowState(n, ctx);
+    const t = today || new Date().toISOString().slice(0, 10);
+    if (this.isReceptionCompletedBucket(n, state)) return 'completed';
+    if (this.isIntakeRevenueResolved(n, ctx)) return 'revenueResolved';
+    if (this.needsReceptionAttention(n, state, ctx)) return 'needsAction';
+    if (this.isReceptionTodayRelated(n, state, ctx, t)) return 'todayCheck';
+    const created = (n.createdAt || '').slice(0, 10);
+    if (created) {
+      const ageDays = Math.floor((new Date(t + 'T12:00:00') - new Date(created + 'T12:00:00')) / 86400000);
+      if (ageDays >= 30) return 'completed';
+    }
+    return 'todayCheck';
+  },
+
+  getReceptionNextActionLabel(intake, state, context) {
+    if (this.isIntakeRevenueResolved(intake, context)) return '関連売上を見る';
+    if (state.completedNoRevenue || state.primaryAction === 'fillRevenue') return '売上管理へ';
+    if (state.hasWorkOrder) {
+      const wo = state.workOrder || {};
+      const cal = typeof WorkOrderBrain !== 'undefined'
+        ? WorkOrderBrain.buildGoogleCalendarUrl(wo)
+        : { ready: false };
+      if (cal.ready || wo.status === 'tentative') return 'Googleカレンダー確認';
+      return '予定確認';
+    }
+    const n = this.normalizeIntake(intake);
+    if (!n.source || !n.serviceText || !n.customerName) return '要確認';
+    if (/日程|希望日/.test([n.preferredDatesText, n.handlingStatus].join(''))) return 'Googleカレンダー確認';
+    return '受付詳細';
+  },
+
+  groupReceptionIntakesForList(intakes, context, today) {
+    const buckets = {
+      needsAction: [],
+      todayCheck: [],
+      revenueResolved: [],
+      completed: []
+    };
+    (intakes || []).forEach(intake => {
+      const n = this.normalizeIntake(intake);
+      const state = this.getWorkflowState(n, context || {});
+      const bucket = this.getReceptionListBucket(n, context, today);
+      buckets[bucket].push({ intake: n, state, bucket });
+    });
+    const byCreatedDesc = (a, b) => (b.intake.createdAt || '').localeCompare(a.intake.createdAt || '');
+    const byScheduleAsc = (a, b) => {
+      const da = (a.state.workOrder && a.state.workOrder.scheduledDate)
+        || a.intake.scheduledDate
+        || a.intake.preferredDatesText
+        || '';
+      const db = (b.state.workOrder && b.state.workOrder.scheduledDate)
+        || b.intake.scheduledDate
+        || b.intake.preferredDatesText
+        || '';
+      return String(da).localeCompare(String(db));
+    };
+    buckets.needsAction.sort(byCreatedDesc);
+    buckets.todayCheck.sort(byScheduleAsc);
+    buckets.revenueResolved.sort(byCreatedDesc);
+    buckets.completed.sort((a, b) => (a.intake.createdAt || '').localeCompare(b.intake.createdAt || ''));
+    return buckets;
   }
 };

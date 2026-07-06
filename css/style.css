@@ -5602,6 +5602,111 @@ body {
   gap: 0.75rem;
 }
 
+/* v4.11.12 受付一覧：次アクション別セクション */
+.reception-list-overview,
+.reception-list-flow-note {
+  margin: 0 0 0.65rem;
+  font-size: 0.9rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+.reception-list-section {
+  margin-bottom: 0.85rem;
+}
+
+.reception-list-section-title {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.reception-list-section-count {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-muted, #94a3b8);
+}
+
+.reception-list-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.reception-list-section-open .reception-list-section-title {
+  color: var(--text-primary, #e2e8f0);
+}
+
+.reception-list-section-collapsed > summary {
+  cursor: pointer;
+  list-style: disclosure-closed;
+}
+
+.reception-bucket-needsAction {
+  border-left: 3px solid #f59e0b;
+}
+
+.reception-bucket-todayCheck {
+  border-left: 3px solid #38bdf8;
+}
+
+.reception-bucket-revenueResolved {
+  border-left: 3px solid #22c55e;
+  opacity: 0.92;
+}
+
+.reception-bucket-completed {
+  border-left: 3px solid #94a3b8;
+  opacity: 0.85;
+}
+
+.reception-saved-grid {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, 0.7fr) minmax(5rem, 1fr) minmax(4.5rem, 0.8fr) minmax(6rem, 1.4fr) minmax(5rem, 0.9fr) minmax(4.5rem, 0.7fr) minmax(6rem, 1.2fr) minmax(5.5rem, 0.9fr);
+  gap: 0.35rem 0.5rem;
+  align-items: start;
+  margin-bottom: 0.45rem;
+  font-size: 0.86rem;
+}
+
+.reception-saved-grid .reception-saved-title {
+  margin: 0;
+}
+
+.reception-saved-source,
+.reception-saved-service,
+.reception-saved-schedule,
+.reception-saved-amount,
+.reception-saved-status,
+.reception-saved-next {
+  color: var(--text-muted, #94a3b8);
+  word-break: break-word;
+}
+
+.reception-saved-next {
+  color: #38bdf8;
+  font-weight: 500;
+}
+
+.reception-visible-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+@media (max-width: 900px) {
+  .reception-saved-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .reception-saved-grid .reception-saved-title {
+    grid-column: 1 / -1;
+  }
+
+  .reception-saved-next {
+    grid-column: 1 / -1;
+  }
+}
+
 .reception-saved-item {
   padding: 1rem;
   border: 1px solid rgba(148, 163, 184, 0.2);

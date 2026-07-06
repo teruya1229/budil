@@ -40,10 +40,10 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.11'), 'index.html should show v4.11.11');
-assert(indexHtml.includes('js/app.js?v=4.11.11'), 'app.js cache buster should be v4.11.11');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.11'"), 'storage.js version should be v4.11.11');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.11'"), 'data-backup version should be v4.11.11');
+assert(indexHtml.includes('v4.11.12'), 'index.html should show v4.11.12');
+assert(indexHtml.includes('js/app.js?v=4.11.12'), 'app.js cache buster should be v4.11.12');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.12'"), 'storage.js version should be v4.11.12');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.12'"), 'data-backup version should be v4.11.12');
 
 console.log('== sanitizing helpers ==');
 assert(documentsJs.includes('sanitizeDocumentForCustomerDisplay'), 'documents brain should sanitize customer display');
@@ -53,7 +53,7 @@ assert(!documentsJs.includes('rev.memo,\n      rev.description'), 'buildInvoiceF
 assert(documentsJs.includes('displayItems'), 'calcFromItems should expose displayItems for taxIncluded');
 assert(revenueJs.includes('getCustomerFacingServiceLabel'), 'revenue brain should expose service label helper');
 assert(appJs.includes('この受付から売上確定する'), 'v4.10.29 reception revenue action must remain');
-assert(indexHtml.includes('css/style.css?v=4.11.11'), 'v4.10.25 documents CSS cache buster must remain');
+assert(indexHtml.includes('css/style.css?v=4.11.12'), 'v4.10.25 documents CSS cache buster must remain');
 assert(!css.includes('v4.10.30'), 'css must not be changed for v4.10.30');
 
 for (const term of NG_TERMS) {
