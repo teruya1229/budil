@@ -1,5 +1,5 @@
 /**
- * Budil v4.12.0 - schedule page completion workflow verification.
+ * Budil v4.12.1 - schedule page completion workflow verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -24,7 +24,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.12.0 schedule-page-workflow ==');
+console.log('== v4.12.1 schedule-page-workflow ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -41,14 +41,14 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.0'), 'index.html should show v4.12.0');
-assert(indexHtml.includes('js/app.js?v=4.12.0'), 'app.js cache buster should be v4.12.0');
-assert(indexHtml.includes('css/style.css?v=4.12.0'), 'style.css cache buster should be v4.12.0');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.0'"), 'storage.js version should be v4.12.0');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.0'"), 'data-backup version should be v4.12.0');
-assert(statusMd.includes('v4.12.0'), 'status.md should document v4.12.0');
-assert(handoffMd.includes('v4.12.0'), 'handoff.md should document v4.12.0');
-assert(decisionLog.includes('v4.12.0'), 'decision-log.md should record v4.12.0');
+assert(indexHtml.includes('v4.12.1'), 'index.html should show v4.12.1');
+assert(indexHtml.includes('js/app.js?v=4.12.1'), 'app.js cache buster should be v4.12.1');
+assert(indexHtml.includes('css/style.css?v=4.12.1'), 'style.css cache buster should be v4.12.1');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.1'"), 'storage.js version should be v4.12.1');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.1'"), 'data-backup version should be v4.12.1');
+assert(statusMd.includes('v4.12.1'), 'status.md should document v4.12.1');
+assert(handoffMd.includes('v4.12.1'), 'handoff.md should document v4.12.1');
+assert(decisionLog.includes('v4.12.1'), 'decision-log.md should record v4.12.1');
 
 console.log('== schedule page layout order ==');
 const scheduleView = indexHtml.slice(
@@ -111,9 +111,9 @@ assert(indexHtml.includes('id="executive-home"'), 'executive home must remain');
 assert(indexHtml.includes('id="revenue-confirmation-queue-list"'), 'revenue queue must remain');
 assert(revenueBrainJs.includes('confirmedFeeAmount = confirmedRevenue - confirmedGrossProfit'), 'v4.11.5 fee formula must remain');
 assert(revenueBrainJs.includes('totalProfit = confirmedGrossProfit + scheduledGrossProfit - monthExpense'), 'totalProfit formula must remain');
-assert(!receptionJs.includes('renderScheduleTodayList'), 'reception-brain must not change for v4.12.0');
-assert(!documentsJs.includes('renderScheduleTodayList'), 'documents-brain must not change for v4.12.0');
-assert(!followJs.includes('renderScheduleTodayList'), 'follow-up-brain must not change for v4.12.0');
+assert(!receptionJs.includes('renderScheduleTodayList'), 'reception-brain must not change for v4.12.1');
+assert(!documentsJs.includes('renderScheduleTodayList'), 'documents-brain must not change for v4.12.1');
+assert(!followJs.includes('renderScheduleTodayList'), 'follow-up-brain must not change for v4.12.1');
 
 console.log('== forbidden label scan ==');
 for (const term of ['見込み利益', '見込み売上', '今月利益', '今月売上', '予定売上見込み']) {
@@ -163,4 +163,4 @@ assert(css.includes('#view-calendar-registration .schedule-revenue-queue-list'),
 
 execSync('node scripts/verify-v41110-executive-home-action-workflow.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('\nAll v4.12.0 schedule-page-workflow checks passed.');
+console.log('\nAll v4.12.1 schedule-page-workflow checks passed.');

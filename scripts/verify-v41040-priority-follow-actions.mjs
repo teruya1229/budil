@@ -41,10 +41,10 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.0'), 'index.html should show v4.12.0');
-assert(indexHtml.includes('js/app.js?v=4.12.0'), 'app.js cache buster should be v4.12.0');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.0'"), 'storage.js version should be v4.12.0');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.0'"), 'data-backup version should be v4.12.0');
+assert(indexHtml.includes('v4.12.1'), 'index.html should show v4.12.1');
+assert(indexHtml.includes('js/app.js?v=4.12.1'), 'app.js cache buster should be v4.12.1');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.1'"), 'storage.js version should be v4.12.1');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.1'"), 'data-backup version should be v4.12.1');
 
 console.log('== daily priority action wiring ==');
 assert(appJs.includes('renderDailyPriorityActionButtons'), 'daily priority action renderer should exist');

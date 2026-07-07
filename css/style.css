@@ -1373,6 +1373,76 @@ body {
   margin-top: 4px;
 }
 
+/* v4.12.1 顧客資産メモ */
+.customer-asset-memo-section {
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  background: var(--surface-muted, #f9fafb);
+}
+
+.customer-asset-memo-section legend {
+  padding: 0 0.35rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.customer-asset-memo-note {
+  margin: 0 0 0.65rem;
+  font-size: 0.82rem;
+  color: var(--text-muted, #6b7280);
+}
+
+.customer-asset-ref {
+  margin-top: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 6px;
+  background: var(--surface-muted, #f3f4f6);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.customer-asset-ref-compact {
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.82rem;
+}
+
+.customer-asset-ref-line {
+  margin: 0.15rem 0;
+}
+
+.customer-asset-ref-hint {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted, #6b7280);
+}
+
+.reception-customer-asset-ref {
+  margin-top: 0.5rem;
+}
+
+.sales-detail-customer-asset {
+  margin-top: 0.35rem;
+}
+
+.work-order-customer-asset-brief {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted, #6b7280);
+}
+
+.follow-up-customer-asset-ref {
+  margin-top: 0.35rem;
+}
+
+@media (max-width: 390px) {
+  .customer-asset-memo-section .form-row-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* v1.7 営業管理 */
 .sales-priority-label {
   display: inline-block;

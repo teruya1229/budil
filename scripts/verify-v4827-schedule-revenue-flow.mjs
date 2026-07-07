@@ -74,9 +74,9 @@ const completionBrain = load('js/work-completion-brain.js');
 
 console.log('== v4.10.1 schedule to revenue flow ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.12.0'), 'header version should be v4.10.1');
-assert(indexHtml.includes('Budil v4.12.0'), 'sidebar version should be v4.10.1');
-assert(indexHtml.includes('js/app.js?v=4.12.0'), 'app.js cache buster should be v4.10.1');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.12.1'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.12.1'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.12.1'), 'app.js cache buster should be v4.10.1');
 assert(indexHtml.includes('\u58f2\u4e0a\u4e88\u5b9a\uff08\u672a\u78ba\u5b9a\uff09'), 'daily schedule title should show unconfirmed label');
 assert(indexHtml.includes('daily-section-schedule'), 'daily schedule section should exist');
 assert(indexHtml.indexOf('daily-section-schedule') < indexHtml.indexOf('daily-section-revenue-assist'),

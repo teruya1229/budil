@@ -49,6 +49,15 @@
     '見送り': '見送り'
   };
 
+  const CUSTOMER_TYPE_HINTS = {
+    A: '丁寧に説明し、安心感を出す',
+    B: '写真・仕上がり・具体的成果を伝える',
+    C: '短く、手間を減らし、要点だけ伝える',
+    D: '料金・理由・根拠を明確にする',
+    E: '作業工程・確認内容・透明性を見せる',
+    F: '状態確認と安心材料を渡す'
+  };
+
   // ── 営業プリセット（v1.6）──
   // 目的: 営業先登録の最初に「何を売るか」を選ぶだけで、入力/提案/文面生成を揃える
   let currentSalesPreset = 'ai_docs';
@@ -103,6 +112,122 @@
       memoTemplate: '【エアコンクリーニング法人営業】\n・法人向けに定期対応で品質維持\n・運用に合わせた清掃提案'
     }
   };
+
+  function formatCustomerTypePair(major, minor) {
+    const m = String(major || '').trim();
+    const n = String(minor || '').trim();
+    if (!m && !n) return '';
+    return `${m || '—'} / ${n || '—'}`;
+  }
+
+  function hasCustomerAssetMemo(lead) {
+    if (!lead) return false;
+    return !!(String(lead.customerTypeMajor || '').trim()
+      || String(lead.customerTypeMinor || '').trim()
+      || String(lead.customerMemo || '').trim());
+  }
+
+  function readCustomerAssetMemoFromForm(prefix) {
+    const majorEl = document.getElementById(`${prefix}-customer-type-major`);
+    const minorEl = document.getElementById(`${prefix}-customer-type-minor`);
+    const memoEl = document.getElementById(`${prefix}-customer-memo`);
+    return {
+      customerTypeMajor: majorEl ? majorEl.value : '',
+      customerTypeMinor: minorEl ? minorEl.value : '',
+      customerMemo: memoEl ? memoEl.value.trim() : ''
+    };
+  }
+
+  function fillCustomerAssetMemoForm(prefix, lead) {
+    const majorEl = document.getElementById(`${prefix}-customer-type-major`);
+    const minorEl = document.getElementById(`${prefix}-customer-type-minor`);
+    const memoEl = document.getElementById(`${prefix}-customer-memo`);
+    const data = lead || {};
+    if (majorEl) majorEl.value = data.customerTypeMajor || '';
+    if (minorEl) minorEl.value = data.customerTypeMinor || '';
+    if (memoEl) memoEl.value = data.customerMemo || '';
+  }
+
+  function resolveLeadById(leadId) {
+    const id = String(leadId || '').trim();
+    if (!id) return null;
+    return Storage.getLeads().find(l => l && l.id === id) || null;
+  }
+
+  function resolveLeadForIntake(intake) {
+    if (!intake) return null;
+    return resolveLeadById(intake.relatedLeadId);
+  }
+
+  function resolveLeadForWorkOrder(wo) {
+    if (!wo) return null;
+    const lead = resolveLeadById(wo.leadId);
+    if (lead) return lead;
+    const intakeId = getWorkOrderReceptionId(wo);
+    if (!intakeId) return null;
+    const intake = Storage.getReceptionIntakes().find(i => i && i.id === intakeId);
+    return resolveLeadForIntake(intake);
+  }
+
+  function saveCustomerAssetMemoToLead(leadId, fields) {
+    const id = String(leadId || '').trim();
+    if (!id || !fields) return false;
+    const lead = resolveLeadById(id);
+    if (!lead) return false;
+    Storage.updateLead(id, {
+      customerTypeMajor: fields.customerTypeMajor || '',
+      customerTypeMinor: fields.customerTypeMinor || '',
+      customerMemo: fields.customerMemo || ''
+    });
+    return true;
+  }
+
+  function renderCustomerAssetMemoReferenceHtml(lead, options) {
+    const opts = options || {};
+    if (!lead) return '';
+    const pair = formatCustomerTypePair(lead.customerTypeMajor, lead.customerTypeMinor);
+    const memo = String(lead.customerMemo || '').trim();
+    if (!pair && !memo) return '';
+    const parts = [];
+    if (pair) {
+      parts.push(`<p class="customer-asset-ref-line"><span class="label-muted">顧客タイプ</span> ${esc(pair)}</p>`);
+      if (opts.showHint) {
+        const hints = [];
+        const major = String(lead.customerTypeMajor || '').trim();
+        const minor = String(lead.customerTypeMinor || '').trim();
+        if (major && CUSTOMER_TYPE_HINTS[major]) hints.push(CUSTOMER_TYPE_HINTS[major]);
+        if (minor && CUSTOMER_TYPE_HINTS[minor] && minor !== major) hints.push(CUSTOMER_TYPE_HINTS[minor]);
+        if (hints.length) {
+          parts.push(`<p class="customer-asset-ref-hint">${esc(hints.join(' / '))}</p>`);
+        }
+      }
+    }
+    if (memo) {
+      const memoText = opts.shortMemo
+        ? '顧客メモあり'
+        : (opts.memoPreview && memo.length > opts.memoPreview
+          ? `${memo.slice(0, opts.memoPreview)}…`
+          : memo);
+      parts.push(`<p class="customer-asset-ref-line"><span class="label-muted">顧客メモ</span> ${esc(memoText)}</p>`);
+    }
+    return parts.length
+      ? `<div class="customer-asset-ref${opts.compact ? ' customer-asset-ref-compact' : ''}">${parts.join('')}</div>`
+      : '';
+  }
+
+  function renderReceptionCustomerAssetRef(intake) {
+    const el = document.getElementById('reception-customer-asset-ref');
+    if (!el) return;
+    const lead = resolveLeadForIntake(intake);
+    const html = renderCustomerAssetMemoReferenceHtml(lead, { compact: true, memoPreview: 80 });
+    if (html) {
+      el.innerHTML = html;
+      el.classList.remove('hidden');
+    } else {
+      el.innerHTML = '';
+      el.classList.add('hidden');
+    }
+  }
 
   function toISODateLocal(d) {
     const y = d.getFullYear();
@@ -9907,6 +10032,12 @@
     document.getElementById('work-completion-payment-concern').checked = defaults.paymentConcern;
     document.getElementById('work-completion-actual-memo').value = defaults.additionalMemo;
     document.getElementById('work-completion-follow-memo').value = defaults.followMemo;
+    const linkedLead = resolveLeadForWorkOrder(wo);
+    const leadIdEl = document.getElementById('work-completion-lead-id');
+    const noteEl = document.getElementById('work-completion-customer-asset-note');
+    if (leadIdEl) leadIdEl.value = linkedLead ? linkedLead.id : '';
+    fillCustomerAssetMemoForm('work-completion', linkedLead);
+    if (noteEl) noteEl.classList.toggle('hidden', !!linkedLead);
     const hint = document.getElementById('work-completion-estimate-hint');
     if (hint) {
       hint.textContent = wo.estimateAmount
@@ -9950,6 +10081,8 @@
       : '';
     if (!confirm(`過去売上復元から確定売上として登録します。${diffMsg}\n\n既存売上は上書きしません。よろしいですか？`)) return false;
 
+    const leadIdForAsset = document.getElementById('work-completion-lead-id')?.value || '';
+    const assetFields = readCustomerAssetMemoFromForm('work-completion');
     const result = Storage.convertCalendarPastCandidateToRevenue(wo.id, {
       today: TODAY(),
       override: {
@@ -9976,6 +10109,7 @@
       return false;
     }
     const newRecord = (result.addedRecords && result.addedRecords[0]) || null;
+    if (leadIdForAsset) saveCustomerAssetMemoToLead(leadIdForAsset, assetFields);
     closeWorkCompletionModal();
     refreshAfterWorkCompletion();
     renderDailyRevenueConfirmationQueue();
@@ -10029,7 +10163,10 @@
 
     const revenuePayload = WorkCompletionBrain.createRevenuePayloadFromWorkOrder(wo, input);
     if (!confirmRevenueSaveWithDuplicateCheck(revenuePayload, '')) return;
+    const leadIdForAsset = document.getElementById('work-completion-lead-id')?.value || '';
+    const assetFields = readCustomerAssetMemoFromForm('work-completion');
     const newRecord = Storage.addRevenueRecord(revenuePayload);
+    if (leadIdForAsset) saveCustomerAssetMemoToLead(leadIdForAsset, assetFields);
     const woPatch = WorkCompletionBrain.markWorkOrderCompleted(wo, newRecord, input);
     Storage.updateWorkOrder(workOrderId, woPatch);
     const intakeId = getWorkOrderReceptionId(wo);
@@ -10278,6 +10415,10 @@
     const opts = options || {};
     const wo = WorkOrderBrain.normalizeWorkOrder(workOrder);
     const area = WorkOrderBrain.getWorkOrderArea(wo);
+    const linkedLead = resolveLeadForWorkOrder(wo);
+    const assetBrief = hasCustomerAssetMemo(linkedLead)
+      ? `<p class="work-order-customer-asset-brief">顧客タイプ ${esc(formatCustomerTypePair(linkedLead.customerTypeMajor, linkedLead.customerTypeMinor))}${linkedLead.customerMemo ? ' / 顧客メモあり' : ''}</p>`
+      : '';
     const timeLabel = wo.startTime && wo.endTime ? `${wo.startTime}〜${wo.endTime}` : (wo.startTime || '時間未設定');
     const todayClass = opts.isToday ? ' is-today' : '';
     return `
@@ -10290,6 +10431,7 @@
         </div>
         <p class="work-order-item-meta"><strong>${esc(wo.customerName || '（名前なし）')}</strong> / ${esc(wo.serviceText || '—')}</p>
         <p class="work-order-item-meta">エリア：${esc(area)} ${renderAreaDistanceBadge(area, wo.address)} / 予定売上：${esc(WorkOrderBrain.formatYen(wo.estimateAmount))}${typeof CalendarCandidateBrain !== 'undefined' && CalendarCandidateBrain.isCalendarCandidateWorkOrder(wo) && !wo.actualRevenueId ? ' <span class="work-order-not-revenue">（売上未確定）</span>' : ''}</p>
+        ${assetBrief}
         <div class="work-order-item-actions">
           ${renderWorkOrderItemActions(wo)}
         </div>
@@ -10814,6 +10956,11 @@
     const expanded = followUpCardExpandedKey === `${target.id}|${primaryType}`;
     const serviceSummary = (target.serviceText || '—').slice(0, 40) + ((target.serviceText || '').length > 40 ? '…' : '');
     const statusText = FollowUpBrain.formatFollowUpStatus(target);
+    const assetRef = renderCustomerAssetMemoReferenceHtml(resolveLeadById(target.leadId), {
+      compact: true,
+      shortMemo: true,
+      showHint: true
+    });
     const f = FollowUpBrain.normalizeFollowUp(target.followUp);
     const thanksBtn = f.thanksStatus === 'pending' && !statusRows.thanksSkipped
       ? `<button type="button" class="btn btn-sm btn-primary" data-follow-row-open="${esc(target.id)}" data-follow-row-open-type="thanks">お礼LINE</button>`
@@ -10849,6 +10996,7 @@
           <span class="follow-up-row-status" title="状態">${esc(statusText)}</span>
           <span class="follow-up-row-next" title="次アクション">次：${esc(nextAction)}</span>
         </div>
+        ${assetRef ? `<div class="follow-up-customer-asset-ref">${assetRef}</div>` : ''}
         <div class="follow-up-row-actions">
           ${thanksBtn}
           ${reviewBtn}
@@ -10969,6 +11117,7 @@
 
     el.innerHTML = `
       <p class="follow-up-target-meta"><strong>${esc(target.customerName)}</strong> / ${esc(target.serviceText || '')} / ${esc(target.workDate || '')}</p>
+      ${renderCustomerAssetMemoReferenceHtml(resolveLeadById(target.leadId), { showHint: true, memoPreview: 120 })}
       <div class="follow-up-detail-block">
         <h3>お礼LINE文</h3>
         <textarea class="follow-up-message-text" id="follow-up-thanks-text" readonly>${esc(thanksMsg)}</textarea>
@@ -14034,6 +14183,7 @@
       areaEl.value = item.area;
       areaEl.dataset.manual = '1';
     }
+    renderReceptionCustomerAssetRef(item);
   }
 
   function clearReceptionForm() {
@@ -14283,6 +14433,7 @@
           <span class="reception-saved-status" title="状態">${esc(statusText)}</span>
           <span class="reception-saved-next" title="次アクション">次：${esc(nextAction)}</span>
         </div>
+        ${renderCustomerAssetMemoReferenceHtml(resolveLeadForIntake(intake), { compact: true, memoPreview: 60 })}
         ${renderReceptionActionBlock(intake)}
         <div class="reception-saved-actions reception-legacy-actions hidden">
           <button type="button" class="btn btn-sm btn-primary" data-reception-create-lead="${esc(intake.id)}">営業先を作成</button>
@@ -15499,6 +15650,7 @@
         areaEl.value = item.area;
         areaEl.dataset.manual = '1';
       }
+      fillCustomerAssetMemoForm('lead', item);
       toggleNgReason();
     } else {
       document.getElementById('lead-modal-title').textContent = '営業先を追加';
@@ -15507,6 +15659,7 @@
       fillAreaSelectOptions(document.getElementById('lead-area'), '');
       applySalesPresetToLeadForm(currentSalesPreset);
       syncLeadAreaFromAddress();
+      fillCustomerAssetMemoForm('lead', null);
     }
     document.getElementById('lead-modal').classList.remove('hidden');
   }
@@ -15543,7 +15696,8 @@
       ngReason: document.getElementById('lead-ng-reason').value,
       memo: document.getElementById('lead-memo').value,
       salesPreset: document.getElementById('lead-sales-preset').value,
-      priorityManual: priorityTouched || (!id && document.getElementById('lead-priority').value !== 'B')
+      priorityManual: priorityTouched || (!id && document.getElementById('lead-priority').value !== 'B'),
+      ...readCustomerAssetMemoFromForm('lead')
     };
 
     if (id) {
@@ -15704,6 +15858,18 @@
     } else {
       memoEl.textContent = '';
       memoEl.classList.add('hidden');
+    }
+
+    const assetEl = document.getElementById('sales-detail-customer-asset');
+    if (assetEl) {
+      const assetHtml = renderCustomerAssetMemoReferenceHtml(lead, { memoPreview: 160 });
+      if (assetHtml) {
+        assetEl.innerHTML = assetHtml;
+        assetEl.classList.remove('hidden');
+      } else {
+        assetEl.innerHTML = '';
+        assetEl.classList.add('hidden');
+      }
     }
 
     document.getElementById('msg-email').value = msgs.email;

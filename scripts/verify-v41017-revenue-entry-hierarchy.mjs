@@ -28,10 +28,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.12.0'), 'index.html should show v4.12.0');
-assert(indexHtml.includes('js/app.js?v=4.12.0'), 'app.js cache buster should be v4.12.0');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.0'"), 'storage.js version should be v4.12.0');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.0'"), 'data-backup version should be v4.12.0');
+assert(indexHtml.includes('v4.12.1'), 'index.html should show v4.12.1');
+assert(indexHtml.includes('js/app.js?v=4.12.1'), 'app.js cache buster should be v4.12.1');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.1'"), 'storage.js version should be v4.12.1');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.1'"), 'data-backup version should be v4.12.1');
 
 const revenueViewStart = indexHtml.indexOf('id="view-revenue"');
 const revenueViewEnd = indexHtml.indexOf('id="view-revenue-analysis"');
@@ -42,7 +42,7 @@ assert(revenueChunk.includes('id="revenue-list-section"'), 'revenue list should 
 assert(revenueChunk.includes('id="revenue-manual-input-details"'), 'manual input should be in details');
 assert(
   revenueChunk.indexOf('id="revenue-manual-input-details"') < revenueChunk.indexOf('id="revenue-list-section"'),
-  'manual input should appear before revenue list in v4.12.0 workflow'
+  'manual input should appear before revenue list in v4.12.1 workflow'
 );
 assert(
   revenueChunk.includes('売上明細を手入力（例外）') ||

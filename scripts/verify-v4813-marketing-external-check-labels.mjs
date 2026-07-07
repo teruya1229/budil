@@ -27,9 +27,9 @@ const executiveBrain = load('js/executive-brain.js');
 
 console.log('== v4.8.30 marketing/site check labels ==');
 
-assert(indexHtml.includes('\u7d4c\u55b6\u8133\u307f\u305d v4.12.0'), 'header version should be v4.8.30');
-assert(indexHtml.includes('Budil v4.12.0'), 'sidebar version should be v4.8.30');
-assert(indexHtml.includes('js/app.js?v=4.12.0'), 'app.js cache buster should be v4.8.30');
+assert(indexHtml.includes('\u7d4c\u55b6\u8133\u307f\u305d v4.12.1'), 'header version should be v4.8.30');
+assert(indexHtml.includes('Budil v4.12.1'), 'sidebar version should be v4.8.30');
+assert(indexHtml.includes('js/app.js?v=4.12.1'), 'app.js cache buster should be v4.8.30');
 assert(indexHtml.includes('\u96c6\u5ba2\u7ba1\u7406'), 'marketing group label should exist');
 assert(indexHtml.includes('\u30b5\u30a4\u30c8\u78ba\u8a8d\u8a18\u9332'), 'site check record label should exist');
 assert(indexHtml.includes('\u96c6\u5ba2\u30ec\u30dd\u30fc\u30c8\u8cbc\u308a\u4ed8\u3051'), 'marketing report paste label should exist');
