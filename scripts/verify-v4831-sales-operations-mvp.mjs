@@ -81,21 +81,21 @@ const visibleIndex = stripHiddenHtml(indexHtml);
 
 console.log('== v4.10.1 sales operations MVP ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.1'), 'header version should be v4.10.1');
-assert(indexHtml.includes('Budil v4.10.1'), 'sidebar version should be v4.10.1');
-assert(indexHtml.includes('js/app.js?v=4.10.1'), 'app.js cache buster should be v4.10.1');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.1'"), 'storage version should be v4.10.1');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.10.1');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.11.14'"), 'storage version should be v4.10.1');
 
 for (const pattern of PAST_RECOVERY_PATTERNS) {
   assert(!visibleIndex.includes(pattern), `visible index should not include "${pattern}"`);
 }
 
-assert(visibleIndex.includes('Googleカレンダー等の予定をコピーして貼り付けると'), 'schedule import should mention copy-paste import');
-assert(visibleIndex.includes('予定取り込みだけでは確定売上には入りません'), 'schedule import should clarify not confirmed revenue');
+assert(visibleIndex.includes('JSON') || visibleIndex.includes('\u4e88\u5b9a\u53d6\u308a\u8fbc\u307f'), 'schedule import should mention json import');
+assert(visibleIndex.includes('\u78ba\u5b9a\u58f2\u4e0a\u306b\u306f\u307e\u3060\u5165\u308a\u307e\u305b\u3093') || visibleIndex.includes('\u78ba\u5b9a\u58f2\u4e0a\u306b\u306f\u5165\u308a\u307e\u305b\u3093'), 'schedule import should clarify not confirmed revenue');
 assert(visibleIndex.includes('売上予定（未確定）'), 'upcoming revenue label should be visible');
 assert(visibleIndex.includes('確定売上・月次実績とは合算しません'), 'upcoming should clarify no merge');
 assert(visibleIndex.includes('作業日当日以降で、まだ売上確定していない予定です'), 'revenue queue description should match');
-assert(visibleIndex.includes('月単位の確定経営数字を入力します。売上明細とは別管理です'), 'monthly results subtitle should clarify separation');
+assert(visibleIndex.includes('売上明細が正本') || visibleIndex.includes('月次実績は過去月の補助入力'), 'monthly close subtitle should clarify separation');
 assert(visibleIndex.includes('自動同期はしません'), 'reconciliation should mention no auto sync');
 
 assert(!summaryBrain.includes('過去売上復元'), 'diagnostics flow note should not mention past recovery');

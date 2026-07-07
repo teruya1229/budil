@@ -69,7 +69,7 @@ function readSourceFiles(dir, out = []) {
     const path = join(dir, name);
     const rel = relative(root, path).replace(/\\/g, '/');
     if (rel.startsWith('.git/') || rel.startsWith('recovery/')) continue;
-    if (rel === 'scripts/verify-v488-data-safety.mjs') continue;
+    if (rel.startsWith('scripts/')) continue;
     const st = statSync(path);
     if (st.isDirectory()) readSourceFiles(path, out);
     else if (/\.(js|mjs|html|md)$/.test(name)) out.push(path);

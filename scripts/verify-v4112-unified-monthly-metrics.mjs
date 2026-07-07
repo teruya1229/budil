@@ -1,5 +1,5 @@
 /**
- * Budil v4.11.13 / v4.11.13 - unified monthly revenue/profit metrics verification.
+ * Budil v4.11.14 / v4.11.14 - unified monthly revenue/profit metrics verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -23,7 +23,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.11.13 unified-monthly-metrics ==');
+console.log('== v4.11.14 unified-monthly-metrics ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -41,16 +41,16 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.13'), 'index.html should show v4.11.13');
-assert(indexHtml.includes('js/app.js?v=4.11.13'), 'app.js cache buster should be v4.11.13');
-assert(indexHtml.includes('js/revenue-brain.js?v=4.11.13'), 'revenue-brain cache buster should be v4.11.13');
-assert(indexHtml.includes('js/executive-brain.js?v=4.11.13'), 'executive-brain cache buster should be v4.11.13');
-assert(indexHtml.includes('js/reception-brain.js?v=4.11.13'), 'reception-brain cache buster should remain v4.11.0');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.13'"), 'storage.js version should be v4.11.13');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.13'"), 'data-backup version should be v4.11.13');
-assert(statusMd.includes('v4.11.13'), 'status.md should document v4.11.13');
-assert(handoffMd.includes('v4.11.13'), 'handoff.md should document v4.11.13');
-assert(decisionLog.includes('v4.11.13'), 'decision-log.md should record v4.11.13');
+assert(indexHtml.includes('v4.11.14'), 'index.html should show v4.11.14');
+assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.11.14');
+assert(indexHtml.includes('js/revenue-brain.js?v=4.11.14'), 'revenue-brain cache buster should be v4.11.14');
+assert(indexHtml.includes('js/executive-brain.js?v=4.11.14'), 'executive-brain cache buster should be v4.11.14');
+assert(indexHtml.includes('js/reception-brain.js?v=4.11.14'), 'reception-brain cache buster should remain v4.11.0');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.14'"), 'storage.js version should be v4.11.14');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.14'"), 'data-backup version should be v4.11.14');
+assert(statusMd.includes('v4.11.14'), 'status.md should document v4.11.14');
+assert(handoffMd.includes('v4.11.14'), 'handoff.md should document v4.11.14');
+assert(decisionLog.includes('v4.11.14'), 'decision-log.md should record v4.11.14');
 
 console.log('== shared metrics wiring ==');
 assert(revenueBrainJs.includes('buildSharedMonthlyMetrics'), 'RevenueBrain should expose buildSharedMonthlyMetrics');
@@ -73,9 +73,9 @@ assert(!appJs.includes("label: '確定', value:"), 'revenue summary must not kee
 assert(appJs.includes('合計売上'), 'executive home should show 合計売上');
 
 console.log('== untouched files ==');
-assert(!receptionJs.includes('buildSharedMonthlyMetrics'), 'reception-brain must not change for v4.11.13');
-assert(!documentsJs.includes('buildSharedMonthlyMetrics'), 'documents-brain must not change for v4.11.13');
-assert(!followJs.includes('buildSharedMonthlyMetrics'), 'follow-up-brain must not change for v4.11.13');
+assert(!receptionJs.includes('buildSharedMonthlyMetrics'), 'reception-brain must not change for v4.11.14');
+assert(!documentsJs.includes('buildSharedMonthlyMetrics'), 'documents-brain must not change for v4.11.14');
+assert(!followJs.includes('buildSharedMonthlyMetrics'), 'follow-up-brain must not change for v4.11.14');
 assert(profitBrainJs.includes('getSharedMonthlyMetricsForProfit'), 'profit-brain should delegate to RevenueBrain shared metrics');
 assert(!profitBrainJs.includes('buildSharedMonthlyMetrics(ctx)'), 'profit-brain must not define its own buildSharedMonthlyMetrics');
 
@@ -182,4 +182,4 @@ console.log('== monthly results isolation ==');
 
 execSync('node scripts/verify-v4111-calendar-import-result-shows-tamazawa.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('\nAll v4.11.13 unified-monthly-metrics checks passed.');
+console.log('\nAll v4.11.14 unified-monthly-metrics checks passed.');

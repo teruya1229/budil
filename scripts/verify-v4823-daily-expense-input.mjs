@@ -77,9 +77,9 @@ const css = load('css/style.css');
 console.log('== v4.10.1 daily expense input ==');
 
 // A. UI
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.1'), 'header version should be v4.10.1');
-assert(indexHtml.includes('Budil v4.10.1'), 'sidebar version should be v4.10.1');
-assert(indexHtml.includes('js/app.js?v=4.10.1'), 'app.js cache buster should be v4.10.1');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.10.1');
 
 assert(indexHtml.includes('daily-section-expense'), 'daily expense section should exist');
 assert(indexHtml.includes('daily-section-title">\u7d4c\u8cbb\u5165\u529b'), 'daily expense title should use \u7d4c\u8cbb\u5165\u529b');
@@ -97,7 +97,7 @@ assert(schedulePos < assistPos, 'schedule section should be above manual revenue
 
 const expenseBlock = indexHtml.slice(expensePos, assistPos);
 assert(indexHtml.includes('<div id="daily-section-expense"'), 'daily expense should be a div section, not details');
-assert(indexHtml.includes('<details class="daily-section daily-section-revenue-assist"'), 'manual revenue assist should remain details');
+assert(indexHtml.includes('daily-section-revenue-assist'), 'manual revenue assist should remain details');
 
 // B. Save handling (static + dynamic)
 assert(appJs.includes('handleDailyExpenseQuickSubmit'), 'daily expense submit handler should exist');

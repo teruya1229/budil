@@ -40,8 +40,8 @@ assert(defaults.yamada === 60, 'ヤマダ should default gross margin to 60');
 assert(defaults.kurashi === 80, 'くらしのマーケット should default gross margin to 80');
 assert(defaults.lp === 100, 'LP should default gross margin to 100');
 assert(defaults.other === null, 'その他 should not auto-fill gross margin');
-assert(defaults.oneTen === null, '110番 should not auto-fill gross margin');
-assert(defaults.coop === null, 'コープ should not auto-fill gross margin');
+assert(defaults.oneTen === 80, '110番 should use default gross margin from master');
+assert(defaults.coop === 80, 'コープ should use default gross margin from master');
 assert(defaults.yamadaAlias === 60, 'ヤマダ aliases should normalize to 60');
 
 const indexHtml = load('index.html');

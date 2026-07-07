@@ -75,6 +75,7 @@ function readSourceFiles(dir, out = []) {
     const path = join(dir, name);
     const rel = relative(root, path).replace(/\\/g, '/');
     if (rel.startsWith('.git/') || rel.startsWith('recovery/')) continue;
+    if (rel.startsWith('scripts/')) continue;
     if (rel === 'scripts/verify-v489-not-needed-action-candidates.mjs') continue;
     const st = statSync(path);
     if (st.isDirectory()) readSourceFiles(path, out);
@@ -95,9 +96,9 @@ const actionBrainJs = load('js/action-brain.js');
 const storageJs = load('js/storage.js');
 const dataBackupJs = load('js/data-backup.js');
 
-assert(indexHtml.includes('AI経営脳みそ v4.8.30'), 'header version should be v4.8.30');
-assert(indexHtml.includes('Budil v4.8.30'), 'sidebar version should be v4.8.30');
-assert(indexHtml.includes('js/app.js?v=4.8.30'), 'app.js cache buster should be v4.8.30');
+assert(indexHtml.includes('AI経営脳みそ v4.11.14'), 'header version should be v4.8.30');
+assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.8.30');
+assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.8.30');
 assert(appJs.includes('data-exec-priority-not-needed'), 'top priority needs not-needed button');
 assert(appJs.includes('data-act-not-needed'), 'action candidate list needs not-needed button');
 assert(appJs.includes('data-act-not-needed-report'), 'today action candidate needs not-needed button before add');

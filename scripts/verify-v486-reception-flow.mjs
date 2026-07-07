@@ -40,7 +40,8 @@ const ctx = createContext({
   MapBrain: { detectAreaFromAddress: () => '那覇市' },
   CalendarCandidateBrain: {
     isPendingCandidate: () => false,
-    normalizeCandidateMeta: (x) => x || {}
+    normalizeCandidateMeta: (x) => x || {},
+    findRevenueDuplicateMatches: () => []
   },
   FollowUpBrain: {
     normalizeFollowUp: (x) => x || {}

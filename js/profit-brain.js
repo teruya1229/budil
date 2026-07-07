@@ -1119,15 +1119,15 @@ const ProfitBrain = {
         gapDiff = Number(gapRow.diff) || 0;
       }
       if (gapDiff > 0) {
-        nextAction = '月次実績との差額を売上明細に追加できます。';
+        nextAction = '月次実績との整合チェックを確認してください。差額を売上明細に追加できます。';
         primaryAction = {
           id: 'reconciliation_add',
           label: '差額を確認する',
           view: 'revenue',
-          scrollSelector: '#revenue-monthly-reconciliation'
+          scrollSelector: '#revenue-reconciliation-check'
         };
       } else {
-        nextAction = '売上明細が月次実績より多いです。月次実績を確認してください。';
+        nextAction = '月次実績との整合チェックを確認してください。売上明細が月次実績より多いです。月次実績を確認してください。';
         primaryAction = {
           id: 'reconciliation_edit',
           label: '月次実績を編集',
@@ -1173,6 +1173,167 @@ const ProfitBrain = {
       nextAction,
       primaryAction,
       flowNote: '合計売上→今月経費→合計利益→未確定の売上→月次実績との整合→月次締めで次にやること'
+    };
+  },
+
+  buildMonthEndChecklist(options) {
+    const opts = options || {};
+    const today = opts.today || new Date().toISOString().slice(0, 10);
+    const monthKey = opts.monthKey || this.currentMonthKey(today);
+    const revenues = opts.revenues || [];
+    const expenses = opts.expenses || [];
+    const documents = opts.documents || [];
+    const monthlyResults = opts.monthlyResults || [];
+    const revenueGapCount = Number(opts.revenueGapCount) || 0;
+    const revenueGapAmount = Number(opts.revenueGapAmount) || 0;
+
+    const receivableSummary = typeof PaymentBrain !== 'undefined'
+      ? PaymentBrain.summarizeReceivables(revenues, documents, today)
+      : { pendingTotal: 0, overdueCount: 0, count: 0, items: [] };
+    const paymentPendingCount = (receivableSummary.items || []).filter(item => (item.unpaidAmount || 0) > 0).length;
+    const paymentOverdueCount = receivableSummary.overdueCount || 0;
+
+    const billingGroups = typeof RevenueBrain !== 'undefined'
+      ? RevenueBrain.buildMonthlyBillingGroups(revenues)
+      : [];
+    const billingPendingCount = billingGroups.filter(g => g.status !== '入金済み').length;
+
+    const monthExpenses = this.filterMonthExpenses(expenses, monthKey);
+    const expenseInputCount = monthExpenses.length;
+    const monthExpense = this.sumAmount(monthExpenses);
+    const unlinkedCount = monthExpenses.filter(e => this.isUnlinkedExpense(e)).length;
+
+    const monthlyRecord = typeof MonthlyResultsBrain !== 'undefined'
+      ? MonthlyResultsBrain.findForMonth(monthlyResults, monthKey)
+      : null;
+    const hasMonthlyResult = !!monthlyRecord;
+
+    const sharedMetrics = typeof RevenueBrain !== 'undefined' && typeof this.getSharedMonthlyMetricsForProfit === 'function'
+      ? this.getSharedMonthlyMetricsForProfit(opts.profitCtx || {}, {
+        today,
+        revenues,
+        expenses,
+        workOrders: opts.workOrders || [],
+        monthKey
+      })
+      : null;
+
+    const totalRevenue = sharedMetrics ? Number(sharedMetrics.totalRevenue) || 0 : 0;
+    const confirmedRevenue = sharedMetrics ? Number(sharedMetrics.confirmedRevenue) || 0 : 0;
+    const scheduledRevenue = sharedMetrics ? Number(sharedMetrics.scheduledRevenue) || 0 : 0;
+    const totalProfit = sharedMetrics ? Number(sharedMetrics.totalProfit) || 0 : 0;
+    const confirmedProfit = sharedMetrics ? Number(sharedMetrics.confirmedProfit) || 0 : 0;
+    const scheduledProfit = sharedMetrics ? Number(sharedMetrics.scheduledProfit) || 0 : 0;
+    const totalFee = sharedMetrics
+      ? Number(sharedMetrics.totalFeeAmount) || 0
+      : 0;
+
+    const documentCount = (documents || []).length;
+    const invoiceCount = (documents || []).filter(d => d && d.type === 'invoice').length;
+    const estimateCount = (documents || []).filter(d => d && d.type === 'estimate').length;
+
+    const statusForCount = (count, warnThreshold) => {
+      if (count <= 0) return { key: 'ok', label: '確認済み' };
+      if (count >= (warnThreshold || 1)) return { key: 'warn', label: '要確認' };
+      return { key: 'info', label: 'あり' };
+    };
+
+    const items = [
+      {
+        id: 'revenue-gaps',
+        label: '売上確定漏れ',
+        count: revenueGapCount,
+        amount: revenueGapAmount,
+        amountLabel: revenueGapCount ? this.formatYen(revenueGapAmount) : '—',
+        status: statusForCount(revenueGapCount),
+        scrollSelector: '#month-end-revenue-gaps-card',
+        primaryAction: { label: '売上確定へ', view: 'revenue', scrollSelector: '#revenue-confirmation-queue-list' }
+      },
+      {
+        id: 'payment-pending',
+        label: paymentOverdueCount > 0 ? '入金待ち / 入金遅れ' : '入金待ち',
+        count: paymentPendingCount,
+        amount: receivableSummary.pendingTotal || 0,
+        amountLabel: paymentPendingCount ? this.formatYen(receivableSummary.pendingTotal || 0) : '—',
+        status: paymentOverdueCount > 0
+          ? { key: 'warn', label: `入金遅れ${paymentOverdueCount}件` }
+          : statusForCount(paymentPendingCount),
+        scrollSelector: '#month-end-payment-pending-card',
+        primaryAction: { label: '入金予定へ', view: 'receivables' }
+      },
+      {
+        id: 'monthly-billing',
+        label: 'コープ・ヤマダ月次請求',
+        count: billingGroups.length,
+        amountLabel: billingGroups.length ? `${billingPendingCount}件未完了` : '—',
+        status: statusForCount(billingPendingCount),
+        scrollSelector: '#month-end-monthly-billing-card',
+        primaryAction: { label: '月次請求を見る', view: 'receivables', scrollSelector: '#receivables-monthly-billing-card' }
+      },
+      {
+        id: 'expense-check',
+        label: '経費入力確認',
+        count: expenseInputCount,
+        amount: monthExpense,
+        amountLabel: this.formatYen(monthExpense),
+        status: expenseInputCount === 0
+          ? { key: 'info', label: '未入力' }
+          : (unlinkedCount > 0 ? { key: 'warn', label: `未紐付け${unlinkedCount}件` } : { key: 'ok', label: '入力あり' }),
+        scrollSelector: '#month-end-expense-check-card',
+        primaryAction: { label: '経費入力へ', view: 'profit', scrollSelector: '#profit-expense-form-section' }
+      },
+      {
+        id: 'documents-aux',
+        label: '請求書/見積書補助確認',
+        count: documentCount,
+        amountLabel: documentCount ? `請求書${invoiceCount}・見積${estimateCount}` : '—',
+        status: { key: 'info', label: documentCount ? '補助確認' : 'なし' },
+        scrollSelector: '#month-end-documents-aux-card',
+        primaryAction: { label: '請求書/見積書へ', view: 'documents' }
+      },
+      {
+        id: 'monthly-results',
+        label: '月次実績入力',
+        count: hasMonthlyResult ? 1 : 0,
+        amountLabel: hasMonthlyResult ? '入力済み' : '未入力',
+        status: hasMonthlyResult ? { key: 'ok', label: '入力済み' } : { key: 'info', label: '補助入力' },
+        scrollSelector: '#monthly-results-form-card',
+        primaryAction: { label: '月次実績を入力', view: 'monthly-results', scrollSelector: '#monthly-results-form-card' }
+      },
+      {
+        id: 'profit-check',
+        label: '利益確認',
+        count: null,
+        amountLabel: this.formatYen(totalProfit),
+        status: totalProfit >= 0 ? { key: 'ok', label: '確認できます' } : { key: 'warn', label: '赤字注意' },
+        scrollSelector: '#month-end-profit-check-card',
+        primaryAction: { label: '利益管理へ', view: 'profit' }
+      }
+    ];
+
+    return {
+      monthKey,
+      today,
+      items,
+      metrics: {
+        totalRevenue,
+        confirmedRevenue,
+        scheduledRevenue,
+        monthExpense,
+        totalFee,
+        totalProfit,
+        confirmedProfit,
+        scheduledProfit,
+        expenseInputCount,
+        unlinkedCount,
+        paymentPendingCount,
+        paymentOverdueCount,
+        billingGroups,
+        documentCount,
+        invoiceCount,
+        estimateCount,
+        hasMonthlyResult
+      }
     };
   },
 

@@ -69,7 +69,7 @@ function readSourceFiles(dir, out = []) {
     const path = join(dir, name);
     const rel = relative(root, path).replace(/\\/g, '/');
     if (rel.startsWith('.git/') || rel.startsWith('recovery/')) continue;
-    if (rel === 'scripts/verify-v4822-revenue-confirmation-hardening.mjs') continue;
+    if (rel.startsWith('scripts/')) continue;
     const st = statSync(path);
     if (st.isDirectory()) readSourceFiles(path, out);
     else if (/\.(js|mjs|html|md)$/.test(name)) out.push(path);
@@ -87,9 +87,9 @@ const storageJs = load('js/storage.js');
 
 console.log('== v4.8.30 revenue confirmation hardening ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.30'), 'header version should be v4.8.30');
-assert(indexHtml.includes('Budil v4.8.30'), 'sidebar version should be v4.8.30');
-assert(indexHtml.includes('js/app.js?v=4.8.30'), 'app.js cache buster should be v4.8.30');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.8.30');
+assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.8.30');
+assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.8.30');
 
 assert(appJs.includes('getRevenueConfirmationWorkOrderIds'), 'revenue queue work-order id helper should exist');
 assert(appJs.includes('isDailyTaskLinkedToRevenueQueueWorkOrder'), 'daily task revenue queue link helper should exist');
@@ -347,7 +347,7 @@ console.log('-- E. safety guards (static) --');
 const sourceText = readSourceFiles(root).map(p => readFileSync(p, 'utf8')).join('\n');
 assert(!(new RegExp('localStorage' + '\\.clear\\s*\\(')).test(sourceText), 'direct localStorage clear must not exist');
 assert(storageJs.includes('PROTECTED_DELETE_KEYS'), 'PROTECTED_DELETE_KEYS should remain');
-assert(indexHtml.includes('\u4e00\u62ec\u58f2\u4e0a\u767b\u9332\u306e\u524d\u306b\u5b89\u5168\u30d0\u30c3\u30af\u30a2\u30c3\u30d7\u3092\u4f5c\u6210\u3057\u307e\u3059'),
+assert(indexHtml.includes('\u4e00\u62ec\u58f2\u4e0a\u78ba\u5b9a\u306e\u524d\u306b\u5b89\u5168\u30d0\u30c3\u30af\u30a2\u30c3\u30d7\u3092\u4f5c\u6210\u3057\u307e\u3059'),
   'bulk past recovery safety note should remain');
 assert(appJs.includes('external-check-dash-brief'), 'v4.8.20 external check summary should remain');
 

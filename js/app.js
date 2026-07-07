@@ -12391,8 +12391,304 @@
     showAppToast('CSV一括取り込みを保存しました');
   }
 
+  function getMonthEndCloseContext() {
+    const today = TODAY();
+    const workOrders = Storage.getWorkOrders();
+    const revenues = Storage.getRevenueRecords();
+    const expenses = Storage.getExpenseRecords();
+    const documents = Storage.getDocuments();
+    const monthlyResults = Storage.getMonthlyResults();
+    const profitCtx = getProfitContext();
+    const queue = collectRevenueConfirmationQueue({ scheduleMode: true });
+    const revenueGapAmount = (queue.items || []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const checklist = ProfitBrain.buildMonthEndChecklist({
+      today,
+      workOrders,
+      revenues,
+      expenses,
+      documents,
+      monthlyResults,
+      profitCtx,
+      revenueGapCount: queue.totalCount || 0,
+      revenueGapAmount
+    });
+    const receivableSummary = PaymentBrain.summarizeReceivables(revenues, documents, today);
+    const paymentItems = RevenueBrain.filterReceivableItemsForIndividualBilling(receivableSummary.items || [])
+      .filter(item => (item.unpaidAmount || 0) > 0);
+    return {
+      today,
+      checklist,
+      revenueQueue: queue,
+      paymentItems,
+      receivableSummary,
+      billingGroups: checklist.metrics.billingGroups || []
+    };
+  }
+
+  function bindMonthEndNavButtons(root) {
+    if (!root) return;
+    root.querySelectorAll('[data-month-end-nav]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.monthEndView;
+        const scroll = btn.dataset.monthEndScroll || null;
+        if (view) navigateToView(view, scroll);
+        else if (btn.dataset.monthEndScroll) scrollToElement(btn.dataset.monthEndScroll);
+      });
+    });
+    root.querySelectorAll('[data-month-end-scroll]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => scrollToElement(btn.dataset.monthEndScroll));
+    });
+  }
+
+  function renderMonthEndChecklistRow(item) {
+    const countLabel = item.count == null ? '—' : `${item.count}件`;
+    const statusClass = item.status && item.status.key === 'warn'
+      ? 'is-warn'
+      : (item.status && item.status.key === 'ok' ? 'is-ok' : 'is-info');
+    const action = item.primaryAction;
+    const actionBtn = action
+      ? `<button type="button" class="btn btn-sm btn-secondary" data-month-end-nav data-month-end-view="${esc(action.view)}"${action.scrollSelector ? ` data-month-end-scroll="${esc(action.scrollSelector)}"` : ''}>${esc(action.label)}</button>`
+      : '';
+    const scrollBtn = item.scrollSelector
+      ? `<button type="button" class="btn btn-sm btn-secondary" data-month-end-scroll="${esc(item.scrollSelector)}">詳細を見る</button>`
+      : '';
+    return `<div class="month-end-checklist-row ${statusClass}" data-month-end-item="${esc(item.id)}">
+      <div class="month-end-checklist-label"><strong>${esc(item.label)}</strong></div>
+      <div class="month-end-checklist-count">${esc(countLabel)}</div>
+      <div class="month-end-checklist-amount">${esc(item.amountLabel || '—')}</div>
+      <div class="month-end-checklist-status"><span class="month-end-status-badge ${statusClass}">${esc((item.status && item.status.label) || '—')}</span></div>
+      <div class="month-end-checklist-actions">${scrollBtn}${actionBtn}</div>
+    </div>`;
+  }
+
+  function renderMonthEndChecklist() {
+    const el = document.getElementById('month-end-checklist');
+    if (!el || typeof ProfitBrain === 'undefined') return;
+    const ctx = getMonthEndCloseContext();
+    const items = ctx.checklist.items || [];
+    el.innerHTML = `
+      <div class="month-end-checklist-head">
+        <span>項目</span><span>件数</span><span>金額/状態</span><span>状態</span><span>処理先</span>
+      </div>
+      <div class="month-end-checklist-rows">${items.map(renderMonthEndChecklistRow).join('')}</div>`;
+    bindMonthEndNavButtons(el);
+  }
+
+  function renderMonthEndRevenueGapRow(item) {
+    const amountLabel = item.amount ? WorkOrderBrain.formatYen(item.amount) : '—';
+    return `<tr class="month-end-revenue-gap-row">
+      <td>${esc(formatRevenueQueueDate(item.scheduledDate))}</td>
+      <td>${esc(item.customerName)}</td>
+      <td>${esc((item.serviceText || '').slice(0, 28))}</td>
+      <td class="num">${esc(amountLabel)}</td>
+      <td>${esc(item.source || '—')}</td>
+      <td>${esc(item.statusLabel)}</td>
+      <td class="actions month-end-row-actions">
+        <button type="button" class="btn btn-sm btn-primary" data-daily-revenue-confirm="${esc(item.id)}" data-daily-revenue-source="${esc(item.type)}">売上確定へ</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-month-end-nav data-month-end-view="calendar-registration">作業予定を見る</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-month-end-nav data-month-end-view="revenue" data-month-end-scroll="#revenue-confirmation-queue-list">売上管理へ</button>
+      </td>
+    </tr>`;
+  }
+
+  function renderMonthEndRevenueGaps() {
+    const el = document.getElementById('month-end-revenue-gaps-list');
+    if (!el) return;
+    const ctx = getMonthEndCloseContext();
+    const items = (ctx.revenueQueue.items || []).slice(0, 12);
+    if (!items.length) {
+      el.innerHTML = '<p class="placeholder-text">売上確定漏れはありません。</p>';
+      return;
+    }
+    const hidden = Math.max(0, (ctx.revenueQueue.totalCount || 0) - items.length);
+    el.innerHTML = `
+      <div class="month-end-table-wrap">
+        <table class="month-end-table">
+          <thead><tr>
+            <th>日付</th><th>顧客名</th><th>作業内容</th><th>金額</th><th>依頼元</th><th>状態</th><th>操作</th>
+          </tr></thead>
+          <tbody>${items.map(renderMonthEndRevenueGapRow).join('')}</tbody>
+        </table>
+      </div>
+      ${hidden ? `<p class="month-end-more-note">ほか${hidden}件あります。</p>` : ''}
+      <div class="month-end-section-actions">
+        <button type="button" class="btn btn-sm btn-secondary" data-month-end-nav data-month-end-view="calendar-registration">作業予定を見る</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-month-end-nav data-month-end-view="revenue" data-month-end-scroll="#revenue-confirmation-queue-list">売上管理へ</button>
+      </div>`;
+    bindDailyRevenueQueueEvents(el);
+    bindMonthEndNavButtons(el);
+  }
+
+  function renderMonthEndPaymentPendingRow(item) {
+    const rev = item.revenue || item.record || {};
+    const delay = PaymentBrain.getDelayLabel(item.expectedPaymentDate, TODAY());
+    const delayClass = PaymentBrain.isOverdue(item.record, TODAY()) ? 'receivable-overdue' : '';
+    const paidAmount = Math.max(0, (Number(rev.amount) || 0) - (Number(item.unpaidAmount) || 0));
+    return `<tr class="month-end-payment-row">
+      <td>${esc(item.counterparty || rev.customerName || '—')}</td>
+      <td>${esc(PaymentBrain.getSourceDisplayLabel(item))}</td>
+      <td class="num">${esc(PaymentBrain.formatYen(rev.amount))}</td>
+      <td class="num">${esc(PaymentBrain.formatYen(paidAmount))}</td>
+      <td class="num">${esc(PaymentBrain.formatYen(item.unpaidAmount))}</td>
+      <td class="${delayClass}">${esc(item.expectedPaymentDate || '—')} ${delay ? ` / ${esc(delay)}` : ''}</td>
+      <td class="actions month-end-row-actions">
+        <button type="button" class="btn btn-sm btn-secondary" data-month-end-nav data-month-end-view="receivables">入金予定へ</button>
+        ${renderReceivableActionButtons(item)}
+      </td>
+    </tr>`;
+  }
+
+  function renderMonthEndPaymentPending() {
+    const el = document.getElementById('month-end-payment-pending-list');
+    if (!el) return;
+    const ctx = getMonthEndCloseContext();
+    const items = ctx.paymentItems.slice(0, 12);
+    if (!items.length) {
+      el.innerHTML = '<p class="placeholder-text">入金待ちの確定売上はありません。</p>';
+      return;
+    }
+    const hidden = Math.max(0, ctx.paymentItems.length - items.length);
+    el.innerHTML = `
+      <div class="month-end-table-wrap">
+        <table class="month-end-table">
+          <thead><tr>
+            <th>顧客名</th><th>依頼元</th><th>売上額</th><th>入金済み</th><th>入金待ち</th><th>入金予定/状態</th><th>操作</th>
+          </tr></thead>
+          <tbody>${items.map(renderMonthEndPaymentPendingRow).join('')}</tbody>
+        </table>
+      </div>
+      ${hidden ? `<p class="month-end-more-note">ほか${hidden}件あります。</p>` : ''}
+      <div class="month-end-section-actions">
+        <button type="button" class="btn btn-sm btn-primary" data-month-end-nav data-month-end-view="receivables">入金予定へ</button>
+      </div>`;
+    bindReceivableListActions(ctx.paymentItems);
+    bindMonthEndNavButtons(el);
+  }
+
+  function renderMonthEndMonthlyBillingRow(group) {
+    const sourceLabel = RevenueBrain.getMonthlyBillingSourceLabel(group.sourceGroup);
+    const monthLabel = RevenueBrain.formatBillingMonthLabel(group.billingMonth);
+    return `<tr class="month-end-billing-row">
+      <td>${esc(monthLabel)}</td>
+      <td>${esc(sourceLabel)}</td>
+      <td>${group.count}件</td>
+      <td class="num">${esc(RevenueBrain.formatYen(group.totalRevenue))}</td>
+      <td class="num">${esc(RevenueBrain.formatYen(group.totalProfit))}</td>
+      <td>${esc(group.status)}</td>
+      <td class="actions month-end-row-actions">
+        <button type="button" class="btn btn-sm btn-secondary" data-month-end-nav data-month-end-view="receivables" data-month-end-scroll="#receivables-monthly-billing-card">月次請求を見る</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-month-end-nav data-month-end-view="receivables">入金予定へ</button>
+      </td>
+    </tr>`;
+  }
+
+  function renderMonthEndMonthlyBilling() {
+    const el = document.getElementById('month-end-monthly-billing-list');
+    if (!el) return;
+    const groups = getMonthEndCloseContext().billingGroups.slice(0, 8);
+    if (!groups.length) {
+      el.innerHTML = '<p class="placeholder-text">コープ・ヤマダの月次請求対象はありません。</p>';
+      return;
+    }
+    el.innerHTML = `
+      <div class="month-end-table-wrap">
+        <table class="month-end-table">
+          <thead><tr>
+            <th>請求月</th><th>依頼元グループ</th><th>対象件数</th><th>請求額</th><th>予定利益</th><th>状態</th><th>操作</th>
+          </tr></thead>
+          <tbody>${groups.map(renderMonthEndMonthlyBillingRow).join('')}</tbody>
+        </table>
+      </div>
+      <div class="month-end-section-actions">
+        <button type="button" class="btn btn-sm btn-primary" data-month-end-nav data-month-end-view="receivables" data-month-end-scroll="#receivables-monthly-billing-card">月次請求を見る</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-month-end-nav data-month-end-view="receivables">入金予定へ</button>
+      </div>`;
+    bindMonthEndNavButtons(el);
+  }
+
+  function renderMonthEndExpenseCheck() {
+    const el = document.getElementById('month-end-expense-check');
+    if (!el) return;
+    const metrics = getMonthEndCloseContext().checklist.metrics;
+    const unlinkedNote = metrics.unlinkedCount > 0
+      ? `<p class="month-end-expense-note">未紐付け支出が${metrics.unlinkedCount}件あります。必要なら利益管理で確認してください。</p>`
+      : '';
+    const emptyNote = metrics.expenseInputCount === 0
+      ? '<p class="month-end-expense-note">今月の経費入力がまだありません。使ったお金があれば記録してください。</p>'
+      : '';
+    el.innerHTML = `
+      <ul class="month-end-expense-stats">
+        <li><span>今月経費</span><strong>${esc(ProfitBrain.formatYen(metrics.monthExpense))}</strong></li>
+        <li><span>経費入力件数</span><strong>今月${metrics.expenseInputCount}件</strong></li>
+        <li><span>未紐付け支出</span><strong>${metrics.unlinkedCount}件</strong></li>
+      </ul>
+      ${emptyNote}
+      ${unlinkedNote}
+      <div class="month-end-section-actions">
+        <button type="button" class="btn btn-sm btn-primary" data-month-end-nav data-month-end-view="profit" data-month-end-scroll="#profit-expense-form-section">経費入力へ</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-month-end-nav data-month-end-view="profit">利益管理へ</button>
+      </div>`;
+    bindMonthEndNavButtons(el);
+  }
+
+  function renderMonthEndDocumentsAux() {
+    const el = document.getElementById('month-end-documents-aux');
+    if (!el) return;
+    const metrics = getMonthEndCloseContext().checklist.metrics;
+    const docs = Storage.getDocuments() || [];
+    const draftInvoices = docs.filter(d => d && d.type === 'invoice' && (d.status === 'draft' || !d.status)).length;
+    const draftNote = draftInvoices > 0
+      ? `<p class="month-end-documents-note">下書き請求書が${draftInvoices}件あります。必要なら確認してください。</p>`
+      : '';
+    el.innerHTML = `
+      <ul class="month-end-documents-stats">
+        <li><span>請求書</span><strong>${metrics.invoiceCount}件</strong></li>
+        <li><span>見積書</span><strong>${metrics.estimateCount}件</strong></li>
+        <li><span>合計</span><strong>${metrics.documentCount}件</strong></li>
+      </ul>
+      <p class="field-hint">売上正本は売上明細です。請求書・見積書は補助書類として月末に確認できます。</p>
+      ${draftNote}
+      <div class="month-end-section-actions">
+        <button type="button" class="btn btn-sm btn-primary" data-month-end-nav data-month-end-view="documents">請求書/見積書へ</button>
+      </div>`;
+    bindMonthEndNavButtons(el);
+  }
+
+  function renderMonthEndProfitCheck() {
+    const el = document.getElementById('month-end-profit-check');
+    if (!el) return;
+    const m = getMonthEndCloseContext().checklist.metrics;
+    el.innerHTML = `
+      <div class="month-end-profit-grid">
+        <div class="month-end-profit-item"><span>合計売上</span><strong>${esc(RevenueBrain.formatYen(m.totalRevenue))}</strong></div>
+        <div class="month-end-profit-item"><span>確定売上</span><strong>${esc(RevenueBrain.formatYen(m.confirmedRevenue))}</strong></div>
+        <div class="month-end-profit-item"><span>予定売上</span><strong>${esc(RevenueBrain.formatYen(m.scheduledRevenue))}</strong></div>
+        <div class="month-end-profit-item"><span>今月経費</span><strong>${esc(ProfitBrain.formatYen(m.monthExpense))}</strong></div>
+        <div class="month-end-profit-item"><span>仲介料</span><strong>${esc(ProfitBrain.formatYen(m.totalFee))}</strong></div>
+        <div class="month-end-profit-item"><span>合計利益</span><strong>${esc(ProfitBrain.formatYen(m.totalProfit))}</strong></div>
+        <div class="month-end-profit-item"><span>確定利益</span><strong>${esc(ProfitBrain.formatYen(m.confirmedProfit))}</strong></div>
+        <div class="month-end-profit-item"><span>予定利益</span><strong>${esc(ProfitBrain.formatYen(m.scheduledProfit))}</strong></div>
+      </div>
+      <div class="month-end-section-actions">
+        <button type="button" class="btn btn-sm btn-primary" data-month-end-nav data-month-end-view="profit">利益管理へ</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-month-end-nav data-month-end-view="revenue">売上管理へ</button>
+      </div>`;
+    bindMonthEndNavButtons(el);
+  }
+
   function renderMonthlyResultsView() {
     try {
+      renderMonthEndChecklist();
+      renderMonthEndRevenueGaps();
+      renderMonthEndPaymentPending();
+      renderMonthEndMonthlyBilling();
+      renderMonthEndExpenseCheck();
+      renderMonthEndDocumentsAux();
+      renderMonthEndProfitCheck();
       const records = Storage.getMonthlyResults();
       renderMonthlyResultsSummary(records);
       renderMonthlyResultsList(records);

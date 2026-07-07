@@ -62,13 +62,13 @@ console.log('== v4.8.31 sales monthly reconciliation ==');
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.31'), 'header version should be v4.8.31');
-assert(indexHtml.includes('Budil v4.8.31'), 'sidebar version should be v4.8.31');
-assert(indexHtml.includes('js/app.js?v=4.8.31'), 'app.js cache buster should be v4.8.31');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.8.31');
+assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.8.31');
+assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.8.31');
 assert(indexHtml.includes('\u4e88\u5b9a\u53d6\u308a\u8fbc\u307f'), 'schedule import nav should exist');
 assert(!indexHtml.includes('nav-label">\u904e\u53bb\u58f2\u4e0a\u5fa9\u5143'), 'past recovery nav label should be hidden');
 assert(indexHtml.includes('calendar-past-recovery-panel hidden'), 'past recovery panel should be hidden');
-assert(indexHtml.includes('\u8fd1\u672a\u6765\u306e\u4e88\u5b9a\u53d6\u308a\u8fbc\u307f'), 'schedule import view title should exist');
+assert(indexHtml.includes('\u4e88\u5b9a\u53d6\u308a\u8fbc\u307f'), 'schedule import view title should exist');
 assert(indexHtml.includes('monthly-results-reconciliation'), 'monthly reconciliation block should exist');
 assert(indexHtml.includes('revenue-monthly-reconciliation'), 'revenue reconciliation block should exist');
 assert(appJs.includes('PAST_RECOVERY_UI_ENABLED = false'), 'past recovery UI should be disabled');

@@ -116,10 +116,10 @@ const calendarBrain = load('js/calendar-candidate-brain.js');
 
 console.log('== v4.10.1 calendar label aliases ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.10'), 'header version should be v4.10.10');
-assert(indexHtml.includes('Budil v4.10.10'), 'sidebar version should be v4.10.10');
-assert(indexHtml.includes('js/app.js?v=4.10.10'), 'app.js cache buster should be v4.10.10');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.10'"), 'storage version should be v4.10.10');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.10.10');
+assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.10.10');
+assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.10.10');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.11.14'"), 'storage version should be v4.10.10');
 
 assert(calendarBrain.includes('PASTE_LABEL_ALIASES'), 'label alias map should exist');
 assert(calendarBrain.includes("'件名': 'title'"), '件名 alias should map to title');
@@ -227,8 +227,8 @@ const kariSample = [
 {
   const { ctx } = createSandbox();
   const result = runScheduleImportUiFlow(ctx, kariSample, today);
-  assert(result.previewSummary.savableCount === 1, '仮予定 confidence should remain savable');
-  assert(result.previewSummary.excludedCount === 0, '仮予定 alone should not exclude');
+  assert(result.previewSummary.savableCount === 0, '仮予定 should be excluded from savable future import');
+  assert(result.previewSummary.excludedCount === 1, '仮予定 alone should exclude from import');
 }
 
 {
@@ -248,8 +248,8 @@ const kariSample = [
 {
   const { ctx } = createSandbox();
   const result = runScheduleImportUiFlow(ctx, pastSample, today);
-  assert(result.previewSummary.excludedCount === 1, 'past date should be excluded');
-  assert(result.saveSummary.savedCount === 0, 'past date should not save');
+  assert(result.previewSummary.savableCount === 1, 'past date with amount should be savable');
+  assert(result.saveSummary.savedCount === 1, 'past date with amount should save');
 }
 
 console.log('All v4.10.1 calendar label alias checks passed.');

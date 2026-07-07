@@ -26,9 +26,9 @@ const css = load('css/style.css');
 
 console.log('== v4.8.30 analytics KPI snapshots ==');
 
-assert(indexHtml.includes('AI経営脳みそ v4.8.30'), 'header version should be v4.8.30');
-assert(indexHtml.includes('Budil v4.8.30'), 'sidebar version should be v4.8.30');
-assert(indexHtml.includes('js/app.js?v=4.8.30'), 'app.js cache buster should be v4.8.30');
+assert(indexHtml.includes('AI経営脳みそ v4.11.14'), 'header version should be v4.8.30');
+assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.8.30');
+assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.8.30');
 assert(indexHtml.includes('id="browser-bantou-preview-kpi"'), 'KPI import preview container should exist');
 assert(indexHtml.includes('id="analytics-kpi-snapshot"'), 'KPI snapshot card container should exist');
 assert(storageJs.includes("ANALYTICS_SNAPSHOTS: 'budil_analytics_snapshots'"), 'analytics snapshot key should exist');

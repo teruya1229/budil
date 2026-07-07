@@ -1,5 +1,5 @@
 /**
- * Budil v4.11.13 - source profit rates in shared monthly metrics verification.
+ * Budil v4.11.14 - source profit rates in shared monthly metrics verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -24,7 +24,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.11.13 source-profit-rates ==');
+console.log('== v4.11.14 source-profit-rates ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -42,16 +42,16 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.13'), 'index.html should show v4.11.13');
-assert(indexHtml.includes('js/app.js?v=4.11.13'), 'app.js cache buster should be v4.11.13');
-assert(indexHtml.includes('js/revenue-brain.js?v=4.11.13'), 'revenue-brain cache buster should be v4.11.13');
-assert(indexHtml.includes('js/profit-brain.js?v=4.11.13'), 'profit-brain cache buster should be v4.11.13');
-assert(indexHtml.includes('js/executive-brain.js?v=4.11.13'), 'executive-brain cache buster should be v4.11.13');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.13'"), 'storage.js version should be v4.11.13');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.13'"), 'data-backup version should be v4.11.13');
-assert(statusMd.includes('v4.11.13'), 'status.md should document v4.11.13');
-assert(handoffMd.includes('v4.11.13'), 'handoff.md should document v4.11.13');
-assert(decisionLog.includes('v4.11.13'), 'decision-log.md should record v4.11.13');
+assert(indexHtml.includes('v4.11.14'), 'index.html should show v4.11.14');
+assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.11.14');
+assert(indexHtml.includes('js/revenue-brain.js?v=4.11.14'), 'revenue-brain cache buster should be v4.11.14');
+assert(indexHtml.includes('js/profit-brain.js?v=4.11.14'), 'profit-brain cache buster should be v4.11.14');
+assert(indexHtml.includes('js/executive-brain.js?v=4.11.14'), 'executive-brain cache buster should be v4.11.14');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.14'"), 'storage.js version should be v4.11.14');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.14'"), 'data-backup version should be v4.11.14');
+assert(statusMd.includes('v4.11.14'), 'status.md should document v4.11.14');
+assert(handoffMd.includes('v4.11.14'), 'handoff.md should document v4.11.14');
+assert(decisionLog.includes('v4.11.14'), 'decision-log.md should record v4.11.14');
 
 console.log('== source profit master wiring ==');
 assert(revenueBrainJs.includes('getSourceProfitRate'), 'RevenueBrain should expose getSourceProfitRate');
@@ -70,9 +70,9 @@ for (const term of ['見込み利益', '見込み売上', '今月利益', '今�
 }
 
 console.log('== untouched files ==');
-assert(!receptionJs.includes('getSourceProfitRate'), 'reception-brain must not change for v4.11.13');
-assert(!documentsJs.includes('getSourceProfitRate'), 'documents-brain must not change for v4.11.13');
-assert(!followJs.includes('getSourceProfitRate'), 'follow-up-brain must not change for v4.11.13');
+assert(!receptionJs.includes('getSourceProfitRate'), 'reception-brain must not change for v4.11.14');
+assert(!documentsJs.includes('getSourceProfitRate'), 'documents-brain must not change for v4.11.14');
+assert(!followJs.includes('getSourceProfitRate'), 'follow-up-brain must not change for v4.11.14');
 
 function createSandbox() {
   const sandbox = {
@@ -201,4 +201,4 @@ console.log('== screen consistency ==');
 
 execSync('node scripts/verify-v4114-unify-monthly-metric-labels.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('\nAll v4.11.13 source-profit-rates checks passed.');
+console.log('\nAll v4.11.14 source-profit-rates checks passed.');

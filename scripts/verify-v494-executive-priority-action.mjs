@@ -67,14 +67,14 @@ const css = load('css/style.css');
 
 console.log('== v4.10.1 executive priority action ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.1'), 'header version should be v4.10.1');
-assert(indexHtml.includes('Budil v4.10.1'), 'sidebar version should be v4.10.1');
-assert(indexHtml.includes('js/app.js?v=4.10.1'), 'app.js cache buster should be v4.10.1');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.1'"), 'storage version should be v4.10.1');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.10.1');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.11.14'"), 'storage version should be v4.10.1');
 
 assert(indexHtml.includes('id="exec-home-priority-action"'), 'executive priority action block should exist');
 assert(appJs.includes('renderExecutivePriorityAction'), 'app should render executive priority action');
-assert(appJs.includes('buildExecutivePriorityAction'), 'app should use priority action builder');
+assert(appJs.includes('buildTodayPriorityAction'), 'app should use priority action builder');
 assert(profitBrain.includes('buildExecutivePriorityAction'), 'brain should define executive priority action');
 assert(profitBrain.includes('isMonthlyClosingPeriod'), 'brain should define monthly closing period helper');
 assert(appJs.includes('\u4eca\u65e5\u306e\u6700\u512a\u5148\u30a2\u30af\u30b7\u30e7\u30f3'), 'priority action title should be rendered by app');

@@ -28,11 +28,11 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 // --- バージョン ---
-assert(indexHtml.includes('v4.11.13'), 'index.html should show v4.11.13');
-assert(indexHtml.includes('js/app.js?v=4.11.13'), 'app.js cache buster should be v4.11.13');
-assert(indexHtml.includes('css/style.css?v=4.11.13'), 'css cache buster should be v4.10.41');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.13'"), 'storage.js version should be v4.11.13');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.13'"), 'data-backup version should be v4.11.13');
+assert(indexHtml.includes('v4.11.14'), 'index.html should show v4.11.14');
+assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.11.14');
+assert(indexHtml.includes('css/style.css?v=4.11.14'), 'css cache buster should be v4.10.41');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.14'"), 'storage.js version should be v4.11.14');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.14'"), 'data-backup version should be v4.11.14');
 assert(statusMd.includes('v4.10.25'), 'status.md should document v4.10.25');
 assert(statusMd.includes('v4.10.26'), 'status.md should document v4.10.26');
 assert(statusMd.includes('v4.10.38'), 'status.md should document v4.10.27');

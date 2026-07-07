@@ -22,16 +22,16 @@ const executiveBrain = load('js/executive-brain.js');
 
 console.log('== v4.8.30 navigation labels (v4817 verify) ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.30'), 'header version should be v4.8.30');
-assert(indexHtml.includes('Budil v4.8.30'), 'sidebar version should be v4.8.30');
-assert(indexHtml.includes('js/app.js?v=4.8.30'), 'app.js cache buster should be v4.8.30');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.8.30');
+assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.8.30');
+assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.8.30');
 
 assert(indexHtml.includes('\u96c6\u5ba2\u7ba1\u7406'), 'marketing group should exist');
 assert(indexHtml.includes('\u30b5\u30a4\u30c8\u78ba\u8a8d\u8a18\u9332'), 'site check record UI should exist');
 assert(indexHtml.includes('\u96c6\u5ba2\u65bd\u7b56\u30e1\u30e2'), 'strategy memo nav should exist');
 assert(indexHtml.includes('\u6539\u5584\u30ea\u30b9\u30c8'), 'improvement list label should exist');
 assert(indexHtml.includes('\u7d4c\u55b6\u30e1\u30e2'), 'business memo label should exist');
-assert(indexHtml.includes('\u30ab\u30ec\u30f3\u30c0\u30fc\u767b\u9332'), 'calendar entry should be calendar registration');
+assert(indexHtml.includes('\u53d7\u4ed8\u30fb\u4e88\u5b9a\u78ba\u8a8d'), 'calendar entry should be schedule registration');
 assert(indexHtml.includes('\u55b6\u696d\u7ba1\u7406'), 'sales group should exist');
 
 assert(!indexHtml.includes('nav-label">\u9700\u8981\u30ec\u30fc\u30c0\u30fc'), 'radar should not be a top-level nav item');
@@ -55,7 +55,7 @@ assert(appJs.includes('\u6bce\u65e5\u3084\u308b\u3053\u3068\u306f\u307e\u3060\u3
 assert(appJs.includes('\u4f5c\u696d\u4e88\u5b9a\u306f\u307e\u3060\u3042\u308a\u307e\u305b\u3093'), 'empty work order copy should exist');
 
 assert(executiveBrain.includes("label: '\u96c6\u5ba2\u7ba1\u7406'"), 'executive quick button should use marketing group');
-assert(executiveBrain.includes("label: '\u30b5\u30a4\u30c8\u78ba\u8a8d\u8a18\u9332'"), 'executive secondary should use site check record');
+assert(executiveBrain.includes("label: '\u96c6\u5ba2\u7ba1\u7406'"), 'executive secondary should use marketing group');
 
 assert(!appJs.match(/\u884c\u52d5\u5019\u88dc\u306b\u8ffd\u52a0/), 'UI should not use action candidate add');
 assert(!appJs.match(/\u4eca\u65e5\u3084\u308b\u3053\u3068\u5019\u88dc/), 'UI should not use daily task candidate in app.js');

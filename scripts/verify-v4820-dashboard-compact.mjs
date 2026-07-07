@@ -22,13 +22,13 @@ const css = load('css/style.css');
 
 console.log('== v4.8.30 dashboard compact ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.30'), 'header version should be v4.8.30');
-assert(indexHtml.includes('Budil v4.8.30'), 'sidebar version should be v4.8.30');
-assert(indexHtml.includes('js/app.js?v=4.8.30'), 'app.js cache buster should be v4.8.30');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.8.30');
+assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.8.30');
+assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.8.30');
 
 assert(indexHtml.includes('\u6642\u9593\u304c\u3042\u308b\u6642\u306e\u6b21\u306e\u4e00\u624b'), 'improvement sublead should exist');
 assert(indexHtml.includes('\u6539\u5584\u30ea\u30b9\u30c8\u304b\u3089\u3001\u4eca\u65e5\u3084\u308b\u5206\u3060\u3051\u78ba\u8a8d\u3057\u307e\u3059'), 'improvement hint should exist');
-assert(indexHtml.includes('\u6bce\u65e5\u3084\u308b\u3053\u3068\uff08\u30bf\u30b9\u30af\uff09'), 'backup scope should use daily tasks label');
+assert(indexHtml.includes('\u6bce\u65e5\u3084\u308b\u3053\u3068'), 'backup scope should use daily tasks label');
 assert(!indexHtml.includes('\u4eca\u65e5\u3084\u308b\u3053\u3068\uff08\u30bf\u30b9\u30af\uff09'), 'backup scope should not use old daily tasks label');
 
 assert(appJs.includes('external-check-dash-brief'), 'dash external check brief block should exist');

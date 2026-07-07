@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.11.13">
+  <link rel="stylesheet" href="css/style.css?v=4.11.14">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.11.13</small>
+          <small>AI経営脳みそ v4.11.14</small>
         </div>
       </div>
       <nav class="nav">
@@ -75,7 +75,7 @@
               <span class="nav-icon">📊</span><span class="nav-label">売上一覧</span>
             </button>
             <button class="nav-item nav-item-main" data-view="monthly-results">
-              <span class="nav-icon">📅</span><span class="nav-label">月次実績・照合</span>
+              <span class="nav-icon">📅</span><span class="nav-label">月次締め</span>
             </button>
             <button class="nav-item nav-item-main" data-view="profit">
               <span class="nav-icon">📈</span><span class="nav-label">利益管理</span>
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.11.13</small>
+        <small>Budil v4.11.14</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の最優先 → 今日やること → 今月の数字</p>
             </div>
-            <span class="exec-home-version">v4.11.13</span>
+            <span class="exec-home-version">v4.11.14</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden exec-tower-span-full"></div>
 
@@ -202,7 +202,7 @@
             <summary>詳細チェック・運用状況</summary>
             <div class="exec-collapse-body exec-home-detail-grid">
               <div id="exec-home-operations-start-check" class="exec-home-operations-start-check-block" aria-live="polite"></div>
-              <div id="exec-home-monthly-closing-check" class="monthly-closing-check-block" aria-live="polite"></div>
+              <div id="exec-home-monthly-closing-check" class="monthly-closing-check-block" aria-live="polite"><span class="sr-only">月次締めチェック</span></div>
               <div id="exec-home-profit-diagnostics" class="exec-home-profit-diagnostics-block" aria-live="polite"></div>
               <details class="exec-collapse exec-home-section-collapse">
                 <summary>経費内訳（詳細）</summary>
@@ -594,7 +594,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.11.13</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.11.14</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -2786,16 +2786,46 @@
         </details>
       </section>
 
-      <!-- 月次実績入力 -->
+      <!-- 月次締め -->
       <section id="view-monthly-results" class="view">
         <header class="view-header">
-          <h1>月次実績・照合</h1>
-          <p class="view-subtitle">過去月の売上合計を照合・入力する補助画面です。通常の売上入力は売上確定待ち→売上確定の流れで行います。売上明細とは別管理です。</p>
+          <h1>月次締め</h1>
+          <p class="view-subtitle">月末に漏れを潰すチェックリストです。上から順に確認してください。売上明細が正本で、月次実績は過去月の補助入力です。</p>
         </header>
 
-        <div class="card card-wide card-monthly-results-summary">
-          <h2>月別サマリー</h2>
-          <div id="monthly-results-summary" class="monthly-results-summary-grid"></div>
+        <div class="card card-wide card-month-end-checklist" id="month-end-checklist-card">
+          <h2>月末チェックリスト</h2>
+          <p class="field-hint month-end-checklist-note">作業月・売上月・請求月・入金月は混ぜずに、それぞれの欄で確認してください。</p>
+          <div id="month-end-checklist" class="month-end-checklist-wrap" aria-live="polite"></div>
+        </div>
+
+        <div class="card card-wide card-month-end-section" id="month-end-revenue-gaps-card">
+          <h2>売上確定漏れ</h2>
+          <p class="field-hint">作業月ベース：今日以前・金額あり・売上未確定（キャンセル/完了済み/売上確定済みは除外）</p>
+          <div id="month-end-revenue-gaps-list" class="month-end-section-list"></div>
+        </div>
+
+        <div class="card card-wide card-month-end-section" id="month-end-payment-pending-card">
+          <h2>入金待ち / 入金遅れ</h2>
+          <p class="field-hint">入金月ベース：確定売上で未入金または一部入金のもの</p>
+          <div id="month-end-payment-pending-list" class="month-end-section-list"></div>
+        </div>
+
+        <div class="card card-wide card-month-end-section" id="month-end-monthly-billing-card">
+          <h2>コープ・ヤマダ月次請求確認</h2>
+          <p class="field-hint">請求月ベース表示。作業月・売上月は変更しません。</p>
+          <div id="month-end-monthly-billing-list" class="month-end-section-list"></div>
+        </div>
+
+        <div class="card card-wide card-month-end-section" id="month-end-expense-check-card">
+          <h2>経費入力確認</h2>
+          <div id="month-end-expense-check" class="month-end-section-body"></div>
+        </div>
+
+        <div class="card card-wide card-month-end-section" id="month-end-documents-aux-card">
+          <h2>請求書/見積書補助確認</h2>
+          <p class="field-hint">請求書・見積書は売上正本の補助書類です。月末に必要なら確認してください。</p>
+          <div id="month-end-documents-aux" class="month-end-section-body"></div>
         </div>
 
         <div class="card card-wide" id="monthly-results-form-card">
@@ -2855,6 +2885,19 @@
           </form>
         </div>
 
+        <div class="card card-wide card-month-end-section" id="month-end-profit-check-card">
+          <h2>利益確認</h2>
+          <div id="month-end-profit-check" class="month-end-section-body"></div>
+        </div>
+
+        <details class="card card-wide card-month-end-details-collapse">
+          <summary>詳細分析・履歴</summary>
+          <div class="month-end-details-collapse-body">
+        <div class="card card-wide card-monthly-results-summary">
+          <h2>月別サマリー</h2>
+          <div id="monthly-results-summary" class="monthly-results-summary-grid"></div>
+        </div>
+
         <div class="card card-wide card-monthly-results-csv">
           <h2>CSV一括取り込み（過去月まとめて入力）</h2>
           <p class="monthly-results-csv-hint">1行1ヶ月。ヘッダー行あり・なしどちらも可。外注費なしの旧形式（8列）も取り込めます。</p>
@@ -2881,6 +2924,8 @@
           <h2>月次実績一覧</h2>
           <div id="monthly-results-list" class="monthly-results-list-wrap"></div>
         </div>
+          </div>
+        </details>
       </section>
 
       <!-- 集客チェック（旧アクセス分析） -->
@@ -3664,30 +3709,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.11.13"></script>
+  <script src="js/storage.js?v=4.11.14"></script>
   <script src="js/messages.js?v=4.10.22"></script>
   <script src="js/demand-brain.js?v=4.10.22"></script>
   <script src="js/demand-radar.js?v=4.10.22"></script>
   <script src="js/sales-brain.js?v=4.10.22"></script>
   <script src="js/management-brain.js?v=4.10.22"></script>
   <script src="js/payment-brain.js?v=4.10.22"></script>
-  <script src="js/revenue-brain.js?v=4.11.13"></script>
+  <script src="js/revenue-brain.js?v=4.11.14"></script>
   <script src="js/revenue-summary-brain.js?v=4.10.22"></script>
-  <script src="js/reception-brain.js?v=4.11.13"></script>
+  <script src="js/reception-brain.js?v=4.11.14"></script>
   <script src="js/map-brain.js?v=4.10.22"></script>
   <script src="js/calendar-candidate-brain.js?v=4.11.1"></script>
   <script src="js/external-check-brain.js?v=4.10.22"></script>
   <script src="js/action-brain.js?v=4.10.22"></script>
   <script src="js/work-order-brain.js?v=4.10.22"></script>
-  <script src="js/follow-up-brain.js?v=4.11.13"></script>
+  <script src="js/follow-up-brain.js?v=4.11.14"></script>
   <script src="js/work-completion-brain.js?v=4.10.22"></script>
-  <script src="js/profit-brain.js?v=4.11.13"></script>
+  <script src="js/profit-brain.js?v=4.11.14"></script>
   <script src="js/analytics-brain.js?v=4.10.22"></script>
   <script src="js/monthly-results-brain.js?v=4.10.22"></script>
   <script src="js/documents-brain.js?v=4.10.41"></script>
-  <script src="js/executive-brain.js?v=4.11.13"></script>
+  <script src="js/executive-brain.js?v=4.11.14"></script>
   <script src="js/card-ocr.js?v=4.10.22"></script>
-  <script src="js/data-backup.js?v=4.11.13"></script>
-  <script src="js/app.js?v=4.11.13"></script>
+  <script src="js/data-backup.js?v=4.11.14"></script>
+  <script src="js/app.js?v=4.11.14"></script>
 </body>
 </html>

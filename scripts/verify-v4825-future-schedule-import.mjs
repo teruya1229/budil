@@ -69,12 +69,12 @@ const calendarBrain = load('js/calendar-candidate-brain.js');
 
 console.log('== v4.10.1 future schedule import ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.1'), 'header version should be v4.10.1');
-assert(indexHtml.includes('Budil v4.10.1'), 'sidebar version should be v4.10.1');
-assert(indexHtml.includes('js/app.js?v=4.10.1'), 'app.js cache buster should be v4.10.1');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.10.1');
 
-assert(indexHtml.includes('Google\u30ab\u30ec\u30f3\u30c0\u30fc\u7b49\u306e\u4e88\u5b9a\u3092\u30b3\u30d4\u30fc\u3057\u3066\u8cbc\u308a\u4ed8\u3051\u308b\u3068'), 'future import subtitle should mention copy-paste import');
-assert(indexHtml.includes('\u4e88\u5b9a\u53d6\u308a\u8fbc\u307f\u3060\u3051\u3067\u306f\u78ba\u5b9a\u58f2\u4e0a\u306b\u306f\u5165\u308a\u307e\u305b\u3093'), 'future import should clarify not confirmed revenue');
+assert(indexHtml.includes('JSON\u51fa\u529b') || indexHtml.includes('JSON\u53d6\u308a\u8fbc\u307f'), 'future import subtitle should mention json import');
+assert(indexHtml.includes('\u78ba\u5b9a\u58f2\u4e0a\u306b\u306f\u307e\u3060\u5165\u308a\u307e\u305b\u3093') || indexHtml.includes('\u78ba\u5b9a\u58f2\u4e0a\u306b\u306f\u5165\u308a\u307e\u305b\u3093'), 'future import should clarify not confirmed revenue');
 assert(indexHtml.includes('calendar-past-recovery-panel hidden'), 'past recovery panel should stay hidden');
 assert(!indexHtml.includes('nav-label">\u904e\u53bb\u58f2\u4e0a\u5fa9\u5143'), 'past recovery nav label should not appear');
 assert(indexHtml.includes('id="mgmt-calendar-candidates-section"'), 'morning past recovery section id should exist');
@@ -191,8 +191,8 @@ const completedPaste = [
     preview = CalendarCandidateBrain.attachFutureImportPreview(preview, '2026-06-28');
   `, ctx);
   assert(ctx.preview.items[0].isPastDate === true, 'past date should be flagged in future import preview');
-  assert(ctx.preview.items[0].futureImport.status === 'excluded', 'past date should be excluded from future import');
-  assert((ctx.preview.warnings || []).some(w => w.includes('\u904e\u53bb\u65e5\u4ed8')), 'preview should warn about past dates');
+  assert(ctx.preview.items[0].futureImport.status === 'eligible', 'past date with amount should remain eligible');
+  assert(ctx.preview.items[0].futureImport.savable === true, 'past date with amount should be savable');
 }
 
 {

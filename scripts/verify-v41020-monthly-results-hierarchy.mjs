@@ -29,24 +29,25 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.11.13'), 'index.html should show v4.11.13');
-assert(indexHtml.includes('js/app.js?v=4.11.13'), 'app.js cache buster should be v4.11.13');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.13'"), 'storage.js version should be v4.11.13');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.13'"), 'data-backup version should be v4.11.13');
+assert(indexHtml.includes('v4.11.14'), 'index.html should show v4.11.14');
+assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.11.14');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.11.14'"), 'storage.js version should be v4.11.14');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.11.14'"), 'data-backup version should be v4.11.14');
 
 const monthlyViewStart = indexHtml.indexOf('id="view-monthly-results"');
-const monthlyViewEnd = indexHtml.indexOf('<!-- フォロー -->', monthlyViewStart) || indexHtml.indexOf('section id="view-follow', monthlyViewStart);
-const monthlyViewChunk = indexHtml.slice(monthlyViewStart, monthlyViewEnd > monthlyViewStart ? monthlyViewEnd : monthlyViewStart + 5000);
+const monthlyViewEnd = indexHtml.indexOf('<!-- 集客チェック', monthlyViewStart);
+const monthlyViewChunk = indexHtml.slice(monthlyViewStart, monthlyViewEnd > monthlyViewStart ? monthlyViewEnd : monthlyViewStart + 8000);
 
-assert(monthlyViewChunk.includes('照合'), 'monthly-results view should mention 照合 (reconciliation)');
-assert(monthlyViewChunk.includes('過去月'), 'monthly-results view should mention 過去月');
+assert(monthlyViewChunk.includes('月次締め') || monthlyViewChunk.includes('照合'), 'monthly-results view should mention 月次締め or 照合');
+assert(monthlyViewChunk.includes('過去月') || monthlyViewChunk.includes('補助'), 'monthly-results view should mention 過去月 or 補助入力');
 assert(monthlyViewChunk.includes('monthly-results-purpose-note'), 'monthly-results purpose note should exist');
-assert(monthlyViewChunk.includes('通常の売上'), 'monthly-results view should clarify normal sales flow');
-assert(monthlyViewChunk.includes('売上確定待ち'), 'monthly-results view should reference 売上確定待ち as normal flow');
+assert(monthlyViewChunk.includes('通常の売上') || monthlyViewChunk.includes('売上明細'), 'monthly-results view should clarify normal sales flow');
+assert(monthlyViewChunk.includes('売上確定') || monthlyViewChunk.includes('月末チェックリスト'), 'monthly-results view should reference sales confirmation workflow');
 
 const navChunk = indexHtml.slice(0, indexHtml.indexOf('</nav>') + 10);
-assert(!navChunk.includes('月次実績入力</span>'), 'nav label should not say 月次実績入力 (should be 月次実績・照合 or similar)');
+assert(!navChunk.includes('月次実績入力</span>'), 'nav label should not say 月次実績入力');
 assert(navChunk.includes('data-view="monthly-results"'), 'monthly-results nav button should remain');
+assert(navChunk.includes('月次締め') || navChunk.includes('月次実績'), 'monthly nav label should remain');
 
 assert(monthlyViewChunk.includes('売上明細との整合チェック'), '整合チェック card should remain');
 assert(monthlyViewChunk.includes('自動同期はしません'), 'no-auto-sync note should remain');

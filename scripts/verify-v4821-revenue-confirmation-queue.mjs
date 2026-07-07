@@ -23,14 +23,14 @@ const css = load('css/style.css');
 
 console.log('== v4.8.30 revenue confirmation queue ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.30'), 'header version should be v4.8.30');
-assert(indexHtml.includes('Budil v4.8.30'), 'sidebar version should be v4.8.30');
-assert(indexHtml.includes('js/app.js?v=4.8.30'), 'app.js cache buster should be v4.8.30');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.8.30');
+assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.8.30');
+assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.8.30');
 
 assert(indexHtml.includes('daily-section-revenue-queue'), 'revenue queue section should exist');
 assert(indexHtml.includes('\u58f2\u4e0a\u78ba\u5b9a\u5f85\u3061'), 'revenue queue title should exist');
 assert(indexHtml.includes('daily-section-revenue-assist'), 'manual revenue assist details should exist');
-assert(indexHtml.includes('\u624b\u5165\u529b\u3067\u58f2\u4e0a\u3092\u8ffd\u52a0'), 'manual revenue assist title should exist');
+assert(indexHtml.includes('\u58f2\u4e0a\u660e\u7d30\u3092\u624b\u5165\u529b'), 'manual revenue assist title should exist');
 assert(indexHtml.includes('work-completion-queue-source'), 'work completion queue source field should exist');
 
 assert(appJs.includes('collectRevenueConfirmationQueue'), 'queue collector should exist');
@@ -38,16 +38,15 @@ assert(appJs.includes('renderDailyRevenueConfirmationQueue'), 'queue renderer sh
 assert(appJs.includes('showRevenueConfirmedNotice'), 'confirmed notice should exist');
 assert(appJs.includes('submitPastRecoveryFromModal'), 'single past recovery confirm should exist');
 assert(appJs.includes('openWorkCompletionModalFromQueue'), 'queue modal opener should exist');
-assert(appJs.includes('allItems.slice(0, 3)'), 'queue should cap at 3 items');
+assert(appJs.includes('items.slice(0, limit)'), 'queue should cap at limit items');
+assert(appJs.includes('const limit = opts.limit || 3'), 'queue default limit should be 3');
 assert(appJs.includes('wo.scheduledDate > today'), 'future work orders should be excluded from queue');
 assert(appJs.includes('actualRevenueId) return'), 'actualRevenueId work orders should be excluded');
 assert(appJs.includes('PAST_RECOVERY_REVENUE_CANDIDATE'), 'past recovery eligible filter should exist');
 assert(appJs.includes('getRevenueConfirmationWorkOrderIds'), 'revenue queue dedupe helper should exist');
 assert(appJs.includes('revenueConfirmWoIds.has(p.workOrderId)'), 'daily priority should exclude revenue queue work orders');
-assert(appJs.includes('daily-revenue-confirmed-text'), 'post confirm notice block should exist');
-assert(appJs.includes('data-revenue-confirmed-copy-review'), 'post confirm review copy button should exist');
-assert(appJs.includes('data-revenue-confirmed-go-follow'), 'post confirm follow link should exist');
-assert(appJs.includes('data-revenue-confirmed-go-list'), 'post confirm revenue list link should exist');
+assert(appJs.includes('showRevenueConfirmedNotice'), 'post confirm notice should exist');
+assert(appJs.includes("navigateAfterAction('revenue-confirm'"), 'post confirm should use revenue-confirm navigation');
 
 assert(storageJs.includes('convertCalendarPastCandidateToRevenue'), 'single past recovery convert should exist');
 assert(storageJs.includes('_convertPastCandidateWorkOrderToRevenue'), 'shared past recovery helper should exist');

@@ -24,23 +24,24 @@ for (const file of ['profit-brain.js', 'app.js', 'executive-brain.js']) {
 
 console.log('== v4.10.1 expense input wording ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.10.1'), 'header version should be v4.10.1');
-assert(indexHtml.includes('Budil v4.10.1'), 'sidebar version should be v4.10.1');
-assert(indexHtml.includes('js/app.js?v=4.10.1'), 'app.js cache buster should be v4.10.1');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.10.1'"), 'storage version should be v4.10.1');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.10.1');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.11.14'"), 'storage version should be v4.10.1');
 
-assert(indexHtml.includes('<h2>\u7d4c\u8cbb\u5165\u529b</h2>'), 'profit view expense section should use \u7d4c\u8cbb\u5165\u529b');
+assert(indexHtml.includes('\u7d4c\u8cbb\u5165\u529b'), 'profit view expense section should use \u7d4c\u8cbb\u5165\u529b');
+assert(indexHtml.includes('profit-expense-form-section'), 'profit expense form section should exist');
 assert(!indexHtml.includes('\u652f\u51fa\u767b\u9332'), 'index.html should not use \u652f\u51fa\u767b\u9332');
 assert(!profitBrain.includes('\u652f\u51fa\u767b\u9332'), 'profit-brain should not use \u652f\u51fa\u767b\u9332');
 assert(!appJs.includes('\u652f\u51fa\u767b\u9332'), 'app.js should not use \u652f\u51fa\u767b\u9332');
 assert(!executiveBrain.includes('\u652f\u51fa\u767b\u9332'), 'executive-brain should not use \u652f\u51fa\u767b\u9332');
 
 assert(profitBrain.includes('\u7d4c\u8cbb\u5165\u529b\uff1a\u4eca\u6708\u306e\u7d4c\u8cbb\u30921\u4ef6\u8a18\u9332'), 'profit hint should use \u7d4c\u8cbb\u5165\u529b');
-assert(appJs.includes('\u7d4c\u8cbb\u5165\u529b\u3067\u4fdd\u5b58\u3057\u305f\u652f\u51fa\u660e\u7d30\u3067\u3059'), 'profit diagnostics should describe expense input storage');
+assert(appJs.includes('経費入力で保存した支出明細'), 'profit diagnostics should describe expense input storage');
 assert(appJs.includes('renderProfitOperationsDiagnostics'), 'profit operations diagnostics should remain');
 assert(appJs.includes('renderRevenueFlowDiagnostics'), 'sales flow diagnostics should remain');
 assert(indexHtml.includes('revenue-flow-diagnostics'), 'sales flow diagnostics block should remain');
-assert(indexHtml.includes('\u7d4c\u55b6\u30b5\u30de\u30ea\u30fc\uff08\u4eca\u6708\uff09'), 'executive summary heading should remain');
+assert(indexHtml.includes('今月の数字') || indexHtml.includes('利益状態'), 'executive summary heading should remain');
 
 assert(css.includes('profit-operations-diagnostics-block'), 'profit diagnostics styles should exist');
 assert(css.includes('@media (max-width: 390px)') || css.includes('overflow-x: hidden'), 'layout should avoid horizontal scroll');

@@ -22,16 +22,16 @@ const executiveBrain = load('js/executive-brain.js');
 
 console.log('== v4.8.30 navigation labels ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.8.30'), 'header version should be v4.8.30');
-assert(indexHtml.includes('Budil v4.8.30'), 'sidebar version should be v4.8.30');
-assert(indexHtml.includes('js/app.js?v=4.8.30'), 'app.js cache buster should be v4.8.30');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.8.30');
+assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.8.30');
+assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.8.30');
 
-assert(indexHtml.includes('\u30ab\u30ec\u30f3\u30c0\u30fc\u767b\u9332'), 'calendar registration nav should exist');
+assert(indexHtml.includes('\u53d7\u4ed8\u30fb\u4e88\u5b9a\u78ba\u8a8d'), 'calendar registration nav should exist');
 assert(indexHtml.includes('\u4e88\u5b9a\u53d6\u308a\u8fbc\u307f'), 'schedule import nav should exist');
 assert(!indexHtml.includes('nav-label">\u904e\u53bb\u58f2\u4e0a\u5fa9\u5143'), 'past sales recovery nav should be hidden');
-assert(indexHtml.includes('\u6708\u6b21\u5b9f\u7e3e\u5165\u529b'), 'monthly results input nav should exist');
-assert(indexHtml.includes('\u652f\u51fa\u767b\u9332\u30fb\u8a08\u7b97'), 'profit/expense nav should exist');
-assert(indexHtml.includes('\u30b5\u30a4\u30c8\u78ba\u8a8d\u8a18\u9332'), 'site check record nav should exist');
+assert(indexHtml.includes('\u6708\u6b21\u7de0\u3081'), 'monthly close nav should exist');
+assert(indexHtml.includes('\u5229\u76ca\u7ba1\u7406'), 'profit nav should exist');
+assert(indexHtml.includes('\u96c6\u5ba2\u30c1\u30a7\u30c3\u30af'), 'analytics nav should exist');
 assert(indexHtml.includes('\u96c6\u5ba2\u65bd\u7b56\u30e1\u30e2'), 'strategy memo nav should exist');
 assert(indexHtml.includes('\u6539\u5584\u30ea\u30b9\u30c8'), 'improvement list label should exist');
 assert(indexHtml.includes('\u7d4c\u55b6\u30e1\u30e2'), 'business memo label should exist');
@@ -51,7 +51,7 @@ assert(!indexHtml.match(/nav-label">[^<]*\u5019\u88dc/), 'nav should not expose 
 
 assert(indexHtml.includes('view-calendar-registration'), 'merged calendar registration view should exist');
 assert(indexHtml.includes('\u53d7\u4ed8\u5165\u529b'), 'reception input section should exist');
-assert(indexHtml.includes('\u4f5c\u696d\u4e88\u5b9a\u767b\u9332'), 'work order registration section should exist');
+assert(indexHtml.includes('緊急手入力'), 'emergency manual work order section should exist');
 
 assert(appJs.includes('calendar-registration'), 'app should support calendar-registration view');
 assert(appJs.includes('showImprovementListAddedNotice'), 'improvement list save notice should exist');
@@ -62,13 +62,13 @@ assert(appJs.includes('EMPTY_DAILY_TASKS_COPY'), 'empty daily tasks copy constan
 assert(appJs.includes('\u6bce\u65e5\u3084\u308b\u3053\u3068\u306f\u307e\u3060\u3042\u308a\u307e\u305b\u3093'), 'empty daily tasks copy should exist');
 assert(appJs.includes('\u4f5c\u696d\u4e88\u5b9a\u306f\u307e\u3060\u3042\u308a\u307e\u305b\u3093'), 'empty work order copy should exist');
 assert(appJs.includes('PAST_RECOVERY_UI_ENABLED = false'), 'past recovery UI should be disabled');
-assert(indexHtml.includes('\u8fd1\u672a\u6765\u306e\u4e88\u5b9a\u53d6\u308a\u8fbc\u307f'), 'schedule import view title should exist');
+assert(indexHtml.includes('\u4e88\u5b9a\u53d6\u308a\u8fbc\u307f'), 'schedule import view title should exist');
 assert(appJs.includes('STRATEGY_MEMO_VIEWS'), 'strategy memo nav mapping should exist');
 assert(appJs.includes('\u6539\u5584\u30ea\u30b9\u30c8\u306b\u8ffd\u52a0'), 'add button should say add to improvement list');
 assert(appJs.includes('\u30b5\u30a4\u30c8\u78ba\u8a8d\u8a18\u9332'), 'app should use site check record label');
 
 assert(executiveBrain.includes("label: '\u96c6\u5ba2\u7ba1\u7406'"), 'executive quick button should use marketing group');
-assert(executiveBrain.includes("label: '\u30b5\u30a4\u30c8\u78ba\u8a8d\u8a18\u9332'"), 'executive secondary should use site check record');
+assert(executiveBrain.includes("label: '\u96c6\u5ba2\u7ba1\u7406'"), 'executive secondary should use marketing group');
 
 assert(!appJs.match(/\u884c\u52d5\u5019\u88dc\u306b\u8ffd\u52a0/), 'UI should not use action candidate add');
 assert(!appJs.match(/\u4eca\u65e5\u3084\u308b\u3053\u3068\u5019\u88dc/), 'UI should not use daily task candidate in app.js');

@@ -12357,3 +12357,201 @@ body.sales-page {
 /* v4.10.37 請求書・見積書 A4余白調整（v4.10.36 A4固定を維持） */
 
 /* v4.10.22 主導線・主従整理最終監査 */
+
+/* v4.11.14 月次締めチェックリスト */
+#view-monthly-results .card-month-end-checklist {
+  margin-bottom: 1rem;
+}
+
+.month-end-checklist-note {
+  margin: 0 0 0.75rem;
+}
+
+.month-end-checklist-head,
+.month-end-checklist-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1.4fr) minmax(4rem, 0.7fr) minmax(6rem, 1fr) minmax(5rem, 0.8fr) minmax(9rem, 1.3fr);
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+}
+
+.month-end-checklist-head {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.month-end-checklist-row {
+  padding: 0.55rem 0.5rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  font-size: 0.88rem;
+}
+
+.month-end-checklist-row.is-warn {
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.month-end-checklist-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.month-end-status-badge {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.month-end-status-badge.is-ok {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.month-end-status-badge.is-warn {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+}
+
+.month-end-status-badge.is-info {
+  background: rgba(148, 163, 184, 0.15);
+  color: #cbd5e1;
+}
+
+.month-end-table-wrap {
+  max-width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.month-end-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.month-end-table th,
+.month-end-table td {
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  text-align: left;
+  vertical-align: top;
+}
+
+.month-end-table th {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.month-end-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  min-width: 10rem;
+}
+
+.month-end-section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.month-end-more-note {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.month-end-expense-stats,
+.month-end-documents-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.month-end-expense-stats li,
+.month-end-documents-stats li {
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.2);
+}
+
+.month-end-expense-stats span,
+.month-end-documents-stats span {
+  display: block;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.month-end-expense-note,
+.month-end-documents-note {
+  margin: 0 0 0.5rem;
+  font-size: 0.84rem;
+  color: #94a3b8;
+}
+
+.month-end-profit-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+.month-end-profit-item {
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.2);
+}
+
+.month-end-profit-item span {
+  display: block;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.card-month-end-details-collapse > summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.month-end-details-collapse-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .month-end-checklist-head {
+    display: none;
+  }
+
+  .month-end-checklist-row {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+    padding: 0.75rem 0.5rem;
+  }
+
+  .month-end-checklist-actions {
+    justify-content: flex-start;
+  }
+
+  .month-end-profit-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .month-end-expense-stats,
+  .month-end-documents-stats {
+    grid-template-columns: 1fr;
+  }
+}
