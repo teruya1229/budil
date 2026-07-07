@@ -1,5 +1,16 @@
 ﻿# Budil status
 
+## v4.11.15 実装内容（v4.11系横断点検・安定化）
+
+- 表示バージョンを v4.11.15 に更新
+- index.html の主要 JS/CSS cache buster を v4.11.15 に統一
+- 請求書プレビューの印影画像で sealImage 未設定時の空 src を除去（app.js）
+- work-order-brain の「見込み売上」表記を「予定売上」へ修正
+- 利益管理の「支出一覧」見出しを「経費一覧」へ修正（NG表記「支出」回避）
+- v4.11.5〜v4.11.14 の実務導線・画面順・計算仕様は維持
+- 新機能・自動化・localStorageキー変更なし
+- 新規 verify-v41115-cross-screen-workflow-stability.mjs 追加
+
 ## v4.11.14 実装内容（月次締め画面の月末チェックリスト整理）
 
 - 表示バージョンを v4.11.14 に更新

@@ -69,9 +69,9 @@ const calendarBrain = load('js/calendar-candidate-brain.js');
 
 console.log('== v4.10.1 future schedule import ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.10.1');
-assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.10.1');
-assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.10.1');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.15'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.11.15'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.11.15'), 'app.js cache buster should be v4.10.1');
 
 assert(indexHtml.includes('JSON\u51fa\u529b') || indexHtml.includes('JSON\u53d6\u308a\u8fbc\u307f'), 'future import subtitle should mention json import');
 assert(indexHtml.includes('\u78ba\u5b9a\u58f2\u4e0a\u306b\u306f\u307e\u3060\u5165\u308a\u307e\u305b\u3093') || indexHtml.includes('\u78ba\u5b9a\u58f2\u4e0a\u306b\u306f\u5165\u308a\u307e\u305b\u3093'), 'future import should clarify not confirmed revenue');

@@ -66,9 +66,9 @@ const css = load('css/style.css');
 
 console.log('== v4.10.1 sales flow diagnostics ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.10.1');
-assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.10.1');
-assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.10.1');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.15'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.11.15'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.11.15'), 'app.js cache buster should be v4.10.1');
 assert(indexHtml.includes('id="revenue-flow-diagnostics"'), 'sales flow diagnostics block should exist');
 assert(indexHtml.includes('calendar-candidate-import-result'), 'schedule import result panel should remain');
 

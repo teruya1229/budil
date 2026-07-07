@@ -67,10 +67,10 @@ const css = load('css/style.css');
 
 console.log('== v4.10.1 monthly closing check ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.10.1');
-assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.10.1');
-assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.10.1');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.11.14'"), 'storage version should be v4.10.1');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.15'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.11.15'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.11.15'), 'app.js cache buster should be v4.10.1');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.11.15'"), 'storage version should be v4.10.1');
 
 assert(indexHtml.includes('id="profit-monthly-closing-check"'), 'profit monthly closing block should exist');
 assert(indexHtml.includes('id="revenue-monthly-closing-check"'), 'revenue monthly closing block should exist');

@@ -137,10 +137,10 @@ const css = load('css/style.css');
 
 console.log('== v4.10.1 future schedule import UI flow ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.10.4');
-assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.10.4');
-assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.10.4');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.11.14'"), 'storage version should be v4.10.4');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.15'), 'header version should be v4.10.4');
+assert(indexHtml.includes('Budil v4.11.15'), 'sidebar version should be v4.10.4');
+assert(indexHtml.includes('js/app.js?v=4.11.15'), 'app.js cache buster should be v4.10.4');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.11.15'"), 'storage version should be v4.10.4');
 
 assert(indexHtml.includes('JSON\u53d6\u308a\u8fbc\u307f') || indexHtml.includes('JSON\u51fa\u529b'), 'paste hint should mention json import');
 assert(indexHtml.includes('Budil\u306f\u30ab\u30ec\u30f3\u30c0\u30fc\u306b\u76f4\u63a5\u63a5\u7d9a\u3057\u307e\u305b\u3093') || indexHtml.includes('\u6b63\u672c\u30d5\u30ed\u30fc'), 'paste hint should clarify no direct calendar API');

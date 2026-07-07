@@ -77,9 +77,9 @@ const css = load('css/style.css');
 console.log('== v4.10.1 daily expense input ==');
 
 // A. UI
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.10.1');
-assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.10.1');
-assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.10.1');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.15'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.11.15'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.11.15'), 'app.js cache buster should be v4.10.1');
 
 assert(indexHtml.includes('daily-section-expense'), 'daily expense section should exist');
 assert(indexHtml.includes('daily-section-title">\u7d4c\u8cbb\u5165\u529b'), 'daily expense title should use \u7d4c\u8cbb\u5165\u529b');

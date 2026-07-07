@@ -314,7 +314,7 @@ const WorkOrderBrain = {
     if (!forecast.todayCount && !forecast.weekCount) return '';
     const parts = [];
     if (forecast.todayCount) {
-      parts.push(`今日は作業予定が${forecast.todayCount}件、見込み売上は${this.formatYen(forecast.todayAmount)}です`);
+      parts.push(`今日は作業予定が${forecast.todayCount}件、予定売上は${this.formatYen(forecast.todayAmount)}です`);
     }
     if (forecast.completedNoRevenueCount) {
       parts.push(`作業日経過後の売上未確定が${forecast.completedNoRevenueCount}件あります`);

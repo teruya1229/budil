@@ -22,9 +22,9 @@ const executiveBrain = load('js/executive-brain.js');
 
 console.log('== v4.8.30 navigation labels ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.8.30');
-assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.8.30');
-assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.8.30');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.15'), 'header version should be v4.8.30');
+assert(indexHtml.includes('Budil v4.11.15'), 'sidebar version should be v4.8.30');
+assert(indexHtml.includes('js/app.js?v=4.11.15'), 'app.js cache buster should be v4.8.30');
 
 assert(indexHtml.includes('\u53d7\u4ed8\u30fb\u4e88\u5b9a\u78ba\u8a8d'), 'calendar registration nav should exist');
 assert(indexHtml.includes('\u4e88\u5b9a\u53d6\u308a\u8fbc\u307f'), 'schedule import nav should exist');

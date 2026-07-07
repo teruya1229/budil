@@ -11804,7 +11804,7 @@
     if (!el) return;
     const list = (ctx.expenses || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     if (!list.length) {
-      el.innerHTML = '<p class="placeholder-text">支出はまだ登録されていません。</p>';
+      el.innerHTML = '<p class="placeholder-text">経費はまだ登録されていません。</p>';
       return;
     }
     el.innerHTML = `<table class="profit-table"><thead><tr>
@@ -18478,13 +18478,24 @@
     renderDashboard();
   }
 
+  function cleanupDocumentSealImages(root) {
+    if (!root) return;
+    root.querySelectorAll('img.doc-seal').forEach(img => {
+      const src = img.getAttribute('src');
+      if (!src || !String(src).trim()) img.remove();
+    });
+  }
+
   function openDocumentPreview(id) {
     const doc = Storage.getDocumentById(id);
     if (!doc) return;
     currentDocPreviewId = id;
     showDocumentsPanel('preview');
     const body = document.getElementById('documents-preview-body');
-    if (body) body.innerHTML = DocumentsBrain.renderDocumentSheet(doc, esc);
+    if (body) {
+      body.innerHTML = DocumentsBrain.renderDocumentSheet(doc, esc);
+      cleanupDocumentSealImages(body);
+    }
     const convertBtn = document.getElementById('btn-doc-convert-invoice');
     const revenueBtn = document.getElementById('btn-doc-reflect-revenue');
     const normalized = DocumentsBrain.normalizeDocument(doc);
@@ -18633,7 +18644,10 @@
     document.getElementById('btn-doc-preview-from-form')?.addEventListener('click', () => {
       const data = collectDocumentFormData();
       const body = document.getElementById('documents-preview-body');
-      if (body) body.innerHTML = DocumentsBrain.renderDocumentSheet(data, esc);
+      if (body) {
+        body.innerHTML = DocumentsBrain.renderDocumentSheet(data, esc);
+        cleanupDocumentSealImages(body);
+      }
       showDocumentsPanel('preview');
     });
     document.getElementById('btn-doc-edit-from-preview')?.addEventListener('click', () => {

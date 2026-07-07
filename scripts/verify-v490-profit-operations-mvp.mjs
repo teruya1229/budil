@@ -67,10 +67,10 @@ const css = load('css/style.css');
 
 console.log('== v4.10.1 profit operations MVP ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.14'), 'header version should be v4.10.1');
-assert(indexHtml.includes('Budil v4.11.14'), 'sidebar version should be v4.10.1');
-assert(indexHtml.includes('js/app.js?v=4.11.14'), 'app.js cache buster should be v4.10.1');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.11.14'"), 'storage version should be v4.10.1');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.15'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.11.15'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.11.15'), 'app.js cache buster should be v4.10.1');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.11.15'"), 'storage version should be v4.10.1');
 
 assert(indexHtml.includes('nav-label">\u58f2\u4e0a\u7ba1\u7406'), 'nav should use \u58f2\u4e0a\u7ba1\u7406');
 assert(indexHtml.includes('nav-label">\u5229\u76ca\u7ba1\u7406'), 'nav should use \u5229\u76ca\u7ba1\u7406');

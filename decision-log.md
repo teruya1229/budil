@@ -2,6 +2,21 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.11.15 v4.11系横断点検・安定化（2026-07-07）
+
+**日付**: 2026-07-07
+
+**判断内容**:
+- v4.11.5〜v4.11.14 で整えた実務導線を横断点検し、導線切れ・文言ズレ・空src・cache buster漏れのみ最小修正
+- 新機能追加・自動化・データ構造変更は行わない
+- 印影未設定時の空 src は documents-brain を触らず app.js で除去
+- NG表記（見込み売上・支出一覧見出し）を正式表記へ置換
+
+**変更ファイル**:
+- index.html, js/app.js, js/work-order-brain.js, js/storage.js, js/data-backup.js
+- scripts/verify-v41115-cross-screen-workflow-stability.mjs
+- status.md, handoff.md, decision-log.md
+
 ## v4.11.14 月次締め画面の月末チェックリスト整理（2026-07-07）
 
 **日付**: 2026-07-07
