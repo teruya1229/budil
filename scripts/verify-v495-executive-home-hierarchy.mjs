@@ -20,10 +20,10 @@ const css = load('css/style.css');
 
 console.log('== v4.10.1 executive home hierarchy ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.15'), 'header version should be v4.10.1');
-assert(indexHtml.includes('Budil v4.11.15'), 'sidebar version should be v4.10.1');
-assert(indexHtml.includes('js/app.js?v=4.11.15'), 'app.js cache buster should be v4.10.1');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.11.15'"), 'storage version should be v4.10.1');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.12.0'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.12.0'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.12.0'), 'app.js cache buster should be v4.10.1');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.12.0'"), 'storage version should be v4.10.1');
 
 assert(indexHtml.includes('id="exec-home-priority-action"'), 'priority action block should exist');
 assert(indexHtml.includes('exec-home-today-tasks'), 'today tasks section should exist');

@@ -2,6 +2,23 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.0 実運用リハーサル点検（2026-07-07）
+
+**日付**: 2026-07-07
+
+**判断内容**:
+- v4.11.5〜v4.11.15 で整えた実務導線を、受付→カレンダー→作業予定→売上確定→入金→フォロー→月次締めの1周で点検
+- 新機能追加・自動化・データ構造変更は行わない
+- 明確な導線切れ・表記ズレ・空src・cache buster漏れのみ最小修正
+- calendar-candidate-brain.js の cache buster は v4.11.1 のまま維持（触らないファイル方針）
+- 仕様判断が必要な項目は修正せず報告
+
+**変更ファイル**:
+- index.html, js/storage.js, js/data-backup.js
+- scripts/verify-v4120-operational-workflow-rehearsal.mjs
+- scripts/verify-v4*.mjs（バージョン参照を v4.12.0 に更新）
+- status.md, handoff.md, decision-log.md
+
 ## v4.11.15 v4.11系横断点検・安定化（2026-07-07）
 
 **日付**: 2026-07-07

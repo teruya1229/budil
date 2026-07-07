@@ -56,10 +56,10 @@ const css = load('css/style.css');
 
 // --- バージョン確認 ---
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.15'), 'index.html should show v4.11.15');
-assert(indexHtml.includes('js/app.js?v=4.11.15'), 'app.js cache buster should be v4.11.15');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.15'"), 'storage.js version should be v4.11.15');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.15'"), 'data-backup version should be v4.11.15');
+assert(indexHtml.includes('v4.12.0'), 'index.html should show v4.12.0');
+assert(indexHtml.includes('js/app.js?v=4.12.0'), 'app.js cache buster should be v4.12.0');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.0'"), 'storage.js version should be v4.12.0');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.0'"), 'data-backup version should be v4.12.0');
 
 // --- v4.10.26 今日判定が維持されていること ---
 console.log('== TODAY() local date regression ==');
@@ -104,7 +104,7 @@ assert(
 // --- v4.10.25 請求書UI修正が維持されていること ---
 console.log('== v4.10.25 documents UI regression ==');
 assert(css.includes('v4.10.25 請求書・見積書'), 'css should still include v4.10.25 documents marker');
-assert(indexHtml.includes('css/style.css?v=4.11.15'), 'css cache buster should remain v4.10.25.1');
+assert(indexHtml.includes('css/style.css?v=4.12.0'), 'css cache buster should remain v4.10.25.1');
 
 // --- v4.10.26: isRevenueConfirmationQueueCandidate が >= を使っていること ---
 console.log('== isRevenueConfirmationQueueCandidate >= regression ==');

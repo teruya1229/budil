@@ -1,5 +1,15 @@
 ﻿# Budil status
 
+## v4.12.0 実装内容（実運用リハーサル点検版）
+
+- 表示バージョンを v4.12.0 に更新
+- index.html の主要 JS/CSS cache buster を v4.12.0 に統一（calendar-candidate-brain.js は v4.11.1 のまま維持）
+- 受付→Googleカレンダー→作業予定→売上確定→入金確認→フォロー→月次締めの実務導線を横断点検
+- 明確な導線切れ・表記ズレ・空src・cache buster漏れは最小修正方針（今回は calendar-candidate cache buster 維持のみ）
+- v4.11.5〜v4.11.15 の実務導線・画面順・計算仕様は維持
+- 新機能・自動化・localStorageキー変更なし
+- 新規 verify-v4120-operational-workflow-rehearsal.mjs 追加
+
 ## v4.11.15 実装内容（v4.11系横断点検・安定化）
 
 - 表示バージョンを v4.11.15 に更新

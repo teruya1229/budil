@@ -1,5 +1,5 @@
 /**
- * Budil v4.11.15 - reception list next-action workflow verification.
+ * Budil v4.12.0 - reception list next-action workflow verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/app.js', 'js/reception-brain.js', 'js/revenue-brain.js',
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.11.15 reception-list-next-action ==');
+console.log('== v4.12.0 reception-list-next-action ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -45,15 +45,15 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.11.15'), 'index.html should show v4.11.15');
-assert(indexHtml.includes('js/app.js?v=4.11.15'), 'app.js cache buster should be v4.11.15');
-assert(indexHtml.includes('css/style.css?v=4.11.15'), 'style.css cache buster should be v4.11.15');
-assert(indexHtml.includes('js/reception-brain.js?v=4.11.15'), 'reception-brain cache buster should be v4.11.15');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.11.15'"), 'storage.js version should be v4.11.15');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.11.15'"), 'data-backup version should be v4.11.15');
-assert(statusMd.includes('v4.11.15'), 'status.md should document v4.11.15');
-assert(handoffMd.includes('v4.11.15'), 'handoff.md should document v4.11.15');
-assert(decisionLog.includes('v4.11.15'), 'decision-log.md should record v4.11.15');
+assert(indexHtml.includes('v4.12.0'), 'index.html should show v4.12.0');
+assert(indexHtml.includes('js/app.js?v=4.12.0'), 'app.js cache buster should be v4.12.0');
+assert(indexHtml.includes('css/style.css?v=4.12.0'), 'style.css cache buster should be v4.12.0');
+assert(indexHtml.includes('js/reception-brain.js?v=4.12.0'), 'reception-brain cache buster should be v4.12.0');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.0'"), 'storage.js version should be v4.12.0');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.0'"), 'data-backup version should be v4.12.0');
+assert(statusMd.includes('v4.12.0'), 'status.md should document v4.12.0');
+assert(handoffMd.includes('v4.12.0'), 'handoff.md should document v4.12.0');
+assert(decisionLog.includes('v4.12.0'), 'decision-log.md should record v4.12.0');
 
 console.log('== reception list bucket helpers ==');
 assert(receptionJs.includes('groupReceptionIntakesForList'), 'groupReceptionIntakesForList required');
@@ -105,7 +105,7 @@ assert(
   'reception list should use view revenue when resolved'
 );
 
-console.log('== v4.10.39 / v4.11.10 / v4.11.15 maintained ==');
+console.log('== v4.10.39 / v4.11.10 / v4.12.0 maintained ==');
 assert(appJs.includes('!isReceptionIntakeRevenueResolved(p.intakeId)'), 'exec priority fill guard must remain');
 assert(appJs.includes('売上確定済み（受付と既存売上が一致）'), 'resolved intake done label should remain');
 assert(appJs.includes('renderScheduleTodayList'), 'schedule page today list must remain');
@@ -115,7 +115,7 @@ assert(appJs.includes('data-follow-card-open'), 'follow card actions should rema
 assert(appJs.includes('confirmationStatus'), 'calendar confirmationStatus handling should remain');
 
 console.log('== untouched modules ==');
-assert(!documentsJs.includes('v4.11.15'), 'documents-brain should not be version-bumped');
+assert(!documentsJs.includes('v4.12.0'), 'documents-brain should not be version-bumped');
 assert(followJs.includes('getFollowUpTargets'), 'follow-up brain core helpers must remain');
 
 console.log('== reception list css ==');
@@ -236,4 +236,4 @@ console.log('== completed intake stays in collapsed bucket ==');
   assert(!buckets.needsAction.includes('intake-done'), 'done intake must not be in needsAction');
 }
 
-console.log('\nAll v4.11.15 reception-list-next-action checks passed.');
+console.log('\nAll v4.12.0 reception-list-next-action checks passed.');

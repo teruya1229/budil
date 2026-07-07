@@ -24,7 +24,7 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.11.15'), 'index.html should show v4.11.15');
+assert(indexHtml.includes('v4.12.0'), 'index.html should show v4.12.0');
 assert(indexHtml.includes('id="view-revenue-analysis"'), 'revenue analysis view should exist');
 assert(indexHtml.includes('売上分析'), 'nav or header should link to 売上分析');
 

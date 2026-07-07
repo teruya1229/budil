@@ -21,7 +21,7 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.11.15'), 'index.html should show v4.11.15');
+assert(indexHtml.includes('v4.12.0'), 'index.html should show v4.12.0');
 assert(indexHtml.includes('受付・予定確認'), 'calendar registration view should be renamed');
 assert(
   indexHtml.includes('Googleカレンダーが作業予定の正本'),

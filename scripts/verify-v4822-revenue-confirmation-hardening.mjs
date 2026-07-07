@@ -87,9 +87,9 @@ const storageJs = load('js/storage.js');
 
 console.log('== v4.8.30 revenue confirmation hardening ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.11.15'), 'header version should be v4.8.30');
-assert(indexHtml.includes('Budil v4.11.15'), 'sidebar version should be v4.8.30');
-assert(indexHtml.includes('js/app.js?v=4.11.15'), 'app.js cache buster should be v4.8.30');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.12.0'), 'header version should be v4.8.30');
+assert(indexHtml.includes('Budil v4.12.0'), 'sidebar version should be v4.8.30');
+assert(indexHtml.includes('js/app.js?v=4.12.0'), 'app.js cache buster should be v4.8.30');
 
 assert(appJs.includes('getRevenueConfirmationWorkOrderIds'), 'revenue queue work-order id helper should exist');
 assert(appJs.includes('isDailyTaskLinkedToRevenueQueueWorkOrder'), 'daily task revenue queue link helper should exist');
