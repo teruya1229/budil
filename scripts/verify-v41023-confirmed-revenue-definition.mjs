@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Budil v4.10.38 — 確定売上定義統一 verification.
  *
  * 確認内容:
@@ -46,10 +46,10 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 // --- バージョン確認 ---
-assert(indexHtml.includes('v4.12.1'), 'index.html should show v4.12.1');
-assert(indexHtml.includes('js/app.js?v=4.12.1'), 'app.js cache buster should be v4.12.1');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.1'"), 'storage.js version should be v4.12.1');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.1'"), 'data-backup version should be v4.12.1');
+assert(indexHtml.includes('v4.12.3'), 'index.html should show v4.12.3');
+assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.12.3');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.3'"), 'storage.js version should be v4.12.3');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.3'"), 'data-backup version should be v4.12.3');
 assert(statusMd.includes('v4.10.25'), 'status.md should document v4.10.25');
 assert(handoffMd.includes('v4.10.25'), 'handoff.md should document v4.10.25');
 assert(decisionLog.includes('v4.10.25'), 'decision-log.md should record v4.10.25');

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Budil v4.10.1 data consistency check verification.
  */
 import { readFileSync } from 'node:fs';
@@ -72,10 +72,10 @@ const css = load('css/style.css');
 
 console.log('== v4.10.1 data consistency check ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.12.1'), 'header version should be v4.10.1');
-assert(indexHtml.includes('Budil v4.12.1'), 'sidebar version should be v4.10.1');
-assert(indexHtml.includes('js/app.js?v=4.12.1'), 'app.js cache buster should be v4.10.1');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.12.1'"), 'storage version should be v4.10.1');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.12.3'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.12.3'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.10.1');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.12.3'"), 'storage version should be v4.10.1');
 
 assert(indexHtml.includes('id="data-consistency-check"'), 'data management consistency block should exist');
 assert(indexHtml.includes('id="exec-home-data-consistency-check"'), 'exec home consistency block should exist');

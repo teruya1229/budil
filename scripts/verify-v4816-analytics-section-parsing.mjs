@@ -23,8 +23,8 @@ const analyticsBrainJs = load('js/analytics-brain.js');
 
 console.log('== v4.8.30 analytics section parsing ==');
 
-assert(indexHtml.includes('v4.12.1'), 'header version should be v4.12.1');
-assert(indexHtml.includes('js/app.js?v=4.12.1'), 'app.js cache buster should be v4.8.30');
+assert(indexHtml.includes('v4.12.3'), 'header version should be v4.12.3');
+assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.8.30');
 assert(analyticsBrainJs.includes('applySectionMetrics'), 'section metric parser should exist');
 assert(analyticsBrainJs.includes('parseLpTopAccessSection'), 'LP top parser should exist');
 

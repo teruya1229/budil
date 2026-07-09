@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Budil v4.10.5 local calendar JSON workflow verification.
  */
 import { readFileSync } from 'node:fs';
@@ -24,7 +24,7 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.12.1'), 'index.html should show v4.12.1');
+assert(indexHtml.includes('v4.12.3'), 'index.html should show v4.12.3');
 assert(indexHtml.includes('run-budil-calendar-export.bat'), 'calendar JSON hint should mention bat launcher');
 assert(indexHtml.includes('budil-calendar-events.json'), 'calendar JSON hint should mention output filename');
 assert(indexHtml.includes('btn-calendar-candidate-json-import'), 'v4.10.1 JSON import button should remain');

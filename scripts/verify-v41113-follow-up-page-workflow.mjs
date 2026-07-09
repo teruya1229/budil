@@ -1,5 +1,5 @@
-/**
- * Budil v4.12.1 - follow-up page action workflow verification.
+﻿/**
+ * Budil v4.12.3 - follow-up page action workflow verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/app.js', 'js/follow-up-brain.js', 'js/executive-brain.js
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.12.1 follow-up-page-workflow ==');
+console.log('== v4.12.3 follow-up-page-workflow ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -52,15 +52,15 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.1'), 'index.html should show v4.12.1');
-assert(indexHtml.includes('js/app.js?v=4.12.1'), 'app.js cache buster should be v4.12.1');
-assert(indexHtml.includes('css/style.css?v=4.12.1'), 'style.css cache buster should be v4.12.1');
-assert(indexHtml.includes('js/follow-up-brain.js?v=4.12.1'), 'follow-up-brain cache buster should be v4.12.1');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.1'"), 'storage.js version should be v4.12.1');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.1'"), 'data-backup version should be v4.12.1');
-assert(statusMd.includes('v4.12.1'), 'status.md should document v4.12.1');
-assert(handoffMd.includes('v4.12.1'), 'handoff.md should document v4.12.1');
-assert(decisionLog.includes('v4.12.1'), 'decision-log.md should record v4.12.1');
+assert(indexHtml.includes('v4.12.3'), 'index.html should show v4.12.3');
+assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.12.3');
+assert(indexHtml.includes('css/style.css?v=4.12.3'), 'style.css cache buster should be v4.12.3');
+assert(indexHtml.includes('js/follow-up-brain.js?v=4.12.3'), 'follow-up-brain cache buster should be v4.12.3');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.3'"), 'storage.js version should be v4.12.3');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.3'"), 'data-backup version should be v4.12.3');
+assert(statusMd.includes('v4.12.3'), 'status.md should document v4.12.3');
+assert(handoffMd.includes('v4.12.3'), 'handoff.md should document v4.12.3');
+assert(decisionLog.includes('v4.12.3'), 'decision-log.md should record v4.12.3');
 
 console.log('== follow-up page structure ==');
 assert(indexHtml.includes('今日やるフォロー'), 'today follow section required');
@@ -99,7 +99,7 @@ console.log('== copy + mark proximity ==');
   assert(expandedFn[0].includes('follow-up-copy-mark-actions'), 'copy/mark action group required');
 }
 
-console.log('== v4.11.5 / v4.11.8 / v4.11.10 / v4.12.1 maintained ==');
+console.log('== v4.11.5 / v4.11.8 / v4.11.10 / v4.12.3 maintained ==');
 assert(appJs.includes('buildSharedMonthlyMetrics'), 'profit metrics must remain');
 assert(appJs.includes('renderReceptionListSection'), 'reception list sections must remain');
 assert(appJs.includes('buildTodayPriorityAction'), 'executive home priority must remain');
@@ -108,8 +108,8 @@ assert(appJs.includes('skipFollowUpCardAction'), 'follow skip helper must remain
 assert(receptionJs.includes('groupReceptionIntakesForList'), 'reception bucket helper must remain');
 
 console.log('== untouched modules ==');
-assert(!documentsJs.includes('v4.12.1'), 'documents-brain should not be version-bumped');
-assert(!receptionJs.includes('v4.12.1'), 'reception-brain should not be changed');
+assert(!documentsJs.includes('v4.12.3'), 'documents-brain should not be version-bumped');
+assert(!receptionJs.includes('v4.12.3'), 'reception-brain should not be changed');
 
 console.log('== follow-up css ==');
 assert(css.includes('follow-up-row-grid'), 'follow row grid required');
@@ -208,4 +208,4 @@ console.log('== next action label ==');
   assert(label === 'お礼LINE', 'pending thanks should show お礼LINE next action');
 }
 
-console.log('\nAll v4.12.1 follow-up-page-workflow checks passed.');
+console.log('\nAll v4.12.3 follow-up-page-workflow checks passed.');

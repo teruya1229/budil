@@ -47,7 +47,7 @@ const cases = runInContext(`
     customerName: '受付テスト',
     source: 'LINE',
     serviceText: '剪定',
-    estimateAmount: 12000
+    estimateAmount: 0
   };
   const lead = { id: 'lead_1', company: '受付テスト' };
   const openWork = { id: 'wo_1', intakeId: 'intake_1', status: 'scheduled' };

@@ -2,6 +2,24 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.3 予定取り込み 更新→取り込み導線（2026-07-09）
+
+**日付**: 2026-07-09
+
+**判断内容**:
+- calendar-sync-worker に Budil から呼べるローカルAPI/HTTPサーバーは存在しない（調査のみ、worker側は変更しない）
+- GitHub Pages 上の Budil から PC 内 bat を直接実行する実装は禁止のため、書き出しボタンは手動実行案内に接続
+- `run-budil-calendar-export.bat` と `output/budil-calendar-events.json` のパスを画面に明示し、コピー可能にする
+- ファイル選択後は File.lastModified ベースで更新日時・古さ警告を表示（取り込み自体は止めない）
+- 既存の JSON 取り込み・作業予定保存・Googleカレンダー正本フローは維持
+- calendar-candidate-brain.js の cache buster は v4.11.1 のまま維持
+
+**変更ファイル**:
+- index.html, js/app.js, css/style.css, js/storage.js, js/data-backup.js
+- scripts/verify-v4123-calendar-export-import-workflow.mjs
+- scripts/verify-v4*.mjs（バージョン参照を v4.12.3 に更新）
+- status.md, handoff.md, decision-log.md
+
 ## v4.12.1 顧客資産メモ最小移植（2026-07-07）
 
 **日付**: 2026-07-07

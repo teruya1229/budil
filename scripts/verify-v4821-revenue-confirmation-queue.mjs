@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Budil v4.8.30 revenue confirmation queue verification.
  */
 import { readFileSync } from 'node:fs';
@@ -23,9 +23,9 @@ const css = load('css/style.css');
 
 console.log('== v4.8.30 revenue confirmation queue ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.12.1'), 'header version should be v4.8.30');
-assert(indexHtml.includes('Budil v4.12.1'), 'sidebar version should be v4.8.30');
-assert(indexHtml.includes('js/app.js?v=4.12.1'), 'app.js cache buster should be v4.8.30');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.12.3'), 'header version should be v4.8.30');
+assert(indexHtml.includes('Budil v4.12.3'), 'sidebar version should be v4.8.30');
+assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.8.30');
 
 assert(indexHtml.includes('daily-section-revenue-queue'), 'revenue queue section should exist');
 assert(indexHtml.includes('\u58f2\u4e0a\u78ba\u5b9a\u5f85\u3061'), 'revenue queue title should exist');

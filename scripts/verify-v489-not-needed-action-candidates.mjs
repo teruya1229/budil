@@ -96,9 +96,9 @@ const actionBrainJs = load('js/action-brain.js');
 const storageJs = load('js/storage.js');
 const dataBackupJs = load('js/data-backup.js');
 
-assert(indexHtml.includes('AI経営脳みそ v4.12.1'), 'header version should be v4.8.30');
-assert(indexHtml.includes('Budil v4.12.1'), 'sidebar version should be v4.8.30');
-assert(indexHtml.includes('js/app.js?v=4.12.1'), 'app.js cache buster should be v4.8.30');
+assert(indexHtml.includes('AI経営脳みそ v4.12.3'), 'header version should be v4.8.30');
+assert(indexHtml.includes('Budil v4.12.3'), 'sidebar version should be v4.8.30');
+assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.8.30');
 assert(appJs.includes('data-exec-priority-not-needed'), 'top priority needs not-needed button');
 assert(appJs.includes('data-act-not-needed'), 'action candidate list needs not-needed button');
 assert(appJs.includes('data-act-not-needed-report'), 'today action candidate needs not-needed button before add');

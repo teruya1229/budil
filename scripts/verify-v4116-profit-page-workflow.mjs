@@ -1,5 +1,5 @@
-/**
- * Budil v4.12.1 - profit page workflow and schedule edit actions verification.
+﻿/**
+ * Budil v4.12.3 - profit page workflow and schedule edit actions verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -24,7 +24,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.12.1 profit-page-workflow ==');
+console.log('== v4.12.3 profit-page-workflow ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -42,14 +42,14 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.1'), 'index.html should show v4.12.1');
-assert(indexHtml.includes('js/app.js?v=4.12.1'), 'app.js cache buster should be v4.12.1');
-assert(indexHtml.includes('css/style.css?v=4.12.1'), 'style.css cache buster should be v4.12.1');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.1'"), 'storage.js version should be v4.12.1');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.1'"), 'data-backup version should be v4.12.1');
-assert(statusMd.includes('v4.12.1'), 'status.md should document v4.12.1');
-assert(handoffMd.includes('v4.12.1'), 'handoff.md should document v4.12.1');
-assert(decisionLog.includes('v4.12.1'), 'decision-log.md should record v4.12.1');
+assert(indexHtml.includes('v4.12.3'), 'index.html should show v4.12.3');
+assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.12.3');
+assert(indexHtml.includes('css/style.css?v=4.12.3'), 'style.css cache buster should be v4.12.3');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.3'"), 'storage.js version should be v4.12.3');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.3'"), 'data-backup version should be v4.12.3');
+assert(statusMd.includes('v4.12.3'), 'status.md should document v4.12.3');
+assert(handoffMd.includes('v4.12.3'), 'handoff.md should document v4.12.3');
+assert(decisionLog.includes('v4.12.3'), 'decision-log.md should record v4.12.3');
 
 console.log('== profit page layout ==');
 assert(indexHtml.includes('id="profit-operations-diagnostics"'), 'profit operations diagnostics block required');
@@ -92,9 +92,9 @@ for (const term of ['\u898b\u8fbc\u307f\u5229\u76ca', '\u898b\u8fbc\u307f\u58f2\
 }
 
 console.log('== untouched modules ==');
-assert(!receptionJs.includes('renderProfitUpcomingSchedule'), 'reception-brain must not change for v4.12.1');
-assert(!documentsJs.includes('renderProfitUpcomingSchedule'), 'documents-brain must not change for v4.12.1');
-assert(!followJs.includes('renderProfitUpcomingSchedule'), 'follow-up-brain must not change for v4.12.1');
+assert(!receptionJs.includes('renderProfitUpcomingSchedule'), 'reception-brain must not change for v4.12.3');
+assert(!documentsJs.includes('renderProfitUpcomingSchedule'), 'documents-brain must not change for v4.12.3');
+assert(!followJs.includes('renderProfitUpcomingSchedule'), 'follow-up-brain must not change for v4.12.3');
 assert(css.includes('profit-detail-analysis-collapse'), 'css should style profit detail collapse');
 
 function createSandbox() {
@@ -156,4 +156,4 @@ console.log('== screen consistency ==');
   assert(result.upcoming.upcoming[0].id === 'wo1', 'upcoming schedule item should expose work order id for edit');
 }
 
-console.log('\nAll v4.12.1 profit-page-workflow checks passed.');
+console.log('\nAll v4.12.3 profit-page-workflow checks passed.');

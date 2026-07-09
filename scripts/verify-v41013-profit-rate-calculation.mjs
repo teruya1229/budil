@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Budil v4.10.20 — gross margin rate profit calculation verification.
  */
 import { readFileSync } from 'node:fs';
@@ -53,10 +53,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.12.1'), 'index.html should show v4.12.1');
-assert(indexHtml.includes('js/app.js?v=4.12.1'), 'app.js cache buster should be v4.12.1');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.1'"), 'storage.js version should be v4.12.1');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.1'"), 'data-backup version should be v4.12.1');
+assert(indexHtml.includes('v4.12.3'), 'index.html should show v4.12.3');
+assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.12.3');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.3'"), 'storage.js version should be v4.12.3');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.3'"), 'data-backup version should be v4.12.3');
 
 assert(revenueJs.includes('resolveGrossMarginRate'), 'revenue brain should resolve gross margin rate');
 assert(revenueJs.includes('computeMarginProfit'), 'revenue brain should compute margin profit');

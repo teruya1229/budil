@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Budil v4.10.38 - invoice/estimate Money Forward-like layout verification.
  */
 import { readFileSync } from 'node:fs';
@@ -39,11 +39,11 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.1'), 'index.html should show v4.12.1');
-assert(indexHtml.includes('js/app.js?v=4.12.1'), 'app.js cache buster should be v4.12.1');
-assert(indexHtml.includes('css/style.css?v=4.12.1'), 'style.css cache buster should be v4.10.41');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.1'"), 'storage.js version should be v4.12.1');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.1'"), 'data-backup version should be v4.12.1');
+assert(indexHtml.includes('v4.12.3'), 'index.html should show v4.12.3');
+assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.12.3');
+assert(indexHtml.includes('css/style.css?v=4.12.3'), 'style.css cache buster should be v4.10.41');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.3'"), 'storage.js version should be v4.12.3');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.3'"), 'data-backup version should be v4.12.3');
 
 console.log('== layout structure ==');
 assert(documentsJs.includes('doc-sheet-left'), 'left header block should exist');

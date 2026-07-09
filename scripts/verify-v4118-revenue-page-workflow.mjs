@@ -1,5 +1,5 @@
-/**
- * Budil v4.12.1 - revenue page workflow and row action verification.
+﻿/**
+ * Budil v4.12.3 - revenue page workflow and row action verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -24,7 +24,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.12.1 revenue-page-workflow ==');
+console.log('== v4.12.3 revenue-page-workflow ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -40,14 +40,14 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.1'), 'index.html should show v4.12.1');
-assert(indexHtml.includes('js/app.js?v=4.12.1'), 'app.js cache buster should be v4.12.1');
-assert(indexHtml.includes('css/style.css?v=4.12.1'), 'style.css cache buster should be v4.12.1');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.1'"), 'storage.js version should be v4.12.1');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.1'"), 'data-backup version should be v4.12.1');
-assert(statusMd.includes('v4.12.1'), 'status.md should document v4.12.1');
-assert(handoffMd.includes('v4.12.1'), 'handoff.md should document v4.12.1');
-assert(decisionLog.includes('v4.12.1'), 'decision-log.md should record v4.12.1');
+assert(indexHtml.includes('v4.12.3'), 'index.html should show v4.12.3');
+assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.12.3');
+assert(indexHtml.includes('css/style.css?v=4.12.3'), 'style.css cache buster should be v4.12.3');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.3'"), 'storage.js version should be v4.12.3');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.3'"), 'data-backup version should be v4.12.3');
+assert(statusMd.includes('v4.12.3'), 'status.md should document v4.12.3');
+assert(handoffMd.includes('v4.12.3'), 'handoff.md should document v4.12.3');
+assert(decisionLog.includes('v4.12.3'), 'decision-log.md should record v4.12.3');
 
 console.log('== revenue page layout order ==');
 const viewRevenue = indexHtml.slice(
@@ -108,9 +108,9 @@ for (const term of ['見込み利益', '見込み売上', '今月利益', '今�
 }
 
 console.log('== untouched modules ==');
-assert(!receptionJs.includes('renderRevenueRowWorkflowActions'), 'reception-brain must not change for v4.12.1');
-assert(!documentsJs.includes('renderRevenueRowWorkflowActions'), 'documents-brain must not change for v4.12.1');
-assert(!followJs.includes('renderRevenueRowWorkflowActions'), 'follow-up-brain must not change for v4.12.1');
+assert(!receptionJs.includes('renderRevenueRowWorkflowActions'), 'reception-brain must not change for v4.12.3');
+assert(!documentsJs.includes('renderRevenueRowWorkflowActions'), 'documents-brain must not change for v4.12.3');
+assert(!followJs.includes('renderRevenueRowWorkflowActions'), 'follow-up-brain must not change for v4.12.3');
 
 console.log('== revenue workflow css ==');
 assert(css.includes('#view-revenue .revenue-summary-grid'), 'revenue summary grid css required');
@@ -119,4 +119,4 @@ assert(css.includes('#view-revenue .revenue-workflow-secondary-collapse'), 'seco
 
 execSync('node scripts/verify-v4117-profit-broker-fees-layout.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('\nAll v4.12.1 revenue-page-workflow checks passed.');
+console.log('\nAll v4.12.3 revenue-page-workflow checks passed.');
