@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.12.3 - calendar export and import workflow verification.
+ * Budil v4.12.4 - calendar export and import workflow verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -33,14 +33,14 @@ const NG_TERMS = [
   '\u58f2\u4e0a\u767b\u9332\u6e08\u307f', '\u4f5c\u696d\u5f8c\u78ba\u5b9a'
 ];
 
-console.log('== v4.12.3 calendar-export-import-workflow ==');
+console.log('== v4.12.4 calendar-export-import-workflow ==');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.3'), 'index.html should show v4.12.3');
-assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.12.3');
-assert(indexHtml.includes('css/style.css?v=4.12.3'), 'style.css cache buster should be v4.12.3');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.3'"), 'storage version should be v4.12.3');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.3'"), 'data-backup version should be v4.12.3');
+assert(indexHtml.includes('v4.12.4'), 'index.html should show v4.12.4');
+assert(indexHtml.includes('js/app.js?v=4.12.4'), 'app.js cache buster should be v4.12.4');
+assert(indexHtml.includes('css/style.css?v=4.12.4'), 'style.css cache buster should be v4.12.4');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.4'"), 'storage version should be v4.12.4');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.4'"), 'data-backup version should be v4.12.4');
 assert(!indexHtml.includes('?v=4.12.1'), 'old cache buster v4.12.1 should be gone');
 assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.11.1'), 'calendar-candidate cache buster should remain v4.11.1');
 
@@ -94,9 +94,9 @@ assert(css.includes('calendar-json-file-meta-panel'), 'file meta css should exis
 assert(css.includes('calendar-json-stale-warn'), 'stale warning css should exist');
 
 console.log('== docs ==');
-assert(statusMd.includes('v4.12.3'), 'status.md should document v4.12.3');
-assert(handoffMd.includes('v4.12.3'), 'handoff.md should document v4.12.3');
-assert(decisionLog.includes('v4.12.3'), 'decision-log.md should record v4.12.3');
+assert(statusMd.includes('v4.12.4'), 'status.md should document v4.12.4');
+assert(handoffMd.includes('v4.12.4'), 'handoff.md should document v4.12.4');
+assert(decisionLog.includes('v4.12.4'), 'decision-log.md should record v4.12.4');
 
 console.log('== NG terms / data safety ==');
 for (const term of NG_TERMS) {
@@ -108,4 +108,4 @@ assert(!indexHtml.includes('src=""'), 'index.html must not contain empty src');
 console.log('== chain prior release ==');
 execSync('node scripts/verify-v4121-customer-asset-memo.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('All v4.12.3 calendar-export-import-workflow checks passed.');
+console.log('All v4.12.4 calendar-export-import-workflow checks passed.');

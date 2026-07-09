@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.12.3 - monthly close checklist workflow verification.
+ * Budil v4.12.4 - monthly close checklist workflow verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -24,7 +24,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.12.3 monthly-close-checklist-workflow ==');
+console.log('== v4.12.4 monthly-close-checklist-workflow ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -46,11 +46,11 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.3'), 'index.html should show v4.12.3');
-assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.12.3');
-assert(indexHtml.includes('css/style.css?v=4.12.3'), 'style.css cache buster should be v4.12.3');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.3'"), 'storage.js version should be v4.12.3');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.3'"), 'data-backup version should be v4.12.3');
+assert(indexHtml.includes('v4.12.4'), 'index.html should show v4.12.4');
+assert(indexHtml.includes('js/app.js?v=4.12.4'), 'app.js cache buster should be v4.12.4');
+assert(indexHtml.includes('css/style.css?v=4.12.4'), 'style.css cache buster should be v4.12.4');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.4'"), 'storage.js version should be v4.12.4');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.4'"), 'data-backup version should be v4.12.4');
 
 console.log('== monthly close page structure ==');
 const viewMonthly = indexHtml.slice(
@@ -114,12 +114,12 @@ for (const term of NG_TERMS) {
   assert(!viewMonthly.includes(term), `monthly close view must not include ${term}`);
 }
 
-console.log('== v4.11.5 / v4.11.8 / v4.11.9 / v4.11.10 / v4.11.11 / v4.12.3 maintained ==');
+console.log('== v4.11.5 / v4.11.8 / v4.11.9 / v4.11.10 / v4.11.11 / v4.12.4 maintained ==');
 assert(appJs.includes('buildSharedMonthlyMetrics'), 'shared monthly metrics must remain');
 assert(appJs.includes('renderReceivablesMonthlyBillingGroups'), 'v4.11.9 billing renderer must remain');
 assert(appJs.includes('buildTodayPriorityAction'), 'v4.11.10 executive priority must remain');
 assert(appJs.includes('renderWorkOrderPendingCompletionList'), 'v4.11.11 schedule queue must remain');
-assert(appJs.includes('renderFollowUpTodayList'), 'v4.12.3 follow list must remain');
+assert(appJs.includes('renderFollowUpTodayList'), 'v4.12.4 follow list must remain');
 assert(appJs.includes('renderReceptionListSection'), 'v4.11.12 reception list must remain');
 
 console.log('== untouched modules ==');
@@ -175,4 +175,4 @@ const billingItem = checklist.items.find(i => i.id === 'monthly-billing');
 assert(billingItem, 'monthly billing checklist item required');
 assert(checklist.metrics.billingGroups.length >= 1, 'coop billing group should exist');
 
-console.log('\nAll v4.12.3 monthly-close-checklist-workflow checks passed.');
+console.log('\nAll v4.12.4 monthly-close-checklist-workflow checks passed.');

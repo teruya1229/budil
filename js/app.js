@@ -220,14 +220,126 @@
       : '';
   }
 
+  let customerMemoEditOnSaved = null;
+
+  function renderCustomerMemoEditButton(leadId, options) {
+    const id = String(leadId || '').trim();
+    if (!id || !resolveLeadById(id)) return '';
+    const opts = options || {};
+    return `<button type="button" class="btn btn-sm btn-secondary btn-customer-memo-edit" data-customer-memo-edit="${esc(id)}">${esc(opts.label || '顧客メモ編集')}</button>`;
+  }
+
+  function renderCustomerMemoEditButtonWrap(leadId) {
+    const btn = renderCustomerMemoEditButton(leadId);
+    return btn ? `<div class="customer-memo-edit-action">${btn}</div>` : '';
+  }
+
+  function openCustomerMemoEditModal(leadId, options) {
+    const id = String(leadId || '').trim();
+    const lead = resolveLeadById(id);
+    if (!lead) {
+      alert('営業先に紐づいていないため保存できません。営業先を作成/紐づけ後に保存できます。');
+      return;
+    }
+    customerMemoEditOnSaved = (options && options.onSaved) || null;
+    fillCustomerAssetMemoForm('customer-memo-edit', lead);
+    const leadIdEl = document.getElementById('customer-memo-edit-lead-id');
+    if (leadIdEl) leadIdEl.value = id;
+    const nameEl = document.getElementById('customer-memo-edit-lead-name');
+    if (nameEl) nameEl.textContent = lead.company || lead.contact || '（名前なし）';
+    document.getElementById('customer-memo-edit-modal')?.classList.remove('hidden');
+  }
+
+  function closeCustomerMemoEditModal() {
+    document.getElementById('customer-memo-edit-modal')?.classList.add('hidden');
+    customerMemoEditOnSaved = null;
+  }
+
+  function refreshAfterCustomerMemoEdit(leadId) {
+    renderFollowUpView();
+    renderRevenueView();
+    renderReceptionView();
+    renderWorkOrderView();
+    if (currentMessageLeadId === leadId) {
+      const lead = resolveLeadById(leadId);
+      if (lead) {
+        const assetEl = document.getElementById('sales-detail-customer-asset');
+        if (assetEl) {
+          const assetHtml = renderCustomerAssetMemoReferenceHtml(lead, { memoPreview: 160 });
+          const btnWrap = renderCustomerMemoEditButtonWrap(leadId);
+          assetEl.innerHTML = (assetHtml || '') + btnWrap;
+          assetEl.classList.toggle('hidden', !assetHtml && !btnWrap);
+          bindCustomerMemoEditButtons(assetEl);
+        }
+      }
+    }
+    const editId = document.getElementById('reception-edit-id')?.value;
+    if (editId) {
+      const intake = Storage.getReceptionIntakes().find(i => i.id === editId);
+      if (intake) renderReceptionCustomerAssetRef(intake);
+    }
+    renderDashboard();
+  }
+
+  function saveCustomerMemoEditModal() {
+    const id = document.getElementById('customer-memo-edit-lead-id')?.value || '';
+    if (!id || !resolveLeadById(id)) {
+      alert('営業先に紐づいていないため保存できません。営業先を作成/紐づけ後に保存できます。');
+      return;
+    }
+    const fields = readCustomerAssetMemoFromForm('customer-memo-edit');
+    if (!saveCustomerAssetMemoToLead(id, fields)) {
+      alert('保存できませんでした。');
+      return;
+    }
+    const onSaved = customerMemoEditOnSaved;
+    closeCustomerMemoEditModal();
+    refreshAfterCustomerMemoEdit(id);
+    if (onSaved) onSaved(id);
+    showAppToast('顧客メモを保存しました');
+  }
+
+  function bindCustomerMemoEditButtons(container) {
+    if (!container) return;
+    container.querySelectorAll('[data-customer-memo-edit]').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        openCustomerMemoEditModal(btn.dataset.customerMemoEdit);
+      });
+    });
+  }
+
+  function initCustomerMemoEditModal() {
+    const form = document.getElementById('customer-memo-edit-form');
+    if (form && !form.dataset.bound) {
+      form.dataset.bound = '1';
+      form.addEventListener('submit', e => {
+        e.preventDefault();
+        saveCustomerMemoEditModal();
+      });
+    }
+    document.getElementById('btn-customer-memo-edit-cancel')?.addEventListener('click', closeCustomerMemoEditModal);
+    const modal = document.getElementById('customer-memo-edit-modal');
+    if (modal && !modal.dataset.bound) {
+      modal.dataset.bound = '1';
+      modal.addEventListener('click', e => {
+        if (e.target === modal) closeCustomerMemoEditModal();
+      });
+    }
+  }
+
   function renderReceptionCustomerAssetRef(intake) {
     const el = document.getElementById('reception-customer-asset-ref');
     if (!el) return;
     const lead = resolveLeadForIntake(intake);
     const html = renderCustomerAssetMemoReferenceHtml(lead, { compact: true, memoPreview: 80 });
-    if (html) {
-      el.innerHTML = html;
+    const btnWrap = lead ? renderCustomerMemoEditButtonWrap(lead.id) : '';
+    if (html || btnWrap) {
+      el.innerHTML = (html || '') + btnWrap;
       el.classList.remove('hidden');
+      bindCustomerMemoEditButtons(el);
     } else {
       el.innerHTML = '';
       el.classList.add('hidden');
@@ -10571,6 +10683,7 @@
 
   function renderWorkOrderItemActions(workOrder) {
     const wo = WorkOrderBrain.normalizeWorkOrder(workOrder);
+    const linkedLead = resolveLeadForWorkOrder(wo);
     const cal = WorkOrderBrain.buildGoogleCalendarUrl(wo);
     const mapUrl = MapBrain.buildGoogleMapSearchUrl(wo.address);
     const completed = wo.status === 'completed';
@@ -10588,6 +10701,7 @@
       `<button type="button" class="btn btn-sm btn-secondary" data-wo-add-task="${esc(wo.id)}">毎日やることに追加</button>`,
       canConfirm ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-needs-review="${esc(wo.id)}">要確認</button>` : '',
       hasRevenue ? `<button type="button" class="btn btn-sm btn-secondary" data-wo-goto-follow="${esc(wo.id)}">フォローへ</button>` : '',
+      linkedLead ? `<button type="button" class="btn btn-sm btn-secondary" data-customer-memo-edit="${esc(linkedLead.id)}">顧客メモ編集</button>` : '',
       `<button type="button" class="btn btn-sm btn-secondary" data-wo-edit="${esc(wo.id)}">編集</button>`,
       canConfirm ? `<button type="button" class="btn btn-sm btn-secondary btn-danger-outline" data-wo-cancel-open="${esc(wo.id)}">キャンセル</button>` : ''
     ].filter(Boolean).join('');
@@ -10678,6 +10792,7 @@
         if (wo) openWorkOrderFormPanel(wo);
       });
     });
+    bindCustomerMemoEditButtons(container);
   }
 
   function addTaskFromWorkOrder(workOrderId) {
@@ -11077,6 +11192,9 @@
     const repeatDateField = type === 'repeat'
       ? `<p class="follow-up-card-inline-meta">次回目安：<input type="date" class="follow-up-card-repeat-date" data-follow-repeat-date="${esc(target.id)}" value="${esc(nextMaint)}"></p>`
       : '';
+    const memoEditBtn = target.leadId && resolveLeadById(target.leadId)
+      ? renderCustomerMemoEditButton(target.leadId)
+      : '';
     return `
       <div class="follow-up-card-expanded" data-follow-expanded="${esc(type)}">
         ${repeatDateField}
@@ -11084,6 +11202,7 @@
         <div class="follow-up-card-actions follow-up-copy-mark-actions">
           <button type="button" class="btn btn-sm btn-secondary" data-follow-card-copy="${esc(target.id)}" data-follow-card-copy-type="${esc(type)}">文面コピー</button>
           <button type="button" class="btn btn-sm btn-primary" data-follow-card-mark="${esc(target.id)}" data-follow-card-mark-type="${esc(type)}">${esc(markLabel[type] || '済みにする')}</button>
+          ${memoEditBtn}
         </div>
       </div>`;
   }
@@ -11144,11 +11263,13 @@
     const expanded = followUpCardExpandedKey === `${target.id}|${primaryType}`;
     const serviceSummary = (target.serviceText || '—').slice(0, 40) + ((target.serviceText || '').length > 40 ? '…' : '');
     const statusText = FollowUpBrain.formatFollowUpStatus(target);
-    const assetRef = renderCustomerAssetMemoReferenceHtml(resolveLeadById(target.leadId), {
+    const linkedLead = resolveLeadById(target.leadId);
+    const assetRef = renderCustomerAssetMemoReferenceHtml(linkedLead, {
       compact: true,
       shortMemo: true,
       showHint: true
     });
+    const memoEditBtn = linkedLead ? renderCustomerMemoEditButton(linkedLead.id) : '';
     const f = FollowUpBrain.normalizeFollowUp(target.followUp);
     const thanksBtn = f.thanksStatus === 'pending' && !statusRows.thanksSkipped
       ? `<button type="button" class="btn btn-sm btn-primary" data-follow-row-open="${esc(target.id)}" data-follow-row-open-type="thanks">お礼LINE</button>`
@@ -11192,6 +11313,7 @@
           ${copyBtn}
           ${markBtn}
           ${revenueBtn}
+          ${memoEditBtn}
         </div>
         ${expanded ? renderFollowUpCardExpandedBlock(target, primaryType, cardCtx.profile) : ''}
       </div>`;
@@ -11286,6 +11408,7 @@
         if (target) openFollowUpRevenue(target);
       });
     });
+    bindCustomerMemoEditButtons(root);
   }
 
   function renderFollowUpDetail(target) {
@@ -11306,6 +11429,7 @@
     el.innerHTML = `
       <p class="follow-up-target-meta"><strong>${esc(target.customerName)}</strong> / ${esc(target.serviceText || '')} / ${esc(target.workDate || '')}</p>
       ${renderCustomerAssetMemoReferenceHtml(resolveLeadById(target.leadId), { showHint: true, memoPreview: 120 })}
+      ${target.leadId && resolveLeadById(target.leadId) ? renderCustomerMemoEditButtonWrap(target.leadId) : ''}
       <div class="follow-up-detail-block">
         <h3>お礼LINE文</h3>
         <textarea class="follow-up-message-text" id="follow-up-thanks-text" readonly>${esc(thanksMsg)}</textarea>
@@ -11342,6 +11466,7 @@
       </div>`;
 
     bindFollowUpDetailEvents(target);
+    bindCustomerMemoEditButtons(el);
   }
 
   function bindFollowUpDetailEvents(target) {
@@ -14606,6 +14731,7 @@
       workOrders: Storage.getWorkOrders(),
       revenues: Storage.getRevenueRecords()
     });
+    const linkedLead = resolveLeadForIntake(intake);
     const serviceSummary = (intake.serviceText || '—').slice(0, 48) + ((intake.serviceText || '').length > 48 ? '…' : '');
     const resolved = isReceptionWorkflowRevenueResolved(state);
     const statusLabels = (workflow.labels || []).filter(label => !(resolved && label === '売上未確定'));
@@ -14622,7 +14748,8 @@
           <span class="reception-saved-status" title="状態">${esc(statusText)}</span>
           <span class="reception-saved-next" title="次アクション">次：${esc(nextAction)}</span>
         </div>
-        ${renderCustomerAssetMemoReferenceHtml(resolveLeadForIntake(intake), { compact: true, memoPreview: 60 })}
+        ${renderCustomerAssetMemoReferenceHtml(linkedLead, { compact: true, memoPreview: 60 })}
+        ${linkedLead ? renderCustomerMemoEditButtonWrap(linkedLead.id) : ''}
         ${renderReceptionActionBlock(intake)}
         <div class="reception-saved-actions reception-legacy-actions hidden">
           <button type="button" class="btn btn-sm btn-primary" data-reception-create-lead="${esc(intake.id)}">営業先を作成</button>
@@ -14868,6 +14995,7 @@
         setTimeout(() => scrollToElement('#revenue-queue-list'), 160);
       });
     });
+    bindCustomerMemoEditButtons(container);
   }
 
   function bindReceptionOpenButtons(container) {
@@ -16052,9 +16180,11 @@
     const assetEl = document.getElementById('sales-detail-customer-asset');
     if (assetEl) {
       const assetHtml = renderCustomerAssetMemoReferenceHtml(lead, { memoPreview: 160 });
-      if (assetHtml) {
-        assetEl.innerHTML = assetHtml;
+      const btnWrap = renderCustomerMemoEditButtonWrap(leadId);
+      if (assetHtml || btnWrap) {
+        assetEl.innerHTML = (assetHtml || '') + btnWrap;
         assetEl.classList.remove('hidden');
+        bindCustomerMemoEditButtons(assetEl);
       } else {
         assetEl.innerHTML = '';
         assetEl.classList.add('hidden');
@@ -17632,6 +17762,10 @@
       buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-revenue-go-follow="${esc(id)}">フォローへ</button>`);
     }
 
+    if (record.leadId && resolveLeadById(record.leadId)) {
+      buttons.push(`<button type="button" class="btn btn-sm btn-secondary btn-customer-memo-edit" data-customer-memo-edit="${esc(record.leadId)}">顧客メモ編集</button>`);
+    }
+
     buttons.push(`<button type="button" class="btn btn-sm btn-secondary btn-edit" data-edit-revenue="${esc(id)}">編集</button>`);
     buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-revenue-check-source="${esc(id)}">依頼元</button>`);
     buttons.push(`<button type="button" class="btn btn-sm btn-danger btn-danger" data-delete-revenue="${esc(id)}">削除</button>`);
@@ -17655,6 +17789,7 @@
     document.querySelectorAll('[data-revenue-check-source]').forEach(btn => {
       btn.addEventListener('click', () => openRevenueSourceCheck(btn.dataset.revenueCheckSource));
     });
+    bindCustomerMemoEditButtons(document);
   }
 
   function renderRevenueSalesOutcomeSection() {
@@ -19111,6 +19246,7 @@
     initAnalytics();
     initDemandSearch();
     initLeads();
+    initCustomerMemoEditModal();
     initRevenue();
     initReceivables();
     initDocuments();

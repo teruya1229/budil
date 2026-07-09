@@ -24,10 +24,10 @@ for (const file of ['profit-brain.js', 'app.js', 'executive-brain.js']) {
 
 console.log('== v4.10.1 expense input wording ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.12.3'), 'header version should be v4.10.1');
-assert(indexHtml.includes('Budil v4.12.3'), 'sidebar version should be v4.10.1');
-assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.10.1');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.12.3'"), 'storage version should be v4.10.1');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.12.4'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.12.4'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.12.4'), 'app.js cache buster should be v4.10.1');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.12.4'"), 'storage version should be v4.10.1');
 
 assert(indexHtml.includes('\u7d4c\u8cbb\u5165\u529b'), 'profit view expense section should use \u7d4c\u8cbb\u5165\u529b');
 assert(indexHtml.includes('profit-expense-form-section'), 'profit expense form section should exist');

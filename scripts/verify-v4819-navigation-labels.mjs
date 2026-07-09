@@ -23,9 +23,9 @@ const css = load('css/style.css');
 
 console.log('== v4.8.30 daily flow and navigation ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.12.3'), 'header version should be v4.8.30');
-assert(indexHtml.includes('Budil v4.12.3'), 'sidebar version should be v4.8.30');
-assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.8.30');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.12.4'), 'header version should be v4.8.30');
+assert(indexHtml.includes('Budil v4.12.4'), 'sidebar version should be v4.8.30');
+assert(indexHtml.includes('js/app.js?v=4.12.4'), 'app.js cache buster should be v4.8.30');
 
 assert(indexHtml.includes('\u6bce\u65e5\u3084\u308b\u3053\u3068'), 'nav should use daily tasks label');
 assert(!indexHtml.includes('nav-label">\u4eca\u65e5\u3084\u308b\u3053\u3068'), 'nav should not use old daily tasks label');

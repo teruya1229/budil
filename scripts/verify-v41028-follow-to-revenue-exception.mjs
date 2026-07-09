@@ -29,10 +29,10 @@ const dataBackupJs = load('js/data-backup.js');
 const css = load('css/style.css');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.3'), 'index.html should show v4.12.3');
-assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.12.3');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.3'"), 'storage.js version should be v4.12.3');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.3'"), 'data-backup version should be v4.12.3');
+assert(indexHtml.includes('v4.12.4'), 'index.html should show v4.12.4');
+assert(indexHtml.includes('js/app.js?v=4.12.4'), 'app.js cache buster should be v4.12.4');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.4'"), 'storage.js version should be v4.12.4');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.4'"), 'data-backup version should be v4.12.4');
 
 console.log('== exception UI wiring ==');
 assert(appJs.includes('data-exec-priority-fill-revenue'), 'priority card should expose exception revenue button');
@@ -49,7 +49,7 @@ assert(!css.includes('v4.10.28'), 'css must not be changed for v4.10.28');
 console.log('== v4.10.27 regression markers ==');
 assert(calBrainJs.includes('c.startTime || \'\''), 'v4.10.27 dedupe startTime must remain');
 assert(appJs.includes('CalendarCandidateBrain.isPendingCandidate(wo)'), 'v4.10.27 revenue queue candidate path must remain');
-assert(indexHtml.includes('css/style.css?v=4.12.3'), 'v4.10.25 documents CSS cache buster must remain');
+assert(indexHtml.includes('css/style.css?v=4.12.4'), 'v4.10.25 documents CSS cache buster must remain');
 
 function createSandbox() {
   const ctx = createContext({

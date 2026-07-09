@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.12.3 - customer asset memo verification.
+ * Budil v4.12.4 - customer asset memo verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -42,14 +42,14 @@ const FORBIDDEN_EXTRA_FIELDS = [
   'airconMemo'
 ];
 
-console.log('== v4.12.3 customer-asset-memo ==');
+console.log('== v4.12.4 customer-asset-memo ==');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.3'), 'index.html should show v4.12.3');
-assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.12.3');
-assert(indexHtml.includes('css/style.css?v=4.12.3'), 'style.css cache buster should be v4.12.3');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.3'"), 'storage version should be v4.12.3');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.3'"), 'data-backup version should be v4.12.3');
+assert(indexHtml.includes('v4.12.4'), 'index.html should show v4.12.4');
+assert(indexHtml.includes('js/app.js?v=4.12.4'), 'app.js cache buster should be v4.12.4');
+assert(indexHtml.includes('css/style.css?v=4.12.4'), 'style.css cache buster should be v4.12.4');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.4'"), 'storage version should be v4.12.4');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.4'"), 'data-backup version should be v4.12.4');
 assert(!indexHtml.includes('?v=4.12.0'), 'old cache buster v4.12.0 should be gone');
 assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.11.1'), 'calendar-candidate cache buster should remain v4.11.1');
 
@@ -95,7 +95,7 @@ assert(submitWorkCompletion[0].includes('saveCustomerAssetMemoToLead'), 'work co
 assert(submitWorkCompletion[0].includes('work-completion-lead-id'), 'work completion should read linked lead id');
 
 console.log('== reception/follow-up reference display ==');
-assert(appJs.includes('renderCustomerAssetMemoReferenceHtml(resolveLeadForIntake(intake)'),
+assert(appJs.includes('renderCustomerAssetMemoReferenceHtml(linkedLead'),
   'reception list should reference lead customer asset memo');
 assert(appJs.includes('resolveLeadById(target.leadId)'), 'follow-up should reference lead customer asset memo');
 
@@ -119,4 +119,4 @@ assert(dataBackupJs.includes('exportPayload'), 'backup export helper should exis
 console.log('== chain prior operational rehearsal ==');
 execSync('node scripts/verify-v4120-operational-workflow-rehearsal.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('All v4.12.3 customer-asset-memo checks passed.');
+console.log('All v4.12.4 customer-asset-memo checks passed.');

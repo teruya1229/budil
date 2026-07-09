@@ -131,10 +131,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.12.3'), 'index.html should show v4.12.3');
-assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.12.3');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.3'"), 'storage.js version should be v4.12.3');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.3'"), 'data-backup version should be v4.12.3');
+assert(indexHtml.includes('v4.12.4'), 'index.html should show v4.12.4');
+assert(indexHtml.includes('js/app.js?v=4.12.4'), 'app.js cache buster should be v4.12.4');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.4'"), 'storage.js version should be v4.12.4');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.4'"), 'data-backup version should be v4.12.4');
 
 assert(indexHtml.includes('集客チェック'), 'index.html should use 集客チェック label');
 assert(indexHtml.includes('id="browser-bantou-paste"'), 'main paste textarea should exist');

@@ -81,10 +81,10 @@ const visibleIndex = stripHiddenHtml(indexHtml);
 
 console.log('== v4.10.1 sales operations MVP ==');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.12.3'), 'header version should be v4.10.1');
-assert(indexHtml.includes('Budil v4.12.3'), 'sidebar version should be v4.10.1');
-assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.10.1');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.12.3'"), 'storage version should be v4.10.1');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.12.4'), 'header version should be v4.10.1');
+assert(indexHtml.includes('Budil v4.12.4'), 'sidebar version should be v4.10.1');
+assert(indexHtml.includes('js/app.js?v=4.12.4'), 'app.js cache buster should be v4.10.1');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.12.4'"), 'storage version should be v4.10.1');
 
 for (const pattern of PAST_RECOVERY_PATTERNS) {
   assert(!visibleIndex.includes(pattern), `visible index should not include "${pattern}"`);

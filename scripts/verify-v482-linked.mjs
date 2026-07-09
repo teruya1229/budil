@@ -238,7 +238,7 @@ assert(doc(result.afterDeleteRevenue.documents, 'doc_b')?.linkedRevenueId === ''
 assert(!doc(result.afterDeleteDocument.documents, 'doc_d'), 'doc_d should be deleted');
 assert(rev(result.afterDeleteDocument.revenues, 'rev_d')?.linkedDocumentId === '', 'rev_d link should be cleared after document delete');
 
-assert(result.exported.appVersion === 'v4.12.3', 'backup appVersion should be v4.12.3');
+assert(result.exported.appVersion === 'v4.12.4', 'backup appVersion should be v4.12.4');
 assert(result.exported.dataKeys.includes('budil_revenue_records'), 'backup should include revenues');
 assert(result.exported.dataKeys.includes('budil_documents'), 'backup should include documents');
 

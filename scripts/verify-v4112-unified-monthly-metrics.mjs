@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.12.3 / v4.12.3 - unified monthly revenue/profit metrics verification.
+ * Budil v4.12.4 / v4.12.4 - unified monthly revenue/profit metrics verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -23,7 +23,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.12.3 unified-monthly-metrics ==');
+console.log('== v4.12.4 unified-monthly-metrics ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -41,16 +41,16 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.3'), 'index.html should show v4.12.3');
-assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.12.3');
-assert(indexHtml.includes('js/revenue-brain.js?v=4.12.3'), 'revenue-brain cache buster should be v4.12.3');
-assert(indexHtml.includes('js/executive-brain.js?v=4.12.3'), 'executive-brain cache buster should be v4.12.3');
-assert(indexHtml.includes('js/reception-brain.js?v=4.12.3'), 'reception-brain cache buster should remain v4.11.0');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.3'"), 'storage.js version should be v4.12.3');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.3'"), 'data-backup version should be v4.12.3');
-assert(statusMd.includes('v4.12.3'), 'status.md should document v4.12.3');
-assert(handoffMd.includes('v4.12.3'), 'handoff.md should document v4.12.3');
-assert(decisionLog.includes('v4.12.3'), 'decision-log.md should record v4.12.3');
+assert(indexHtml.includes('v4.12.4'), 'index.html should show v4.12.4');
+assert(indexHtml.includes('js/app.js?v=4.12.4'), 'app.js cache buster should be v4.12.4');
+assert(indexHtml.includes('js/revenue-brain.js?v=4.12.4'), 'revenue-brain cache buster should be v4.12.4');
+assert(indexHtml.includes('js/executive-brain.js?v=4.12.4'), 'executive-brain cache buster should be v4.12.4');
+assert(indexHtml.includes('js/reception-brain.js?v=4.12.4'), 'reception-brain cache buster should remain v4.11.0');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.4'"), 'storage.js version should be v4.12.4');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.4'"), 'data-backup version should be v4.12.4');
+assert(statusMd.includes('v4.12.4'), 'status.md should document v4.12.4');
+assert(handoffMd.includes('v4.12.4'), 'handoff.md should document v4.12.4');
+assert(decisionLog.includes('v4.12.4'), 'decision-log.md should record v4.12.4');
 
 console.log('== shared metrics wiring ==');
 assert(revenueBrainJs.includes('buildSharedMonthlyMetrics'), 'RevenueBrain should expose buildSharedMonthlyMetrics');
@@ -73,9 +73,9 @@ assert(!appJs.includes("label: '確定', value:"), 'revenue summary must not kee
 assert(appJs.includes('合計売上'), 'executive home should show 合計売上');
 
 console.log('== untouched files ==');
-assert(!receptionJs.includes('buildSharedMonthlyMetrics'), 'reception-brain must not change for v4.12.3');
-assert(!documentsJs.includes('buildSharedMonthlyMetrics'), 'documents-brain must not change for v4.12.3');
-assert(!followJs.includes('buildSharedMonthlyMetrics'), 'follow-up-brain must not change for v4.12.3');
+assert(!receptionJs.includes('buildSharedMonthlyMetrics'), 'reception-brain must not change for v4.12.4');
+assert(!documentsJs.includes('buildSharedMonthlyMetrics'), 'documents-brain must not change for v4.12.4');
+assert(!followJs.includes('buildSharedMonthlyMetrics'), 'follow-up-brain must not change for v4.12.4');
 assert(profitBrainJs.includes('getSharedMonthlyMetricsForProfit'), 'profit-brain should delegate to RevenueBrain shared metrics');
 assert(!profitBrainJs.includes('buildSharedMonthlyMetrics(ctx)'), 'profit-brain must not define its own buildSharedMonthlyMetrics');
 
@@ -182,4 +182,4 @@ console.log('== monthly results isolation ==');
 
 execSync('node scripts/verify-v4111-calendar-import-result-shows-tamazawa.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('\nAll v4.12.3 unified-monthly-metrics checks passed.');
+console.log('\nAll v4.12.4 unified-monthly-metrics checks passed.');

@@ -84,9 +84,9 @@ const indexHtml = load('index.html');
 const appJs = load('js/app.js');
 const storageJs = load('js/storage.js');
 
-assert(indexHtml.includes('AI経営脳みそ v4.12.3'), 'header version should be v4.8.30');
-assert(indexHtml.includes('Budil v4.12.3'), 'sidebar version should be v4.8.30');
-assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.8.30');
+assert(indexHtml.includes('AI経営脳みそ v4.12.4'), 'header version should be v4.8.30');
+assert(indexHtml.includes('Budil v4.12.4'), 'sidebar version should be v4.8.30');
+assert(indexHtml.includes('js/app.js?v=4.12.4'), 'app.js cache buster should be v4.8.30');
 assert(appJs.includes('compact') && appJs.includes('data-act-not-needed-report'), 'compact today action candidates should render not-needed buttons');
 assert(appJs.includes('data-exec-priority-not-needed'), 'top priority not-needed button should remain');
 assert(appJs.includes('data-act-not-needed="${esc(c.id)}"'), 'action candidate not-needed button should remain');

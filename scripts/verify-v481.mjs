@@ -198,8 +198,8 @@ console.log('\n== backup restore E2E ==');
     ({ exported, integrity, preview, revenues, documents, receivables });
   `, ctx);
 
-  assert(e2e.exported.backupVersion === 'v4.12.3', 'backupVersion mismatch');
-  assert(e2e.exported.appVersion === 'v4.12.3', 'appVersion mismatch');
+  assert(e2e.exported.backupVersion === 'v4.12.4', 'backupVersion mismatch');
+  assert(e2e.exported.appVersion === 'v4.12.4', 'appVersion mismatch');
   assert(e2e.exported.dataKeys.includes('budil_revenue_records'), 'missing revenue key');
   assert(e2e.exported.dataKeys.includes('budil_documents'), 'missing documents key');
   assert(e2e.integrity.revenueCount === 4, 'revenue count in backup');

@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.12.3 - cross-screen workflow stability verification.
+ * Budil v4.12.4 - cross-screen workflow stability verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -60,18 +60,18 @@ const VIEW_IDS = [
   'view-documents'
 ];
 
-console.log('== v4.12.3 cross-screen-workflow-stability ==');
+console.log('== v4.12.4 cross-screen-workflow-stability ==');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.3'), 'index.html should show v4.12.3');
-assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.12.3');
-assert(indexHtml.includes('css/style.css?v=4.12.3'), 'style.css cache buster should be v4.12.3');
-assert(indexHtml.includes('js/revenue-brain.js?v=4.12.3'), 'revenue-brain cache buster should be v4.12.3');
-assert(indexHtml.includes('js/profit-brain.js?v=4.12.3'), 'profit-brain cache buster should be v4.12.3');
-assert(indexHtml.includes('js/executive-brain.js?v=4.12.3'), 'executive-brain cache buster should be v4.12.3');
-assert(indexHtml.includes('js/work-order-brain.js?v=4.12.3'), 'work-order-brain cache buster should be v4.12.3');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.3'"), 'storage version should be v4.12.3');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.3'"), 'data-backup version should be v4.12.3');
+assert(indexHtml.includes('v4.12.4'), 'index.html should show v4.12.4');
+assert(indexHtml.includes('js/app.js?v=4.12.4'), 'app.js cache buster should be v4.12.4');
+assert(indexHtml.includes('css/style.css?v=4.12.4'), 'style.css cache buster should be v4.12.4');
+assert(indexHtml.includes('js/revenue-brain.js?v=4.12.4'), 'revenue-brain cache buster should be v4.12.4');
+assert(indexHtml.includes('js/profit-brain.js?v=4.12.4'), 'profit-brain cache buster should be v4.12.4');
+assert(indexHtml.includes('js/executive-brain.js?v=4.12.4'), 'executive-brain cache buster should be v4.12.4');
+assert(indexHtml.includes('js/work-order-brain.js?v=4.12.4'), 'work-order-brain cache buster should be v4.12.4');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.4'"), 'storage version should be v4.12.4');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.4'"), 'data-backup version should be v4.12.4');
 assert(!indexHtml.includes('?v=4.11.14'), 'old cache buster v4.11.14 should be gone');
 assert(!indexHtml.includes('?v=4.12.35'), 'broken cache buster v4.12.35 should not exist');
 
@@ -126,4 +126,4 @@ console.log('== layout safety ==');
 assert(css.includes('month-end-checklist') || css.includes('exec-home-priority-action'),
   'cross-screen layout styles should exist');
 
-console.log('All v4.12.3 cross-screen-workflow-stability checks passed.');
+console.log('All v4.12.4 cross-screen-workflow-stability checks passed.');

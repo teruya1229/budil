@@ -1437,6 +1437,29 @@ body {
   margin-top: 0.35rem;
 }
 
+.customer-memo-edit-action {
+  margin-top: 0.35rem;
+}
+
+.customer-memo-edit-desc {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text-muted, #666);
+}
+
+.customer-memo-edit-lead-name {
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+}
+
+.customer-memo-edit-section {
+  margin-bottom: 0.5rem;
+}
+
+.btn-customer-memo-edit {
+  white-space: nowrap;
+}
+
 @media (max-width: 390px) {
   .customer-asset-memo-section .form-row-2 {
     grid-template-columns: 1fr;

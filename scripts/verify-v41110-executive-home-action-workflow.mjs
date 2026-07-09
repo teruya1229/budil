@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.12.3 - executive home action-first workflow verification.
+ * Budil v4.12.4 - executive home action-first workflow verification.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -24,7 +24,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.12.3 executive-home-action-workflow ==');
+console.log('== v4.12.4 executive-home-action-workflow ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -42,14 +42,14 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.3'), 'index.html should show v4.12.3');
-assert(indexHtml.includes('js/app.js?v=4.12.3'), 'app.js cache buster should be v4.12.3');
-assert(indexHtml.includes('css/style.css?v=4.12.3'), 'style.css cache buster should be v4.12.3');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.3'"), 'storage.js version should be v4.12.3');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.3'"), 'data-backup version should be v4.12.3');
-assert(statusMd.includes('v4.12.3'), 'status.md should document v4.12.3');
-assert(handoffMd.includes('v4.12.3'), 'handoff.md should document v4.12.3');
-assert(decisionLog.includes('v4.12.3'), 'decision-log.md should record v4.12.3');
+assert(indexHtml.includes('v4.12.4'), 'index.html should show v4.12.4');
+assert(indexHtml.includes('js/app.js?v=4.12.4'), 'app.js cache buster should be v4.12.4');
+assert(indexHtml.includes('css/style.css?v=4.12.4'), 'style.css cache buster should be v4.12.4');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.4'"), 'storage.js version should be v4.12.4');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.4'"), 'data-backup version should be v4.12.4');
+assert(statusMd.includes('v4.12.4'), 'status.md should document v4.12.4');
+assert(handoffMd.includes('v4.12.4'), 'handoff.md should document v4.12.4');
+assert(decisionLog.includes('v4.12.4'), 'decision-log.md should record v4.12.4');
 
 console.log('== executive home layout order ==');
 const execHome = indexHtml.slice(
@@ -205,4 +205,4 @@ console.log('== runtime priority: receivables ==');
   assert(result.primaryAction.label === '入金予定へ', 'payment should link to receivables');
 }
 
-console.log('\nAll v4.12.3 executive-home-action-workflow checks passed.');
+console.log('\nAll v4.12.4 executive-home-action-workflow checks passed.');
