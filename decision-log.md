@@ -2,6 +2,26 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.7 verify整理（2026-07-09）
+
+**日付**: 2026-07-09
+
+**判断内容**:
+- 本体機能・UI・データ仕様は変更しない。verify の誤検知・旧バージョン固定・legacy 混在を整理
+- 現行合格は current verify chain（`node scripts/verify-current.mjs`）のみ。v4.8/v4.9 は legacy verify（`verify-legacy-reference.mjs`）に分離
+- 作業前から失敗していた `verify-reception-actions.mjs`（RevenueBrain 未読込）と `verify-calendar-past-recovery.mjs`（.cursor 誤検知 + 旧バージョン固定）を修正し legacy 参考枠へ
+- 版別 verify の表示バージョンピンを v4.12.7 に追従。calendar-candidate-brain.js?v=4.11.1 の意図的固定は維持
+- legacy verify を現行合否に混ぜない。失敗を隠さない
+
+**変更ファイル**:
+- index.html, js/storage.js, js/data-backup.js（表示バージョンのみ）
+- scripts/verify-current.mjs, scripts/verify-legacy-reference.mjs, scripts/verify-v4127-verify-chain-cleanup.mjs
+- scripts/verify-v4*.mjs（現行チェーンのバージョンピン更新）
+- scripts/verify-calendar-past-recovery.mjs, scripts/verify-reception-actions.mjs
+- status.md, handoff.md, decision-log.md
+
+**現行合格コマンド**: `node scripts/verify-current.mjs`
+
 ## v4.12.6 タッチ決済・入金サイクル表示（2026-07-09）
 
 **日付**: 2026-07-09

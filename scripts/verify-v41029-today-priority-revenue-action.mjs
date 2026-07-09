@@ -41,10 +41,10 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.5'), 'index.html should show v4.12.4');
-assert(indexHtml.includes('js/app.js?v=4.12.5'), 'app.js cache buster should be v4.12.4');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.5'"), 'storage.js version should be v4.12.4');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.5'"), 'data-backup version should be v4.12.4');
+assert(indexHtml.includes('v4.12.7'), 'index.html should show v4.12.7');
+assert(indexHtml.includes('js/app.js?v=4.12.7'), 'app.js cache buster should be v4.12.7');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.7'"), 'storage.js version should be v4.12.7');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.7'"), 'data-backup version should be v4.12.7');
 
 console.log('== priority action button wiring ==');
 assert(appJs.includes('data-exec-priority-fill-revenue'), 'exec priority should expose fill-revenue button');

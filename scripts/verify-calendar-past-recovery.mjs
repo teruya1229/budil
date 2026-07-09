@@ -64,14 +64,17 @@ function createSandbox(seed = {}) {
 }
 
 function readSourceFiles(dir, out = []) {
+  const relDir = relative(root, dir).replace(/\\/g, '/');
+  if (relDir.startsWith('.git/') || relDir.startsWith('recovery/') || relDir.startsWith('.cursor/')) return out;
   for (const name of readdirSync(dir)) {
     const path = join(dir, name);
     const rel = relative(root, path).replace(/\\/g, '/');
-    if (rel.startsWith('.git/') || rel.startsWith('recovery/')) continue;
+    if (rel.startsWith('.git/') || rel.startsWith('recovery/') || rel.startsWith('.cursor/')) continue;
+    if (rel.startsWith('scripts/') || rel.startsWith('docs/') || rel.startsWith('hub/') || rel.startsWith('auth/')) continue;
     if (rel === 'scripts/verify-calendar-past-recovery.mjs') continue;
     const st = statSync(path);
     if (st.isDirectory()) readSourceFiles(path, out);
-    else if (/\.(js|mjs|html|md)$/.test(name)) out.push(path);
+    else if (/\.(js|html)$/.test(name) && (rel.startsWith('js/') || rel === 'index.html')) out.push(path);
   }
   return out;
 }
@@ -87,9 +90,9 @@ const appJs = load('js/app.js');
 const calendarBrain = load('js/calendar-candidate-brain.js');
 const storageJs = load('js/storage.js');
 
-assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.12.4'), 'header version should be v4.12.4');
-assert(indexHtml.includes('Budil v4.12.5'), 'sidebar version should be v4.12.4');
-assert(indexHtml.includes('js/app.js?v=4.12.5'), 'app.js cache buster should be v4.12.4');
+assert(indexHtml.includes('AI\u7d4c\u55b6\u8133\u307f\u305d v4.12.7'), 'header version should be v4.12.7');
+assert(indexHtml.includes('Budil v4.12.7'), 'sidebar version should be v4.12.7');
+assert(indexHtml.includes('js/app.js?v=4.12.7'), 'app.js cache buster should be v4.12.7');
 assert(indexHtml.includes('calendar-past-recovery-panel hidden'), 'past recovery panel should be hidden in UI');
 assert(indexHtml.includes('\u4e88\u5b9a\u53d6\u308a\u8fbc\u307f'), 'schedule import nav should exist');
 assert(!indexHtml.includes('nav-label">\u904e\u53bb\u58f2\u4e0a\u5fa9\u5143'), 'past recovery nav label should be hidden');

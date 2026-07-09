@@ -39,6 +39,7 @@ const ctx = createContext({
   }
 });
 
+runInContext(loadScript('revenue-brain.js'), ctx, { filename: 'revenue-brain.js' });
 runInContext(loadScript('reception-brain.js'), ctx, { filename: 'reception-brain.js' });
 
 const cases = runInContext(`

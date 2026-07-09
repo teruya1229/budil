@@ -39,12 +39,12 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.5'), 'index.html should show v4.12.4');
-assert(indexHtml.includes('js/app.js?v=4.12.5'), 'app.js cache buster should be v4.12.4');
-assert(indexHtml.includes('css/style.css?v=4.12.5'), 'style.css cache buster should be v4.10.41');
-assert(indexHtml.includes('js/documents-brain.js?v=4.12.5'), 'documents-brain cache buster should be v4.12.4');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.5'"), 'storage.js version should be v4.12.4');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.5'"), 'data-backup version should be v4.12.4');
+assert(indexHtml.includes('v4.12.7'), 'index.html should show v4.12.7');
+assert(indexHtml.includes('js/app.js?v=4.12.7'), 'app.js cache buster should be v4.12.7');
+assert(indexHtml.includes('css/style.css?v=4.12.7'), 'style.css cache buster should be v4.10.41');
+assert(indexHtml.includes('js/documents-brain.js?v=4.12.7'), 'documents-brain cache buster should be v4.12.7');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.7'"), 'storage.js version should be v4.12.7');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.7'"), 'data-backup version should be v4.12.7');
 
 console.log('== A4 fixed sheet CSS ==');
 assert(css.includes('width: 210mm'), 'doc-sheet should use fixed A4 width');

@@ -1,5 +1,30 @@
 ﻿# Budil status
 
+## v4.12.7 実装内容（verify整理）
+
+- **本体機能追加なし**（verify整理・現行/legacy分類のみ）
+- 表示バージョンを v4.12.7 に更新
+- index.html の主要 JS/CSS cache buster を v4.12.7 に統一（calendar-candidate-brain.js は v4.11.1 のまま維持）
+- 現行合格判定用 current verify chain `scripts/verify-current.mjs` を追加（v4.10.0〜v4.10.42 + v4.11.x + v4.12.0〜v4.12.7）
+- legacy参考用 legacy verify `scripts/verify-legacy-reference.mjs` を追加（v4.8/v4.9系 + 補助verify。現行合否には含めない）
+- 新規 `scripts/verify-v4127-verify-chain-cleanup.mjs` 追加
+- `verify-calendar-past-recovery.mjs`：検索対象を js/ と index.html に限定（.cursor/rules 誤検知を解消）
+- `verify-reception-actions.mjs`：sandbox に revenue-brain.js を読み込み（openRevenue 期待値の誤失敗を解消）
+- v4.12.6 支払方法/入金サイクル・v4.12.5 くらし支払・v4.12.4 顧客メモ・v4.12.3 予定取り込みは維持
+- localStorageキー変更なし
+
+### verify分類（v4.12.7）
+
+| 分類 | 内容 | 実行コマンド |
+|------|------|-------------|
+| **A. current** | 現行v4.12.7で必ず通す verify（v4.10〜v4.12系 66本 + runner） | `node scripts/verify-current.mjs` |
+| **B. versioned-current** | 上記に含まれる版別仕様維持 verify（削除せず current チェーン内で維持） | 同上 |
+| **C. legacy-reference** | v4.8/v4.9 旧前提参考 verify（37本 + 補助3本）。現行合否に含めない | `node scripts/verify-legacy-reference.mjs` |
+| **D. broken-legacy（解消済）** | 作業前HEADでも失敗していた verify-reception-actions / verify-calendar-past-recovery。修正済み・legacy 参考実行に移動 | legacy runner 参照 |
+| **E. needs-decision** | なし（本体仕様判断が必要な verify は今回未検出） | — |
+
+**現行合格判定コマンド**: `node scripts/verify-current.mjs`
+
 ## v4.12.6 実装内容（タッチ決済・入金サイクル表示）
 
 - 表示バージョンを v4.12.6 に更新

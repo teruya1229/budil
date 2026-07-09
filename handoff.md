@@ -15,8 +15,9 @@
 
 | 項目 | 値 |
 |------|-----|
-| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.6 |
-| 最新バージョン | v4.12.6 |
+| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.7 |
+| 最新バージョン | v4.12.7 |
+| v4.12.7 verify整理（本体機能追加なし） | current verify chain 確立 / legacy 分離 / 作業前失敗2件を修正・分類 / push予定 |
 | v4.12.6 タッチ決済・入金サイクル表示 | commit `a61e34c` / verify-v4126合格 / verify-v4125合格 / ローカル・公開ブラウザ点検OK / push済み・Pages反映済み |
 | v4.12.5 くらし支払方法追加 | commit `7c67272` / verify-v4125合格 / v4.10-v4.12 verify 64件合格 / ローカルブラウザ点検OK / push済み・Pages反映待ち |
 | v4.12.4 顧客メモクイック編集 | 正式合格 commit `af9e502` / verify-v4124合格（102中100合格、既存2件はHEAD時点でも失敗） / ブラウザ点検OK / push済み |
@@ -60,6 +61,14 @@
 | v4.10.23 確定売上定義統一commit | 9a6d161 |
 | v4.10.22 本体修正commit | ee8eec3 |
 | ブランチ | `main` push 済み |
+
+## v4.12.7 verify運用（2026-07-09）
+
+- **本体**: 機能追加なし。表示バージョン v4.12.7 のみ
+- **現行合格**: `node scripts/verify-current.mjs`（v4.10.0〜v4.10.42 + v4.11.x + v4.12.0〜v4.12.7、66本）
+- **legacy参考**: `node scripts/verify-legacy-reference.mjs`（v4.8/v4.9系 + intake/reception/calendar-past。現行合否外）
+- **作業前失敗2件**: verify-reception-actions（sandbox修正済）/ verify-calendar-past-recovery（スキャン範囲修正済）。legacy 枠へ移動
+- **削除**: legacy verify は削除していない（旧仕様参考・手動回帰用）
 
 ## v4.11.10 経営ホーム処理優先導線（2026-07-06）
 

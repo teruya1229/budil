@@ -43,16 +43,17 @@ const TOUCH_LABEL = 'カード：タッチ決済';
 console.log('== v4.12.6 touch-card-payment-cycle ==');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.6'), 'index.html should show v4.12.6');
-assert(indexHtml.includes('js/app.js?v=4.12.6'), 'app.js cache buster should be v4.12.6');
-assert(indexHtml.includes('css/style.css?v=4.12.6'), 'style.css cache buster should be v4.12.6');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.6'"), 'storage version should be v4.12.6');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.6'"), 'data-backup version should be v4.12.6');
-assert(!indexHtml.includes('?v=4.12.5'), 'old cache buster v4.12.5 should be gone from index');
+assert(indexHtml.includes('v4.12.7'), 'index.html should show v4.12.7');
+assert(indexHtml.includes('js/app.js?v=4.12.7'), 'app.js cache buster should be v4.12.7');
+assert(indexHtml.includes('css/style.css?v=4.12.7'), 'style.css cache buster should be v4.12.7');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.7'"), 'storage version should be v4.12.7');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.7'"), 'data-backup version should be v4.12.7');
+assert(!indexHtml.includes('?v=4.12.6'), 'old cache buster v4.12.6 should be gone from index');
 assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.11.1'), 'calendar-candidate cache buster should remain v4.11.1');
-assert(statusMd.includes('v4.12.6'), 'status.md should document v4.12.6');
-assert(handoffMd.includes('v4.12.6'), 'handoff.md should document v4.12.6');
-assert(decisionLog.includes('v4.12.6'), 'decision-log.md should record v4.12.6');
+assert(statusMd.includes('v4.12.7'), 'status.md should document v4.12.7');
+assert(handoffMd.includes('v4.12.7'), 'handoff.md should document v4.12.7');
+assert(decisionLog.includes('v4.12.7'), 'decision-log.md should record v4.12.7');
+assert(statusMd.includes('v4.12.6'), 'status.md should retain v4.12.6 history');
 
 console.log('== payment method options ==');
 assert(paymentBrainJs.includes("value: 'card_touch'"), 'card_touch option required');
