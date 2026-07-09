@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.12.4">
+  <link rel="stylesheet" href="css/style.css?v=4.12.5">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.12.4</small>
+          <small>AI経営脳みそ v4.12.5</small>
         </div>
       </div>
       <nav class="nav">
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.12.4</small>
+        <small>Budil v4.12.5</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の最優先 → 今日やること → 今月の数字</p>
             </div>
-            <span class="exec-home-version">v4.12.4</span>
+            <span class="exec-home-version">v4.12.5</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden exec-tower-span-full"></div>
 
@@ -594,7 +594,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.12.4</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.12.5</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -2441,6 +2441,12 @@
           <div id="receivables-monthly-billing-groups" class="receivables-monthly-billing-groups"></div>
         </div>
 
+        <div class="card card-wide receivables-curama-deferred-card hidden" id="receivables-curama-deferred-card">
+          <h2>くらしのマーケット：後払い</h2>
+          <p class="field-hint">月末締め・翌月末入金の案件です。コープ・ヤマダ月次請求とは別枠で確認してください。</p>
+          <div id="receivables-curama-deferred-summary" class="receivables-curama-deferred-summary"></div>
+        </div>
+
         <div class="card card-wide receivables-list-card">
           <h2>1件ごと入金確認</h2>
           <p class="field-hint">直請け・Air・自社導線・くらしのマーケット等は1件ごとに入金確認します。コープ・ヤマダは上の月次請求で管理します。</p>
@@ -2872,6 +2878,12 @@
           <h2>コープ・ヤマダ月次請求確認</h2>
           <p class="field-hint">請求月ベース表示。作業月・売上月は変更しません。</p>
           <div id="month-end-monthly-billing-list" class="month-end-section-list"></div>
+        </div>
+
+        <div class="card card-wide card-month-end-section" id="month-end-curama-deferred-card">
+          <h2>くらしのマーケット：後払い</h2>
+          <p class="field-hint">月末締め・翌月末入金として入金予定を確認してください。</p>
+          <div id="month-end-curama-deferred-list" class="month-end-section-list"></div>
         </div>
 
         <div class="card card-wide card-month-end-section" id="month-end-expense-check-card">
@@ -3848,30 +3860,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.12.4"></script>
-  <script src="js/messages.js?v=4.12.4"></script>
-  <script src="js/demand-brain.js?v=4.12.4"></script>
-  <script src="js/demand-radar.js?v=4.12.4"></script>
-  <script src="js/sales-brain.js?v=4.12.4"></script>
-  <script src="js/management-brain.js?v=4.12.4"></script>
-  <script src="js/payment-brain.js?v=4.12.4"></script>
-  <script src="js/revenue-brain.js?v=4.12.4"></script>
-  <script src="js/revenue-summary-brain.js?v=4.12.4"></script>
-  <script src="js/reception-brain.js?v=4.12.4"></script>
-  <script src="js/map-brain.js?v=4.12.4"></script>
+  <script src="js/storage.js?v=4.12.5"></script>
+  <script src="js/messages.js?v=4.12.5"></script>
+  <script src="js/demand-brain.js?v=4.12.5"></script>
+  <script src="js/demand-radar.js?v=4.12.5"></script>
+  <script src="js/sales-brain.js?v=4.12.5"></script>
+  <script src="js/management-brain.js?v=4.12.5"></script>
+  <script src="js/payment-brain.js?v=4.12.5"></script>
+  <script src="js/revenue-brain.js?v=4.12.5"></script>
+  <script src="js/revenue-summary-brain.js?v=4.12.5"></script>
+  <script src="js/reception-brain.js?v=4.12.5"></script>
+  <script src="js/map-brain.js?v=4.12.5"></script>
   <script src="js/calendar-candidate-brain.js?v=4.11.1"></script>
-  <script src="js/external-check-brain.js?v=4.12.4"></script>
-  <script src="js/action-brain.js?v=4.12.4"></script>
-  <script src="js/work-order-brain.js?v=4.12.4"></script>
-  <script src="js/follow-up-brain.js?v=4.12.4"></script>
-  <script src="js/work-completion-brain.js?v=4.12.4"></script>
-  <script src="js/profit-brain.js?v=4.12.4"></script>
-  <script src="js/analytics-brain.js?v=4.12.4"></script>
-  <script src="js/monthly-results-brain.js?v=4.12.4"></script>
-  <script src="js/documents-brain.js?v=4.12.4"></script>
-  <script src="js/executive-brain.js?v=4.12.4"></script>
-  <script src="js/card-ocr.js?v=4.12.4"></script>
-  <script src="js/data-backup.js?v=4.12.4"></script>
-  <script src="js/app.js?v=4.12.4"></script>
+  <script src="js/external-check-brain.js?v=4.12.5"></script>
+  <script src="js/action-brain.js?v=4.12.5"></script>
+  <script src="js/work-order-brain.js?v=4.12.5"></script>
+  <script src="js/follow-up-brain.js?v=4.12.5"></script>
+  <script src="js/work-completion-brain.js?v=4.12.5"></script>
+  <script src="js/profit-brain.js?v=4.12.5"></script>
+  <script src="js/analytics-brain.js?v=4.12.5"></script>
+  <script src="js/monthly-results-brain.js?v=4.12.5"></script>
+  <script src="js/documents-brain.js?v=4.12.5"></script>
+  <script src="js/executive-brain.js?v=4.12.5"></script>
+  <script src="js/card-ocr.js?v=4.12.5"></script>
+  <script src="js/data-backup.js?v=4.12.5"></script>
+  <script src="js/app.js?v=4.12.5"></script>
 </body>
 </html>

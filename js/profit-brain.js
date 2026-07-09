@@ -1198,6 +1198,12 @@ const ProfitBrain = {
       : [];
     const billingPendingCount = billingGroups.filter(g => g.status !== '入金済み').length;
 
+    const curamaDeferredSummary = typeof RevenueBrain !== 'undefined'
+      ? RevenueBrain.buildCuramaDeferredSummary(revenues)
+      : { count: 0, total: 0, items: [] };
+    const curamaDeferredCount = curamaDeferredSummary.count || 0;
+    const curamaDeferredTotal = curamaDeferredSummary.total || 0;
+
     const monthExpenses = this.filterMonthExpenses(expenses, monthKey);
     const expenseInputCount = monthExpenses.length;
     const monthExpense = this.sumAmount(monthExpenses);
@@ -1271,6 +1277,20 @@ const ProfitBrain = {
         primaryAction: { label: '月次請求を見る', view: 'receivables', scrollSelector: '#receivables-monthly-billing-card' }
       },
       {
+        id: 'curama-deferred',
+        label: 'くらしのマーケット：後払い',
+        count: curamaDeferredCount,
+        amount: curamaDeferredTotal,
+        amountLabel: curamaDeferredCount ? this.formatYen(curamaDeferredTotal) : '—',
+        status: statusForCount(curamaDeferredCount),
+        scrollSelector: '#month-end-curama-deferred-card',
+        primaryAction: {
+          label: 'くらし後払いを見る',
+          view: 'receivables',
+          scrollSelector: '#receivables-curama-deferred-card'
+        }
+      },
+      {
         id: 'expense-check',
         label: '経費入力確認',
         count: expenseInputCount,
@@ -1329,6 +1349,8 @@ const ProfitBrain = {
         paymentPendingCount,
         paymentOverdueCount,
         billingGroups,
+        curamaDeferredCount,
+        curamaDeferredTotal,
         documentCount,
         invoiceCount,
         estimateCount,

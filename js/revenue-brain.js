@@ -1223,5 +1223,60 @@ const RevenueBrain = {
       if (!rev) return true;
       return !this.isMonthlyBillingSource(this.resolveRecordSourceText(rev));
     });
+  },
+
+  isCuramaOnlineCardPayment(paymentMethod) {
+    const m = String(paymentMethod || '').trim();
+    if (!m) return false;
+    if (m === 'curama_online_card' || m === 'kurashi_card') return true;
+    if (/^くらしカード決済$/.test(m)) return true;
+    if (/くらしのマーケット[：:]\s*オンラインカード|くらしオンラインカード/.test(m)) return true;
+    if (/オンラインカード/.test(m) && /くらし|くらマ/.test(m)) return true;
+    return false;
+  },
+
+  isCuramaDeferredPayment(paymentMethod) {
+    const m = String(paymentMethod || '').trim();
+    if (!m) return false;
+    if (m === 'curama_deferred' || m === 'kurashi_deferred') return true;
+    if (/^くらし後払い$/.test(m)) return true;
+    if (/くらしのマーケット[：:]\s*後払い|くらし後払い/.test(m)) return true;
+    return false;
+  },
+
+  getPaymentMethodLabel(paymentMethod) {
+    const m = String(paymentMethod || '').trim();
+    if (!m) return '—';
+    if (typeof PaymentBrain !== 'undefined' && PaymentBrain.PAYMENT_METHOD_LABELS[m]) {
+      return PaymentBrain.PAYMENT_METHOD_LABELS[m];
+    }
+    if (this.isCuramaOnlineCardPayment(m)) return 'くらしのマーケット：オンラインカード決済';
+    if (this.isCuramaDeferredPayment(m)) return 'くらしのマーケット：後払い';
+    return m;
+  },
+
+  getPaymentMethodDisplayHint(paymentMethod) {
+    if (this.isCuramaDeferredPayment(paymentMethod)) {
+      return '月末締め・翌月末入金';
+    }
+    if (this.isCuramaOnlineCardPayment(paymentMethod)) {
+      return 'オンラインカード決済（現金集金ではありません）';
+    }
+    return '';
+  },
+
+  collectCuramaDeferredOpenRecords(records) {
+    return this.normalizeRevenueRecords(records).filter(r => {
+      if (!r || r.status === 'キャンセル') return false;
+      if (!this.isCuramaDeferredPayment(r.paymentMethod)) return false;
+      if (typeof PaymentBrain === 'undefined') return true;
+      return PaymentBrain.isReceivablePending(r);
+    });
+  },
+
+  buildCuramaDeferredSummary(records) {
+    const items = this.collectCuramaDeferredOpenRecords(records);
+    const total = items.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    return { count: items.length, total, items };
   }
 };

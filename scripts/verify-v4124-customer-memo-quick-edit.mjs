@@ -1,5 +1,5 @@
 /**
- * Budil v4.12.4 - customer memo quick edit verification.
+ * Budil v4.12.5 - customer memo quick edit verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -51,19 +51,20 @@ const NG_TERMS = [
   '\u58f2\u4e0a\u767b\u9332\u6e08\u307f', '\u4f5c\u696d\u5f8c\u78ba\u5b9a'
 ];
 
-console.log('== v4.12.4 customer-memo-quick-edit ==');
+console.log('== v4.12.5 customer-memo-quick-edit ==');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.4'), 'index.html should show v4.12.4');
-assert(indexHtml.includes('js/app.js?v=4.12.4'), 'app.js cache buster should be v4.12.4');
-assert(indexHtml.includes('css/style.css?v=4.12.4'), 'style.css cache buster should be v4.12.4');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.4'"), 'storage version should be v4.12.4');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.4'"), 'data-backup version should be v4.12.4');
+assert(indexHtml.includes('v4.12.5'), 'index.html should show v4.12.5');
+assert(indexHtml.includes('js/app.js?v=4.12.5'), 'app.js cache buster should be v4.12.5');
+assert(indexHtml.includes('css/style.css?v=4.12.5'), 'style.css cache buster should be v4.12.5');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.5'"), 'storage version should be v4.12.5');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.5'"), 'data-backup version should be v4.12.5');
 assert(!indexHtml.includes('?v=4.12.3'), 'old cache buster v4.12.3 should be gone');
+assert(!indexHtml.includes('?v=4.12.4'), 'old cache buster v4.12.4 should be gone');
 assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.11.1'), 'calendar-candidate cache buster should remain v4.11.1');
-assert(statusMd.includes('v4.12.4'), 'status.md should document v4.12.4');
-assert(handoffMd.includes('v4.12.4'), 'handoff.md should document v4.12.4');
-assert(decisionLog.includes('v4.12.4'), 'decision-log.md should record v4.12.4');
+assert(statusMd.includes('v4.12.5'), 'status.md should document v4.12.5');
+assert(handoffMd.includes('v4.12.5'), 'handoff.md should document v4.12.5');
+assert(decisionLog.includes('v4.12.5'), 'decision-log.md should record v4.12.5');
 
 console.log('== shared customer memo edit modal ==');
 assert(indexHtml.includes('id="customer-memo-edit-modal"'), 'customer memo edit modal should exist');
@@ -91,7 +92,7 @@ assert(indexHtml.includes('id="work-completion-customer-type-major"'), 'work com
 assert(indexHtml.includes('id="work-completion-customer-memo"'), 'work completion customer memo should remain');
 assert(indexHtml.includes('id="lead-customer-memo"'), 'lead form customer memo should remain');
 
-console.log('== v4.12.4 calendar import workflow preserved ==');
+console.log('== v4.12.5 calendar import workflow preserved ==');
 assert(indexHtml.includes('btn-calendar-export-latest'), 'export latest button should remain');
 assert(indexHtml.includes('btn-calendar-candidate-json-import'), 'JSON import button should remain');
 
@@ -153,4 +154,4 @@ console.log('== chain prior customer asset memo and calendar workflow ==');
 execSync('node scripts/verify-v4121-customer-asset-memo.mjs', { cwd: root, stdio: 'inherit' });
 execSync('node scripts/verify-v4123-calendar-export-import-workflow.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('All v4.12.4 customer-memo-quick-edit checks passed.');
+console.log('All v4.12.5 customer-memo-quick-edit checks passed.');

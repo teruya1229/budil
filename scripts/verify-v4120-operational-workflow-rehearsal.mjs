@@ -1,5 +1,5 @@
 ﻿/**
- * Budil v4.12.4 - operational workflow rehearsal verification.
+ * Budil v4.12.5 - operational workflow rehearsal verification.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -79,14 +79,14 @@ const STORAGE_KEY_SNIPPETS = [
   'budil_expense_records', 'budil_followups'
 ];
 
-console.log('== v4.12.4 operational-workflow-rehearsal ==');
+console.log('== v4.12.5 operational-workflow-rehearsal ==');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.4'), 'index.html should show v4.12.4');
-assert(indexHtml.includes('js/app.js?v=4.12.4'), 'app.js cache buster should be v4.12.4');
-assert(indexHtml.includes('css/style.css?v=4.12.4'), 'style.css cache buster should be v4.12.4');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.4'"), 'storage version should be v4.12.4');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.4'"), 'data-backup version should be v4.12.4');
+assert(indexHtml.includes('v4.12.5'), 'index.html should show v4.12.5');
+assert(indexHtml.includes('js/app.js?v=4.12.5'), 'app.js cache buster should be v4.12.5');
+assert(indexHtml.includes('css/style.css?v=4.12.5'), 'style.css cache buster should be v4.12.5');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.5'"), 'storage version should be v4.12.5');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.5'"), 'data-backup version should be v4.12.5');
 assert(!indexHtml.includes('?v=4.11.15'), 'old cache buster v4.11.15 should be gone');
 
 console.log('== empty src / layout safety ==');
@@ -159,4 +159,4 @@ assert(!appJs.includes('autoMonthlyClose'), 'auto monthly close must not be adde
 console.log('== chain prior cross-screen stability ==');
 execSync('node scripts/verify-v41115-cross-screen-workflow-stability.mjs', { cwd: root, stdio: 'inherit' });
 
-console.log('All v4.12.4 operational-workflow-rehearsal checks passed.');
+console.log('All v4.12.5 operational-workflow-rehearsal checks passed.');

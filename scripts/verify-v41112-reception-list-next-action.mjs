@@ -45,15 +45,15 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.4'), 'index.html should show v4.12.4');
-assert(indexHtml.includes('js/app.js?v=4.12.4'), 'app.js cache buster should be v4.12.4');
-assert(indexHtml.includes('css/style.css?v=4.12.4'), 'style.css cache buster should be v4.12.4');
-assert(indexHtml.includes('js/reception-brain.js?v=4.12.4'), 'reception-brain cache buster should be v4.12.4');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.4'"), 'storage.js version should be v4.12.4');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.4'"), 'data-backup version should be v4.12.4');
-assert(statusMd.includes('v4.12.4'), 'status.md should document v4.12.4');
-assert(handoffMd.includes('v4.12.4'), 'handoff.md should document v4.12.4');
-assert(decisionLog.includes('v4.12.4'), 'decision-log.md should record v4.12.4');
+assert(indexHtml.includes('v4.12.5'), 'index.html should show v4.12.4');
+assert(indexHtml.includes('js/app.js?v=4.12.5'), 'app.js cache buster should be v4.12.4');
+assert(indexHtml.includes('css/style.css?v=4.12.5'), 'style.css cache buster should be v4.12.4');
+assert(indexHtml.includes('js/reception-brain.js?v=4.12.5'), 'reception-brain cache buster should be v4.12.4');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.5'"), 'storage.js version should be v4.12.4');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.5'"), 'data-backup version should be v4.12.4');
+assert(statusMd.includes('v4.12.5'), 'status.md should document v4.12.4');
+assert(handoffMd.includes('v4.12.5'), 'handoff.md should document v4.12.4');
+assert(decisionLog.includes('v4.12.5'), 'decision-log.md should record v4.12.4');
 
 console.log('== reception list bucket helpers ==');
 assert(receptionJs.includes('groupReceptionIntakesForList'), 'groupReceptionIntakesForList required');
@@ -115,7 +115,7 @@ assert(appJs.includes('data-follow-card-open'), 'follow card actions should rema
 assert(appJs.includes('confirmationStatus'), 'calendar confirmationStatus handling should remain');
 
 console.log('== untouched modules ==');
-assert(!documentsJs.includes('v4.12.4'), 'documents-brain should not be version-bumped');
+assert(!documentsJs.includes('v4.12.5'), 'documents-brain should not be version-bumped');
 assert(followJs.includes('getFollowUpTargets'), 'follow-up brain core helpers must remain');
 
 console.log('== reception list css ==');

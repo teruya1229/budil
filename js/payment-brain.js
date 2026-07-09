@@ -11,6 +11,8 @@ const PaymentBrain = {
     { value: 'square_card', label: 'Squareカード決済' },
     { value: 'kurashi_deferred', label: 'くらし後払い' },
     { value: 'kurashi_card', label: 'くらしカード決済' },
+    { value: 'curama_online_card', label: 'くらしのマーケット：オンラインカード決済' },
+    { value: 'curama_deferred', label: 'くらしのマーケット：後払い' },
     { value: 'corporate_monthly', label: '法人月末請求' },
     { value: 'other', label: 'その他' }
   ],
@@ -23,6 +25,8 @@ const PaymentBrain = {
     square_card: 'Squareカード決済',
     kurashi_deferred: 'くらし後払い',
     kurashi_card: 'くらしカード決済',
+    curama_online_card: 'くらしのマーケット：オンラインカード決済',
+    curama_deferred: 'くらしのマーケット：後払い',
     corporate_monthly: '法人月末請求',
     other: 'その他',
     card: 'カード決済（旧）'
@@ -36,6 +40,8 @@ const PaymentBrain = {
     square_card: '毎週水曜締・同週金曜払',
     kurashi_deferred: '月末締め・翌月末払い',
     kurashi_card: '毎月1日払・4営業日前締（土日のみ除外、祝日は未対応）',
+    curama_online_card: 'オンラインカード決済・個別入金確認（当日現金集金ではありません）',
+    curama_deferred: '月末締め・翌月末入金（後払い）',
     corporate_monthly: '初期値は翌月末。翌々月末払いの場合は手入力してください。',
     other: '手入力',
     card: '旧カード決済：手入力または既存予定日を優先'
@@ -136,7 +142,10 @@ const PaymentBrain = {
     const weekday = base.getDay();
 
     if (method === 'cash') return iso;
-    if (['bank_transfer', 'online_payment', 'kurashi_deferred', 'corporate_monthly'].includes(method)) {
+    if (['bank_transfer', 'online_payment', 'kurashi_deferred', 'curama_deferred', 'corporate_monthly'].includes(method)) {
+      return this.nextMonthEndISO(iso);
+    }
+    if (method === 'curama_online_card') {
       return this.nextMonthEndISO(iso);
     }
     if (method === 'touch_payment') {
@@ -661,10 +670,26 @@ const PaymentBrain = {
       return (items || []).filter(i => i.paymentMethod === 'corporate_monthly');
     }
     if (f === 'kurashi') {
-      return (items || []).filter(i => ['kurashi_deferred', 'kurashi_card'].includes(i.paymentMethod));
+      return (items || []).filter(i => {
+        const m = i.paymentMethod;
+        if (['kurashi_deferred', 'kurashi_card', 'curama_online_card', 'curama_deferred'].includes(m)) return true;
+        if (typeof RevenueBrain !== 'undefined') {
+          return RevenueBrain.isCuramaOnlineCardPayment(m) || RevenueBrain.isCuramaDeferredPayment(m);
+        }
+        return false;
+      });
     }
     if (f === 'other') {
-      return (items || []).filter(i => !['corporate_monthly', 'kurashi_deferred', 'kurashi_card'].includes(i.paymentMethod));
+      return (items || []).filter(i => {
+        const m = i.paymentMethod;
+        if (['corporate_monthly', 'kurashi_deferred', 'kurashi_card', 'curama_online_card', 'curama_deferred'].includes(m)) {
+          return false;
+        }
+        if (typeof RevenueBrain !== 'undefined') {
+          if (RevenueBrain.isCuramaOnlineCardPayment(m) || RevenueBrain.isCuramaDeferredPayment(m)) return false;
+        }
+        return true;
+      });
     }
     return items || [];
   },

@@ -10839,6 +10839,91 @@ body.sales-page {
   }
 }
 
+#view-receivables .receivables-curama-deferred-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+#view-receivables .receivables-curama-deferred-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+#view-receivables .receivables-curama-deferred-list li {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr auto;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: 0.92rem;
+}
+
+.revenue-payment-method-badge,
+.payment-method-badge-deferred,
+.payment-method-badge-online-card {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.payment-method-badge-deferred {
+  background: #fff3e0;
+  color: #8a4b00;
+  border: 1px solid #ffcc80;
+}
+
+.payment-method-badge-online-card,
+.revenue-payment-method-badge.payment-method-badge-online-card {
+  background: #e8f4fd;
+  color: #0d47a1;
+  border: 1px solid #90caf9;
+}
+
+.revenue-payment-method-badge.payment-method-badge-deferred {
+  background: #fff3e0;
+  color: #8a4b00;
+  border: 1px solid #ffcc80;
+}
+
+.payment-method-display-hint {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  color: #666;
+  line-height: 1.3;
+}
+
+#view-receivables .receivables-card-meta .payment-method-display-hint,
+#view-revenue .revenue-card-meta .payment-method-display-hint {
+  display: inline;
+  margin-left: 0.25rem;
+}
+
+.month-end-curama-deferred-summary {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.month-end-curama-deferred-note,
+.receivables-curama-deferred-note {
+  margin: 0 0 0.75rem;
+}
+
+@media (max-width: 640px) {
+  #view-receivables .receivables-curama-deferred-list li {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+}
+
 @media (min-width: 900px) {
   .receivables-table-wrap {
     display: block;

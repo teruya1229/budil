@@ -46,11 +46,11 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.4'), 'index.html should show v4.12.4');
-assert(indexHtml.includes('js/app.js?v=4.12.4'), 'app.js cache buster should be v4.12.4');
-assert(indexHtml.includes('css/style.css?v=4.12.4'), 'style.css cache buster should be v4.12.4');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.4'"), 'storage.js version should be v4.12.4');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.4'"), 'data-backup version should be v4.12.4');
+assert(indexHtml.includes('v4.12.5'), 'index.html should show v4.12.4');
+assert(indexHtml.includes('js/app.js?v=4.12.5'), 'app.js cache buster should be v4.12.4');
+assert(indexHtml.includes('css/style.css?v=4.12.5'), 'style.css cache buster should be v4.12.4');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.5'"), 'storage.js version should be v4.12.4');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.5'"), 'data-backup version should be v4.12.4');
 
 console.log('== monthly close page structure ==');
 const viewMonthly = indexHtml.slice(
@@ -105,6 +105,8 @@ assert(!appJs.includes('localStorage.clear'), 'localStorage.clear forbidden');
 
 console.log('== profit-brain checklist API ==');
 assert(profitJs.includes('buildMonthEndChecklist'), 'buildMonthEndChecklist required');
+assert(profitJs.includes("id: 'curama-deferred'"), 'curama deferred checklist item required');
+assert(appJs.includes('renderMonthEndCuramaDeferred'), 'month-end curama deferred renderer required');
 assert(revenueBrainJs.includes('buildMonthlyBillingGroups'), 'monthly billing groups must remain');
 assert(revenueBrainJs.includes('coop: 80'), 'coop profit rate must remain');
 assert(revenueBrainJs.includes('yamada: 60'), 'yamada profit rate must remain');
@@ -168,11 +170,13 @@ const checklist = PB.buildMonthEndChecklist({
   revenueGapCount: 2,
   revenueGapAmount: 25000
 });
-assert(checklist.items.length === 7, 'checklist should have 7 items');
+assert(checklist.items.length === 8, 'checklist should have 8 items');
 assert(checklist.items[0].label === '売上確定漏れ', 'first item should be revenue gaps');
 assert(checklist.items[0].count === 2, 'revenue gap count');
 const billingItem = checklist.items.find(i => i.id === 'monthly-billing');
 assert(billingItem, 'monthly billing checklist item required');
+const curamaDeferredItem = checklist.items.find(i => i.id === 'curama-deferred');
+assert(curamaDeferredItem, 'curama deferred checklist item required');
 assert(checklist.metrics.billingGroups.length >= 1, 'coop billing group should exist');
 
 console.log('\nAll v4.12.4 monthly-close-checklist-workflow checks passed.');

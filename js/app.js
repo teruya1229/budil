@@ -10285,8 +10285,12 @@
     }
     fillSourceSelectOptions(sourceEl);
     if (methodEl && methodEl.options.length <= 1) {
-      methodEl.innerHTML = '<option value="">未選択</option>'
-        + WorkCompletionBrain.PAYMENT_METHODS.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+      const basic = WorkCompletionBrain.PAYMENT_METHODS
+        .map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+      const kurashi = PaymentBrain.PAYMENT_METHODS
+        .filter(m => ['curama_online_card', 'curama_deferred', 'kurashi_card', 'kurashi_deferred'].includes(m.value))
+        .map(m => `<option value="${esc(m.value)}">${esc(m.label)}</option>`).join('');
+      methodEl.innerHTML = '<option value="">未選択</option>' + basic + kurashi;
     }
   }
 
@@ -13072,6 +13076,41 @@
     bindMonthEndNavButtons(el);
   }
 
+  function renderMonthEndCuramaDeferred() {
+    const el = document.getElementById('month-end-curama-deferred-list');
+    if (!el) return;
+    const summary = RevenueBrain.buildCuramaDeferredSummary(Storage.getRevenueRecords());
+    if (!summary.count) {
+      el.innerHTML = '<p class="placeholder-text">くらしのマーケット後払いの入金待ちはありません。</p>';
+      return;
+    }
+    const rows = summary.items.slice(0, 8).map(r => `
+      <tr class="month-end-curama-deferred-row">
+        <td>${esc(r.workDate || '—')}</td>
+        <td>${esc(r.customerName || '—')}</td>
+        <td class="num">${esc(RevenueBrain.formatYen(r.amount))}</td>
+        <td><span class="payment-method-badge-deferred">後払い</span></td>
+      </tr>`).join('');
+    const hidden = Math.max(0, summary.count - 8);
+    el.innerHTML = `
+      <p class="month-end-curama-deferred-summary">
+        くらし後払い：<strong>${summary.count}件 / ${esc(RevenueBrain.formatYen(summary.total))}</strong>
+      </p>
+      <p class="field-hint month-end-curama-deferred-note">月末締め・翌月末入金として入金予定を確認してください。</p>
+      <div class="month-end-table-wrap">
+        <table class="month-end-table">
+          <thead><tr><th>作業日</th><th>顧客名</th><th>売上額</th><th>区分</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      ${hidden ? `<p class="month-end-more-note">ほか${hidden}件あります。</p>` : ''}
+      <div class="month-end-section-actions">
+        <button type="button" class="btn btn-sm btn-primary" data-month-end-nav data-month-end-view="receivables" data-month-end-scroll="#receivables-curama-deferred-card">くらし後払いを見る</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-month-end-nav data-month-end-view="receivables">入金予定へ</button>
+      </div>`;
+    bindMonthEndNavButtons(el);
+  }
+
   function renderMonthEndExpenseCheck() {
     const el = document.getElementById('month-end-expense-check');
     if (!el) return;
@@ -13148,6 +13187,7 @@
       renderMonthEndRevenueGaps();
       renderMonthEndPaymentPending();
       renderMonthEndMonthlyBilling();
+      renderMonthEndCuramaDeferred();
       renderMonthEndExpenseCheck();
       renderMonthEndDocumentsAux();
       renderMonthEndProfitCheck();
@@ -16846,8 +16886,26 @@
   }
 
   function renderPaymentMethodBadge(record) {
-    const label = PaymentBrain.getPaymentMethodLabel(record);
-    return `<span class="revenue-payment-method-badge">${esc(label)}</span>`;
+    const method = record && record.paymentMethod;
+    const label = typeof RevenueBrain !== 'undefined' && RevenueBrain.getPaymentMethodLabel
+      ? RevenueBrain.getPaymentMethodLabel(method)
+      : PaymentBrain.getPaymentMethodLabel(record);
+    const hint = typeof RevenueBrain !== 'undefined' && RevenueBrain.getPaymentMethodDisplayHint
+      ? RevenueBrain.getPaymentMethodDisplayHint(method)
+      : '';
+    let badgeClass = 'revenue-payment-method-badge';
+    if (typeof RevenueBrain !== 'undefined') {
+      if (RevenueBrain.isCuramaDeferredPayment(method)) badgeClass += ' payment-method-badge-deferred';
+      else if (RevenueBrain.isCuramaOnlineCardPayment(method)) badgeClass += ' payment-method-badge-online-card';
+    }
+    const hintHtml = hint
+      ? `<small class="payment-method-display-hint">${esc(hint)}</small>`
+      : '';
+    return `<span class="${badgeClass}">${esc(label)}</span>${hintHtml}`;
+  }
+
+  function renderReceivablePaymentMethodCell(record) {
+    return renderPaymentMethodBadge(record || {});
   }
 
   const LINK_UNLINK_CONFIRM = 'リンクだけ解除します。売上・請求書データは削除されません。よろしいですか？';
@@ -17140,6 +17198,34 @@
     showAppToast('入金済みにしました');
   }
 
+  function renderReceivablesCuramaDeferredNotice() {
+    const card = document.getElementById('receivables-curama-deferred-card');
+    const summaryEl = document.getElementById('receivables-curama-deferred-summary');
+    if (!card || !summaryEl) return;
+    const summary = RevenueBrain.buildCuramaDeferredSummary(Storage.getRevenueRecords());
+    if (!summary.count) {
+      card.classList.add('hidden');
+      summaryEl.innerHTML = '';
+      return;
+    }
+    card.classList.remove('hidden');
+    summaryEl.innerHTML = `
+      <p class="receivables-curama-deferred-metrics">
+        <span class="payment-method-badge-deferred">後払い</span>
+        <strong>${summary.count}件 / ${esc(RevenueBrain.formatYen(summary.total))}</strong>
+      </p>
+      <p class="field-hint receivables-curama-deferred-note">月末締め・翌月末入金として入金予定を確認してください。コープ・ヤマダ月次請求とは別枠です。</p>
+      <ul class="receivables-curama-deferred-list">
+        ${summary.items.slice(0, 6).map(r => `
+          <li>
+            <span>${esc(String(r.workDate || '').slice(5).replace('-', '/'))}</span>
+            <span>${esc(r.customerName || '—')}</span>
+            <span class="num">${esc(RevenueBrain.formatYen(r.amount))}</span>
+          </li>`).join('')}
+      </ul>
+      ${summary.count > 6 ? `<p class="field-hint">ほか${summary.count - 6}件あります。下の1件ごと入金確認で確認できます。</p>` : ''}`;
+  }
+
   function renderReceivablesMonthEndReview(today) {
     const card = document.getElementById('receivables-month-end-review-card');
     const listEl = document.getElementById('receivables-month-end-review-list');
@@ -17274,6 +17360,7 @@
       }
 
       renderReceivablesMonthEndReview(today);
+      renderReceivablesCuramaDeferredNotice();
       renderReceivablesMonthlyBillingGroups();
 
       document.querySelectorAll('[data-receivables-filter]').forEach(btn => {
@@ -17307,7 +17394,7 @@
           <td>${esc(item.counterparty)}</td>
           <td>${esc(item.subject)}</td>
           <td class="num">${esc(PaymentBrain.formatYen(item.unpaidAmount))}</td>
-          <td>${esc(PaymentBrain.getPaymentMethodLabel(item.record))}</td>
+          <td>${renderReceivablePaymentMethodCell(item.record)}</td>
           <td>${esc(item.expectedPaymentDate || '—')}</td>
           <td>${renderPaymentStatusBadge(item.record)}</td>
           <td class="${delayClass}">${esc(delay)}</td>
@@ -17334,7 +17421,7 @@
             </div>
             <p class="receivables-card-subject">${esc(item.subject)}</p>
             <div class="receivables-card-meta">
-              <span>${esc(PaymentBrain.getPaymentMethodLabel(item.record))}</span>
+              <span>${renderReceivablePaymentMethodCell(item.record)}</span>
               <span>入金予定：${esc(item.expectedPaymentDate || '—')}</span>
             </div>
             <p class="receivables-card-delay ${delayClass}">${esc(delay)}</p>
