@@ -6,6 +6,7 @@ const PaymentBrain = {
   PAYMENT_METHODS: [
     { value: 'cash', label: '現金' },
     { value: 'bank_transfer', label: '銀行振込' },
+    { value: 'card_touch', label: 'カード：タッチ決済' },
     { value: 'touch_payment', label: 'タッチ決済' },
     { value: 'online_payment', label: 'オンライン決済' },
     { value: 'square_card', label: 'Squareカード決済' },
@@ -20,6 +21,7 @@ const PaymentBrain = {
   PAYMENT_METHOD_LABELS: {
     cash: '現金',
     bank_transfer: '銀行振込',
+    card_touch: 'カード：タッチ決済',
     touch_payment: 'タッチ決済',
     online_payment: 'オンライン決済',
     square_card: 'Squareカード決済',
@@ -35,6 +37,7 @@ const PaymentBrain = {
   PAYMENT_METHOD_RULE_LABELS: {
     cash: '当日入金済み',
     bank_transfer: '月末締翌月末日払',
+    card_touch: '毎月5日払（1〜4日は当月5日、5日以降は翌月5日）',
     touch_payment: '毎月5日払（1〜4日は当月5日、5日以降は翌月5日）',
     online_payment: '月末締翌月末日払',
     square_card: '毎週水曜締・同週金曜払',
@@ -45,6 +48,18 @@ const PaymentBrain = {
     corporate_monthly: '初期値は翌月末。翌々月末払いの場合は手入力してください。',
     other: '手入力',
     card: '旧カード決済：手入力または既存予定日を優先'
+  },
+
+  PAYMENT_CYCLE_LABELS: {
+    cash: '作業当日集金',
+    bank_transfer: '入金確認が必要',
+    card_touch: '5日払い',
+    touch_payment: '5日払い',
+    curama_online_card: '毎月1日出金（祝日等は翌営業日）',
+    kurashi_card: '毎月1日出金（祝日等は翌営業日）',
+    curama_deferred: '月末締め・翌月末払い',
+    kurashi_deferred: '月末締め・翌月末払い',
+    corporate_monthly: '月次請求。請求月・入金月を確認'
   },
 
   PAYMENT_STATUSES: [
@@ -148,7 +163,7 @@ const PaymentBrain = {
     if (method === 'curama_online_card') {
       return this.nextMonthEndISO(iso);
     }
-    if (method === 'touch_payment') {
+    if (method === 'card_touch' || method === 'touch_payment') {
       const targetMonth = day <= 4 ? month : month + 1;
       return this.toISODate(new Date(year, targetMonth, 5, 12, 0, 0, 0));
     }
@@ -167,6 +182,55 @@ const PaymentBrain = {
 
   getPaymentMethodRuleLabel(paymentMethod) {
     return this.PAYMENT_METHOD_RULE_LABELS[paymentMethod] || '手入力';
+  },
+
+  resolvePaymentCycleMethodKey(paymentMethod) {
+    const m = String(paymentMethod || '').trim();
+    if (!m) return '';
+    if (this.PAYMENT_CYCLE_LABELS[m]) return m;
+    if (this.PAYMENT_METHOD_LABELS[m]) return m;
+    if (/^現金$/.test(m)) return 'cash';
+    if (/振込|銀行/.test(m)) return 'bank_transfer';
+    if (/^カード[：:]\s*タッチ/.test(m) || /^タッチ決済$/.test(m)) return 'card_touch';
+    if (typeof RevenueBrain !== 'undefined') {
+      if (RevenueBrain.isCuramaOnlineCardPayment(m)) return 'curama_online_card';
+      if (RevenueBrain.isCuramaDeferredPayment(m)) return 'curama_deferred';
+    }
+    return m;
+  },
+
+  getPaymentCycleLabel(paymentMethod, sourceText) {
+    const m = String(paymentMethod || '').trim();
+    const key = this.resolvePaymentCycleMethodKey(m);
+    if (key && this.PAYMENT_CYCLE_LABELS[key]) return this.PAYMENT_CYCLE_LABELS[key];
+    if (!m) {
+      if (typeof RevenueBrain !== 'undefined' && sourceText) {
+        const group = RevenueBrain.getMonthlyBillingSourceGroup(sourceText);
+        if (group === 'coop' || group === 'yamada') return '月次請求。請求月・入金月を確認';
+      }
+      return '入金方法を確認';
+    }
+    return '';
+  },
+
+  getPaymentCycleNote(paymentMethod, sourceText) {
+    const m = String(paymentMethod || '').trim();
+    const cycle = this.getPaymentCycleLabel(paymentMethod, sourceText);
+    if (!cycle) return '';
+    if (cycle === '入金方法を確認') return '入金方法を確認してください。';
+    const methodLabel = typeof RevenueBrain !== 'undefined'
+      ? RevenueBrain.getPaymentMethodLabel(paymentMethod)
+      : (this.PAYMENT_METHOD_LABELS[paymentMethod] || m);
+    const needsManualConfirm = [
+      '5日払い',
+      '毎月1日出金（祝日等は翌営業日）',
+      '月末締め・翌月末払い',
+      '入金確認が必要'
+    ].includes(cycle);
+    const suffix = needsManualConfirm ? '入金確認はユーザーが行います。' : '';
+    const displayLabel = (methodLabel && methodLabel !== '—') ? methodLabel : m;
+    if (displayLabel) return `${displayLabel}は${cycle}。${suffix}`;
+    return `${cycle}。${suffix}`;
   },
 
   migratePaymentStatus(raw, fallback) {

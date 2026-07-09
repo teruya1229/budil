@@ -15,8 +15,9 @@
 
 | 項目 | 値 |
 |------|-----|
-| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.5 |
-| 最新バージョン | v4.12.5 |
+| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.6 |
+| 最新バージョン | v4.12.6 |
+| v4.12.6 タッチ決済・入金サイクル表示 | verify-v4126実装済み / commit・push・公開確認は作業中 |
 | v4.12.5 くらし支払方法追加 | commit `7c67272` / verify-v4125合格 / v4.10-v4.12 verify 64件合格 / ローカルブラウザ点検OK / push済み・Pages反映待ち |
 | v4.12.4 顧客メモクイック編集 | 正式合格 commit `af9e502` / verify-v4124合格（102中100合格、既存2件はHEAD時点でも失敗） / ブラウザ点検OK / push済み |
 | v4.12.3 予定取り込み 更新→取り込み導線 | 正式合格 commit `8313ccf` / verify-v4123合格 / ブラウザ点検OK（ローカル） / push済み・Pages反映待ち |

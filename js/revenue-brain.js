@@ -1256,11 +1256,23 @@ const RevenueBrain = {
   },
 
   getPaymentMethodDisplayHint(paymentMethod) {
-    if (this.isCuramaDeferredPayment(paymentMethod)) {
-      return '月末締め・翌月末入金';
+    if (typeof PaymentBrain !== 'undefined') {
+      const cycle = PaymentBrain.getPaymentCycleLabel(paymentMethod, '');
+      if (cycle && cycle !== '入金方法を確認') return cycle;
     }
-    if (this.isCuramaOnlineCardPayment(paymentMethod)) {
-      return 'オンラインカード決済（現金集金ではありません）';
+    return '';
+  },
+
+  getPaymentCycleLabel(paymentMethod, sourceText) {
+    if (typeof PaymentBrain !== 'undefined') {
+      return PaymentBrain.getPaymentCycleLabel(paymentMethod, sourceText);
+    }
+    return '';
+  },
+
+  getPaymentCycleNote(paymentMethod, sourceText) {
+    if (typeof PaymentBrain !== 'undefined') {
+      return PaymentBrain.getPaymentCycleNote(paymentMethod, sourceText);
     }
     return '';
   },

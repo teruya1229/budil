@@ -2,6 +2,22 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.6 タッチ決済・入金サイクル表示（2026-07-09）
+
+**日付**: 2026-07-09
+
+**判断内容**:
+- 現場で使う「カード：タッチ決済」を支払方法として追加（value: card_touch）。既存 touch_payment は互換維持
+- 入金サイクルは表示のみ。5日払い等を自動入金済み・自動入金日確定にしない
+- 支払方法は入金管理、依頼元は利益率計算。混ぜない（v4.11.5 / v4.12.5 維持）
+- くらしオンラインカード・くらし後払い・コープ/ヤマダ月次請求の既存導線は維持
+- paymentMethod 未設定は未設定扱い。依頼元だけで後払い推定しない
+
+**変更ファイル**:
+- index.html, js/app.js, js/payment-brain.js, js/revenue-brain.js, css/style.css, js/storage.js, js/data-backup.js
+- scripts/verify-v4126-touch-card-payment-cycle.mjs
+- status.md, handoff.md, decision-log.md
+
 ## v4.12.5 くらし支払方法追加（2026-07-09）
 
 **日付**: 2026-07-09

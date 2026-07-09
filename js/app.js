@@ -10287,10 +10287,10 @@
     if (methodEl && methodEl.options.length <= 1) {
       const basic = WorkCompletionBrain.PAYMENT_METHODS
         .map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
-      const kurashi = PaymentBrain.PAYMENT_METHODS
-        .filter(m => ['curama_online_card', 'curama_deferred', 'kurashi_card', 'kurashi_deferred'].includes(m.value))
+      const extra = PaymentBrain.PAYMENT_METHODS
+        .filter(m => ['card_touch', 'touch_payment', 'curama_online_card', 'curama_deferred', 'kurashi_card', 'kurashi_deferred'].includes(m.value))
         .map(m => `<option value="${esc(m.value)}">${esc(m.label)}</option>`).join('');
-      methodEl.innerHTML = '<option value="">未選択</option>' + basic + kurashi;
+      methodEl.innerHTML = '<option value="">未選択</option>' + basic + extra;
     }
   }
 
@@ -10333,6 +10333,7 @@
     document.getElementById('work-completion-payment-status').value = defaults.paymentStatus;
     document.getElementById('work-completion-payment-date').value = defaults.paymentDate;
     document.getElementById('work-completion-payment-method').value = defaults.paymentMethod;
+    updateWorkCompletionPaymentCycleHint(defaults.paymentMethod);
     document.getElementById('work-completion-payment-concern').checked = defaults.paymentConcern;
     document.getElementById('work-completion-actual-memo').value = defaults.additionalMemo;
     document.getElementById('work-completion-follow-memo').value = defaults.followMemo;
@@ -11021,7 +11022,13 @@
       });
     }
     bindGrossMarginManualTracking(document.getElementById('work-completion-gross-rate'));
-    document.getElementById('work-completion-source')?.addEventListener('change', () => applyWorkCompletionGrossMarginDefault());
+    document.getElementById('work-completion-source')?.addEventListener('change', () => {
+      applyWorkCompletionGrossMarginDefault();
+      updateWorkCompletionPaymentCycleHint();
+    });
+    document.getElementById('work-completion-payment-method')?.addEventListener('change', () => {
+      updateWorkCompletionPaymentCycleHint();
+    });
     document.querySelectorAll('#work-completion-modal, #work-cancel-modal').forEach(modal => {
       modal.addEventListener('click', e => {
         if (e.target === modal) modal.classList.add('hidden');
@@ -12994,9 +13001,13 @@
     const delay = PaymentBrain.getDelayLabel(item.expectedPaymentDate, TODAY());
     const delayClass = PaymentBrain.isOverdue(item.record, TODAY()) ? 'receivable-overdue' : '';
     const paidAmount = Math.max(0, (Number(rev.amount) || 0) - (Number(item.unpaidAmount) || 0));
+    const cycleLabel = RevenueBrain.getPaymentCycleLabel(rev.paymentMethod || item.paymentMethod, rev.source);
+    const cycleHtml = cycleLabel
+      ? `<br><small class="payment-cycle-label">入金サイクル：${esc(cycleLabel)}</small>`
+      : '';
     return `<tr class="month-end-payment-row">
       <td>${esc(item.counterparty || rev.customerName || '—')}</td>
-      <td>${esc(PaymentBrain.getSourceDisplayLabel(item))}</td>
+      <td>${esc(PaymentBrain.getSourceDisplayLabel(item))}<br>${renderPaymentMethodBadge(rev)}${cycleHtml}</td>
       <td class="num">${esc(PaymentBrain.formatYen(rev.amount))}</td>
       <td class="num">${esc(PaymentBrain.formatYen(paidAmount))}</td>
       <td class="num">${esc(PaymentBrain.formatYen(item.unpaidAmount))}</td>
@@ -13040,7 +13051,7 @@
     const monthLabel = RevenueBrain.formatBillingMonthLabel(group.billingMonth);
     return `<tr class="month-end-billing-row">
       <td>${esc(monthLabel)}</td>
-      <td>${esc(sourceLabel)}</td>
+      <td>${esc(sourceLabel)}<br><small class="payment-cycle-label">入金サイクル：月次請求。請求月・入金月を確認</small></td>
       <td>${group.count}件</td>
       <td class="num">${esc(RevenueBrain.formatYen(group.totalRevenue))}</td>
       <td class="num">${esc(RevenueBrain.formatYen(group.totalProfit))}</td>
@@ -13084,19 +13095,22 @@
       el.innerHTML = '<p class="placeholder-text">くらしのマーケット後払いの入金待ちはありません。</p>';
       return;
     }
-    const rows = summary.items.slice(0, 8).map(r => `
+    const rows = summary.items.slice(0, 8).map(r => {
+      const cycleLabel = RevenueBrain.getPaymentCycleLabel(r.paymentMethod, r.source);
+      return `
       <tr class="month-end-curama-deferred-row">
         <td>${esc(r.workDate || '—')}</td>
         <td>${esc(r.customerName || '—')}</td>
         <td class="num">${esc(RevenueBrain.formatYen(r.amount))}</td>
-        <td><span class="payment-method-badge-deferred">後払い</span></td>
-      </tr>`).join('');
+        <td><span class="payment-method-badge-deferred">後払い</span>${cycleLabel ? `<br><small class="payment-cycle-label">入金サイクル：${esc(cycleLabel)}</small>` : ''}</td>
+      </tr>`;
+    }).join('');
     const hidden = Math.max(0, summary.count - 8);
     el.innerHTML = `
       <p class="month-end-curama-deferred-summary">
         くらし後払い：<strong>${summary.count}件 / ${esc(RevenueBrain.formatYen(summary.total))}</strong>
       </p>
-      <p class="field-hint month-end-curama-deferred-note">月末締め・翌月末入金として入金予定を確認してください。</p>
+      <p class="field-hint month-end-curama-deferred-note">入金サイクル：月末締め・翌月末払い。入金確認はユーザーが行います。</p>
       <div class="month-end-table-wrap">
         <table class="month-end-table">
           <thead><tr><th>作業日</th><th>顧客名</th><th>売上額</th><th>区分</th></tr></thead>
@@ -16691,10 +16705,37 @@
     updateRevenuePaymentRuleHint(r.paymentMethod);
   }
 
+  function updateRevenuePaymentCycleHint(method, sourceText) {
+    const el = document.getElementById('revenue-payment-cycle-hint');
+    if (!el || typeof RevenueBrain === 'undefined') return;
+    const source = sourceText != null
+      ? sourceText
+      : (document.getElementById('revenue-source')?.value || '');
+    const note = RevenueBrain.getPaymentCycleNote(
+      method || document.getElementById('revenue-payment-method')?.value || '',
+      source
+    );
+    el.textContent = note ? `入金サイクル：${note}` : '';
+  }
+
+  function updateWorkCompletionPaymentCycleHint(method, sourceText) {
+    const el = document.getElementById('work-completion-payment-cycle-hint');
+    if (!el || typeof RevenueBrain === 'undefined') return;
+    const source = sourceText != null
+      ? sourceText
+      : (document.getElementById('work-completion-source')?.value || '');
+    const note = RevenueBrain.getPaymentCycleNote(
+      method || document.getElementById('work-completion-payment-method')?.value || '',
+      source
+    );
+    el.textContent = note ? `入金サイクル：${note}` : '';
+  }
+
   function updateRevenuePaymentRuleHint(method) {
     const el = document.getElementById('revenue-payment-rule-hint');
     if (!el) return;
     el.textContent = PaymentBrain.getPaymentMethodRuleLabel(method || document.getElementById('revenue-payment-method')?.value || 'cash');
+    updateRevenuePaymentCycleHint(method);
   }
 
   function suggestRevenuePaymentFromMethod(preserveUserInput, forceStatusDefault) {
@@ -16887,21 +16928,23 @@
 
   function renderPaymentMethodBadge(record) {
     const method = record && record.paymentMethod;
+    const source = record && record.source;
     const label = typeof RevenueBrain !== 'undefined' && RevenueBrain.getPaymentMethodLabel
       ? RevenueBrain.getPaymentMethodLabel(method)
       : PaymentBrain.getPaymentMethodLabel(record);
-    const hint = typeof RevenueBrain !== 'undefined' && RevenueBrain.getPaymentMethodDisplayHint
-      ? RevenueBrain.getPaymentMethodDisplayHint(method)
+    const cycleLabel = typeof RevenueBrain !== 'undefined' && RevenueBrain.getPaymentCycleLabel
+      ? RevenueBrain.getPaymentCycleLabel(method, source)
       : '';
     let badgeClass = 'revenue-payment-method-badge';
     if (typeof RevenueBrain !== 'undefined') {
       if (RevenueBrain.isCuramaDeferredPayment(method)) badgeClass += ' payment-method-badge-deferred';
       else if (RevenueBrain.isCuramaOnlineCardPayment(method)) badgeClass += ' payment-method-badge-online-card';
+      else if (method === 'card_touch' || method === 'touch_payment') badgeClass += ' payment-method-badge-touch-card';
     }
-    const hintHtml = hint
-      ? `<small class="payment-method-display-hint">${esc(hint)}</small>`
+    const cycleHtml = cycleLabel
+      ? `<small class="payment-cycle-label">入金サイクル：${esc(cycleLabel)}</small>`
       : '';
-    return `<span class="${badgeClass}">${esc(label)}</span>${hintHtml}`;
+    return `<span class="${badgeClass}">${esc(label)}</span>${cycleHtml}`;
   }
 
   function renderReceivablePaymentMethodCell(record) {
@@ -17214,7 +17257,7 @@
         <span class="payment-method-badge-deferred">後払い</span>
         <strong>${summary.count}件 / ${esc(RevenueBrain.formatYen(summary.total))}</strong>
       </p>
-      <p class="field-hint receivables-curama-deferred-note">月末締め・翌月末入金として入金予定を確認してください。コープ・ヤマダ月次請求とは別枠です。</p>
+      <p class="field-hint receivables-curama-deferred-note">入金サイクル：月末締め・翌月末払い。コープ・ヤマダ月次請求とは別枠です。入金確認はユーザーが行います。</p>
       <ul class="receivables-curama-deferred-list">
         ${summary.items.slice(0, 6).map(r => `
           <li>
@@ -17302,6 +17345,7 @@
           <span>対象：${group.count}件</span>
           <span>請求額：${esc(RevenueBrain.formatYen(group.totalRevenue))}</span>
           <span>予定利益：${esc(RevenueBrain.formatYen(group.totalProfit))}</span>
+          <span class="payment-cycle-label">入金サイクル：月次請求。請求月・入金月を確認</span>
         </div>
         <div class="receivables-monthly-billing-actions">
           <button type="button" class="btn btn-sm btn-secondary" data-monthly-billing-toggle="${esc(group.key)}">${expanded ? '対象を閉じる' : '対象を見る'}</button>
@@ -18544,12 +18588,18 @@
     toggleRevenueOpenLeadButton();
     document.getElementById('revenue-form').addEventListener('submit', handleRevenueSubmit);
     document.getElementById('btn-revenue-cancel').addEventListener('click', resetRevenueForm);
-    document.getElementById('revenue-payment-method')?.addEventListener('change', () => suggestRevenuePaymentFromMethod(true, true));
+    document.getElementById('revenue-payment-method')?.addEventListener('change', () => {
+      suggestRevenuePaymentFromMethod(true, true);
+      updateRevenuePaymentCycleHint();
+    });
+    document.getElementById('revenue-source')?.addEventListener('change', () => {
+      applyRevenueGrossMarginDefault();
+      updateRevenuePaymentCycleHint();
+    });
     document.getElementById('btn-revenue-recalc-payment-date')?.addEventListener('click', recalculateRevenueExpectedPaymentDate);
     document.getElementById('revenue-amount')?.addEventListener('change', applyRevenuePaymentStatusDefaults);
     document.getElementById('revenue-payment-status')?.addEventListener('change', applyRevenuePaymentStatusDefaults);
     bindGrossMarginManualTracking(document.getElementById('revenue-gross-margin-rate'));
-    document.getElementById('revenue-source')?.addEventListener('change', () => applyRevenueGrossMarginDefault());
     document.getElementById('revenue-lead').addEventListener('change', () => {
       toggleRevenueLeadOptions();
       document.getElementById('revenue-mark-won').checked = false;

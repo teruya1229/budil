@@ -1,5 +1,18 @@
 ﻿# Budil status
 
+## v4.12.6 実装内容（タッチ決済・入金サイクル表示）
+
+- 表示バージョンを v4.12.6 に更新
+- index.html の主要 JS/CSS cache buster を v4.12.6 に統一（calendar-candidate-brain.js は v4.11.1 のまま維持）
+- 支払方法に「カード：タッチ決済」（card_touch）を追加（既存 touch_payment・くらし支払方法は維持）
+- 支払方法ごとの入金サイクル表示を追加（getPaymentCycleLabel / getPaymentCycleNote）
+- 売上確定モーダル・売上手入力/編集フォームの支払方法select直下に入金サイクルを表示
+- 売上一覧・入金予定・月次締めで支払方法と入金サイクルを表示
+- カード：タッチ決済は5日払い表示のみ（自動入金済みにしない）
+- v4.12.5 くらし支払方法・v4.12.4 顧客メモ・v4.12.3 予定取り込み・コープ/ヤマダ月次請求は維持
+- localStorageキー変更なし
+- 新規 verify-v4126-touch-card-payment-cycle.mjs 追加
+
 ## v4.12.5 実装内容（くらし支払方法追加）
 
 - 表示バージョンを v4.12.5 に更新
