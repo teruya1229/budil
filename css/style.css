@@ -9285,7 +9285,29 @@ body.sales-page {
 
 .calendar-candidate-preview-item.is-excluded {
   border-color: rgba(148, 163, 184, 0.45);
-  opacity: 0.85;
+  opacity: 0.92;
+}
+
+.calendar-candidate-exclude-reason,
+.calendar-candidate-include-reason {
+  margin: 0.25rem 0 0.4rem;
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.calendar-candidate-exclude-reason {
+  color: #cbd5e1;
+}
+
+.calendar-candidate-manual-done {
+  margin: 0.45rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #86efac;
+}
+
+.calendar-candidate-preview-item.is-excluded [data-cal-manual-include] {
+  margin-top: 0.35rem;
 }
 
 .calendar-candidate-import-result {

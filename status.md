@@ -1,5 +1,19 @@
 ﻿# Budil status
 
+## v4.12.8 実装内容（対象外候補の手動追加）
+
+- 表示バージョンを v4.12.8 に更新
+- index.html の主要 JS/CSS cache buster を v4.12.8 に統一（calendar-candidate-brain.js も v4.12.8 に更新）
+- 対象外判定を hard（キャンセル等）/ soft（見積・休み等）に整理
+- 金額・確定Status・業務依頼元・作業台数・作業系キーワードがある予定は soft 理由だけでは自動保存候補に残す
+- 対象外カードに「この予定を作業予定に追加」ボタンを追加（売上確定には入れない）
+- 「作業予定として保存されます」と「保存対象外」の矛盾表示を解消
+- 手動追加は candidateMeta.importOverride / calendarImportDecision に記録（新localStorageキーなし）
+- 二重保存は既存 duplicate 判定で防止
+- Googleカレンダー正本フロー・v4.12.3〜v4.12.7 維持
+- 新規 verify-v4128-calendar-excluded-manual-include.mjs 追加
+- 現行合格は引き続き `node scripts/verify-current.mjs`
+
 ## v4.12.7 実装内容（verify整理）
 
 - **本体機能追加なし**（verify整理・現行/legacy分類のみ）

@@ -25,8 +25,15 @@ const CalendarCandidateBrain = {
   PAST_RECOVERY_DUPLICATE: 'duplicate_suspected',
   // v4.10.42: 未確定は状態ラベルとして扱い、候補除外ワードに含めない
   NON_EXCLUSION_CONFIRMATION_STATUSES: ['未確定', '支払方法未定', '型番確認中'],
+  CONFIRMED_SCHEDULE_STATUSES: ['確定', '確定っぽい', 'confirmed'],
   PAST_RECOVERY_EXCLUDED_PATTERN: /キャンセル|取消|取り消し|中止|見積|見積もり|見積り|見積のみ|日程調整|調整中|仮予定|仮押さえ/,
-  FUTURE_IMPORT_EXCLUDED_PATTERN: /キャンセル|取消|取り消し|中止|見積もり|見積り|見積のみ|見積$|日程調整中|調整中|休み|仮予定|仮押さえ/,
+  // v4.12.8: キャンセル等は hard、見積/休み/仮は soft（業務シグナルがあれば自動保存候補に残す）
+  FUTURE_IMPORT_HARD_EXCLUDED_PATTERN: /キャンセル|取消|取り消し|中止/,
+  FUTURE_IMPORT_SOFT_EXCLUDED_PATTERN: /見積もり|見積り|見積のみ|見積$|日程調整中|調整中|休み|休日|私用|家族予定|ブロック|仮予定|仮押さえ|移動のみ|メモのみ/,
+  FUTURE_IMPORT_EXCLUDED_PATTERN: /キャンセル|取消|取り消し|中止|見積もり|見積り|見積のみ|見積$|日程調整中|調整中|休み|休日|私用|家族予定|ブロック|仮予定|仮押さえ/,
+  BUSINESS_SOURCE_PATTERN: /110番|コープ|ヤマダ|くらしのマーケット|くらし|LINE|LP|google_calendar|Googleカレンダー/,
+  WORK_UNIT_PATTERN: /\bN[1-9]\d*\b|[ＮN][１-９1-9]|Ｒ[1-9]|R[1-9]|台/,
+  WORK_KEYWORD_PATTERN: /エアコン|洗濯機|清掃|クリーニング|作業|見積|下見|修理|取付|取り付け|交換|点検/,
 
   PASTE_LABELS: {
     '日付': 'scheduledDate',
@@ -142,7 +149,11 @@ const CalendarCandidateBrain = {
       candidateStatus: this.CANDIDATE_STATUSES.includes(item.candidateStatus)
         ? item.candidateStatus
         : '候補',
-      cautionNote: String(item.cautionNote || '').trim()
+      cautionNote: String(item.cautionNote || '').trim(),
+      // v4.12.8: 対象外候補の手動追加記録（新localStorageキーは作らない）
+      importOverride: item.importOverride === true,
+      importOverrideReason: String(item.importOverrideReason || '').trim(),
+      calendarImportDecision: String(item.calendarImportDecision || '').trim()
     };
   },
 
@@ -573,10 +584,56 @@ const CalendarCandidateBrain = {
     return this.PAST_RECOVERY_EXCLUDED_PATTERN.test(text);
   },
 
-  hasFutureImportExcludedWord(candidate) {
+  hasHardFutureImportExcludedWord(candidate) {
     const text = this.buildFutureImportExclusionText(candidate);
-    if (this.FUTURE_IMPORT_EXCLUDED_PATTERN.test(text)) return true;
+    return this.FUTURE_IMPORT_HARD_EXCLUDED_PATTERN.test(text);
+  },
+
+  hasSoftFutureImportExcludedWord(candidate) {
+    const text = this.buildFutureImportExclusionText(candidate);
+    if (this.FUTURE_IMPORT_SOFT_EXCLUDED_PATTERN.test(text)) return true;
     return /(?:^|\s)見積(?:$|\s)/.test(text);
+  },
+
+  hasFutureImportExcludedWord(candidate) {
+    return this.hasHardFutureImportExcludedWord(candidate) || this.hasSoftFutureImportExcludedWord(candidate);
+  },
+
+  isConfirmedScheduleStatus(value) {
+    const status = this.normalizeConfirmationStatus(value);
+    if (!status) return false;
+    return this.CONFIRMED_SCHEDULE_STATUSES.some(s => status === s || status.includes(s));
+  },
+
+  getWorkScheduleSignals(candidate) {
+    const c = this.normalizeCandidate(candidate);
+    const text = [
+      c.title,
+      c.customerName,
+      c.serviceText,
+      c.source,
+      c.memo,
+      c.cautionNote,
+      c.confidence,
+      c.confirmationStatus
+    ].join(' ');
+    const signals = [];
+    if (c.scheduledDate) signals.push('日時あり');
+    if (Number(c.estimateAmount || 0) > 0) signals.push('予定売上あり');
+    if (this.isConfirmedScheduleStatus(c.confirmationStatus) || this.isConfirmedScheduleStatus(c.confidence)) {
+      signals.push('確定Statusあり');
+    }
+    if (c.source && this.BUSINESS_SOURCE_PATTERN.test(c.source)) signals.push('業務依頼元あり');
+    else if (this.BUSINESS_SOURCE_PATTERN.test(text)) signals.push('業務依頼元あり');
+    if (this.WORK_UNIT_PATTERN.test(text)) signals.push('作業台数表記あり');
+    if (this.WORK_KEYWORD_PATTERN.test(text)) signals.push('作業系キーワードあり');
+    return signals;
+  },
+
+  hasStrongWorkScheduleSignals(candidate) {
+    const signals = this.getWorkScheduleSignals(candidate);
+    // 日時のみでは不十分。金額・確定・依頼元・台数・作業キーワードのいずれかが必要
+    return signals.some(s => s !== '日時あり');
   },
 
   isInPastRecoveryRange(candidate, options) {
@@ -903,27 +960,47 @@ const CalendarCandidateBrain = {
 
   classifyFutureImportCandidate(candidate, today) {
     const c = this.normalizeCandidate(candidate);
-    const reasons = [];
-    if (!c.scheduledDate) reasons.push('日付なし');
+    const hardReasons = [];
+    const softWordReasons = [];
+    const missingFieldReasons = [];
+    if (!c.scheduledDate) hardReasons.push('日付なし');
     // v4.10.42: 日時・作業内容・金額が揃えば候補。未確定は状態ラベルのみで除外しない。
-    if (!c.startTime) reasons.push('時間なし');
-    if (!String(c.serviceText || '').trim()) reasons.push('作業内容なし');
+    if (!c.startTime) missingFieldReasons.push('時間なし');
+    if (!String(c.serviceText || '').trim()) missingFieldReasons.push('作業内容なし');
     // v4.10.27: 過去日付は単独では hard-exclude しない（金額あり翌日インポート対応）
-    if (!Number(c.estimateAmount || 0)) reasons.push('金額なし');
-    if (this.hasFutureImportExcludedWord(c)) reasons.push('対象外ワードあり');
+    if (!Number(c.estimateAmount || 0)) missingFieldReasons.push('金額なし');
+    if (this.hasHardFutureImportExcludedWord(c)) {
+      hardReasons.push('対象外ワードあり（キャンセル等）');
+    } else if (this.hasSoftFutureImportExcludedWord(c)) {
+      softWordReasons.push('対象外ワードあり');
+    }
+    const signals = this.getWorkScheduleSignals(c);
+    const textBlob = [c.title, c.customerName, c.serviceText, c.source, c.memo, c.cautionNote].join(' ');
+    // v4.12.8: soft ワード除外のみ、金額・確定・業務依頼元があれば上書き（欠落フィールドは上書きしない）
+    const strongBusiness = Number(c.estimateAmount || 0) > 0
+      || this.isConfirmedScheduleStatus(c.confirmationStatus)
+      || this.isConfirmedScheduleStatus(c.confidence)
+      || !!(c.source && this.BUSINESS_SOURCE_PATTERN.test(c.source))
+      || this.BUSINESS_SOURCE_PATTERN.test(textBlob);
+    const effectiveSoftWords = strongBusiness ? [] : softWordReasons;
+    const reasons = [...hardReasons, ...effectiveSoftWords, ...missingFieldReasons];
     if (reasons.length) {
       return {
         status: 'excluded',
-        label: '対象外',
+        label: '自動保存対象外',
         reasons,
-        savable: false
+        signals,
+        savable: false,
+        manualIncludeAllowed: true
       };
     }
     return {
       status: 'eligible',
       label: '取り込み対象',
-      reasons: [],
-      savable: true
+      reasons: signals.length ? [`判定理由：${signals.join('・')}`] : [],
+      signals,
+      savable: true,
+      manualIncludeAllowed: false
     };
   },
 
@@ -992,9 +1069,8 @@ const CalendarCandidateBrain = {
       if (isPastDate) pastCount += 1;
       const warnings = [...(item.warnings || [])];
       const futureImport = this.classifyFutureImportCandidate(c, t);
-      if (futureImport.status === 'excluded') {
-        warnings.push(`対象外：${futureImport.reasons.join(' / ')}（保存対象外）`);
-      } else if (isPastDate) {
+      // v4.12.8: 対象外理由はカード側で表示。warnings への重複追記はしない（矛盾表示防止）
+      if (futureImport.status !== 'excluded' && isPastDate) {
         warnings.push('過去日付の予定です。近未来取り込みでは今日以降を推奨します');
       }
       return { ...item, warnings, isPastDate, futureImport };
@@ -1064,7 +1140,10 @@ const CalendarCandidateBrain = {
       importedAt: now,
       confirmedRevenue: false,
       candidateStatus: (extra && extra.candidateStatus) || '候補',
-      cautionNote: c.cautionNote
+      cautionNote: c.cautionNote,
+      importOverride: !!(extra && extra.importOverride),
+      importOverrideReason: (extra && extra.importOverrideReason) || '',
+      calendarImportDecision: (extra && extra.calendarImportDecision) || ''
     });
     const area = typeof MapBrain !== 'undefined'
       ? MapBrain.detectAreaFromAddress(c.address)

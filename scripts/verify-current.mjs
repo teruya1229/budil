@@ -1,6 +1,6 @@
 /**
- * Budil v4.12.7 current verify chain runner.
- * Runs v4.10.0–v4.10.42, v4.11.x, and v4.12.0–v4.12.7 feature verifies only.
+ * Budil v4.12.8 current verify chain runner.
+ * Runs v4.10.0–v4.10.42, v4.11.x, and v4.12.0–v4.12.8 feature verifies only.
  * Legacy v4.8/v4.9 verifies are excluded; see scripts/verify-legacy-reference.mjs.
  */
 import { readdirSync } from 'node:fs';
@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const scriptsDir = join(root, 'scripts');
-const EXPECTED_VERSION = 'v4.12.7';
+const EXPECTED_VERSION = 'v4.12.8';
 
 const CURRENT_PATTERN = /^verify-v4(10|11|12)\d.*\.mjs$/;
 

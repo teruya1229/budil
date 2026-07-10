@@ -2,6 +2,26 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.8 対象外候補の手動追加（2026-07-10）
+
+**日付**: 2026-07-10
+
+**判断内容**:
+- 対象外判定は「自動保存候補から外す初期判定」であり、ユーザーの明示追加を禁止しない
+- hard除外（キャンセル等）と soft除外（見積・休み等）を分離。業務シグナル（金額・確定・依頼元・台数・作業語）があれば soft では自動保存候補に残す
+- 対象外でも「この予定を作業予定に追加」で個別保存可能。売上確定・Googleカレンダー書き戻しはしない
+- 矛盾表示（保存されます + 保存対象外）を解消。理由表示を分離
+- 手動追加記録は candidateMeta 任意フィールドのみ。新localStorageキーは作らない
+- 現行合格は current verify chain を維持
+
+**変更ファイル**:
+- js/calendar-candidate-brain.js, js/app.js, css/style.css
+- index.html, js/storage.js, js/data-backup.js
+- scripts/verify-v4128-calendar-excluded-manual-include.mjs, scripts/verify-current.mjs, scripts/verify-v4*.mjs（バージョンピン）
+- status.md, handoff.md, decision-log.md
+
+**現行合格コマンド**: `node scripts/verify-current.mjs`
+
 ## v4.12.7 verify整理（2026-07-09）
 
 **日付**: 2026-07-09

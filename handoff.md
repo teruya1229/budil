@@ -1,6 +1,6 @@
 ﻿# Budil handoff
 
-最終更新: 2026-07-09
+最終更新: 2026-07-10
 
 ## 正本
 
@@ -15,8 +15,9 @@
 
 | 項目 | 値 |
 |------|-----|
-| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.7 |
-| 最新バージョン | v4.12.7 |
+| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.8 |
+| 最新バージョン | v4.12.8 |
+| v4.12.8 対象外候補の手動追加 | verify-v4128合格 / verify-current 67本合格 / push予定 |
 | v4.12.7 verify整理（本体機能追加なし） | current verify chain 確立 / legacy 分離 / 作業前失敗2件を修正・分類 / push予定 |
 | v4.12.6 タッチ決済・入金サイクル表示 | commit `a61e34c` / verify-v4126合格 / verify-v4125合格 / ローカル・公開ブラウザ点検OK / push済み・Pages反映済み |
 | v4.12.5 くらし支払方法追加 | commit `7c67272` / verify-v4125合格 / v4.10-v4.12 verify 64件合格 / ローカルブラウザ点検OK / push済み・Pages反映待ち |
@@ -61,6 +62,13 @@
 | v4.10.23 確定売上定義統一commit | 9a6d161 |
 | v4.10.22 本体修正commit | ee8eec3 |
 | ブランチ | `main` push 済み |
+
+## v4.12.8 対象外候補の手動追加（2026-07-10）
+
+- **目的**: 対象外判定の過剰除外を抑え、対象外候補でも手動で作業予定に追加できるようにする
+- **維持**: Googleカレンダー正本、売上は作業後確定、v4.12.3〜v4.12.7、current verify 運用
+- **現行合格**: `node scripts/verify-current.mjs`
+- **新規**: `node scripts/verify-v4128-calendar-excluded-manual-include.mjs`
 
 ## v4.12.7 verify運用（2026-07-09）
 
