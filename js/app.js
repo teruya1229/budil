@@ -22,6 +22,8 @@
   let businessReportPeriod = '7d';
   let lastBusinessReportContext = null;
   let revenueAggregationFilter = { year: '', month: '', source: '', service: '' };
+  /** 利益管理の対象月（YYYY-MM）。null/空は当月。localStorageへは保存しない。 */
+  let profitTargetMonthKey = null;
   let currentDocPreviewId = null;
   let documentsFormDirty = false;
   let receivablesFilter = 'all';
@@ -3215,16 +3217,48 @@
     });
   }
 
-  function renderProfitUpcomingSchedule() {
+  function renderProfitUpcomingSchedule(ctx) {
     const el = document.getElementById('profit-upcoming-schedule');
     if (!el) return;
-    const summary = getUpcomingRevenueScheduleSummary();
+    const today = TODAY();
+    const monthKey = (ctx && (ctx.profitMonthKey || (ctx.summary && ctx.summary.monthKey)))
+      || getResolvedProfitTargetMonthKey(today);
+    const kind = (ctx && ctx.profitMonthKind) || getProfitMonthKind(monthKey, today);
+    let summary;
+    if (kind === 'past') {
+      summary = {
+        monthCount: 0,
+        monthTotal: 0,
+        displayCount: 0,
+        displayTotal: 0,
+        upcoming: [],
+        upcomingCount: 0,
+        label: '売上予定（未確定）',
+        scopeNote: '過去月のため、予定売上は合計・一覧に含めません。',
+        hint: '売上確定待ちがある場合は月次締めチェックで確認できます。'
+      };
+    } else if (typeof RevenueSummaryBrain !== 'undefined') {
+      const monthWorkOrders = (Storage.getWorkOrders() || []).filter(w =>
+        w && w.scheduledDate && String(w.scheduledDate).startsWith(monthKey)
+      );
+      summary = RevenueSummaryBrain.buildUpcomingRevenueScheduleSummary(monthWorkOrders, today);
+      if (kind === 'future') {
+        summary.scopeNote = '未来月の予定確認用です。当月・過去月の予定は含みません。';
+        summary.hint = '月次締めや経費未入力の警告対象ではありません。';
+      }
+    } else {
+      summary = getUpcomingRevenueScheduleSummary();
+    }
     const limit = Math.max(summary.upcomingCount || 0, 20);
     el.innerHTML = renderUpcomingRevenueScheduleHtml({
       summary,
       limit,
-      showEditButtons: true,
-      emptyText: '今日以降の売上予定はありません。予定取り込みから読み込めます。'
+      showEditButtons: kind !== 'past',
+      emptyText: kind === 'past'
+        ? '過去月の予定売上はありません。'
+        : (kind === 'future'
+          ? 'この未来月の売上予定はありません。'
+          : '今日以降の売上予定はありません。予定取り込みから読み込めます。')
     });
     bindProfitUpcomingScheduleEvents(el);
   }
@@ -11809,7 +11843,99 @@
   }
 
   // ── 利益管理 ──
+  function getCurrentProfitMonthKey(today) {
+    const t = today || TODAY();
+    return typeof ProfitBrain !== 'undefined'
+      ? ProfitBrain.currentMonthKey(t)
+      : String(t).slice(0, 7);
+  }
+
+  function getResolvedProfitTargetMonthKey(today) {
+    const current = getCurrentProfitMonthKey(today);
+    const selected = String(profitTargetMonthKey || '').trim();
+    if (/^\d{4}-\d{2}$/.test(selected)) return selected;
+    return current;
+  }
+
+  function formatProfitMonthLabel(monthKey) {
+    const key = String(monthKey || '');
+    const parts = key.split('-');
+    if (parts.length < 2) return key || '—';
+    return `${parts[0]}年${parseInt(parts[1], 10)}月`;
+  }
+
+  function getProfitMonthKind(monthKey, today) {
+    const current = getCurrentProfitMonthKey(today);
+    const key = String(monthKey || current);
+    if (key < current) return 'past';
+    if (key > current) return 'future';
+    return 'current';
+  }
+
+  function filterRecordsForProfitMonth(revenues, expenses, workOrders, monthKey) {
+    const key = String(monthKey || '');
+    return {
+      revenues: (revenues || []).filter(r => r && r.workDate && String(r.workDate).startsWith(key)),
+      expenses: (expenses || []).filter(e => e && e.date && String(e.date).startsWith(key)),
+      workOrders: (workOrders || []).filter(w => w && w.scheduledDate && String(w.scheduledDate).startsWith(key))
+    };
+  }
+
+  function resolveProfitSummaryMetrics(summary) {
+    const s = summary || {};
+    if (s.usesMonthlyResult) {
+      const confirmedRevenue = Number(s.confirmedRevenue != null ? s.confirmedRevenue : s.monthRevenue) || 0;
+      const confirmedProfit = Number(s.confirmedProfit != null ? s.confirmedProfit : s.monthGrossProfit) || 0;
+      const scheduledRevenue = Number(s.plannedRevenueEstimate) || 0;
+      const scheduledProfit = Number(s.plannedForecastProfit) || 0;
+      const fee = Number(s.feeExpense) || 0;
+      return {
+        totalRevenue: Number(s.totalRevenue != null ? s.totalRevenue : confirmedRevenue + scheduledRevenue) || 0,
+        totalProfit: Number(s.totalProfit != null ? s.totalProfit : confirmedProfit + scheduledProfit) || 0,
+        monthExpense: Number(s.monthExpense) || 0,
+        confirmedRevenue,
+        confirmedProfit,
+        scheduledRevenue,
+        scheduledProfit,
+        confirmedFeeAmount: fee,
+        scheduledFeeAmount: 0,
+        totalFeeAmount: fee,
+        confirmedGrossProfit: confirmedProfit,
+        scheduledGrossProfit: scheduledProfit
+      };
+    }
+    return getSharedMonthlyMetrics({ monthKey: s.monthKey });
+  }
+
+  function syncProfitTargetMonthControls(monthKey, kind) {
+    const input = document.getElementById('profit-target-month');
+    if (input && input.value !== monthKey) input.value = monthKey;
+    const note = document.getElementById('profit-target-month-note');
+    if (note) {
+      if (kind === 'past') {
+        note.textContent = '過去月を表示中です。選択月の売上・経費明細のみを対象にします。ページ再読込で当月に戻ります。';
+      } else if (kind === 'future') {
+        note.textContent = '未来月の予定確認用です。当月・過去月の予定や経費は混ぜません。ページ再読込で当月に戻ります。';
+      } else {
+        note.textContent = '対象月は画面表示中のみ保持します。保存やURLには残しません。';
+      }
+    }
+    const statusHeading = document.getElementById('profit-status-heading');
+    if (statusHeading) {
+      statusHeading.textContent = kind === 'current'
+        ? '利益状態（今月）'
+        : `利益状態（${formatProfitMonthLabel(monthKey)}）`;
+    }
+    const numbersHeading = document.getElementById('profit-numbers-heading');
+    if (numbersHeading) {
+      numbersHeading.textContent = kind === 'current'
+        ? '今月の数字'
+        : `${formatProfitMonthLabel(monthKey)}の数字`;
+    }
+  }
+
   function getProfitContext(opts) {
+    const options = opts || {};
     const today = TODAY();
     const revenues = Storage.getRevenueRecords();
     const expenses = Storage.getExpenseRecords();
@@ -11818,7 +11944,9 @@
     const intakes = Storage.getReceptionIntakes();
     let filteredRevenues = revenues;
     let filteredExpenses = expenses;
-    const range = opts && opts.period;
+    let filteredWorkOrders = workOrders;
+    let monthKey = options.monthKey || null;
+    const range = options.period;
     if (range && range.startDate && range.endDate) {
       filteredRevenues = revenues.filter(r =>
         r && r.workDate && r.workDate >= range.startDate && r.workDate <= range.endDate
@@ -11827,16 +11955,31 @@
         e && e.date && e.date >= range.startDate && e.date <= range.endDate
       );
     }
-    return ProfitBrain.buildProfitContext({
+    if (options.useProfitTargetMonth) {
+      monthKey = getResolvedProfitTargetMonthKey(today);
+      const scoped = filterRecordsForProfitMonth(revenues, expenses, workOrders, monthKey);
+      filteredRevenues = scoped.revenues;
+      filteredExpenses = scoped.expenses;
+      filteredWorkOrders = scoped.workOrders;
+    }
+    const ctx = ProfitBrain.buildProfitContext({
       today,
       revenues: filteredRevenues,
       expenses: filteredExpenses,
-      workOrders,
+      workOrders: filteredWorkOrders,
       leads,
       intakes,
       monthlyResults: Storage.getMonthlyResults(),
-      monthKey: opts && opts.monthKey
+      monthKey: monthKey || undefined
     });
+    const resolvedMonth = (ctx.summary && ctx.summary.monthKey) || monthKey || getCurrentProfitMonthKey(today);
+    const kind = getProfitMonthKind(resolvedMonth, today);
+    if (kind === 'past') {
+      ctx.workOrderRows = [];
+    }
+    ctx.profitMonthKind = kind;
+    ctx.profitMonthKey = resolvedMonth;
+    return ctx;
   }
 
   function renderProfitSummary(ctx, options) {
@@ -11844,23 +11987,33 @@
     const el = document.getElementById('profit-summary');
     if (!el) return;
     const s = ctx.summary;
-    const m = getSharedMonthlyMetrics({ monthKey: s.monthKey });
+    const m = opts.useProfitTargetMonth
+      ? resolveProfitSummaryMetrics(s)
+      : getSharedMonthlyMetrics({ monthKey: s.monthKey });
     const expenseCount = ProfitBrain.filterMonthExpenses(ctx.expenses || [], s.monthKey).length;
     const workflowMode = !!opts.workflowMode;
+    const monthKind = ctx.profitMonthKind || getProfitMonthKind(s.monthKey);
+    const expenseLabel = monthKind === 'current' ? '今月経費' : '対象月の経費';
     const confirmedFee = m.confirmedFeeAmount ?? (m.confirmedRevenue - m.confirmedGrossProfit);
     const scheduledFee = m.scheduledFeeAmount ?? (m.scheduledRevenue - m.scheduledGrossProfit);
     const totalFee = m.totalFeeAmount ?? (confirmedFee + scheduledFee);
-    const monthlyNote = !workflowMode && s.usesMonthlyResult && s.aggregationSourceNote
-      ? `<p class="profit-monthly-source-note">${esc(s.aggregationSourceNote)}</p>`
+    const monthlyNote = s.usesMonthlyResult
+      ? `<p class="profit-monthly-source-note">${esc(s.aggregationSourceNote || '月次実績を優先表示中（売上明細とは別管理）')}。詳細分析は保存済み明細のみで、サマリーへ合算しません。</p>`
+      : '';
+    const futureNote = monthKind === 'future'
+      ? '<p class="profit-month-scope-note">未来月の予定確認用です。月次締め未完了や経費未入力の警告対象ではありません。</p>'
+      : '';
+    const pastNote = monthKind === 'past' && !s.usesMonthlyResult
+      ? '<p class="profit-month-scope-note">過去月の明細ベース表示です。予定売上は合計に含みません。</p>'
       : '';
     const flowNote = workflowMode
       ? ''
-      : `<p class="profit-flow-note">利益は「確定粗利＋予定粗利 − 今月経費」で確認します。依頼元別の取り分率を反映しています。月次実績がある月は月次実績ベースの経営数字を優先表示します。日々の経費入力は支出明細として保存されます。</p>`;
+      : `<p class="profit-flow-note">利益は「確定粗利＋予定粗利 − ${expenseLabel}」で確認します。依頼元別の取り分率を反映しています。月次実績がある月は月次実績ベースの経営数字を優先表示します。日々の経費入力は支出明細として保存されます。</p>`;
     const aggBadge = workflowMode
       ? ''
       : `<p class="profit-aggregation-label">集計：<strong>${esc(s.usesMonthlyResult ? '月次実績ベース' : '明細ベース')}</strong></p>`;
     let monthlyBrief = '';
-    if (!s.usesMonthlyResult && typeof RevenueSummaryBrain !== 'undefined') {
+    if (!s.usesMonthlyResult && !opts.useProfitTargetMonth && typeof RevenueSummaryBrain !== 'undefined') {
       const monthly = RevenueSummaryBrain.buildMonthlySummary(
         RevenueSummaryBrain.confirmedRecords(Storage.getRevenueRecords())
       ).slice(0, 3);
@@ -11881,7 +12034,7 @@
         { label: '合計売上', value: RevenueBrain.formatYen(m.totalRevenue ?? m.plannedRevenue ?? 0), extraClass: 'profit-summary-highlight' },
         { label: '合計利益', value: RevenueBrain.formatYen(m.totalProfit ?? m.plannedProfit ?? 0), extraClass: 'profit-summary-total-profit' },
         { label: '仲介料', value: RevenueBrain.formatYen(totalFee) },
-        { label: '今月経費', value: RevenueBrain.formatYen(m.monthExpense) }
+        { label: expenseLabel, value: RevenueBrain.formatYen(m.monthExpense) }
       ])}
       <p class="profit-breakdown-section-label">確定</p>
       ${renderMetricGrid([
@@ -11902,7 +12055,7 @@
         { label: '合計売上', value: RevenueBrain.formatYen(m.totalRevenue ?? m.plannedRevenue ?? 0), extraClass: 'profit-summary-highlight' },
         { label: '合計利益', value: RevenueBrain.formatYen(m.totalProfit ?? m.plannedProfit ?? 0), extraClass: 'profit-summary-total-profit' },
         { label: '仲介料', value: RevenueBrain.formatYen(totalFee) },
-        { label: '今月経費', value: RevenueBrain.formatYen(m.monthExpense) }
+        { label: expenseLabel, value: RevenueBrain.formatYen(m.monthExpense) }
       ])}
       <p class="profit-breakdown-section-label">確定</p>
       ${renderMetricGrid([
@@ -11935,13 +12088,25 @@
         ? renderCurrentMonthReconciliationBrief(s.monthKey, {
           usesMonthlyResult: true,
           monthlySales: s.monthRevenue,
-          detailTotal: MonthlyResultsBrain.sumDetailRevenueForMonth(Storage.getRevenueRecords(), s.monthKey).total,
-          diff: s.monthRevenue - MonthlyResultsBrain.sumDetailRevenueForMonth(Storage.getRevenueRecords(), s.monthKey).total,
+          detailTotal: MonthlyResultsBrain.sumDetailRevenueForMonth(
+            opts.useProfitTargetMonth ? (ctx.revenues || []) : Storage.getRevenueRecords(),
+            s.monthKey
+          ).total,
+          diff: s.monthRevenue - MonthlyResultsBrain.sumDetailRevenueForMonth(
+            opts.useProfitTargetMonth ? (ctx.revenues || []) : Storage.getRevenueRecords(),
+            s.monthKey
+          ).total,
           status: MonthlyResultsBrain.classifyReconciliationStatus(
             s.monthRevenue,
-            MonthlyResultsBrain.sumDetailRevenueForMonth(Storage.getRevenueRecords(), s.monthKey).total,
+            MonthlyResultsBrain.sumDetailRevenueForMonth(
+              opts.useProfitTargetMonth ? (ctx.revenues || []) : Storage.getRevenueRecords(),
+              s.monthKey
+            ).total,
             true,
-            MonthlyResultsBrain.sumDetailRevenueForMonth(Storage.getRevenueRecords(), s.monthKey).count > 0
+            MonthlyResultsBrain.sumDetailRevenueForMonth(
+              opts.useProfitTargetMonth ? (ctx.revenues || []) : Storage.getRevenueRecords(),
+              s.monthKey
+            ).count > 0
           )
         })
         : '');
@@ -11949,11 +12114,13 @@
       ${flowNote}
       ${aggBadge}
       ${monthlyNote}
+      ${futureNote}
+      ${pastNote}
       ${reconciliationBlock}
       ${metricsLayout}
       ${monthlyBrief}
       ${expenseOverview}
-      ${workflowMode ? '' : `<div class="profit-summary-grid"><div class="profit-summary-item"><span>経費入力</span><strong>今月${expenseCount}件</strong></div></div>`}`;
+      ${workflowMode ? '' : `<div class="profit-summary-grid"><div class="profit-summary-item"><span>経費入力</span><strong>${monthKind === 'current' ? '今月' : '対象月'}${expenseCount}件</strong></div></div>`}`;
   }
 
   function renderProfitExpenseBreakdown(ctx, options) {
@@ -11961,12 +12128,15 @@
     const el = document.getElementById(opts.targetId || 'profit-expense-breakdown');
     if (!el || typeof ProfitBrain === 'undefined') return;
     const monthKey = (ctx.summary && ctx.summary.monthKey) || ProfitBrain.currentMonthKey(TODAY());
+    const monthKind = ctx.profitMonthKind || getProfitMonthKind(monthKey);
+    const title = monthKind === 'current' ? '今月の経費内訳' : '対象月の経費内訳';
+    const emptyScope = monthKind === 'current' ? '今月' : '対象月';
     const breakdown = ProfitBrain.buildMonthExpenseBreakdown(ctx.expenses || [], monthKey);
     if (breakdown.isEmpty) {
       el.innerHTML = `
         <div class="profit-expense-breakdown">
-          <h3 class="profit-expense-breakdown-title">今月の経費内訳</h3>
-          <p class="profit-expense-breakdown-empty">今月の経費入力はまだありません。</p>
+          <h3 class="profit-expense-breakdown-title">${esc(title)}</h3>
+          <p class="profit-expense-breakdown-empty">${esc(emptyScope)}の経費入力はまだありません。</p>
           <p class="profit-expense-breakdown-hint">使ったお金があれば、経費入力に記録してください。</p>
         </div>`;
       return;
@@ -11976,7 +12146,7 @@
     ).join('');
     el.innerHTML = `
       <div class="profit-expense-breakdown">
-        <h3 class="profit-expense-breakdown-title">今月の経費内訳</h3>
+        <h3 class="profit-expense-breakdown-title">${esc(title)}</h3>
         <ul class="profit-expense-breakdown-list">${rows}</ul>
         <p class="profit-expense-breakdown-total">合計：<strong>${esc(ProfitBrain.formatYen(breakdown.total))}</strong></p>
       </div>`;
@@ -12180,29 +12350,60 @@
     const opts = options || {};
     const isCompact = !!opts.compact;
     const today = TODAY();
-    const profitCtx = getProfitContext();
+    const useProfitMonth = opts.useProfitTargetMonth === true;
+    const profitCtx = useProfitMonth
+      ? getProfitContext({ useProfitTargetMonth: true })
+      : getProfitContext();
+    const monthKey = (profitCtx.summary && profitCtx.summary.monthKey) || getCurrentProfitMonthKey(today);
+    const monthKind = useProfitMonth
+      ? (profitCtx.profitMonthKind || getProfitMonthKind(monthKey, today))
+      : 'current';
+    const revenues = useProfitMonth
+      ? (profitCtx.revenues || [])
+      : Storage.getRevenueRecords();
+    const expenses = useProfitMonth
+      ? (profitCtx.expenses || [])
+      : Storage.getExpenseRecords();
+    const workOrders = useProfitMonth
+      ? (Storage.getWorkOrders() || []).filter(w => w && w.scheduledDate && String(w.scheduledDate).startsWith(monthKey))
+      : Storage.getWorkOrders();
     const check = ProfitBrain.buildMonthlyClosingCheck({
       today,
       profitCtx,
-      workOrders: Storage.getWorkOrders(),
-      revenues: Storage.getRevenueRecords(),
+      workOrders,
+      revenues,
       monthlyResults: Storage.getMonthlyResults(),
-      expenses: Storage.getExpenseRecords()
+      expenses
     });
-    const statusClass = check.statusKey === 'ready'
+    let statusMessages = (check.statusMessages || []).slice();
+    let statusKey = check.statusKey;
+    let nextAction = check.nextAction;
+    let primaryAction = check.primaryAction;
+    if (monthKind === 'future') {
+      statusKey = 'future_preview';
+      statusMessages = [
+        `${formatProfitMonthLabel(monthKey)}は予定確認用です`,
+        check.hasMonthlyResult || (profitCtx.summary && profitCtx.summary.usesMonthlyResult)
+          ? 'この未来月には月次実績があります（読み取り専用）'
+          : '未来月のため、月次実績未入力・経費未入力を締め警告にしません'
+      ];
+      nextAction = '未来月の予定を確認してください。';
+      primaryAction = null;
+    }
+    const statusClass = statusKey === 'ready' || statusKey === 'future_preview'
       ? 'is-ok'
-      : (check.statusKey === 'reconciliation_gap' || check.statusKey === 'revenue_queue' ? 'is-warn' : 'is-info');
+      : (statusKey === 'reconciliation_gap' || statusKey === 'revenue_queue' ? 'is-warn' : 'is-info');
     const queueLabel = check.revenueConfirmationQueueCount > 0
       ? `${check.revenueConfirmationQueueCount}件`
       : 'なし';
     const upcomingLabel = check.upcomingScheduleCount > 0
       ? `${check.upcomingScheduleCount}件`
       : 'なし';
-    const statusList = (check.statusMessages || [])
+    const statusList = statusMessages
       .map(msg => `<li>${esc(msg)}</li>`)
       .join('');
-    const action = check.primaryAction;
-    const suppressAction = isCompact || opts.suppressAction;
+    const action = primaryAction;
+    const suppressAction = isCompact || opts.suppressAction || monthKind === 'future';
     const actionBtn = !suppressAction && action
       ? `<div class="revenue-flow-diagnostics-action-wrap"><button type="button" class="btn btn-sm btn-primary monthly-closing-check-action">${esc(action.label)}</button></div>`
       : '';
@@ -12212,12 +12413,13 @@
       : '<p class="revenue-flow-diagnostics-note">読み取り専用です。データの修正・削除・自動同期は行いません。</p>';
     const nextBlock = suppressAction
       ? ''
-      : `<p class="revenue-flow-diagnostics-next">次にやること：${esc(check.nextAction)}</p>`;
+      : `<p class="revenue-flow-diagnostics-next">次にやること：${esc(nextAction)}</p>`;
     const flowBlock = isCompact
       ? ''
       : `<p class="revenue-flow-diagnostics-flow">${esc(check.flowNote)}</p>`;
+    const expenseLabel = monthKind === 'current' ? '今月経費' : '対象月の経費';
     const statusBlock = isCompact
-      ? `<p class="monthly-closing-check-status-brief ${statusClass}">${esc(check.statusMessages[0] || '確認できます')}</p>`
+      ? `<p class="monthly-closing-check-status-brief ${statusClass}">${esc(statusMessages[0] || '確認できます')}</p>`
       : `<ul class="monthly-closing-check-status-list ${statusClass}">${statusList}</ul>`;
     el.innerHTML = `
       <div class="revenue-flow-diagnostics monthly-closing-check${isCompact ? ' monthly-closing-check-compact' : ''}">
@@ -12225,7 +12427,7 @@
         ${noteBlock}
         <ul class="revenue-flow-diagnostics-stats">
           <li><span>合計売上：</span><strong>${esc(ProfitBrain.formatYen(check.monthRevenue))}</strong></li>
-          <li><span>今月経費：</span><strong>${esc(ProfitBrain.formatYen(check.monthExpense))}</strong></li>
+          <li><span>${esc(expenseLabel)}：</span><strong>${esc(ProfitBrain.formatYen(check.monthExpense))}</strong></li>
           <li><span>合計利益：</span><strong>${esc(ProfitBrain.formatYen(check.monthProfit))}</strong></li>
           <li><span>売上確定待ち：</span><strong>${esc(queueLabel)}</strong></li>
           <li><span>売上予定（未確定）：</span><strong>${esc(upcomingLabel)}</strong></li>
@@ -12249,25 +12451,42 @@
     if (!el || typeof ProfitBrain === 'undefined') return;
     const isCompact = !!opts.compact;
     const workflowMode = !!opts.workflowMode;
+    const useProfitMonth = opts.useProfitTargetMonth === true;
+    const monthKey = (ctx.summary && ctx.summary.monthKey) || getCurrentProfitMonthKey(TODAY());
+    const monthKind = ctx.profitMonthKind || getProfitMonthKind(monthKey);
     const diagnostics = ProfitBrain.buildProfitOperationsDiagnostics(ctx, {
       today: TODAY(),
       monthlyResults: Storage.getMonthlyResults(),
-      revenues: Storage.getRevenueRecords(),
-      workOrders: Storage.getWorkOrders(),
+      revenues: useProfitMonth ? (ctx.revenues || []) : Storage.getRevenueRecords(),
+      workOrders: useProfitMonth
+        ? (Storage.getWorkOrders() || []).filter(w => w && w.scheduledDate && String(w.scheduledDate).startsWith(monthKey))
+        : Storage.getWorkOrders(),
       expenses: ctx.expenses || Storage.getExpenseRecords()
     });
-    const sharedMetrics = getSharedMonthlyMetrics({ monthKey: diagnostics.monthKey });
+    const sharedMetrics = diagnostics.usesMonthlyResult
+      ? resolveProfitSummaryMetrics(ctx.summary || {})
+      : getSharedMonthlyMetrics({ monthKey: diagnostics.monthKey });
     const totalFee = sharedMetrics.totalFeeAmount ?? (
       (sharedMetrics.confirmedRevenue - sharedMetrics.confirmedGrossProfit)
       + (sharedMetrics.scheduledRevenue - sharedMetrics.scheduledGrossProfit)
     );
     const monthExpenses = ProfitBrain.filterMonthExpenses(ctx.expenses || [], diagnostics.monthKey);
     const expenseCount = monthExpenses.length;
-    const statusClass = diagnostics.statusKey === 'ok'
+    const expenseLabel = monthKind === 'current' ? '今月経費' : '対象月の経費';
+    const expenseCountLabel = monthKind === 'current' ? `今月${expenseCount}件` : `対象月${expenseCount}件`;
+    let statusMessage = diagnostics.statusMessage;
+    let nextAction = diagnostics.nextAction;
+    let statusKey = diagnostics.statusKey;
+    if (monthKind === 'future' && (statusKey === 'no_expense' || statusKey === 'low_expense')) {
+      statusKey = 'ok';
+      statusMessage = `${formatProfitMonthLabel(monthKey)}は予定確認用です。`;
+      nextAction = '未来月の予定売上を確認してください。';
+    }
+    const statusClass = statusKey === 'ok'
       ? 'is-ok'
-      : (diagnostics.statusKey === 'deficit' || diagnostics.statusKey === 'reconciliation_gap' ? 'is-warn' : 'is-info');
+      : (statusKey === 'deficit' || statusKey === 'reconciliation_gap' ? 'is-warn' : 'is-info');
     const action = diagnostics.primaryAction;
-    const suppressAction = isCompact || opts.suppressAction;
+    const suppressAction = isCompact || opts.suppressAction || monthKind === 'future';
     const hideRevenueCta = opts.suppressRevenueLink && action && action.label === '売上予定を見る';
     const actionBtn = !suppressAction && action && !hideRevenueCta
       ? `<div class="revenue-flow-diagnostics-action-wrap"><button type="button" class="btn btn-sm btn-primary profit-operations-diagnostics-action">${esc(action.label)}</button></div>`
@@ -12279,14 +12498,14 @@
     const defsBlock = (isCompact || workflowMode) ? '' : `
         <dl class="revenue-flow-diagnostics-defs">
           <div><dt>合計売上</dt><dd>確定売上明細と予定売上の合計、または月次実績の合計売上です。</dd></div>
-          <div><dt>今月経費</dt><dd>経費入力で保存した支出明細の当月合計です。</dd></div>
-          <div><dt>合計利益</dt><dd>確定粗利＋予定粗利 − 今月経費で確認します（依頼元別取り分率を反映）。</dd></div>
+          <div><dt>${esc(expenseLabel)}</dt><dd>経費入力で保存した支出明細の対象月合計です。</dd></div>
+          <div><dt>合計利益</dt><dd>確定粗利＋予定粗利 − ${esc(expenseLabel)}で確認します（依頼元別取り分率を反映）。</dd></div>
           <div><dt>月次実績</dt><dd>ある月は月次実績ベースを優先表示します（売上明細とは別管理）。</dd></div>
         </dl>`;
     const nextBlock = suppressAction
-      ? `<p class="revenue-flow-diagnostics-status ${statusClass}">状態：${esc(diagnostics.statusMessage)}</p>`
-      : `<p class="revenue-flow-diagnostics-status ${statusClass}">状態：${esc(diagnostics.statusMessage)}</p>
-        <p class="revenue-flow-diagnostics-next">次にやること：${esc(diagnostics.nextAction)}</p>`;
+      ? `<p class="revenue-flow-diagnostics-status ${statusClass}">状態：${esc(statusMessage)}</p>`
+      : `<p class="revenue-flow-diagnostics-status ${statusClass}">状態：${esc(statusMessage)}</p>
+        <p class="revenue-flow-diagnostics-next">次にやること：${esc(nextAction)}</p>`;
     const flowBlock = (isCompact || workflowMode)
       ? ''
       : `<p class="revenue-flow-diagnostics-flow">${esc(diagnostics.flowNote)}</p>`;
@@ -12302,8 +12521,8 @@
           <li><span>利益率：</span><strong>${esc(ProfitBrain.formatRate(diagnostics.monthProfitRate))}</strong></li>
           <li><span>合計売上：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthRevenue))}</strong></li>
           ${workflowMode && !diagnostics.usesMonthlyResult ? `<li><span>仲介料：</span><strong>${esc(ProfitBrain.formatYen(totalFee))}</strong></li>` : ''}
-          <li><span>今月経費：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthExpense))}</strong></li>
-          <li><span>経費入力：</span><strong>今月${expenseCount}件</strong></li>
+          <li><span>${esc(expenseLabel)}：</span><strong>${esc(ProfitBrain.formatYen(diagnostics.monthExpense))}</strong></li>
+          <li><span>経費入力：</span><strong>${esc(expenseCountLabel)}</strong></li>
           ${(isCompact || workflowMode) ? '' : `<li><span>集計：</span><strong>${esc(diagnostics.aggregationLabel)}</strong></li>
           <li><span>整合チェック：</span><strong>${esc(diagnostics.reconciliationLabel)}</strong></li>`}
         </ul>
@@ -12609,13 +12828,23 @@
       populateProfitExpenseSelects();
       const dateEl = document.getElementById('profit-expense-date');
       if (dateEl && !dateEl.value) dateEl.value = TODAY();
-      const ctx = getProfitContext();
-      renderProfitOperationsDiagnostics(ctx, { suppressRevenueLink: true, workflowMode: true });
-      renderProfitSummary(ctx, { workflowMode: true });
-      renderProfitUpcomingSchedule();
+      const ctx = getProfitContext({ useProfitTargetMonth: true });
+      const monthKey = ctx.profitMonthKey || (ctx.summary && ctx.summary.monthKey) || getCurrentProfitMonthKey();
+      syncProfitTargetMonthControls(monthKey, ctx.profitMonthKind || getProfitMonthKind(monthKey));
+      renderProfitOperationsDiagnostics(ctx, {
+        suppressRevenueLink: true,
+        workflowMode: true,
+        useProfitTargetMonth: true
+      });
+      renderProfitSummary(ctx, { workflowMode: true, useProfitTargetMonth: true });
+      renderProfitUpcomingSchedule(ctx);
       renderProfitExpenseList(ctx);
       renderProfitRevenueRows(ctx);
-      renderMonthlyClosingCheck('profit-monthly-closing-check', { compact: true, suppressAction: true });
+      renderMonthlyClosingCheck('profit-monthly-closing-check', {
+        compact: true,
+        suppressAction: true,
+        useProfitTargetMonth: true
+      });
       renderProfitExpenseBreakdown(ctx);
       renderProfitWorkOrderRows(ctx);
       renderProfitServiceRows(ctx);
@@ -12642,6 +12871,23 @@
     if (expenseOpenBtn && !expenseOpenBtn.dataset.bound) {
       expenseOpenBtn.dataset.bound = '1';
       expenseOpenBtn.addEventListener('click', openProfitExpenseFormSection);
+    }
+    const monthInput = document.getElementById('profit-target-month');
+    if (monthInput && !monthInput.dataset.bound) {
+      monthInput.dataset.bound = '1';
+      monthInput.addEventListener('change', () => {
+        const value = String(monthInput.value || '').trim();
+        profitTargetMonthKey = /^\d{4}-\d{2}$/.test(value) ? value : null;
+        renderProfitView();
+      });
+    }
+    const resetBtn = document.getElementById('profit-target-month-reset');
+    if (resetBtn && !resetBtn.dataset.bound) {
+      resetBtn.dataset.bound = '1';
+      resetBtn.addEventListener('click', () => {
+        profitTargetMonthKey = null;
+        renderProfitView();
+      });
     }
   }
 

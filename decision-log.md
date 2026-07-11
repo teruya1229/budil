@@ -2,6 +2,26 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.11 利益管理の対象月選択（2026-07-11）
+
+**日付**: 2026-07-11
+
+**判断内容**:
+- 利益管理画面のみに対象月選択を追加。他画面（経営ホーム・売上管理・入金・月次締め等）は当月固定のまま
+- 対象月は JS メモリ状態のみ。localStorage / URL / 設定へ保存しない。再読込で当月
+- 売上・経費・作業予定・予定売上・詳細分析・月次整合を同じ monthKey に揃える
+- 過去月は予定売上を合計に混ぜない。月次実績ありはサマリー優先、詳細は明細のみ（自動分解しない）
+- 未来月は予定確認用。月次実績未入力を締め警告・差額追加導線にしない
+- ProfitBrain の利益率・正規化・依頼元表示、RevenueBrain.getSourceProfitRate は変更しない
+
+**変更ファイル**:
+- index.html, js/app.js, css/style.css（最小）
+- js/storage.js, js/data-backup.js（表示バージョン）
+- scripts/verify-v41211-profit-target-month.mjs, scripts/verify-v4*.mjs（バージョンピン）
+- status.md, handoff.md, decision-log.md
+
+**現行合格コマンド**: `node scripts/verify-current.mjs`
+
 ## v4.12.10 利益管理の依頼元別表示整合（2026-07-11）
 
 **日付**: 2026-07-11

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Budil - AI経営脳みそ</title>
-  <link rel="stylesheet" href="css/style.css?v=4.12.10">
+  <link rel="stylesheet" href="css/style.css?v=4.12.11">
 </head>
 <body>
   <div class="app">
@@ -13,7 +13,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.12.10</small>
+          <small>AI経営脳みそ v4.12.11</small>
         </div>
       </div>
       <nav class="nav">
@@ -151,7 +151,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.12.10</small>
+        <small>Budil v4.12.11</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -173,7 +173,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の最優先 → 今日やること → 今月の数字</p>
             </div>
-            <span class="exec-home-version">v4.12.10</span>
+            <span class="exec-home-version">v4.12.11</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden exec-tower-span-full"></div>
 
@@ -594,7 +594,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.12.10</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.12.11</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -2720,11 +2720,17 @@
       <section id="view-profit" class="view">
         <header class="view-header">
           <h1>利益管理</h1>
-          <p class="view-subtitle">利益状態→今月の数字→売上予定（未確定）→経費入力の順で確認します。詳細分析は必要なときだけ開いてください。</p>
+          <p class="view-subtitle">利益状態→対象月の数字→売上予定（未確定）→経費入力の順で確認します。詳細分析は必要なときだけ開いてください。</p>
+          <div class="profit-target-month-bar" role="group" aria-label="対象月">
+            <label for="profit-target-month">対象月</label>
+            <input type="month" id="profit-target-month" class="profit-target-month-input">
+            <button type="button" class="btn btn-sm btn-secondary" id="profit-target-month-reset">今月に戻す</button>
+            <p id="profit-target-month-note" class="profit-target-month-note" aria-live="polite"></p>
+          </div>
         </header>
 
         <div class="card card-wide card-profit-status">
-          <h2>利益状態（今月）</h2>
+          <h2 id="profit-status-heading">利益状態（今月）</h2>
           <div id="profit-operations-diagnostics" class="profit-operations-diagnostics-block" aria-live="polite"></div>
           <div class="profit-quick-actions">
             <button type="button" class="btn btn-sm btn-primary" id="profit-open-expense-form">経費入力</button>
@@ -2732,7 +2738,7 @@
         </div>
 
         <div class="card card-wide card-profit-monthly-numbers">
-          <h2>今月の数字</h2>
+          <h2 id="profit-numbers-heading">今月の数字</h2>
           <div id="profit-summary" class="profit-summary-root"></div>
         </div>
 
@@ -3862,30 +3868,30 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.12.10"></script>
-  <script src="js/messages.js?v=4.12.10"></script>
-  <script src="js/demand-brain.js?v=4.12.10"></script>
-  <script src="js/demand-radar.js?v=4.12.10"></script>
-  <script src="js/sales-brain.js?v=4.12.10"></script>
-  <script src="js/management-brain.js?v=4.12.10"></script>
-  <script src="js/payment-brain.js?v=4.12.10"></script>
-  <script src="js/revenue-brain.js?v=4.12.10"></script>
-  <script src="js/revenue-summary-brain.js?v=4.12.10"></script>
-  <script src="js/reception-brain.js?v=4.12.10"></script>
-  <script src="js/map-brain.js?v=4.12.10"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.12.10"></script>
-  <script src="js/external-check-brain.js?v=4.12.10"></script>
-  <script src="js/action-brain.js?v=4.12.10"></script>
-  <script src="js/work-order-brain.js?v=4.12.10"></script>
-  <script src="js/follow-up-brain.js?v=4.12.10"></script>
-  <script src="js/work-completion-brain.js?v=4.12.10"></script>
-  <script src="js/profit-brain.js?v=4.12.10"></script>
-  <script src="js/analytics-brain.js?v=4.12.10"></script>
-  <script src="js/monthly-results-brain.js?v=4.12.10"></script>
-  <script src="js/documents-brain.js?v=4.12.10"></script>
-  <script src="js/executive-brain.js?v=4.12.10"></script>
-  <script src="js/card-ocr.js?v=4.12.10"></script>
-  <script src="js/data-backup.js?v=4.12.10"></script>
-  <script src="js/app.js?v=4.12.10"></script>
+  <script src="js/storage.js?v=4.12.11"></script>
+  <script src="js/messages.js?v=4.12.11"></script>
+  <script src="js/demand-brain.js?v=4.12.11"></script>
+  <script src="js/demand-radar.js?v=4.12.11"></script>
+  <script src="js/sales-brain.js?v=4.12.11"></script>
+  <script src="js/management-brain.js?v=4.12.11"></script>
+  <script src="js/payment-brain.js?v=4.12.11"></script>
+  <script src="js/revenue-brain.js?v=4.12.11"></script>
+  <script src="js/revenue-summary-brain.js?v=4.12.11"></script>
+  <script src="js/reception-brain.js?v=4.12.11"></script>
+  <script src="js/map-brain.js?v=4.12.11"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.12.11"></script>
+  <script src="js/external-check-brain.js?v=4.12.11"></script>
+  <script src="js/action-brain.js?v=4.12.11"></script>
+  <script src="js/work-order-brain.js?v=4.12.11"></script>
+  <script src="js/follow-up-brain.js?v=4.12.11"></script>
+  <script src="js/work-completion-brain.js?v=4.12.11"></script>
+  <script src="js/profit-brain.js?v=4.12.11"></script>
+  <script src="js/analytics-brain.js?v=4.12.11"></script>
+  <script src="js/monthly-results-brain.js?v=4.12.11"></script>
+  <script src="js/documents-brain.js?v=4.12.11"></script>
+  <script src="js/executive-brain.js?v=4.12.11"></script>
+  <script src="js/card-ocr.js?v=4.12.11"></script>
+  <script src="js/data-backup.js?v=4.12.11"></script>
+  <script src="js/app.js?v=4.12.11"></script>
 </body>
 </html>

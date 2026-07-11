@@ -1,13 +1,27 @@
 ﻿# Budil status
 
-## 正式な現行verify環境（v4.12.10）
+## 正式な現行verify環境（v4.12.11）
 
 - **正式環境**: Budil 単独 clone ではなく、親階層に sibling の `calendar-sync-worker` がある開発環境
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` 側の依存関係（googleapis 等）。`hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（69本。省略・除外・緩和なし）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（70本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.11 実装内容（利益管理の対象月選択）
+
+- 表示バージョンを v4.12.11 に更新
+- index.html の主要 JS/CSS cache buster を v4.12.11 に統一
+- 利益管理に対象月（`input type="month"`）と「今月に戻す」を追加
+- 対象月は画面表示中の JS 状態のみ（localStorage / URL / 設定へ保存しない。再読込で当月）
+- 当月・過去月・未来月で売上・経費・作業予定・予定売上・月次整合を同じ monthKey に揃える
+- 過去月は予定売上を合計に混ぜない。月次実績ありはサマリー優先・詳細は明細のみ
+- 未来月は予定確認用。月次実績未入力を締め警告・差額追加導線にしない
+- 経営ホーム等の他画面は当月固定のまま
+- 利益率・localStorageキー・Googleカレンダー正本は変更なし
+- 新規 verify-v41211-profit-target-month.mjs 追加
+- 現行合格は引き続き `node scripts/verify-current.mjs`
 
 ## v4.12.10 実装内容（利益管理の依頼元別表示整合）
 

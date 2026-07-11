@@ -1,5 +1,5 @@
 /**
- * Budil v4.12.10 - verify chain cleanup verification.
+ * Budil v4.12.11 - verify chain cleanup verification.
  * Confirms current/legacy split, version pins, and safety guards.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -14,8 +14,8 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(`FAIL: ${message}`);
 };
 
-const EXPECTED_VERSION = 'v4.12.10';
-const EXPECTED_CACHE = '4.12.10';
+const EXPECTED_VERSION = 'v4.12.11';
+const EXPECTED_CACHE = '4.12.11';
 
 console.log(`== ${EXPECTED_VERSION} verify-chain-cleanup ==`);
 
@@ -39,19 +39,19 @@ for (const doc of ['status.md', 'handoff.md', 'decision-log.md']) {
   const text = load(doc);
   assert(text.includes('current verify'), `${doc} must document current verify chain`);
   assert(text.includes('legacy'), `${doc} must document legacy verify handling`);
-  assert(text.includes('v4.12.10'), `${doc} must document v4.12.10`);
+  assert(text.includes('v4.12.11'), `${doc} must document v4.12.11`);
 }
 
 console.log('== version pins ==');
 const indexHtml = load('index.html');
 const storageJs = load('js/storage.js');
 const dataBackupJs = load('js/data-backup.js');
-assert(indexHtml.includes(`AI経営脳みそ ${EXPECTED_VERSION}`), 'index header version must be v4.12.10');
-assert(indexHtml.includes(`Budil ${EXPECTED_VERSION}`), 'index sidebar version must be v4.12.10');
-assert(indexHtml.includes(`js/app.js?v=${EXPECTED_CACHE}`), 'app.js cache buster must be v4.12.10');
-assert(storageJs.includes(`BUDIL_VERSION: '${EXPECTED_VERSION}'`), 'storage version must be v4.12.10');
-assert(dataBackupJs.includes(`APP_VERSION: '${EXPECTED_VERSION}'`), 'data-backup version must be v4.12.10');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.10'), 'calendar-candidate cache buster must be v4.12.10');
+assert(indexHtml.includes(`AI経営脳みそ ${EXPECTED_VERSION}`), 'index header version must be v4.12.11');
+assert(indexHtml.includes(`Budil ${EXPECTED_VERSION}`), 'index sidebar version must be v4.12.11');
+assert(indexHtml.includes(`js/app.js?v=${EXPECTED_CACHE}`), 'app.js cache buster must be v4.12.11');
+assert(storageJs.includes(`BUDIL_VERSION: '${EXPECTED_VERSION}'`), 'storage version must be v4.12.11');
+assert(dataBackupJs.includes(`APP_VERSION: '${EXPECTED_VERSION}'`), 'data-backup version must be v4.12.11');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.11'), 'calendar-candidate cache buster must be v4.12.11');
 assert(!indexHtml.includes('?v=4.12.7'), 'old cache buster v4.12.7 must be gone from index');
 
 console.log('== key feature verifies still present ==');
@@ -62,6 +62,7 @@ const mustExist = [
   'verify-v4126-touch-card-payment-cycle.mjs',
   'verify-v4129-source-analysis-alignment.mjs',
   'verify-v41210-profit-source-display-alignment.mjs',
+  'verify-v41211-profit-target-month.mjs',
   'verify-v4115-source-profit-rates.mjs',
   'verify-v4119-monthly-billing-workflow.mjs'
 ];
