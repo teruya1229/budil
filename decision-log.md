@@ -23,7 +23,10 @@
 **現行合格コマンド**: `node scripts/verify-current.mjs`
 
 **正式合格**:
-- commit: `d4833397396023482e9cb0bc6df5f5156c6eabff`
+- 本体commit: `d4833397396023482e9cb0bc6df5f5156c6eabff`
+- 記録commit: `bdd4eaa78dc2ac0e0261c7ef4f9259179b816616`
+- verify-current: 70/70
+- 公開URLで v4.12.11 確認済み
 - main へ push 済み
 
 ## v4.12.10 利益管理の依頼元別表示整合（2026-07-11）

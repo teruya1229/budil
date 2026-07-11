@@ -26,7 +26,7 @@
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.11 |
 | 最新バージョン | v4.12.11 |
-| v4.12.11 利益管理の対象月選択 | 正式合格 commit `d483339` / verify-current 70本合格 / push済み |
+| v4.12.11 利益管理の対象月選択 | 正式合格 本体commit `d483339` / 記録commit `bdd4eaa` / verify-current 70/70 / 公開URLで v4.12.11 確認済み / main push済み |
 | v4.12.10 利益管理の依頼元別表示整合 | 正式合格 commit `a233a2a` / verify-current 69本合格 / 公開URLで v4.12.10 確認済み / push済み |
 | v4.12.9 依頼元分析表示と利益計算の整合 | 正式合格 commit `f10eaa7` / verify-current 68本合格 / 公開URLで v4.12.9 確認済み / push済み |
 | v4.12.8 現行verify再現性 | commit `0aefe8e` / verify-current 前提チェック / push済み |
@@ -83,7 +83,7 @@
 - **維持**: 利益率、localStorage、他画面の当月固定、Googleカレンダー正本、v4.12.9/v4.12.10 依頼元表示
 - **現行合格**: `node scripts/verify-current.mjs`
 - **新規**: `node scripts/verify-v41211-profit-target-month.mjs`
-- **正式合格**: commit `d4833397396023482e9cb0bc6df5f5156c6eabff` / main push 済み
+- **正式合格**: 本体commit `d4833397396023482e9cb0bc6df5f5156c6eabff` / 記録commit `bdd4eaa78dc2ac0e0261c7ef4f9259179b816616` / verify-current 70/70 / 公開URLで v4.12.11 確認済み / main push 済み
 
 ## v4.12.10 利益管理の依頼元別表示整合（2026-07-11）
 
