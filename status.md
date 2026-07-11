@@ -22,6 +22,7 @@
 - 利益率・localStorageキー・Googleカレンダー正本は変更なし
 - 新規 verify-v41211-profit-target-month.mjs 追加
 - 現行合格は引き続き `node scripts/verify-current.mjs`
+- 正式合格: commit `d4833397396023482e9cb0bc6df5f5156c6eabff` / main push 済み
 
 ## v4.12.10 実装内容（利益管理の依頼元別表示整合）
 
