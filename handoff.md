@@ -1,6 +1,6 @@
 ﻿# Budil handoff
 
-最終更新: 2026-07-10
+最終更新: 2026-07-11
 
 ## 正本
 
@@ -11,12 +11,22 @@
 - [decision-log.md](decision-log.md)
 - 公開URL: https://teruya1229.github.io/budil/
 
+## 正式な現行verify環境
+
+- **正式環境**: Budil 単独 clone ではなく、親階層に sibling の `calendar-sync-worker` がある開発環境
+- **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
+- **必須**: `hub/functions` の依存関係（googleapis 等）。依存は `hub/functions` で npm install
+- **禁止**: Budil root での npm install
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（67本）
+- **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
+
 ## 現在の最新状態
 
 | 項目 | 値 |
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.8 |
 | 最新バージョン | v4.12.8 |
+| v4.12.8 現行verify再現性 | verify-current 前提チェック追加 / 本体機能変更なし |
 | v4.12.8 対象外候補の手動追加 | commit `dbefd67` / verify-v4128合格 / verify-current 67本合格 / push済み |
 | v4.12.7 verify整理（本体機能追加なし） | current verify chain 確立 / legacy 分離 / 作業前失敗2件を修正・分類 / push予定 |
 | v4.12.6 タッチ決済・入金サイクル表示 | commit `a61e34c` / verify-v4126合格 / verify-v4125合格 / ローカル・公開ブラウザ点検OK / push済み・Pages反映済み |
@@ -62,6 +72,14 @@
 | v4.10.23 確定売上定義統一commit | 9a6d161 |
 | v4.10.22 本体修正commit | ee8eec3 |
 | ブランチ | `main` push 済み |
+
+## v4.12.8 現行verify再現性（2026-07-11）
+
+- **目的**: 正式開発環境で `node scripts/verify-current.mjs` を迷わず再現可能にする
+- **変更**: `scripts/verify-current.mjs` 開始時の前提チェックのみ（本体機能・画面・localStorage 変更なし）
+- **正式環境**: sibling `calendar-sync-worker` + `hub/functions` 依存（googleapis 等）
+- **禁止**: Budil root の npm install / verify 本数の削減・緩和
+- **現行合格**: `node scripts/verify-current.mjs`
 
 ## v4.12.8 対象外候補の手動追加（2026-07-10）
 

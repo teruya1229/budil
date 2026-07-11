@@ -26,6 +26,10 @@ assert(statSync(join(scriptsDir, 'verify-legacy-reference.mjs')).isFile(), 'veri
 const currentRunner = load('scripts/verify-current.mjs');
 const legacyRunner = load('scripts/verify-legacy-reference.mjs');
 assert(currentRunner.includes('verify-v4(10|11|12)'), 'current runner must target v4.10–v4.12 scripts');
+assert(currentRunner.includes('checkVerifyPrerequisites'), 'current runner must gate on formal env prerequisites');
+assert(currentRunner.includes('calendar-sync-worker'), 'current runner must require sibling calendar-sync-worker');
+assert(currentRunner.includes('googleapis'), 'current runner must require hub/functions googleapis');
+assert(currentRunner.includes('Budil root'), 'current runner must warn against npm install at Budil root');
 assert(legacyRunner.includes('verify-v48'), 'legacy runner must target v4.8 scripts');
 assert(legacyRunner.includes('verify-reception-actions.mjs'), 'legacy runner must list reception-actions');
 assert(legacyRunner.includes('verify-calendar-past-recovery.mjs'), 'legacy runner must list calendar-past-recovery');

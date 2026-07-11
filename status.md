@@ -1,5 +1,14 @@
 ﻿# Budil status
 
+## 正式な現行verify環境（v4.12.8）
+
+- **正式環境**: Budil 単独 clone ではなく、親階層に sibling の `calendar-sync-worker` がある開発環境
+- **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
+- **必須**: `hub/functions` 側の依存関係（googleapis 等）。`hub/functions` で npm install
+- **禁止**: Budil root での npm install
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（67本。省略・除外・緩和なし）
+- **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
 ## v4.12.8 実装内容（対象外候補の手動追加）
 
 - 表示バージョンを v4.12.8 に更新
@@ -13,6 +22,7 @@
 - Googleカレンダー正本フロー・v4.12.3〜v4.12.7 維持
 - 新規 verify-v4128-calendar-excluded-manual-include.mjs 追加
 - 現行合格は引き続き `node scripts/verify-current.mjs`
+- 現行verify再現性: `verify-current.mjs` 開始時に sibling worker / hub/functions 依存の前提チェックを追加（本体機能変更なし）
 
 ## v4.12.7 実装内容（verify整理）
 
