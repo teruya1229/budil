@@ -19,6 +19,7 @@
 - Google広告 / 直受け / くらしのマーケットの既存コメント判定を維持
 - 新規 verify-v41210-profit-source-display-alignment.mjs 追加
 - 現行合格は引き続き `node scripts/verify-current.mjs`
+- 正式合格: commit `a233a2afa72339591b72604e9762ece349e4900f` / main push 済み
 
 ## v4.12.9 実装内容（依頼元分析表示と利益計算の整合）
 
