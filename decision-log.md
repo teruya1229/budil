@@ -21,7 +21,12 @@
 - scripts/verify-v4129-source-analysis-alignment.mjs, scripts/verify-v4*.mjs（バージョンピン）
 - status.md, handoff.md, decision-log.md
 
-**現行合格コマンド**: `node scripts/verify-current.mjs`
+**現行合格コマンド**: `node scripts/verify-current.mjs`（68/68）
+
+**正式合格**:
+- commit: `f10eaa79d68a71b06e94e76670cf983a61824e20`
+- main へ push 済み
+- 公開URLで v4.12.9 確認済み
 
 ## v4.12.8 対象外候補の手動追加（2026-07-10）
 

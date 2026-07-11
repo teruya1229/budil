@@ -19,7 +19,8 @@
 - 利益計算の正本は `RevenueBrain.getSourceProfitRate()` のまま（率・正規化・grossMarginRate 変更なし）
 - `record.source` / localStorageキー / 既存レコードは変更なし
 - 新規 verify-v4129-source-analysis-alignment.mjs 追加
-- 現行合格は引き続き `node scripts/verify-current.mjs`
+- 現行合格は引き続き `node scripts/verify-current.mjs`（68/68）
+- 正式合格: commit `f10eaa79d68a71b06e94e76670cf983a61824e20` / main push 済み / 公開URLで v4.12.9 確認済み
 
 ## v4.12.8 実装内容（対象外候補の手動追加）
 
