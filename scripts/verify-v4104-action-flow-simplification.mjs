@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Budil v4.10.4 action flow simplification verification.
  */
 import { readFileSync } from 'node:fs';
@@ -24,7 +24,7 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.12.8'), 'index.html should show v4.12.8');
+assert(indexHtml.includes('v4.12.9'), 'index.html should show v4.12.9');
 assert(!indexHtml.includes('<option value="完了">完了</option>'), 'revenue status select should not include 完了');
 assert(
   revenueBrain.includes('displayRevenueStatus') && revenueBrain.includes("status === '完了'"),

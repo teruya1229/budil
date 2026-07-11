@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Budil v4.12.4 - calendar unconfirmed candidate import verification.
  *
  * 玉澤 真理子様ケース:
@@ -65,11 +65,11 @@ const tamazawaItem = {
 };
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.8'), 'index.html should show v4.12.8');
-assert(indexHtml.includes('js/app.js?v=4.12.8'), 'app.js cache buster should be v4.12.8');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.8'), 'calendar brain cache buster should be v4.12.8');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.8'"), 'storage.js version should be v4.12.8');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.8'"), 'data-backup version should be v4.12.8');
+assert(indexHtml.includes('v4.12.9'), 'index.html should show v4.12.9');
+assert(indexHtml.includes('js/app.js?v=4.12.9'), 'app.js cache buster should be v4.12.9');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.9'), 'calendar brain cache buster should be v4.12.9');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.9'"), 'storage.js version should be v4.12.9');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.9'"), 'data-backup version should be v4.12.9');
 
 console.log('== v4.12.4 brain markers ==');
 assert(calBrainJs.includes('v4.11.1'), 'calendar-candidate-brain.js should include v4.11.1 marker');
@@ -237,7 +237,7 @@ console.log('== exclusion controls ==');
   assert(results.noDate.status === 'excluded', 'no date should be excluded');
   assert(results.noTime.status === 'excluded', 'no time should be excluded');
   assert(results.noService.status === 'excluded', 'no service should be excluded');
-  // v4.12.8: soft ワード「休み」でも金額があれば自動保存候補に残す
+  // v4.12.9: soft ワード「休み」でも金額があれば自動保存候補に残す
   assert(results.holiday.status === 'eligible', 'holiday with amount should remain eligible (soft word override)');
 }
 

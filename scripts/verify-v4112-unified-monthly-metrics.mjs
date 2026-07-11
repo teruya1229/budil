@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Budil v4.12.4 / v4.12.4 - unified monthly revenue/profit metrics verification.
  */
 import { readFileSync } from 'node:fs';
@@ -41,13 +41,13 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.8'), 'index.html should show v4.12.8');
-assert(indexHtml.includes('js/app.js?v=4.12.8'), 'app.js cache buster should be v4.12.8');
-assert(indexHtml.includes('js/revenue-brain.js?v=4.12.8'), 'revenue-brain cache buster should be v4.12.8');
-assert(indexHtml.includes('js/executive-brain.js?v=4.12.8'), 'executive-brain cache buster should be v4.12.8');
-assert(indexHtml.includes('js/reception-brain.js?v=4.12.8'), 'reception-brain cache buster should remain v4.11.0');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.8'"), 'storage.js version should be v4.12.8');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.8'"), 'data-backup version should be v4.12.8');
+assert(indexHtml.includes('v4.12.9'), 'index.html should show v4.12.9');
+assert(indexHtml.includes('js/app.js?v=4.12.9'), 'app.js cache buster should be v4.12.9');
+assert(indexHtml.includes('js/revenue-brain.js?v=4.12.9'), 'revenue-brain cache buster should be v4.12.9');
+assert(indexHtml.includes('js/executive-brain.js?v=4.12.9'), 'executive-brain cache buster should be v4.12.9');
+assert(indexHtml.includes('js/reception-brain.js?v=4.12.9'), 'reception-brain cache buster should remain v4.11.0');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.9'"), 'storage.js version should be v4.12.9');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.9'"), 'data-backup version should be v4.12.9');
 assert(statusMd.includes('v4.12.5'), 'status.md should document v4.12.4');
 assert(handoffMd.includes('v4.12.5'), 'handoff.md should document v4.12.4');
 assert(decisionLog.includes('v4.12.5'), 'decision-log.md should record v4.12.4');

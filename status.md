@@ -1,13 +1,25 @@
 ﻿# Budil status
 
-## 正式な現行verify環境（v4.12.8）
+## 正式な現行verify環境（v4.12.9）
 
 - **正式環境**: Budil 単独 clone ではなく、親階層に sibling の `calendar-sync-worker` がある開発環境
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` 側の依存関係（googleapis 等）。`hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（67本。省略・除外・緩和なし）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（68本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.9 実装内容（依頼元分析表示と利益計算の整合）
+
+- 表示バージョンを v4.12.9 に更新
+- index.html の主要 JS/CSS cache buster を v4.12.9 に統一
+- `RevenueSummaryBrain.SOURCE_ALIASES` / `getRevenueSource()` の表示分類のみ修正（100%経路を「その他」に潰さない）
+- Google系は記録されている元の依頼元名を分析表示で維持
+- 未設定・不明・判定不能は「不明」、その他は「その他」のまま
+- 利益計算の正本は `RevenueBrain.getSourceProfitRate()` のまま（率・正規化・grossMarginRate 変更なし）
+- `record.source` / localStorageキー / 既存レコードは変更なし
+- 新規 verify-v4129-source-analysis-alignment.mjs 追加
+- 現行合格は引き続き `node scripts/verify-current.mjs`
 
 ## v4.12.8 実装内容（対象外候補の手動追加）
 

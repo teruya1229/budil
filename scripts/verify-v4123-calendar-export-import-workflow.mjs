@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Budil v4.12.5 - calendar export and import workflow verification.
  */
 import { readFileSync } from 'node:fs';
@@ -36,13 +36,13 @@ const NG_TERMS = [
 console.log('== v4.12.5 calendar-export-import-workflow ==');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.8'), 'index.html should show v4.12.8');
-assert(indexHtml.includes('js/app.js?v=4.12.8'), 'app.js cache buster should be v4.12.8');
-assert(indexHtml.includes('css/style.css?v=4.12.8'), 'style.css cache buster should be v4.12.8');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.8'"), 'storage version should be v4.12.8');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.8'"), 'data-backup version should be v4.12.8');
+assert(indexHtml.includes('v4.12.9'), 'index.html should show v4.12.9');
+assert(indexHtml.includes('js/app.js?v=4.12.9'), 'app.js cache buster should be v4.12.9');
+assert(indexHtml.includes('css/style.css?v=4.12.9'), 'style.css cache buster should be v4.12.9');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.9'"), 'storage version should be v4.12.9');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.9'"), 'data-backup version should be v4.12.9');
 assert(!indexHtml.includes('?v=4.12.7'), 'old cache buster v4.12.7 should be gone');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.8'), 'calendar-candidate cache buster should be v4.12.8');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.9'), 'calendar-candidate cache buster should be v4.12.9');
 
 console.log('== workflow UI ==');
 assert(indexHtml.includes('\u6700\u65b0\u4e88\u5b9a\u306e\u66f4\u65b0\u3068\u53d6\u308a\u8fbc\u307f'), 'workflow section title should exist');

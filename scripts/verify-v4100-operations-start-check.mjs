@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Budil v4.10.1 operations start check verification.
  */
 import { readFileSync } from 'node:fs';
@@ -72,10 +72,10 @@ const css = load('css/style.css');
 
 console.log('== v4.10.1 operations start check ==');
 
-assert(indexHtml.includes('AI経営脳みそ v4.12.8'), 'header version should be v4.12.8');
-assert(indexHtml.includes('Budil v4.12.8'), 'sidebar version should be v4.12.8');
-assert(indexHtml.includes('js/app.js?v=4.12.8'), 'app.js cache buster should be v4.12.8');
-assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.12.8'"), 'storage version should be v4.12.8');
+assert(indexHtml.includes('AI経営脳みそ v4.12.9'), 'header version should be v4.12.9');
+assert(indexHtml.includes('Budil v4.12.9'), 'sidebar version should be v4.12.9');
+assert(indexHtml.includes('js/app.js?v=4.12.9'), 'app.js cache buster should be v4.12.9');
+assert(load('js/storage.js').includes("BUDIL_VERSION: 'v4.12.9'"), 'storage version should be v4.12.9');
 
 assert(indexHtml.includes('id="exec-home-operations-start-check"'), 'operations start check container should exist');
 assert(indexHtml.includes('exec-home-operations-start-check-block'), 'operations start check block class should exist');

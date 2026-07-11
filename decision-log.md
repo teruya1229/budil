@@ -2,6 +2,27 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.9 依頼元分析表示と利益計算の整合（2026-07-11）
+
+**日付**: 2026-07-11
+
+**判断内容**:
+- 利益計算の正本は `RevenueBrain.getSourceProfitRate()` のまま。率・正規化・grossMarginRate は変更しない
+- 売上分析（`RevenueSummaryBrain.getRevenueSource()`）の表示分類のみ修正。100%経路（LINE / Airリザーブ / 紹介直 / Google系 等）を「その他」に潰さない
+- Google系は記録されている元の依頼元名を分析表示で維持（LP への統合 alias を外す）
+- 未設定・不明・判定不能は「不明」、その他は「その他」。要確認扱いを維持
+- コープ / 110番 / くらしのマーケット / ヤマダ の既存分析分類は維持
+- `record.source` / localStorageキー / 新画面 / 新分類マスタは作らない
+- 現行合格は current verify chain を維持（68本）
+
+**変更ファイル**:
+- js/revenue-summary-brain.js
+- index.html, js/storage.js, js/data-backup.js（表示バージョン・cache buster）
+- scripts/verify-v4129-source-analysis-alignment.mjs, scripts/verify-v4*.mjs（バージョンピン）
+- status.md, handoff.md, decision-log.md
+
+**現行合格コマンド**: `node scripts/verify-current.mjs`
+
 ## v4.12.8 対象外候補の手動追加（2026-07-10）
 
 **日付**: 2026-07-10

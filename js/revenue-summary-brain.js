@@ -12,21 +12,15 @@ const RevenueSummaryBrain = {
   SOURCE_ALIASES: {
     'LP': 'LP',
     'ホームページ': 'LP',
-    'Google': 'LP',
-    'Google広告': 'LP',
-    'Googleビジネスプロフィール': 'LP',
     '110': '110番',
     '110番': '110番',
     'くらし': 'くらしのマーケット',
     'くらしのマーケット': 'くらしのマーケット',
     'ヤマダ': 'ヤマダ',
     'コープ': 'コープ',
-    'LINE': 'その他',
-    'Airリザーブ': 'その他',
-    '直受け': 'その他',
-    '直予約': 'その他',
-    '紹介': 'その他',
-    '法人': 'その他'
+    'LINE': 'LINE',
+    'Airリザーブ': 'Airリザーブ',
+    '紹介直': '紹介直'
   },
 
   SERVICE_ALIASES: {
@@ -122,6 +116,7 @@ const RevenueSummaryBrain = {
   getRevenueSource(record) {
     const raw = String(record.source || record.referralSource || '').trim();
     if (!raw) return this.UNKNOWN_SOURCE;
+    if (/^(未設定|不明|判定不能)$/.test(raw)) return this.UNKNOWN_SOURCE;
     if (this.SOURCE_ALIASES[raw]) return this.SOURCE_ALIASES[raw];
     if ((RevenueBrain.SOURCES || []).includes(raw)) return raw;
     return raw;

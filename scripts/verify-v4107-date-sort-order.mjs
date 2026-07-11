@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Budil v4.10.20 — scheduled list date/time ascending sort verification.
  */
 import { readFileSync } from 'node:fs';
@@ -25,10 +25,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.12.8'), 'index.html should show v4.12.8');
-assert(indexHtml.includes('js/app.js?v=4.12.8'), 'app.js cache buster should be v4.12.8');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.8'"), 'storage version should be v4.12.8');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.8'"), 'data-backup version should be v4.12.8');
+assert(indexHtml.includes('v4.12.9'), 'index.html should show v4.12.9');
+assert(indexHtml.includes('js/app.js?v=4.12.9'), 'app.js cache buster should be v4.12.9');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.9'"), 'storage version should be v4.12.9');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.9'"), 'data-backup version should be v4.12.9');
 
 assert(workOrderBrain.includes('compareScheduledDateTimeAsc'), 'work-order brain should define compareScheduledDateTimeAsc');
 assert(workOrderBrain.includes('sortByScheduledDateTimeAsc'), 'work-order brain should define sortByScheduledDateTimeAsc');
