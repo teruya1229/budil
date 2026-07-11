@@ -26,7 +26,7 @@
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.10 |
 | 最新バージョン | v4.12.10 |
-| v4.12.10 利益管理の依頼元別表示整合 | 正式合格 commit `a233a2a` / verify-current 69本合格 / 公開URLで v4.12.10 確認予定 / push済み |
+| v4.12.10 利益管理の依頼元別表示整合 | 正式合格 commit `a233a2a` / verify-current 69本合格 / 公開URLで v4.12.10 確認済み / push済み |
 | v4.12.9 依頼元分析表示と利益計算の整合 | 正式合格 commit `f10eaa7` / verify-current 68本合格 / 公開URLで v4.12.9 確認済み / push済み |
 | v4.12.8 現行verify再現性 | commit `0aefe8e` / verify-current 前提チェック / push済み |
 | v4.12.8 対象外候補の手動追加 | commit `dbefd67` / verify-v4128合格 / verify-current 67本合格 / push済み |
