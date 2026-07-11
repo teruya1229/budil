@@ -17,15 +17,16 @@
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` の依存関係（googleapis 等）。依存は `hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（68本）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（69本）
 - **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
 
 ## 現在の最新状態
 
 | 項目 | 値 |
 |------|-----|
-| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.9 |
-| 最新バージョン | v4.12.9 |
+| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.10 |
+| 最新バージョン | v4.12.10 |
+| v4.12.10 利益管理の依頼元別表示整合 | 売上行表示を RevenueSummaryBrain と一致 / 利益率・集計不変 / push予定 |
 | v4.12.9 依頼元分析表示と利益計算の整合 | 正式合格 commit `f10eaa7` / verify-current 68本合格 / 公開URLで v4.12.9 確認済み / push済み |
 | v4.12.8 現行verify再現性 | commit `0aefe8e` / verify-current 前提チェック / push済み |
 | v4.12.8 対象外候補の手動追加 | commit `dbefd67` / verify-v4128合格 / verify-current 67本合格 / push済み |
@@ -73,6 +74,14 @@
 | v4.10.23 確定売上定義統一commit | 9a6d161 |
 | v4.10.22 本体修正commit | ee8eec3 |
 | ブランチ | `main` push 済み |
+
+## v4.12.10 利益管理の依頼元別表示整合（2026-07-11）
+
+- **目的**: 利益管理の依頼元別表示を v4.12.9 売上分析の表示分類と一致させる
+- **変更**: `ProfitBrain.buildSourceRows` の売上行のみ `resolveRevenueSourceLabel` → `RevenueSummaryBrain.getRevenueSource`
+- **維持**: 経費 normalizeSource、利益率、粗利額、コメント判定、localStorage、record.source
+- **現行合格**: `node scripts/verify-current.mjs`
+- **新規**: `node scripts/verify-v41210-profit-source-display-alignment.mjs`
 
 ## v4.12.9 依頼元分析表示と利益計算の整合（2026-07-11）
 

@@ -140,6 +140,14 @@ const ProfitBrain = {
     return this.SOURCE_GROUPS.includes(s) ? s : 'その他';
   },
 
+  /** 利益管理の依頼元別「売上行」表示分類。v4.12.9 売上分析と同一。経費振り分けには使わない。 */
+  resolveRevenueSourceLabel(source) {
+    if (typeof RevenueSummaryBrain !== 'undefined' && typeof RevenueSummaryBrain.getRevenueSource === 'function') {
+      return RevenueSummaryBrain.getRevenueSource({ source });
+    }
+    return this.normalizeSource(source);
+  },
+
   normalizeService(serviceText) {
     const text = (serviceText || '').trim();
     if (!text) return 'その他';
@@ -588,7 +596,7 @@ const ProfitBrain = {
 
     const revRows = this.getRevenueProfitRows(revenues, expenses, [], workOrders);
     revRows.forEach(row => {
-      const source = this.normalizeSource(row.source);
+      const source = this.resolveRevenueSourceLabel(row.source);
       const g = ensure(source);
       g.revenueTotal += row.revenueAmount;
       g.expenseTotal += row.expenseTotal;

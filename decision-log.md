@@ -2,6 +2,25 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.10 利益管理の依頼元別表示整合（2026-07-11）
+
+**日付**: 2026-07-11
+
+**判断内容**:
+- 利益管理の依頼元別「売上行」表示分類のみ、v4.12.9 の `RevenueSummaryBrain.getRevenueSource()` と一致させる
+- 経費 vendor/memo 振り分けの `normalizeSource()` は変更しない（Airリザーブ→その他 等の既存経費分類を維持）
+- 利益率の正本は `RevenueBrain.getSourceProfitRate()` のまま。粗利額・判定・保存値は変更しない
+- Google広告 / 直受け / くらしのマーケットの既存コメント判定を維持
+- 新UI・新localStorageキー・データ移行は作らない
+
+**変更ファイル**:
+- js/profit-brain.js
+- index.html, js/storage.js, js/data-backup.js（表示バージョン・cache buster）
+- scripts/verify-v41210-profit-source-display-alignment.mjs, scripts/verify-v4*.mjs（バージョンピン）
+- status.md, handoff.md, decision-log.md
+
+**現行合格コマンド**: `node scripts/verify-current.mjs`
+
 ## v4.12.9 依頼元分析表示と利益計算の整合（2026-07-11）
 
 **日付**: 2026-07-11

@@ -54,13 +54,13 @@ const NG_TERMS = [
 console.log('== v4.12.5 customer-memo-quick-edit ==');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.9'), 'index.html should show v4.12.9');
-assert(indexHtml.includes('js/app.js?v=4.12.9'), 'app.js cache buster should be v4.12.9');
-assert(indexHtml.includes('css/style.css?v=4.12.9'), 'style.css cache buster should be v4.12.9');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.9'"), 'storage version should be v4.12.9');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.9'"), 'data-backup version should be v4.12.9');
+assert(indexHtml.includes('v4.12.10'), 'index.html should show v4.12.10');
+assert(indexHtml.includes('js/app.js?v=4.12.10'), 'app.js cache buster should be v4.12.10');
+assert(indexHtml.includes('css/style.css?v=4.12.10'), 'style.css cache buster should be v4.12.10');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.10'"), 'storage version should be v4.12.10');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.10'"), 'data-backup version should be v4.12.10');
 assert(!indexHtml.includes('?v=4.12.7'), 'old cache buster v4.12.7 should be gone');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.9'), 'calendar-candidate cache buster should be v4.12.9');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.10'), 'calendar-candidate cache buster should be v4.12.10');
 assert(statusMd.includes('v4.12.5'), 'status.md should document v4.12.5');
 assert(handoffMd.includes('v4.12.5'), 'handoff.md should document v4.12.5');
 assert(decisionLog.includes('v4.12.5'), 'decision-log.md should record v4.12.5');

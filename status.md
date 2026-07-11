@@ -1,13 +1,24 @@
 ﻿# Budil status
 
-## 正式な現行verify環境（v4.12.9）
+## 正式な現行verify環境（v4.12.10）
 
 - **正式環境**: Budil 単独 clone ではなく、親階層に sibling の `calendar-sync-worker` がある開発環境
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` 側の依存関係（googleapis 等）。`hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（68本。省略・除外・緩和なし）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（69本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.10 実装内容（利益管理の依頼元別表示整合）
+
+- 表示バージョンを v4.12.10 に更新
+- index.html の主要 JS/CSS cache buster を v4.12.10 に統一
+- 利益管理の依頼元別「売上行」表示分類を `RevenueSummaryBrain.getRevenueSource()` と一致（`ProfitBrain.resolveRevenueSourceLabel`）
+- 経費 vendor/memo の振り分けは既存 `normalizeSource()` を維持
+- 利益率・粗利額・判定ロジック・保存値は変更なし（表示グループのみ）
+- Google広告 / 直受け / くらしのマーケットの既存コメント判定を維持
+- 新規 verify-v41210-profit-source-display-alignment.mjs 追加
+- 現行合格は引き続き `node scripts/verify-current.mjs`
 
 ## v4.12.9 実装内容（依頼元分析表示と利益計算の整合）
 

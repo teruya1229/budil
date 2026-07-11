@@ -40,12 +40,12 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.9'), 'index.html should show v4.12.9');
-assert(indexHtml.includes('js/app.js?v=4.12.9'), 'app.js cache buster should be v4.12.9');
-assert(indexHtml.includes('js/reception-brain.js?v=4.12.9'), 'reception-brain cache buster should remain v4.11.0');
-assert(indexHtml.includes('js/revenue-brain.js?v=4.12.9'), 'revenue-brain cache buster should be v4.12.9');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.9'"), 'storage.js version should be v4.12.9');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.9'"), 'data-backup version should be v4.12.9');
+assert(indexHtml.includes('v4.12.10'), 'index.html should show v4.12.10');
+assert(indexHtml.includes('js/app.js?v=4.12.10'), 'app.js cache buster should be v4.12.10');
+assert(indexHtml.includes('js/reception-brain.js?v=4.12.10'), 'reception-brain cache buster should remain v4.11.0');
+assert(indexHtml.includes('js/revenue-brain.js?v=4.12.10'), 'revenue-brain cache buster should be v4.12.10');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.10'"), 'storage.js version should be v4.12.10');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.10'"), 'data-backup version should be v4.12.10');
 
 console.log('== reception list display helpers ==');
 assert(revenueJs.includes('resolveRevenueForIntake'), 'resolveRevenueForIntake should exist');

@@ -29,10 +29,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.12.9'), 'index.html should show v4.12.9');
-assert(indexHtml.includes('js/app.js?v=4.12.9'), 'app.js cache buster should be v4.12.9');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.9'"), 'storage.js version should be v4.12.9');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.9'"), 'data-backup version should be v4.12.9');
+assert(indexHtml.includes('v4.12.10'), 'index.html should show v4.12.10');
+assert(indexHtml.includes('js/app.js?v=4.12.10'), 'app.js cache buster should be v4.12.10');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.10'"), 'storage.js version should be v4.12.10');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.10'"), 'data-backup version should be v4.12.10');
 
 // 請求書・見積書 view に目的注記があること
 assert(indexHtml.includes('documents-purpose-note'), 'documents-purpose-note should exist in index.html');
