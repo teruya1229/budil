@@ -2,6 +2,26 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.12 売上一覧の単独依頼元ボタン廃止（2026-07-13）
+
+**日付**: 2026-07-13
+
+**判断内容**:
+- 売上一覧行の単独「依頼元」ボタンは、実体として売上編集を開いて `revenue-source` へフォーカスするだけで「編集」と重複していた
+- 単独ボタンを削除し、依頼元の確認・変更は従来どおり「編集」フォーム内へ一本化する
+- 編集・削除・入金予定／入金済み／請求書／フォロー等の既存行操作は維持
+- `RevenueBrain.getSourceProfitRate()`、利益率、`record.source`、localStorageキー、売上確定フロー、他画面は変更しない
+
+**変更ファイル**:
+- js/app.js（行操作の依頼元ボタン・関数・配線削除のみ）
+- index.html, js/storage.js, js/data-backup.js（表示バージョン・cache buster）
+- scripts/verify-v41212-remove-revenue-source-row-action.mjs（新規）
+- scripts/verify-v4118-revenue-page-workflow.mjs（旧assert更新）
+- scripts/verify-v4*.mjs, scripts/verify-current.mjs（バージョンピン）
+- status.md, handoff.md, decision-log.md
+
+**現行合格コマンド**: `node scripts/verify-current.mjs`（71/71）
+
 ## v4.12.11 利益管理の対象月選択（2026-07-11）
 
 **日付**: 2026-07-11

@@ -1,6 +1,6 @@
 ﻿# Budil handoff
 
-最終更新: 2026-07-11
+最終更新: 2026-07-13
 
 ## 正本
 
@@ -17,15 +17,16 @@
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` の依存関係（googleapis 等）。依存は `hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（70本）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（71本）
 - **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
 
 ## 現在の最新状態
 
 | 項目 | 値 |
 |------|-----|
-| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.11 |
-| 最新バージョン | v4.12.11 |
+| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.12 |
+| 最新バージョン | v4.12.12 |
+| v4.12.12 売上一覧の単独依頼元ボタン廃止 | verify-current 71/71 合格 / push予定 |
 | v4.12.11 利益管理の対象月選択 | 正式合格 本体commit `d483339` / 記録commit `bdd4eaa` / verify-current 70/70 / 公開URLで v4.12.11 確認済み / main push済み |
 | v4.12.10 利益管理の依頼元別表示整合 | 正式合格 commit `a233a2a` / verify-current 69本合格 / 公開URLで v4.12.10 確認済み / push済み |
 | v4.12.9 依頼元分析表示と利益計算の整合 | 正式合格 commit `f10eaa7` / verify-current 68本合格 / 公開URLで v4.12.9 確認済み / push済み |
@@ -75,6 +76,14 @@
 | v4.10.23 確定売上定義統一commit | 9a6d161 |
 | v4.10.22 本体修正commit | ee8eec3 |
 | ブランチ | `main` push 済み |
+
+## v4.12.12 売上一覧の単独依頼元ボタン廃止（2026-07-13）
+
+- **目的**: 売上一覧の単独「依頼元」ボタン（編集と重複）を削除し、依頼元変更は編集フォームへ一本化
+- **変更**: `data-revenue-check-source` / `openRevenueSourceCheck` / 専用listener を削除。編集・削除・入金・請求書・フォローは維持
+- **維持**: `revenue-source` の表示・復元・保存、利益率、localStorage、売上確定、他画面
+- **現行合格**: `node scripts/verify-current.mjs`
+- **新規**: `node scripts/verify-v41212-remove-revenue-source-row-action.mjs`
 
 ## v4.12.11 利益管理の対象月選択（2026-07-11）
 

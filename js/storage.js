@@ -1,9 +1,9 @@
-﻿/**
+/**
  * Budil - localStorage 管理
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.12.11',
+  BUDIL_VERSION: 'v4.12.12',
 
   KEYS: {
     LEADS: 'budil_leads',

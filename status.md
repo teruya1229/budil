@@ -1,13 +1,26 @@
 ﻿# Budil status
 
-## 正式な現行verify環境（v4.12.11）
+## 正式な現行verify環境（v4.12.12）
 
 - **正式環境**: Budil 単独 clone ではなく、親階層に sibling の `calendar-sync-worker` がある開発環境
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` 側の依存関係（googleapis 等）。`hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（70本。省略・除外・緩和なし）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（71本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.12 実装内容（売上一覧の単独依頼元ボタン廃止）
+
+- 表示バージョンを v4.12.12 に更新
+- index.html の主要 JS/CSS cache buster を v4.12.12 に統一
+- 売上一覧行の単独「依頼元」ボタン（`data-revenue-check-source` / `openRevenueSourceCheck`）を削除
+- 依頼元の確認・変更は従来どおり「編集」→ `revenue-source` で行う一本化
+- 編集・削除・入金予定／入金済み／請求書／フォロー等の既存行操作は維持
+- 利益率・`record.source`・localStorageキー・売上確定フロー・他画面は変更なし
+- 新規 verify-v41212-remove-revenue-source-row-action.mjs 追加
+- verify-v4118 の旧「依頼元ボタン必須」assert を削除後仕様へ更新
+- 現行合格は引き続き `node scripts/verify-current.mjs`
+- verify-current 71/71 合格
 
 ## v4.12.11 実装内容（利益管理の対象月選択）
 

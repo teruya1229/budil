@@ -18151,16 +18151,6 @@
     openFollowUpFromPriority(target.id, '');
   }
 
-  function openRevenueSourceCheck(revenueId) {
-    const rev = Storage.getRevenueRecords().find(r => r.id === revenueId);
-    if (!rev) return;
-    openRevenueEdit(revenueId);
-    setTimeout(() => {
-      const sourceEl = document.getElementById('revenue-source');
-      if (sourceEl) sourceEl.focus();
-    }, 150);
-  }
-
   function renderRevenueRowWorkflowActions(record) {
     const id = record.id;
     const buttons = [];
@@ -18191,7 +18181,6 @@
     }
 
     buttons.push(`<button type="button" class="btn btn-sm btn-secondary btn-edit" data-edit-revenue="${esc(id)}">編集</button>`);
-    buttons.push(`<button type="button" class="btn btn-sm btn-secondary" data-revenue-check-source="${esc(id)}">依頼元</button>`);
     buttons.push(`<button type="button" class="btn btn-sm btn-danger btn-danger" data-delete-revenue="${esc(id)}">削除</button>`);
 
     return `<div class="revenue-row-workflow-actions">${buttons.join('')}</div>`;
@@ -18209,9 +18198,6 @@
     });
     document.querySelectorAll('[data-revenue-go-follow]').forEach(btn => {
       btn.addEventListener('click', () => openFollowUpFromRevenue(btn.dataset.revenueGoFollow));
-    });
-    document.querySelectorAll('[data-revenue-check-source]').forEach(btn => {
-      btn.addEventListener('click', () => openRevenueSourceCheck(btn.dataset.revenueCheckSource));
     });
     bindCustomerMemoEditButtons(document);
   }
