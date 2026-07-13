@@ -26,7 +26,7 @@
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.12 |
 | 最新バージョン | v4.12.12 |
-| v4.12.12 売上一覧の単独依頼元ボタン廃止 | verify-current 71/71 合格 / push予定 |
+| v4.12.12 売上一覧の単独依頼元ボタン廃止 | 正式合格 commit `a287b7d` / verify-current 71/71 / 公開URLで v4.12.12 確認済み / main push済み |
 | v4.12.11 利益管理の対象月選択 | 正式合格 本体commit `d483339` / 記録commit `bdd4eaa` / verify-current 70/70 / 公開URLで v4.12.11 確認済み / main push済み |
 | v4.12.10 利益管理の依頼元別表示整合 | 正式合格 commit `a233a2a` / verify-current 69本合格 / 公開URLで v4.12.10 確認済み / push済み |
 | v4.12.9 依頼元分析表示と利益計算の整合 | 正式合格 commit `f10eaa7` / verify-current 68本合格 / 公開URLで v4.12.9 確認済み / push済み |
@@ -83,7 +83,7 @@
 - **変更**: `data-revenue-check-source` / `openRevenueSourceCheck` / 専用listener を削除。編集・削除・入金・請求書・フォローは維持
 - **維持**: `revenue-source` の表示・復元・保存、利益率、localStorage、売上確定、他画面
 - **現行合格**: `node scripts/verify-current.mjs`
-- **新規**: `node scripts/verify-v41212-remove-revenue-source-row-action.mjs`
+- **正式合格**: commit `a287b7da306b304abdeba419da4389e0db0e9e36` / verify-current 71/71 / 公開URLで v4.12.12 確認済み / main push 済み
 
 ## v4.12.11 利益管理の対象月選択（2026-07-11）
 

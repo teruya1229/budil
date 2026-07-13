@@ -21,6 +21,7 @@
 - verify-v4118 の旧「依頼元ボタン必須」assert を削除後仕様へ更新
 - 現行合格は引き続き `node scripts/verify-current.mjs`
 - verify-current 71/71 合格
+- 正式合格: commit `a287b7da306b304abdeba419da4389e0db0e9e36` / main push 済み / 公開URLで v4.12.12 確認済み
 
 ## v4.12.11 実装内容（利益管理の対象月選択）
 

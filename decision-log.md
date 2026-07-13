@@ -22,6 +22,12 @@
 
 **現行合格コマンド**: `node scripts/verify-current.mjs`（71/71）
 
+**正式合格**:
+- commit: `a287b7da306b304abdeba419da4389e0db0e9e36`
+- verify-current: 71/71
+- 公開URLで v4.12.12 確認済み
+- main へ push 済み
+
 ## v4.12.11 利益管理の対象月選択（2026-07-11）
 
 **日付**: 2026-07-11
