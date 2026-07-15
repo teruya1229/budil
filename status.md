@@ -21,6 +21,8 @@
 - 利益率正本・localStorageキー・Googleカレンダー正本フロー・フォロー保存仕様は変更なし
 - verify-v41113 を新仕様へ更新、新規 verify-v41213-operational-action-feedback.mjs を追加
 - 現行合格は引き続き `node scripts/verify-current.mjs`
+- verify-current 72/72 合格
+- 正式合格: commit `f3847f70be913cd9fdd2aa5a473bfe0c02f77fe5` / main push 済み / 公開URLで v4.12.13 確認済み
 
 ## v4.12.12 実装内容（売上一覧の単独依頼元ボタン廃止）
 

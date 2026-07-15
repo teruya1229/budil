@@ -22,7 +22,13 @@
 - scripts/verify-v4*.mjs, scripts/verify-current.mjs（バージョンピン）
 - status.md, handoff.md, decision-log.md
 
-**現行合格コマンド**: `node scripts/verify-current.mjs`（72本想定）
+**現行合格コマンド**: `node scripts/verify-current.mjs`（72/72）
+
+**正式合格**:
+- commit: `f3847f70be913cd9fdd2aa5a473bfe0c02f77fe5`
+- verify-current: 72/72
+- 公開URLで v4.12.13 確認済み（PC/390px、フォロー重複ボタン削除・対象別文言、カレンダー「今回は取り込まない」、JSエラーなし、横スクロールなし）
+- main へ push 済み
 
 ## v4.12.12 売上一覧の単独依頼元ボタン廃止（2026-07-13）
 
