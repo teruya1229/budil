@@ -23,6 +23,7 @@
 - 現行合格は引き続き `node scripts/verify-current.mjs`
 - verify-current 72/72 合格
 - 正式合格: commit `f3847f70be913cd9fdd2aa5a473bfe0c02f77fe5` / main push 済み / 公開URLで v4.12.13 確認済み
+- 最終修正: フォロー画面の旧説明「済みにする」を実際の操作名へ整合（index.html 説明文のみ / バージョン据え置き）
 
 ## v4.12.12 実装内容（売上一覧の単独依頼元ボタン廃止）
 

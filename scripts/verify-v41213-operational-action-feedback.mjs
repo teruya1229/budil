@@ -94,6 +94,22 @@ assert(appJs.includes('openFollowUpTarget'), 'openFollowUpTarget must remain');
 assert(appJs.includes('scrollIntoView'), 'open action should scroll into view');
 assert(appJs.includes('.follow-up-card-expanded'), 'open action should prefer card expanded scroll');
 
+console.log('== 2b. follow-up flow note aligned with typed actions ==');
+assert(!indexHtml.includes('「済みにする」で状態を更新します'), 'old follow note about 済みにする must be removed');
+assert(
+  indexHtml.includes('「〜文を開く」→文面コピー→LINE送信後に「〜送信済みにする」の順で処理します。リピート案内は「次回確認を予定にする」で記録します。送信はご自身で行ってください。'),
+  'new follow-up flow note must exist'
+);
+assert(appJs.includes('お礼LINE文を開く'), 'typed thanks open button must remain');
+assert(appJs.includes('口コミ依頼文を開く'), 'typed review open button must remain');
+assert(appJs.includes('リピート案内文を開く'), 'typed repeat open button must remain');
+assert(appJs.includes('お礼LINE文をコピー'), 'typed thanks copy button must remain');
+assert(appJs.includes('口コミ依頼文をコピー'), 'typed review copy button must remain');
+assert(appJs.includes('リピート案内文をコピー'), 'typed repeat copy button must remain');
+assert(appJs.includes('お礼LINE送信済みにする'), 'typed thanks done button must remain');
+assert(appJs.includes('口コミ依頼送信済みにする'), 'typed review done button must remain');
+assert(appJs.includes('次回確認を予定にする'), 'typed repeat done button must remain');
+
 console.log('== 3. follow status / activity / no auto-send preserved ==');
 {
   const markFn = appJs.match(/function markFollowUpDone[\s\S]*?\n  function /);
