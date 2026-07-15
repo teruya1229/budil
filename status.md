@@ -1,13 +1,26 @@
 ﻿# Budil status
 
-## 正式な現行verify環境（v4.12.12）
+## 正式な現行verify環境（v4.12.13）
 
 - **正式環境**: Budil 単独 clone ではなく、親階層に sibling の `calendar-sync-worker` がある開発環境
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` 側の依存関係（googleapis 等）。`hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（71本。省略・除外・緩和なし）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（72本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.13 実装内容（操作フィードバックの明確化）
+
+- 表示バージョンを v4.12.13 に更新
+- index.html の主要 JS/CSS cache buster を v4.12.13 に統一
+- フォロー一覧上段の重複「文面コピー／済みにする」（`data-follow-row-copy` / `data-follow-row-mark`）を削除
+- 行操作は「お礼LINE文を開く／口コミ依頼文を開く／リピート案内文を開く／売上を見る」に整理し、開くとカード内文面へスクロール
+- カード内・文面プレビューのコピー／完了文言と成功toastを対象別に明記
+- 経営ホームのフォローコピー成功表示を対象別に具体化（内容・配置・自動送信なしは変更なし）
+- 需要ピックアップ / カレンダー候補 / 受付の状態変更に成功toastを追加。カレンダー候補の「このまま保持」を「今回は取り込まない」に改名
+- 利益率正本・localStorageキー・Googleカレンダー正本フロー・フォロー保存仕様は変更なし
+- verify-v41113 を新仕様へ更新、新規 verify-v41213-operational-action-feedback.mjs を追加
+- 現行合格は引き続き `node scripts/verify-current.mjs`
 
 ## v4.12.12 実装内容（売上一覧の単独依頼元ボタン廃止）
 

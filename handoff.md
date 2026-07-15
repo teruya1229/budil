@@ -1,6 +1,6 @@
 ﻿# Budil handoff
 
-最終更新: 2026-07-13
+最終更新: 2026-07-15
 
 ## 正本
 
@@ -17,15 +17,16 @@
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` の依存関係（googleapis 等）。依存は `hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（71本）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（72本）
 - **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
 
 ## 現在の最新状態
 
 | 項目 | 値 |
 |------|-----|
-| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.12 |
-| 最新バージョン | v4.12.12 |
+| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.13 |
+| 最新バージョン | v4.12.13 |
+| v4.12.13 操作フィードバックの明確化 | 実装完了（verify・公開確認後に正式合格を追記） |
 | v4.12.12 売上一覧の単独依頼元ボタン廃止 | 正式合格 commit `a287b7d` / verify-current 71/71 / 公開URLで v4.12.12 確認済み / main push済み |
 | v4.12.11 利益管理の対象月選択 | 正式合格 本体commit `d483339` / 記録commit `bdd4eaa` / verify-current 70/70 / 公開URLで v4.12.11 確認済み / main push済み |
 | v4.12.10 利益管理の依頼元別表示整合 | 正式合格 commit `a233a2a` / verify-current 69本合格 / 公開URLで v4.12.10 確認済み / push済み |

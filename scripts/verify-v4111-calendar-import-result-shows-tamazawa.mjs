@@ -52,11 +52,11 @@ const tamazawaItem = {
 };
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.12'), 'index.html should show v4.12.12');
-assert(indexHtml.includes('js/app.js?v=4.12.12'), 'app.js cache buster should be v4.12.12');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.12'), 'calendar brain cache buster should be v4.12.12');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.12'"), 'storage.js version should be v4.12.12');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.12'"), 'data-backup version should be v4.12.12');
+assert(indexHtml.includes('v4.12.13'), 'index.html should show v4.12.13');
+assert(indexHtml.includes('js/app.js?v=4.12.13'), 'app.js cache buster should be v4.12.13');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.13'), 'calendar brain cache buster should be v4.12.13');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.13'"), 'storage.js version should be v4.12.13');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.13'"), 'data-backup version should be v4.12.13');
 
 console.log('== import result UI wiring ==');
 assert(appJs.includes('renderCalendarImportResultBreakdownHtml'), 'import result breakdown renderer should exist');
@@ -165,7 +165,7 @@ console.log('== excluded controls remain ==');
     const preview = CalendarCandidateBrain.buildImportPreview(${JSON.stringify(parsed)}, []);
     return CalendarCandidateBrain.attachFutureImportPreview(preview, '${TODAY}');
   })()`, ctx);
-  assert(preview.items[0].futureImport.status === 'eligible', 'holiday with amount should remain eligible (v4.12.12 soft override)');
+  assert(preview.items[0].futureImport.status === 'eligible', 'holiday with amount should remain eligible (v4.12.13 soft override)');
   assert(preview.items[1].futureImport.status === 'excluded', 'no-amount should stay excluded');
 }
 

@@ -2,6 +2,28 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.13 操作フィードバックの明確化（2026-07-15）
+
+**日付**: 2026-07-15
+
+**判断内容**:
+- 「押しても裏で何が起きたか分からない」操作をなくす。新機能ではなく、既存操作の重複削除・意味の明示・成功フィードバック追加のみ
+- フォロー一覧上段の汎用「文面コピー／済みにする」はカード内操作と重複し、済み対象も不明なため削除
+- 「〜文を開く」でカード内文面を表示し、対象別のコピー／完了文言と成功toastを付ける
+- 需要ピックアップ・カレンダー候補・受付の状態変更にも具体的な成功toastを追加。カレンダー候補「このまま保持」は「今回は取り込まない」に改名
+- `thanksStatus` / `reviewStatus` / `repeatStatus`・活動履歴・次回メンテ日・自動送信しない方針・localStorage保存形式は維持
+- Googleカレンダー正本フロー、利益率正本、売上確定、他業務フローは変更しない
+
+**変更ファイル**:
+- js/app.js（フォローUI文言・重複操作削除・成功toast）
+- index.html, js/storage.js, js/data-backup.js（表示バージョン・cache buster）
+- scripts/verify-v41213-operational-action-feedback.mjs（新規）
+- scripts/verify-v41113-follow-up-page-workflow.mjs / verify-v41115 / verify-v4106（旧assert更新）
+- scripts/verify-v4*.mjs, scripts/verify-current.mjs（バージョンピン）
+- status.md, handoff.md, decision-log.md
+
+**現行合格コマンド**: `node scripts/verify-current.mjs`（72本想定）
+
 ## v4.12.12 売上一覧の単独依頼元ボタン廃止（2026-07-13）
 
 **日付**: 2026-07-13

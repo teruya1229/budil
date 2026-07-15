@@ -21,7 +21,7 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.12.12'), 'index.html should show v4.12.12');
+assert(indexHtml.includes('v4.12.13'), 'index.html should show v4.12.13');
 assert(indexHtml.includes('受付・予定確認'), 'calendar registration view should be renamed');
 assert(
   indexHtml.includes('Googleカレンダーが作業予定の正本'),
@@ -94,7 +94,7 @@ assert(
 );
 assert(calendarChunk.includes('Googleカレンダーから出力した予定'), 'import subtitle should mention Google Calendar export');
 
-assert(appJs.includes('このまま保持'), 'skip button should be renamed to keep label');
+assert(appJs.includes('今回は取り込まない'), 'skip button should be labeled 今回は取り込まない');
 assert(appJs.includes('getExecutivePriorityActionLabel'), 'executive home should dedupe priority/next CTAs');
 assert(appJs.includes('suppressRevenueLink'), 'profit view should suppress duplicate revenue CTA');
 

@@ -52,12 +52,12 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.12'), 'index.html should show v4.12.12');
-assert(indexHtml.includes('js/app.js?v=4.12.12'), 'app.js cache buster should be v4.12.12');
-assert(indexHtml.includes('css/style.css?v=4.12.12'), 'style.css cache buster should be v4.12.12');
-assert(indexHtml.includes('js/follow-up-brain.js?v=4.12.12'), 'follow-up-brain cache buster should be v4.12.12');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.12'"), 'storage.js version should be v4.12.12');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.12'"), 'data-backup version should be v4.12.12');
+assert(indexHtml.includes('v4.12.13'), 'index.html should show v4.12.13');
+assert(indexHtml.includes('js/app.js?v=4.12.13'), 'app.js cache buster should be v4.12.13');
+assert(indexHtml.includes('css/style.css?v=4.12.13'), 'style.css cache buster should be v4.12.13');
+assert(indexHtml.includes('js/follow-up-brain.js?v=4.12.13'), 'follow-up-brain cache buster should be v4.12.13');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.13'"), 'storage.js version should be v4.12.13');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.13'"), 'data-backup version should be v4.12.13');
 assert(statusMd.includes('v4.12.5'), 'status.md should document v4.12.4');
 assert(handoffMd.includes('v4.12.5'), 'handoff.md should document v4.12.4');
 assert(decisionLog.includes('v4.12.5'), 'decision-log.md should record v4.12.4');
@@ -78,15 +78,27 @@ assert(appJs.includes('renderFollowUpListRow'), 'renderFollowUpListRow required'
 
 console.log('== follow-up action wiring ==');
 assert(appJs.includes('data-follow-row-open'), 'row open buttons required');
-assert(appJs.includes('data-follow-row-copy'), 'row copy buttons required');
-assert(appJs.includes('data-follow-row-mark'), 'row mark buttons required');
+assert(!appJs.includes('data-follow-row-copy'), 'row copy buttons must be removed');
+assert(!appJs.includes('data-follow-row-mark'), 'row mark buttons must be removed');
 assert(appJs.includes('data-follow-view-revenue'), 'view revenue button required');
-assert(appJs.includes('お礼LINE</button>'), 'thanks action label required');
-assert(appJs.includes('口コミ依頼</button>'), 'review action label required');
-assert(appJs.includes('リピート案内</button>'), 'repeat action label required');
-assert(appJs.includes('文面コピー</button>'), 'copy label required');
-assert(appJs.includes('済みにする</button>'), 'mark done label required');
+assert(appJs.includes('お礼LINE文を開く</button>'), 'thanks open label required');
+assert(appJs.includes('口コミ依頼文を開く</button>'), 'review open label required');
+assert(appJs.includes('リピート案内文を開く</button>'), 'repeat open label required');
+assert(appJs.includes('お礼LINE文をコピー</button>'), 'thanks copy label required');
+assert(appJs.includes('口コミ依頼文をコピー</button>'), 'review copy label required');
+assert(appJs.includes('リピート案内文をコピー</button>'), 'repeat copy label required');
+assert(appJs.includes('お礼LINE送信済みにする</button>'), 'thanks mark label required');
+assert(appJs.includes('口コミ依頼送信済みにする</button>'), 'review mark label required');
+assert(appJs.includes('次回確認を予定にする</button>'), 'repeat mark label required');
 assert(appJs.includes('売上を見る</button>'), 'view revenue label required');
+{
+  const rowFn = appJs.match(/function renderFollowUpListRow[\s\S]*?\n  function /);
+  assert(rowFn, 'renderFollowUpListRow must exist');
+  assert(!rowFn[0].includes('文面コピー'), 'list row must not show generic 文面コピー');
+  assert(!rowFn[0].includes('済みにする'), 'list row must not show generic 済みにする');
+  assert(!rowFn[0].includes('data-follow-row-copy'), 'list row must not emit data-follow-row-copy');
+  assert(!rowFn[0].includes('data-follow-row-mark'), 'list row must not emit data-follow-row-mark');
+}
 assert(!appJs.includes('自動送信'), 'must not add auto-send');
 assert(!followJs.includes('Storage.update'), 'follow brain must not write storage');
 
@@ -94,8 +106,8 @@ console.log('== copy + mark proximity ==');
 {
   const expandedFn = appJs.match(/function renderFollowUpCardExpandedBlock[\s\S]*?\n  \}/);
   assert(expandedFn, 'renderFollowUpCardExpandedBlock must exist');
-  assert(expandedFn[0].includes('文面コピー'), 'expanded block should have copy');
-  assert(expandedFn[0].includes('済みにする'), 'expanded block should have mark near copy');
+  assert(expandedFn[0].includes('お礼LINE文をコピー') || expandedFn[0].includes('getFollowUpCopyButtonLabel'), 'expanded block should have typed copy');
+  assert(expandedFn[0].includes('お礼LINE送信済みにする') || expandedFn[0].includes('getFollowUpMarkButtonLabel'), 'expanded block should have typed mark near copy');
   assert(expandedFn[0].includes('follow-up-copy-mark-actions'), 'copy/mark action group required');
 }
 

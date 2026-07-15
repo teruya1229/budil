@@ -38,11 +38,15 @@ const WORKFLOW_BUTTONS = [
   { label: '月次請求を見る', pattern: '月次請求を見る' },
   { label: '請求書/見積書へ', pattern: '請求書/見積書へ' },
   { label: 'フォローへ', pattern: 'フォローへ' },
-  { label: 'お礼LINE', pattern: 'お礼LINE' },
-  { label: '口コミ依頼', pattern: '口コミ依頼' },
-  { label: 'リピート案内', pattern: 'リピート案内' },
-  { label: '文面コピー', pattern: '文面コピー' },
-  { label: '済みにする', pattern: '済みにする' },
+  { label: 'お礼LINE文を開く', pattern: 'お礼LINE文を開く' },
+  { label: '口コミ依頼文を開く', pattern: '口コミ依頼文を開く' },
+  { label: 'リピート案内文を開く', pattern: 'リピート案内文を開く' },
+  { label: 'お礼LINE文をコピー', pattern: 'お礼LINE文をコピー' },
+  { label: '口コミ依頼文をコピー', pattern: '口コミ依頼文をコピー' },
+  { label: 'リピート案内文をコピー', pattern: 'リピート案内文をコピー' },
+  { label: 'お礼LINE送信済みにする', pattern: 'お礼LINE送信済みにする' },
+  { label: '口コミ依頼送信済みにする', pattern: '口コミ依頼送信済みにする' },
+  { label: '次回確認を予定にする', pattern: '次回確認を予定にする' },
   { label: '売上を見る', pattern: '売上を見る' },
   { label: '経費入力へ', pattern: '経費入力へ' },
   { label: '利益管理へ', pattern: '利益管理へ' },
@@ -63,15 +67,15 @@ const VIEW_IDS = [
 console.log('== v4.12.4 cross-screen-workflow-stability ==');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.12'), 'index.html should show v4.12.12');
-assert(indexHtml.includes('js/app.js?v=4.12.12'), 'app.js cache buster should be v4.12.12');
-assert(indexHtml.includes('css/style.css?v=4.12.12'), 'style.css cache buster should be v4.12.12');
-assert(indexHtml.includes('js/revenue-brain.js?v=4.12.12'), 'revenue-brain cache buster should be v4.12.12');
-assert(indexHtml.includes('js/profit-brain.js?v=4.12.12'), 'profit-brain cache buster should be v4.12.12');
-assert(indexHtml.includes('js/executive-brain.js?v=4.12.12'), 'executive-brain cache buster should be v4.12.12');
-assert(indexHtml.includes('js/work-order-brain.js?v=4.12.12'), 'work-order-brain cache buster should be v4.12.12');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.12'"), 'storage version should be v4.12.12');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.12'"), 'data-backup version should be v4.12.12');
+assert(indexHtml.includes('v4.12.13'), 'index.html should show v4.12.13');
+assert(indexHtml.includes('js/app.js?v=4.12.13'), 'app.js cache buster should be v4.12.13');
+assert(indexHtml.includes('css/style.css?v=4.12.13'), 'style.css cache buster should be v4.12.13');
+assert(indexHtml.includes('js/revenue-brain.js?v=4.12.13'), 'revenue-brain cache buster should be v4.12.13');
+assert(indexHtml.includes('js/profit-brain.js?v=4.12.13'), 'profit-brain cache buster should be v4.12.13');
+assert(indexHtml.includes('js/executive-brain.js?v=4.12.13'), 'executive-brain cache buster should be v4.12.13');
+assert(indexHtml.includes('js/work-order-brain.js?v=4.12.13'), 'work-order-brain cache buster should be v4.12.13');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.13'"), 'storage version should be v4.12.13');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.13'"), 'data-backup version should be v4.12.13');
 assert(!indexHtml.includes('?v=4.11.14'), 'old cache buster v4.11.14 should be gone');
 assert(!indexHtml.includes('?v=4.12.35'), 'broken cache buster v4.12.35 should not exist');
 
