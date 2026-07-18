@@ -1,5 +1,5 @@
 /**
- * Budil v4.12.13 - remove redundant revenue-row source action.
+ * Budil v4.12.14 - remove redundant revenue-row source action.
  * Source change/confirm stays inside the existing edit form (revenue-source).
  */
 import { readFileSync } from 'node:fs';
@@ -18,7 +18,7 @@ for (const file of ['js/app.js', 'js/revenue-brain.js', 'js/storage.js', 'js/dat
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.12.13 remove-revenue-source-row-action ==');
+console.log('== v4.12.14 remove-revenue-source-row-action ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -31,16 +31,16 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.13'), 'index.html should show v4.12.13');
-assert(indexHtml.includes('js/app.js?v=4.12.13'), 'app.js cache buster should be v4.12.13');
-assert(indexHtml.includes('css/style.css?v=4.12.13'), 'style.css cache buster should be v4.12.13');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.13'"), 'storage version should be v4.12.13');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.13'"), 'data-backup version should be v4.12.13');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.13'"), 'verify-current EXPECTED_VERSION should be v4.12.13');
+assert(indexHtml.includes('v4.12.14'), 'index.html should show v4.12.14');
+assert(indexHtml.includes('js/app.js?v=4.12.14'), 'app.js cache buster should be v4.12.14');
+assert(indexHtml.includes('css/style.css?v=4.12.14'), 'style.css cache buster should be v4.12.14');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.14'"), 'storage version should be v4.12.14');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.14'"), 'data-backup version should be v4.12.14');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.14'"), 'verify-current EXPECTED_VERSION should be v4.12.14');
 assert(!indexHtml.includes('?v=4.12.11'), 'old cache buster v4.12.11 should be gone');
-assert(statusMd.includes('v4.12.13'), 'status.md should document v4.12.13');
-assert(handoffMd.includes('v4.12.13'), 'handoff.md should document v4.12.13');
-assert(decisionLog.includes('v4.12.13'), 'decision-log.md should record v4.12.13');
+assert(statusMd.includes('v4.12.14'), 'status.md should document v4.12.14');
+assert(handoffMd.includes('v4.12.14'), 'handoff.md should document v4.12.14');
+assert(decisionLog.includes('v4.12.14'), 'decision-log.md should record v4.12.14');
 
 console.log('== standalone source row action removed ==');
 assert(!appJs.includes('data-revenue-check-source'), 'data-revenue-check-source must be removed');
@@ -111,4 +111,4 @@ assert(!appJs.includes('localStorage.clear'), 'app must not clear localStorage')
   }
 }
 
-console.log('\nAll v4.12.13 remove-revenue-source-row-action checks passed.');
+console.log('\nAll v4.12.14 remove-revenue-source-row-action checks passed.');

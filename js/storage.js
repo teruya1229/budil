@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.12.13',
+  BUDIL_VERSION: 'v4.12.14',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -542,6 +542,10 @@ const Storage = {
     }
     if (o.paymentStatus) next.paymentStatus = String(o.paymentStatus).trim();
     if (o.paymentDate !== undefined) next.paymentDate = String(o.paymentDate || '').trim();
+    if (o.expectedPaymentDate !== undefined) next.expectedPaymentDate = String(o.expectedPaymentDate || '').trim();
+    if (o.paidDate !== undefined) next.paidDate = String(o.paidDate || '').trim();
+    if (o.paidAmount !== undefined && o.paidAmount !== '') next.paidAmount = Number(o.paidAmount) || 0;
+    if (o.unpaidAmount !== undefined && o.unpaidAmount !== '') next.unpaidAmount = Number(o.unpaidAmount) || 0;
     if (o.paymentMethod !== undefined) next.paymentMethod = String(o.paymentMethod || '').trim();
     if (o.paymentConcern !== undefined) next.paymentConcern = o.paymentConcern === true;
     if (o.grossMarginRate !== '' && o.grossMarginRate != null) {
@@ -1314,6 +1318,200 @@ const Storage = {
       reason: 'before_delete_demo_work_orders',
       action: 'delete_demo_work_orders'
     });
+  },
+
+  deleteWorkOrder(id) {
+    const woId = String(id || '').trim();
+    if (!woId) {
+      this.recordOperationLog({
+        action: 'delete_work_order_blocked',
+        targetKey: this.KEYS.WORK_ORDERS,
+        reason: 'missing_target_id'
+      });
+      return { ok: false, error: 'missing_target_id' };
+    }
+
+    const beforeWorkOrders = this.getWorkOrders();
+    const target = beforeWorkOrders.find(w => String(w && w.id || '').trim() === woId);
+    if (!target) {
+      this.recordOperationLog({
+        action: 'delete_work_order_blocked',
+        targetKey: this.KEYS.WORK_ORDERS,
+        targetId: woId,
+        reason: 'target_not_found',
+        beforeCount: beforeWorkOrders.length
+      });
+      return { ok: false, error: 'target_not_found', beforeCount: beforeWorkOrders.length };
+    }
+
+    const revenues = this.getRevenueRecords();
+    const lockedByActual = !!String(target.actualRevenueId || '').trim();
+    const lockedByRevenueRef = revenues.some(r => {
+      if (!r) return false;
+      const sourceWo = String(r.sourceWorkOrderId || '').trim();
+      const legacyWo = String(r.workOrderId || '').trim();
+      return sourceWo === woId || legacyWo === woId;
+    });
+    if (lockedByActual || lockedByRevenueRef) {
+      this.recordOperationLog({
+        action: 'delete_work_order_blocked',
+        targetKey: this.KEYS.WORK_ORDERS,
+        targetId: woId,
+        reason: 'revenue_locked',
+        beforeCount: beforeWorkOrders.length,
+        actualRevenueId: String(target.actualRevenueId || ''),
+        lockedByRevenueRef
+      });
+      return {
+        ok: false,
+        error: 'revenue_locked',
+        beforeCount: beforeWorkOrders.length,
+        afterCount: beforeWorkOrders.length
+      };
+    }
+
+    const nextWorkOrders = beforeWorkOrders.filter(w => String(w && w.id || '').trim() !== woId);
+    if (nextWorkOrders.length !== beforeWorkOrders.length - 1) {
+      this.recordOperationLog({
+        action: 'delete_work_order_blocked',
+        targetKey: this.KEYS.WORK_ORDERS,
+        targetId: woId,
+        reason: 'count_mismatch',
+        beforeCount: beforeWorkOrders.length,
+        afterCount: nextWorkOrders.length
+      });
+      return {
+        ok: false,
+        error: 'count_mismatch',
+        beforeCount: beforeWorkOrders.length,
+        afterCount: nextWorkOrders.length
+      };
+    }
+
+    const workOrderBackup = this.createSafetyBackup({
+      reason: 'before_delete_work_order',
+      targetKey: this.KEYS.WORK_ORDERS,
+      targetId: woId,
+      beforeCount: beforeWorkOrders.length,
+      data: beforeWorkOrders
+    });
+
+    let receptionUnlinked = 0;
+    const intakes = this.getReceptionIntakes();
+    let intakesChanged = false;
+    const nextIntakes = intakes.map(intake => {
+      if (!intake) return intake;
+      const ids = Array.isArray(intake.relatedWorkOrderIds)
+        ? intake.relatedWorkOrderIds.map(x => String(x || '').trim()).filter(Boolean)
+        : [];
+      const primary = String(intake.relatedWorkOrderId || '').trim();
+      const hadId = ids.includes(woId) || primary === woId;
+      if (!hadId) return intake;
+      intakesChanged = true;
+      receptionUnlinked += 1;
+      const nextIds = ids.filter(x => x !== woId);
+      let nextPrimary = primary === woId ? (nextIds[0] || '') : primary;
+      if (nextPrimary && !nextIds.includes(nextPrimary)) nextIds.unshift(nextPrimary);
+      if (!nextPrimary) nextPrimary = nextIds[0] || '';
+      let nextStatus = intake.status;
+      if (!nextIds.length && String(intake.status || '') === 'work_scheduled') {
+        const taskIds = Array.isArray(intake.relatedTaskIds) ? intake.relatedTaskIds.filter(Boolean) : [];
+        if (taskIds.length) nextStatus = 'task_created';
+        else if (String(intake.relatedLeadId || '').trim()) nextStatus = 'lead_created';
+        else nextStatus = 'new';
+      }
+      return {
+        ...intake,
+        relatedWorkOrderId: nextPrimary,
+        relatedWorkOrderIds: nextIds,
+        status: nextStatus,
+        updatedAt: new Date().toISOString()
+      };
+    });
+    let receptionBackup = null;
+    if (intakesChanged) {
+      receptionBackup = this.createSafetyBackup({
+        reason: 'before_unlink_reception_from_deleted_work_order',
+        targetKey: this.KEYS.RECEPTION_INTAKES,
+        targetId: woId,
+        beforeCount: intakes.length,
+        data: intakes
+      });
+      this.saveReceptionIntakes(nextIntakes);
+    }
+
+    let expenseUnlinked = 0;
+    const expenses = this.getExpenseRecords();
+    let expensesChanged = false;
+    const nextExpenses = expenses.map(e => {
+      if (!e || String(e.relatedWorkOrderId || '').trim() !== woId) return e;
+      expensesChanged = true;
+      expenseUnlinked += 1;
+      return { ...e, relatedWorkOrderId: '', updatedAt: new Date().toISOString() };
+    });
+    let expenseBackup = null;
+    if (expensesChanged) {
+      expenseBackup = this.createSafetyBackup({
+        reason: 'before_unlink_expense_from_deleted_work_order',
+        targetKey: this.KEYS.EXPENSE_RECORDS,
+        targetId: woId,
+        beforeCount: expenses.length,
+        data: expenses
+      });
+      this.saveExpenseRecords(nextExpenses);
+    }
+
+    let taskUnlinked = 0;
+    const taskStore = this.getDailyActionTasksData();
+    const manualTasks = Array.isArray(taskStore.manualTasks) ? taskStore.manualTasks : [];
+    let tasksChanged = false;
+    const nextManualTasks = manualTasks.map(t => {
+      if (!t || String(t.workOrderId || '').trim() !== woId) return t;
+      tasksChanged = true;
+      taskUnlinked += 1;
+      return { ...t, workOrderId: '', updatedAt: new Date().toISOString() };
+    });
+    let taskBackup = null;
+    if (tasksChanged) {
+      taskBackup = this.createSafetyBackup({
+        reason: 'before_unlink_manual_task_from_deleted_work_order',
+        targetKey: this.KEYS.DAILY_ACTION_TASKS,
+        targetId: woId,
+        beforeCount: manualTasks.length,
+        data: taskStore
+      });
+      this.saveDailyActionTasksData({
+        ...taskStore,
+        manualTasks: nextManualTasks
+      });
+    }
+
+    this.saveWorkOrders(nextWorkOrders);
+    this.recordOperationLog({
+      action: 'delete_work_order',
+      targetKey: this.KEYS.WORK_ORDERS,
+      targetId: woId,
+      beforeCount: beforeWorkOrders.length,
+      afterCount: nextWorkOrders.length,
+      safeBackupId: workOrderBackup.id,
+      receptionBackupId: receptionBackup ? receptionBackup.id : '',
+      expenseBackupId: expenseBackup ? expenseBackup.id : '',
+      taskBackupId: taskBackup ? taskBackup.id : '',
+      receptionUnlinked,
+      expenseUnlinked,
+      taskUnlinked,
+      unlinkedCount: receptionUnlinked + expenseUnlinked + taskUnlinked
+    });
+    return {
+      ok: true,
+      targetId: woId,
+      beforeCount: beforeWorkOrders.length,
+      afterCount: nextWorkOrders.length,
+      safeBackupId: workOrderBackup.id,
+      receptionUnlinked,
+      expenseUnlinked,
+      taskUnlinked
+    };
   },
 
   getExpenseRecords() {

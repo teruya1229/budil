@@ -8766,15 +8766,67 @@
       bindMapActionEvents(mapEl);
     }
     updateWorkOrderCalendarHint();
+    syncWorkOrderFormActionState();
   }
 
-  function clearWorkOrderForm() {
+  function syncWorkOrderFormActionState() {
+    const editId = String(document.getElementById('work-order-edit-id')?.value || '').trim();
+    const clearBtn = document.getElementById('btn-work-order-clear');
+    if (clearBtn) clearBtn.textContent = editId ? '編集をやめる' : '入力をクリア';
+    const deleteBtn = document.getElementById('btn-work-order-delete');
+    if (deleteBtn) {
+      const canDelete = !!editId;
+      deleteBtn.classList.toggle('hidden', !canDelete);
+      deleteBtn.disabled = !canDelete;
+    }
+  }
+
+  function clearWorkOrderForm(options) {
+    const opts = options || {};
+    const wasEditing = !!String(document.getElementById('work-order-edit-id')?.value || '').trim();
     document.getElementById('work-order-edit-id').value = '';
     document.getElementById('work-order-form').reset();
     fillWorkOrderSelects();
     const areaEl = document.getElementById('work-order-area');
     if (areaEl) areaEl.dataset.manual = '';
     syncWorkOrderAreaFromAddress();
+    syncWorkOrderFormActionState();
+    if (opts.silent) return;
+    showAppToast(wasEditing
+      ? '編集を終了しました。保存済み予定は削除していません。'
+      : '入力内容をクリアしました。保存済み予定は削除していません。');
+  }
+
+  function deleteWorkOrderFromForm() {
+    const id = String(document.getElementById('work-order-edit-id')?.value || '').trim();
+    if (!id) return;
+    const ok = confirm(
+      'Budil内の作業予定だけを削除します。\n' +
+      'Googleカレンダーの予定は削除されません。\n' +
+      'Googleカレンダーに予定が残っている場合、次回のJSON取り込みで再表示される可能性があります。\n\n' +
+      '削除してよろしいですか？'
+    );
+    if (!ok) return;
+    const result = Storage.deleteWorkOrder(id);
+    if (!result || !result.ok) {
+      if (result && result.error === 'revenue_locked') {
+        alert('売上確定済みの予定は削除できません。先に売上明細との関係を確認してください。');
+      } else if (result && result.error === 'target_not_found') {
+        alert('対象の作業予定が見つかりませんでした。');
+      } else {
+        alert('作業予定を削除できませんでした。');
+      }
+      return;
+    }
+    clearWorkOrderForm({ silent: true });
+    renderWorkOrderView();
+    renderReceptionView();
+    renderDashboard();
+    renderMorningExecutiveSections();
+    if (typeof renderProfitView === 'function') {
+      try { renderProfitView(); } catch (_) { /* optional */ }
+    }
+    showAppToast('Budilの作業予定を削除しました。Googleカレンダーは変更していません。');
   }
 
   function saveWorkOrderFromForm() {
@@ -10397,6 +10449,44 @@
     if (sourceEl) sourceEl.value = source === 'past-recovery' ? 'past-recovery' : 'work-order';
   }
 
+  function syncWorkCompletionPaymentDateUi(options) {
+    const opts = options || {};
+    const statusEl = document.getElementById('work-completion-payment-status');
+    const dateEl = document.getElementById('work-completion-payment-date');
+    const labelEl = document.getElementById('work-completion-payment-date-label');
+    const hintEl = document.getElementById('work-completion-payment-date-hint');
+    if (!statusEl || !dateEl) return;
+    const status = statusEl.value || '未入金';
+    const paid = WorkCompletionBrain.isPaidCompletionStatus(status);
+    if (labelEl) labelEl.textContent = paid ? '入金日' : '入金予定日';
+    if (hintEl) {
+      hintEl.textContent = paid
+        ? '入金済みは今日の日付を自動入力します。必要なら手入力で変更できます。'
+        : '入金待ちは作業日の翌月末を自動入力します。月末以外は手入力で変更できます。';
+    }
+    if (opts.applyDefault) {
+      const workDate = document.getElementById('work-completion-date')?.value || '';
+      const next = WorkCompletionBrain.getDefaultPaymentDateForCompletion(status, workDate, TODAY());
+      dateEl.value = next;
+      dateEl.dataset.autoPaymentDate = next;
+      dateEl.dataset.manualPaymentDate = '';
+    }
+  }
+
+  function applyWorkCompletionPaymentDateForWorkDateChange() {
+    const dateEl = document.getElementById('work-completion-payment-date');
+    const statusEl = document.getElementById('work-completion-payment-status');
+    if (!dateEl || !statusEl) return;
+    if (dateEl.dataset.manualPaymentDate === '1') return;
+    const current = String(dateEl.value || '').trim();
+    const auto = String(dateEl.dataset.autoPaymentDate || '').trim();
+    if (current && auto && current !== auto) return;
+    const workDate = document.getElementById('work-completion-date')?.value || '';
+    const next = WorkCompletionBrain.getDefaultPaymentDateForCompletion(statusEl.value || '未入金', workDate, TODAY());
+    dateEl.value = next;
+    dateEl.dataset.autoPaymentDate = next;
+  }
+
   function openWorkCompletionModal(workOrderId) {
     const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
     if (!wo) return;
@@ -10411,7 +10501,7 @@
       return;
     }
     fillWorkCompletionSelects();
-    const defaults = WorkCompletionBrain.buildCompletionFormDefaults(wo);
+    const defaults = WorkCompletionBrain.buildCompletionFormDefaults(wo, { today: TODAY() });
     document.getElementById('work-completion-wo-id').value = wo.id;
     document.getElementById('work-completion-date').value = defaults.workDate;
     document.getElementById('work-completion-customer').value = defaults.customerName;
@@ -10424,7 +10514,13 @@
     document.getElementById('work-completion-gross-rate').dataset.autoGrossMarginRate = '';
     applyWorkCompletionGrossMarginDefault();
     document.getElementById('work-completion-payment-status').value = defaults.paymentStatus;
-    document.getElementById('work-completion-payment-date').value = defaults.paymentDate;
+    const paymentDateEl = document.getElementById('work-completion-payment-date');
+    if (paymentDateEl) {
+      paymentDateEl.value = defaults.paymentDate;
+      paymentDateEl.dataset.autoPaymentDate = defaults.paymentDate || '';
+      paymentDateEl.dataset.manualPaymentDate = '';
+    }
+    syncWorkCompletionPaymentDateUi();
     document.getElementById('work-completion-payment-method').value = defaults.paymentMethod;
     updateWorkCompletionPaymentCycleHint(defaults.paymentMethod);
     document.getElementById('work-completion-payment-concern').checked = defaults.paymentConcern;
@@ -10481,6 +10577,11 @@
 
     const leadIdForAsset = document.getElementById('work-completion-lead-id')?.value || '';
     const assetFields = readCustomerAssetMemoFromForm('work-completion');
+    const paymentFields = WorkCompletionBrain.buildCompletionPaymentFields(
+      input.paymentStatus,
+      input.paymentDate,
+      input.amount
+    );
     const result = Storage.convertCalendarPastCandidateToRevenue(wo.id, {
       today: TODAY(),
       override: {
@@ -10491,8 +10592,12 @@
         source: input.source,
         amount: input.amount,
         memo: input.actualMemo,
-        paymentStatus: input.paymentStatus,
-        paymentDate: input.paymentDate,
+        paymentStatus: paymentFields.paymentStatus,
+        paymentDate: paymentFields.paymentDate,
+        expectedPaymentDate: paymentFields.expectedPaymentDate,
+        paidDate: paymentFields.paidDate,
+        paidAmount: paymentFields.paidAmount,
+        unpaidAmount: paymentFields.unpaidAmount,
         paymentMethod: input.paymentMethod,
         paymentConcern: input.paymentConcern,
         grossMarginRate: input.grossMarginRate,
@@ -10546,6 +10651,10 @@
     };
     if (!input.customerName || !input.amount) {
       alert('お客様名と実際の売上金額は必須です。');
+      return;
+    }
+    if (!String(input.paymentDate || '').trim()) {
+      alert('入金日（または入金予定日）を入力してください。');
       return;
     }
     const queueSource = document.getElementById('work-completion-queue-source')?.value || 'work-order';
@@ -10648,6 +10757,7 @@
     const details = document.getElementById('work-order-manual-entry');
     if (details) details.open = true;
     if (workOrder) setWorkOrderFormData(workOrder);
+    else syncWorkOrderFormActionState();
     setTimeout(() => scrollToElement('#work-order-form'), 120);
   }
 
@@ -11066,7 +11176,10 @@
       alert('作業予定を保存しました。');
     });
     const clearBtn = document.getElementById('btn-work-order-clear');
-    if (clearBtn) clearBtn.addEventListener('click', clearWorkOrderForm);
+    if (clearBtn) clearBtn.addEventListener('click', () => clearWorkOrderForm());
+    const deleteBtn = document.getElementById('btn-work-order-delete');
+    if (deleteBtn) deleteBtn.addEventListener('click', deleteWorkOrderFromForm);
+    syncWorkOrderFormActionState();
     const gmapBtn = document.getElementById('btn-work-order-gmap');
     if (gmapBtn) {
       gmapBtn.addEventListener('click', () => {
@@ -11121,6 +11234,20 @@
     });
     document.getElementById('work-completion-payment-method')?.addEventListener('change', () => {
       updateWorkCompletionPaymentCycleHint();
+    });
+    document.getElementById('work-completion-payment-status')?.addEventListener('change', () => {
+      syncWorkCompletionPaymentDateUi({ applyDefault: true });
+    });
+    document.getElementById('work-completion-payment-date')?.addEventListener('input', () => {
+      const dateEl = document.getElementById('work-completion-payment-date');
+      if (!dateEl) return;
+      const current = String(dateEl.value || '').trim();
+      const auto = String(dateEl.dataset.autoPaymentDate || '').trim();
+      dateEl.dataset.manualPaymentDate = (current && current !== auto) ? '1' : '';
+    });
+    document.getElementById('work-completion-date')?.addEventListener('change', () => {
+      applyWorkCompletionPaymentDateForWorkDateChange();
+      syncWorkCompletionPaymentDateUi();
     });
     document.querySelectorAll('#work-completion-modal, #work-cancel-modal').forEach(modal => {
       modal.addEventListener('click', e => {

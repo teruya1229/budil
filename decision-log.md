@@ -2,6 +2,30 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.14 作業予定削除 + 売上確定入金日自動入力（2026-07-18）
+
+**日付**: 2026-07-18
+
+**判断内容**:
+- 作業予定の「クリア」は入力resetのみで削除ではないため、専用削除操作を分離する
+- 削除はBudil内の作業予定のみ。Googleカレンダーは削除せず、再取り込みで再表示され得ることを明示する
+- 売上確定済み予定は削除禁止。受付・経費・毎日やることは削除せず参照だけ安全解除する
+- 売上確定モーダルの入金待ちは作業日の翌月末、入金済みはローカル操作日の今日を自動入力し、手入力で上書き可能にする
+- 保存は `expectedPaymentDate` / `paidDate` 等の正規フィールドへ行う。PaymentBrainの他画面向け支払サイクルは変更しない
+- 新localStorageキーなし。利益率・Calendar正本・AI番頭・月次実績は不変
+
+**変更ファイル**:
+- js/storage.js（`deleteWorkOrder`、past override canonical payment fields）
+- js/work-completion-brain.js（入金日デフォルト／保存フィールド）
+- js/app.js（削除UI・クリア文言・入金日UI配線）
+- index.html（削除ボタン・入金日ラベル／hint、cache buster）
+- js/data-backup.js（表示バージョン）
+- scripts/verify-v41214-work-order-delete-payment-date.mjs（新規）
+- scripts/verify-v4*.mjs, scripts/verify-current.mjs（バージョンピン）
+- status.md, handoff.md, decision-log.md
+
+**現行合格コマンド**: `node scripts/verify-current.mjs`（73/73）
+
 ## v4.12.13 操作フィードバックの明確化（2026-07-15）
 
 **日付**: 2026-07-15

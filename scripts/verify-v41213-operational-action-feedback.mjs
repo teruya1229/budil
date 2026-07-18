@@ -1,5 +1,5 @@
 /**
- * Budil v4.12.13 - operational action feedback clarification.
+ * Budil v4.12.14 - operational action feedback clarification.
  * Duplicate follow-row actions removed; typed copy/done labels and success toasts added.
  */
 import { readFileSync } from 'node:fs';
@@ -26,7 +26,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.12.13 operational-action-feedback ==');
+console.log('== v4.12.14 operational-action-feedback ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -40,16 +40,16 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.13'), 'index.html should show v4.12.13');
-assert(indexHtml.includes('js/app.js?v=4.12.13'), 'app.js cache buster should be v4.12.13');
-assert(indexHtml.includes('css/style.css?v=4.12.13'), 'style.css cache buster should be v4.12.13');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.13'"), 'storage version should be v4.12.13');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.13'"), 'data-backup version should be v4.12.13');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.13'"), 'verify-current EXPECTED_VERSION should be v4.12.13');
+assert(indexHtml.includes('v4.12.14'), 'index.html should show v4.12.14');
+assert(indexHtml.includes('js/app.js?v=4.12.14'), 'app.js cache buster should be v4.12.14');
+assert(indexHtml.includes('css/style.css?v=4.12.14'), 'style.css cache buster should be v4.12.14');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.14'"), 'storage version should be v4.12.14');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.14'"), 'data-backup version should be v4.12.14');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.14'"), 'verify-current EXPECTED_VERSION should be v4.12.14');
 assert(!indexHtml.includes('?v=4.12.12'), 'old cache buster v4.12.12 should be gone');
-assert(statusMd.includes('v4.12.13'), 'status.md should document v4.12.13');
-assert(handoffMd.includes('v4.12.13'), 'handoff.md should document v4.12.13');
-assert(decisionLog.includes('v4.12.13'), 'decision-log.md should record v4.12.13');
+assert(statusMd.includes('v4.12.14'), 'status.md should document v4.12.14');
+assert(handoffMd.includes('v4.12.14'), 'handoff.md should document v4.12.14');
+assert(decisionLog.includes('v4.12.14'), 'decision-log.md should record v4.12.14');
 
 console.log('== 1. follow list row duplicate actions removed ==');
 {
@@ -203,4 +203,4 @@ assert(indexHtml.includes('view-calendar-registration') || appJs.includes('calen
   }
 }
 
-console.log('\nAll v4.12.13 operational-action-feedback checks passed.');
+console.log('\nAll v4.12.14 operational-action-feedback checks passed.');

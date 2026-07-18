@@ -102,7 +102,65 @@ const WorkCompletionBrain = {
     return !!(wo && wo.actualRevenueId);
   },
 
-  buildCompletionFormDefaults(workOrder) {
+  getNextMonthEndDate(workDate) {
+    const raw = String(workDate || '').trim().slice(0, 10);
+    const parts = raw.split('-');
+    if (parts.length < 3) return '';
+    const year = Number(parts[0]);
+    const month = Number(parts[1]);
+    if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) return '';
+    let nextYear = year;
+    let nextMonth = month + 1;
+    if (nextMonth > 12) {
+      nextMonth = 1;
+      nextYear += 1;
+    }
+    const lastDay = new Date(nextYear, nextMonth, 0).getDate();
+    return `${nextYear}-${String(nextMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  },
+
+  isPaidCompletionStatus(paymentStatus) {
+    const raw = String(paymentStatus || '').trim();
+    if (raw === '入金済み') return true;
+    if (typeof PaymentBrain !== 'undefined') {
+      return PaymentBrain.migratePaymentStatus(raw, 'pending') === 'paid';
+    }
+    return raw === 'paid';
+  },
+
+  getDefaultPaymentDateForCompletion(paymentStatus, workDate, today) {
+    if (this.isPaidCompletionStatus(paymentStatus)) {
+      return String(today || '').trim().slice(0, 10);
+    }
+    return this.getNextMonthEndDate(workDate);
+  },
+
+  buildCompletionPaymentFields(paymentStatus, paymentDate, amount) {
+    const statusRaw = String(paymentStatus || '未入金').trim() || '未入金';
+    const date = String(paymentDate || '').trim().slice(0, 10);
+    const amt = Number(amount) || 0;
+    if (this.isPaidCompletionStatus(statusRaw)) {
+      return {
+        paymentStatus: statusRaw,
+        paymentDate: date,
+        expectedPaymentDate: '',
+        paidDate: date,
+        paidAmount: amt,
+        unpaidAmount: 0
+      };
+    }
+    return {
+      paymentStatus: statusRaw,
+      paymentDate: date,
+      expectedPaymentDate: date,
+      paidDate: '',
+      paidAmount: 0,
+      unpaidAmount: amt
+    };
+  },
+
+  buildCompletionFormDefaults(workOrder, options) {
+    const opts = options || {};
     const wo = typeof WorkOrderBrain !== 'undefined'
       ? WorkOrderBrain.normalizeWorkOrder(workOrder)
       : workOrder;
@@ -112,17 +170,19 @@ const WorkCompletionBrain = {
     const source = typeof ReceptionBrain !== 'undefined'
       ? ReceptionBrain.matchRevenueSource(wo.source)
       : wo.source;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = String(opts.today || new Date().toISOString().slice(0, 10)).slice(0, 10);
+    const workDate = wo.scheduledDate || today;
+    const paymentStatus = '未入金';
     return {
-      workDate: wo.scheduledDate || today,
+      workDate,
       customerName: wo.customerName || '',
       actualService: wo.serviceText || '',
       service,
       source,
       amount: wo.estimateAmount || '',
       grossMarginRate: '',
-      paymentStatus: '未入金',
-      paymentDate: '',
+      paymentStatus,
+      paymentDate: this.getDefaultPaymentDateForCompletion(paymentStatus, workDate, today),
       paymentMethod: '',
       paymentConcern: false,
       additionalMemo: wo.memo || '',
@@ -139,6 +199,11 @@ const WorkCompletionBrain = {
       : workOrder;
     const now = new Date().toISOString();
     const memoParts = [input.actualMemo, input.additionalMemo].filter(Boolean);
+    const paymentFields = this.buildCompletionPaymentFields(
+      input.paymentStatus || '未入金',
+      input.paymentDate,
+      input.amount
+    );
     const payload = {
       workDate: input.workDate || wo.scheduledDate || now.slice(0, 10),
       customerName: String(input.customerName || wo.customerName || '').trim(),
@@ -146,7 +211,6 @@ const WorkCompletionBrain = {
       source: input.source || wo.source || '',
       amount: Number(input.amount) || 0,
       status: '確定',
-      paymentStatus: input.paymentStatus || '未入金',
       paymentConcern: input.paymentConcern === true,
       memo: memoParts.join('\n'),
       sourceWorkOrderId: wo.id,
@@ -157,8 +221,8 @@ const WorkCompletionBrain = {
       confirmedAt: now,
       isConfirmedRevenue: true,
       actualMemo: String(input.actualMemo || '').trim(),
-      paymentDate: String(input.paymentDate || '').trim(),
-      paymentMethod: String(input.paymentMethod || '').trim()
+      paymentMethod: String(input.paymentMethod || '').trim(),
+      ...paymentFields
     };
     if (input.grossMarginRate !== '' && input.grossMarginRate != null) {
       const rate = Number(input.grossMarginRate);

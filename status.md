@@ -1,13 +1,27 @@
 ﻿# Budil status
 
-## 正式な現行verify環境（v4.12.13）
+## 正式な現行verify環境（v4.12.14）
 
 - **正式環境**: Budil 単独 clone ではなく、親階層に sibling の `calendar-sync-worker` がある開発環境
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` 側の依存関係（googleapis 等）。`hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（72本。省略・除外・緩和なし）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（73本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.14 実装内容（作業予定削除 + 売上確定入金日自動入力）
+
+- 表示バージョンを v4.12.14 に更新
+- index.html の主要 JS/CSS cache buster を v4.12.14 に統一
+- 作業予定編集に「Budilから予定を削除」を追加（Budil内のみ。Googleカレンダーは削除しない）
+- 「クリア」を新規「入力をクリア」／編集中「編集をやめる」に明確化（Storageは変更しない）
+- 売上確定済み予定（`actualRevenueId` または売上の `sourceWorkOrderId`/`workOrderId` 参照）は削除禁止
+- 受付・経費・毎日やることは削除せず、対象予定ID参照だけ安全解除
+- 売上確定モーダル：入金待ちは作業日の翌月末、入金済みは操作日の今日を自動入力（手入力可）
+- 保存時は `expectedPaymentDate` / `paidDate` 等の正規フィールドへ反映
+- PaymentBrain の他画面向け支払サイクル・利益率・localStorageキー・Calendar正本・AI番頭・月次実績は変更なし
+- 新規 verify-v41214-work-order-delete-payment-date.mjs 追加
+- 現行合格は引き続き `node scripts/verify-current.mjs`
 
 ## v4.12.13 実装内容（操作フィードバックの明確化）
 

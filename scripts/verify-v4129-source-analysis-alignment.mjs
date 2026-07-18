@@ -1,5 +1,5 @@
 /**
- * Budil v4.12.13 - revenue source analysis display aligned with profit rates.
+ * Budil v4.12.14 - revenue source analysis display aligned with profit rates.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/revenue-summary-brain.js', 'js/revenue-brain.js', 'js/st
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.12.13 source-analysis-alignment ==');
+console.log('== v4.12.14 source-analysis-alignment ==');
 
 const indexHtml = load('index.html');
 const storageJs = load('js/storage.js');
@@ -29,15 +29,15 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.13'), 'index.html should show v4.12.13');
-assert(indexHtml.includes('js/app.js?v=4.12.13'), 'app.js cache buster should be v4.12.13');
-assert(indexHtml.includes('js/revenue-summary-brain.js?v=4.12.13'), 'revenue-summary-brain cache buster should be v4.12.13');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.13'"), 'storage version should be v4.12.13');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.13'"), 'data-backup version should be v4.12.13');
+assert(indexHtml.includes('v4.12.14'), 'index.html should show v4.12.14');
+assert(indexHtml.includes('js/app.js?v=4.12.14'), 'app.js cache buster should be v4.12.14');
+assert(indexHtml.includes('js/revenue-summary-brain.js?v=4.12.14'), 'revenue-summary-brain cache buster should be v4.12.14');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.14'"), 'storage version should be v4.12.14');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.14'"), 'data-backup version should be v4.12.14');
 assert(!indexHtml.includes('?v=4.12.8'), 'old cache buster v4.12.8 should be gone');
-assert(statusMd.includes('v4.12.13'), 'status.md should document v4.12.13');
-assert(handoffMd.includes('v4.12.13'), 'handoff.md should document v4.12.13');
-assert(decisionLog.includes('v4.12.13'), 'decision-log.md should record v4.12.13');
+assert(statusMd.includes('v4.12.14'), 'status.md should document v4.12.14');
+assert(handoffMd.includes('v4.12.14'), 'handoff.md should document v4.12.14');
+assert(decisionLog.includes('v4.12.14'), 'decision-log.md should record v4.12.14');
 
 console.log('== summary alias wiring ==');
 assert(revenueSummaryJs.includes("'LINE': 'LINE'"), 'LINE should not collapse to その他');
@@ -162,4 +162,4 @@ const storageKeysBefore = (storageJs.match(/STORAGE_KEYS|localStorage\.setItem\(
 assert(storageKeysBefore > 0, 'storage.js should still define storage keys');
 assert(!revenueSummaryJs.includes('localStorage'), 'revenue-summary-brain must not touch localStorage');
 
-console.log('\nAll v4.12.13 source-analysis-alignment checks passed.');
+console.log('\nAll v4.12.14 source-analysis-alignment checks passed.');
