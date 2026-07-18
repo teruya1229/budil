@@ -26,6 +26,12 @@
 
 **現行合格コマンド**: `node scripts/verify-current.mjs`（73/73）
 
+**正式合格**:
+- commit: `2bbf0a674f21db057ebeb15d11e34f76d5e6af4f`
+- verify-current: 73/73
+- 公開URLで v4.12.14 確認（PC/390px、作業予定削除・入金日自動入力、JSエラーなし、横スクロールなし）
+- main へ push 済み
+
 ## v4.12.13 操作フィードバックの明確化（2026-07-15）
 
 **日付**: 2026-07-15

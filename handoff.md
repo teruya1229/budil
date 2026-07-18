@@ -26,7 +26,7 @@
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.14 |
 | 最新バージョン | v4.12.14 |
-| v4.12.14 作業予定削除 + 売上確定入金日自動入力 | verify-current 73/73 合格（ship hash は commit 後に記録） |
+| v4.12.14 作業予定削除 + 売上確定入金日自動入力 | 正式合格本体 `2bbf0a6` / verify-current 73/73 / 公開URLで v4.12.14 確認 / main push |
 | v4.12.13 操作フィードバックの明確化 | 正式合格本体 `f3847f7` / 説明文最終修正 `a725f01` / verify-current 72/72 / 公開URLで v4.12.13 確認済み / main push済み |
 | v4.12.12 売上一覧の単独依頼元ボタン廃止 | 正式合格 commit `a287b7d` / verify-current 71/71 / 公開URLで v4.12.12 確認済み / main push済み |
 | v4.12.11 利益管理の対象月選択 | 正式合格 本体commit `d483339` / 記録commit `bdd4eaa` / verify-current 70/70 / 公開URLで v4.12.11 確認済み / main push済み |
@@ -88,6 +88,7 @@
 - **維持**: 利益率、PaymentBrain他画面サイクル、localStorageキー、Calendar正本、AI番頭、月次実績
 - **現行合格**: `node scripts/verify-current.mjs`
 - **新規**: `node scripts/verify-v41214-work-order-delete-payment-date.mjs`
+- **正式合格**: commit `2bbf0a674f21db057ebeb15d11e34f76d5e6af4f` / verify-current 73/73 / 公開URLで v4.12.14 確認 / main push
 
 ## v4.12.12 売上一覧の単独依頼元ボタン廃止（2026-07-13）
 

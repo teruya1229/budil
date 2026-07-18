@@ -22,6 +22,8 @@
 - PaymentBrain の他画面向け支払サイクル・利益率・localStorageキー・Calendar正本・AI番頭・月次実績は変更なし
 - 新規 verify-v41214-work-order-delete-payment-date.mjs 追加
 - 現行合格は引き続き `node scripts/verify-current.mjs`
+- verify-current 73/73 合格
+- 正式合格: commit `2bbf0a674f21db057ebeb15d11e34f76d5e6af4f` / main push 予定 / 公開URLで v4.12.14 確認
 
 ## v4.12.13 実装内容（操作フィードバックの明確化）
 
