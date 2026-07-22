@@ -36,20 +36,22 @@ const NG_TERMS = [
 console.log('== v4.12.5 calendar-export-import-workflow ==');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.14'), 'index.html should show v4.12.14');
-assert(indexHtml.includes('js/app.js?v=4.12.14'), 'app.js cache buster should be v4.12.14');
-assert(indexHtml.includes('css/style.css?v=4.12.14'), 'style.css cache buster should be v4.12.14');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.14'"), 'storage version should be v4.12.14');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.14'"), 'data-backup version should be v4.12.14');
+assert(indexHtml.includes('v4.12.15'), 'index.html should show v4.12.15');
+assert(indexHtml.includes('js/app.js?v=4.12.15'), 'app.js cache buster should be v4.12.15');
+assert(indexHtml.includes('css/style.css?v=4.12.15'), 'style.css cache buster should be v4.12.15');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.15'"), 'storage version should be v4.12.15');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.15'"), 'data-backup version should be v4.12.15');
 assert(!indexHtml.includes('?v=4.12.7'), 'old cache buster v4.12.7 should be gone');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.14'), 'calendar-candidate cache buster should be v4.12.14');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.15'), 'calendar-candidate cache buster should be v4.12.15');
 
 console.log('== workflow UI ==');
 assert(indexHtml.includes('\u6700\u65b0\u4e88\u5b9a\u306e\u66f4\u65b0\u3068\u53d6\u308a\u8fbc\u307f'), 'workflow section title should exist');
 assert(indexHtml.includes('btn-calendar-export-latest'), 'export latest button should exist');
-assert(indexHtml.includes('\u6700\u65b0\u4e88\u5b9a\u3092\u66f8\u304d\u51fa\u3059'), 'export latest button label should exist');
+assert(indexHtml.includes('Google\u30ab\u30ec\u30f3\u30c0\u30fc\u3092\u66f4\u65b0'), 'export latest button label should be Google calendar update');
+assert(!indexHtml.includes('\u6700\u65b0\u4e88\u5b9a\u3092\u66f8\u304d\u51fa\u3059'), 'old export-only button label should be gone');
 assert(indexHtml.includes('btn-calendar-candidate-json-import'), 'JSON import button should remain');
 assert(indexHtml.includes('\u30ab\u30ec\u30f3\u30c0\u30fcJSON\u3092\u53d6\u308a\u8fbc\u3080'), 'JSON import button label should remain');
+assert(indexHtml.includes('\u975e\u5e38\u7528'), 'manual JSON import should remain as emergency path');
 assert(indexHtml.includes('\u6b63\u672c\u30d5\u30ed\u30fc'), 'canonical flow notice should remain');
 assert(
   indexHtml.includes('\u78ba\u5b9a\u58f2\u4e0a\u306b\u306f\u307e\u3060\u5165\u308a\u307e\u305b\u3093'),
@@ -70,6 +72,12 @@ assert(appJs.includes('CALENDAR_JSON_STALE_WARN_MS'), '6h stale threshold should
 assert(appJs.includes('CALENDAR_JSON_STALE_STRONG_MS'), '24h stale threshold should exist');
 assert(appJs.includes('file.lastModified'), 'should use File.lastModified');
 assert(appJs.includes('CALENDAR_EXPORT_LOCAL_API_URL'), 'local API URL hook should exist');
+assert(appJs.includes("CALENDAR_LOCAL_API_BASE = 'http://127.0.0.1:43821'"), 'local API base must be fixed loopback URL');
+assert(appJs.includes('CALENDAR_LOCAL_API_HEALTH_URL'), 'health URL constant should exist');
+assert(appJs.includes('CALENDAR_LOCAL_API_SYNC_URL'), 'sync URL constant should exist');
+assert(appJs.includes('commitSavableCalendarCandidates'), 'shared save helper should exist');
+assert(appJs.includes('calendarLocalSyncInFlight'), 'client-side in-flight guard should exist');
+assert(appJs.includes('AbortController'), 'timeout AbortController should exist');
 assert(appJs.includes('ブラウザからbatファイルを直接実行することはできません'), 'manual guide should warn no direct bat execution');
 assert(!appJs.includes('child_process'), 'app.js must not spawn local processes');
 assert(!appJs.includes('require(\'child_process\')'), 'app.js must not require child_process');
@@ -77,7 +85,11 @@ assert(!appJs.includes('ActiveXObject'), 'app.js must not use ActiveX');
 assert(appJs.includes('handleCalendarCandidateJsonFile'), 'JSON file import handler should remain');
 assert(appJs.includes('applyCalendarCandidateParsed'), 'import preview flow should remain');
 assert(appJs.includes('saveAllCalendarCandidates'), 'save all flow should remain');
-
+assert(appJs.includes('function saveAllCalendarCandidates(force)'), 'manual save-all signature should remain');
+assert(
+  /function saveAllCalendarCandidates\(force\) \{[\s\S]{0,400}?commitSavableCalendarCandidates/.test(appJs),
+  'saveAll must reuse shared commit helper'
+);
 console.log('== calendar-sync-worker investigation ==');
 const workerBat = loadWorker('run-budil-calendar-export.bat');
 const workerPkg = loadWorker('package.json');

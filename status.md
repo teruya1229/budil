@@ -1,13 +1,27 @@
 ﻿# Budil status
 
-## 正式な現行verify環境（v4.12.14）
+## 正式な現行verify環境（v4.12.15）
 
 - **正式環境**: Budil 単独 clone ではなく、親階層に sibling の `calendar-sync-worker` がある開発環境
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` 側の依存関係（googleapis 等）。`hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（73本。省略・除外・緩和なし）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（74本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.15 実装内容（Googleカレンダー更新1ボタン化・Budil接続）
+
+- 表示バージョンを v4.12.15 に更新
+- index.html の主要 JS/CSS cache buster を v4.12.15 に統一
+- 既存 `#btn-calendar-export-latest` を「Googleカレンダーを更新」として配線
+- 固定API `http://127.0.0.1:43821` の `/health` → `/sync` で取得
+- レスポンス payload を既存 `parseBudilCalendarEventsJson` へ渡し、既存重複判定のうえ非重複のみ自動保存
+- 保存判定は `commitSavableCalendarCandidates` に共通化し、手動「すべて保存」も同経路を再利用（複製しない）
+- 取得件数／新規／重複／対象外／最終取得日時を表示。失敗時は既存データを変更しない
+- 手動JSON取込は非常用として維持
+- worker loopback APIを正本とし、Google Calendarは読取専用。workerは現時点で手動起動（Windows自動起動は次工程）
+- 新規 verify-v41215-calendar-local-api-one-button.mjs 追加
+- 現行合格は引き続き `node scripts/verify-current.mjs`
 
 ## v4.12.14 実装内容（作業予定削除 + 売上確定入金日自動入力）
 

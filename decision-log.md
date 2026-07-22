@@ -2,6 +2,28 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.15 Googleカレンダー更新1ボタン化（Budil接続）（2026-07-22）
+
+**日付**: 2026-07-22
+
+**判断内容**:
+- worker loopback API（`127.0.0.1:43821` の `/health` `/sync`）を正本とし、公開HTTPS版Budilから1ボタンで取得→parse→重複判定→非重複自動保存まで完了させる
+- Google Calendarは読取専用。Budilから書込み・削除しない
+- 既存 `#btn-calendar-export-latest` を再利用し、入口を増やさない。手動JSON取込は非常用として残す
+- 保存判定は既存 `isFutureImportSavable` / `saveAllCalendarCandidates` 経路を共通関数化し、複製しない
+- API失敗・parse失敗・timeout時は既存作業予定を変更しない
+- workerは現時点で手動起動。Windows自動起動は次工程
+
+**変更ファイル**:
+- js/app.js（local API接続、timeout、多重実行防止、共通保存、成功／エラー表示）
+- index.html（ボタン文言・手順説明、cache buster）
+- js/storage.js / js/data-backup.js（表示バージョン）
+- scripts/verify-v41215-calendar-local-api-one-button.mjs（新規）
+- scripts/verify-v4123-... / scripts/verify-v4*.mjs / verify-current.mjs（バージョンピン・workflow assert更新）
+- status.md, handoff.md, decision-log.md
+
+**現行合格コマンド**: `node scripts/verify-current.mjs`
+
 ## v4.12.14 作業予定削除 + 売上確定入金日自動入力（2026-07-18）
 
 **日付**: 2026-07-18

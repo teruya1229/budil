@@ -33,9 +33,14 @@
   const SCHEDULE_IMPORT_VIEW = 'calendar-candidate';
   const CALENDAR_EXPORT_BAT_PATH = 'C:\\dev\\calendar-sync-worker\\run-budil-calendar-export.bat';
   const CALENDAR_EXPORT_JSON_PATH = 'C:\\dev\\calendar-sync-worker\\output\\budil-calendar-events.json';
-  const CALENDAR_EXPORT_LOCAL_API_URL = '';
+  const CALENDAR_LOCAL_API_BASE = 'http://127.0.0.1:43821';
+  const CALENDAR_EXPORT_LOCAL_API_URL = CALENDAR_LOCAL_API_BASE;
+  const CALENDAR_LOCAL_API_HEALTH_URL = `${CALENDAR_LOCAL_API_BASE}/health`;
+  const CALENDAR_LOCAL_API_SYNC_URL = `${CALENDAR_LOCAL_API_BASE}/sync`;
+  const CALENDAR_LOCAL_API_TIMEOUT_MS = 90000;
   const CALENDAR_JSON_STALE_WARN_MS = 6 * 60 * 60 * 1000;
   const CALENDAR_JSON_STALE_STRONG_MS = 24 * 60 * 60 * 1000;
+  let calendarLocalSyncInFlight = false;
 
   const SALES_TAB_LOG = { email: 'メール送信', form: 'フォーム送信', dm: 'DM', phone: '電話' };
   const ACTIVITY_TYPE_LABELS = {
@@ -9090,12 +9095,16 @@
     }
     el.innerHTML = `
       <div class="calendar-export-guide-panel">
-        <p class="calendar-export-guide-lead">最新予定を書き出すには、ローカルPCで以下を実行してください。</p>
+        <p class="calendar-export-guide-lead">ローカル連携を起動するには、PCで以下を実行してください。</p>
+        <div class="calendar-export-path-row">
+          <code class="calendar-export-path">C:\\dev\\calendar-sync-worker\\start-budil-calendar-local-api.bat</code>
+          <button type="button" class="btn btn-sm btn-secondary" data-copy-calendar-path="local-api">パスをコピー</button>
+        </div>
+        <p class="calendar-export-guide-lead">非常時のみ、従来どおり bat でJSONを書き出して手動取り込みもできます。</p>
         <div class="calendar-export-path-row">
           <code class="calendar-export-path">${esc(CALENDAR_EXPORT_BAT_PATH)}</code>
           <button type="button" class="btn btn-sm btn-secondary" data-copy-calendar-path="bat">パスをコピー</button>
         </div>
-        <p class="calendar-export-guide-lead">実行後、以下のファイルを選んで取り込んでください。</p>
         <div class="calendar-export-path-row">
           <code class="calendar-export-path">${esc(CALENDAR_EXPORT_JSON_PATH)}</code>
           <button type="button" class="btn btn-sm btn-secondary" data-copy-calendar-path="json">パスをコピー</button>
@@ -9119,30 +9128,284 @@
     el.classList.remove('hidden');
   }
 
-  async function handleCalendarExportLatestClick() {
-    renderCalendarExportStatus(null);
-    if (CALENDAR_EXPORT_LOCAL_API_URL) {
-      try {
-        const res = await fetch(CALENDAR_EXPORT_LOCAL_API_URL, { method: 'POST' });
-        if (res.ok) {
-          renderCalendarExportGuide(false);
-          renderCalendarExportStatus(
-            '書き出し完了。budil-calendar-events.json を選んで取り込んでください。',
-            'success'
-          );
-          return;
-        }
-      } catch {
-        // fall through to manual guide
+  function mapCalendarLocalApiError(kind, details) {
+    const info = details || {};
+    if (kind === 'timeout') {
+      return 'カレンダーの取得がタイムアウトしました。既存データは変更していません。';
+    }
+    if (kind === 'not_running') {
+      return 'カレンダー連携が起動していません。PCでローカル連携を起動してから、もう一度お試しください。';
+    }
+    if (kind === 'network') {
+      return 'ローカル連携へ接続できません。Chromeのローカルネットワーク許可と連携ツールの起動状態を確認してください。';
+    }
+    if (kind === 'sync_in_progress' || info.code === 'sync_in_progress' || info.status === 409) {
+      return 'カレンダーを更新中です。完了後にもう一度お試しください。';
+    }
+    if (kind === 'rate_limited' || info.code === 'rate_limited' || info.status === 429) {
+      return '連続更新を避け、数秒後にもう一度お試しください。';
+    }
+    if (kind === 'parse' || kind === 'save') {
+      return 'カレンダーを更新できませんでした。既存データは変更していません。';
+    }
+    return 'カレンダーを更新できませんでした。既存データは変更していません。';
+  }
+
+  function formatCalendarLocalSyncSuccessMessage(meta, summary) {
+    const fetchedAtLabel = meta && meta.fetchedAt
+      ? formatCalendarFileDateTime(Date.parse(meta.fetchedAt))
+      : '';
+    const fetchedCount = Number(meta && meta.itemCount != null ? meta.itemCount : (summary && summary.readCount) || 0);
+    const savedCount = Number((summary && summary.savedCount) || 0);
+    const duplicateCount = Number((summary && summary.duplicateCount) || 0);
+    const excludedCount = Number((summary && summary.excludedCount) || 0);
+    const base = `カレンダーを更新しました。取得${fetchedCount}件／新規${savedCount}件／重複${duplicateCount}件／対象外${excludedCount}件`;
+    return fetchedAtLabel ? `${base}（最終取得：${fetchedAtLabel}）` : base;
+  }
+
+  async function fetchCalendarLocalApi(url, options) {
+    const opts = options || {};
+    const controller = new AbortController();
+    const timeoutMs = Number.isFinite(opts.timeoutMs) ? opts.timeoutMs : CALENDAR_LOCAL_API_TIMEOUT_MS;
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const requestGeneration = opts.generation;
+    try {
+      const res = await fetch(url, {
+        method: opts.method || 'GET',
+        signal: controller.signal,
+        cache: 'no-store',
+        headers: opts.headers || {}
+      });
+      if (requestGeneration != null && requestGeneration !== opts.activeGenerationRef.value) {
+        const stale = new Error('stale_response');
+        stale.code = 'stale_response';
+        throw stale;
       }
-      renderCalendarExportGuide(true);
-      renderCalendarExportStatus(
-        'ローカルAPIに接続できませんでした。以下の手順で手動実行してください。',
-        'error'
+      let body = null;
+      try {
+        body = await res.json();
+      } catch (_) {
+        body = null;
+      }
+      if (requestGeneration != null && requestGeneration !== opts.activeGenerationRef.value) {
+        const stale = new Error('stale_response');
+        stale.code = 'stale_response';
+        throw stale;
+      }
+      return { res, body };
+    } catch (error) {
+      if (error && error.name === 'AbortError') {
+        const timeoutErr = new Error('timeout');
+        timeoutErr.code = 'timeout';
+        throw timeoutErr;
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /**
+   * Save-rule canonical path shared by manual "すべて保存" and local API auto-save.
+   * Does not navigate/refresh/clear UI; caller owns side effects.
+   */
+  function commitSavableCalendarCandidates(preview, force) {
+    if (!preview || !(preview.items || []).length || typeof CalendarCandidateBrain === 'undefined') {
+      return {
+        summary: { readCount: 0, savedCount: 0, duplicateCount: 0, excludedCount: 0, savableCount: 0, revenueRegistered: false },
+        saved: 0
+      };
+    }
+    const past = getCalendarPastRecoveryOptions();
+    const summary = past.enabled
+      ? { readCount: preview.items.length, savedCount: 0, duplicateCount: 0, excludedCount: 0, savableCount: preview.items.length, revenueRegistered: false }
+      : getCalendarFutureImportSummary(preview);
+    const savableItems = past.enabled
+      ? preview.items
+      : preview.items.filter(item => CalendarCandidateBrain.isFutureImportSavable(item, force));
+    let saved = 0;
+    savableItems.forEach(item => {
+      if (!past.enabled && !CalendarCandidateBrain.isFutureImportSavable(item, force)) return;
+      if (item.isDuplicate && !force) return;
+      const payload = CalendarCandidateBrain.createWorkOrderPayload(
+        item.candidate,
+        resolveCalendarCandidateSaveExtras(item, preview)
       );
+      Storage.addWorkOrder(payload);
+      saved += 1;
+    });
+    summary.savedCount = saved;
+    summary.revenueRegistered = false;
+    return { summary, saved };
+  }
+
+  function finalizeCalendarCandidateSaveUi(summary, saved, options) {
+    const opts = options || {};
+    lastCalendarCandidateImportResult = summary;
+    lastCalendarCandidatePreview = null;
+    const pasteEl = document.getElementById('calendar-candidate-paste');
+    if (pasteEl) pasteEl.value = '';
+    const previewPanel = document.getElementById('calendar-candidate-preview');
+    if (previewPanel) previewPanel.classList.add('hidden');
+    renderCalendarCandidateImportResult(summary, { phase: 'result' });
+    refreshCalendarCandidateViews();
+    if (opts.skipNavigate) {
+      if (saved > 0) {
+        showAppToast(`作業予定に${saved}件保存しました。売上予定を確認してください。`);
+      } else if (opts.showEmptyToast) {
+        showAppToast('保存対象がありませんでした');
+      }
       return;
     }
-    renderCalendarExportGuide(true);
+    if (saved > 0) {
+      navigateAfterAction('calendar-import-save', `作業予定に${saved}件保存しました。売上予定を確認してください。`);
+    } else {
+      showAppToast('保存対象がありませんでした');
+      scrollToTopOrTarget(null);
+    }
+  }
+
+  async function handleCalendarExportLatestClick() {
+    const exportBtn = document.getElementById('btn-calendar-export-latest');
+    if (calendarLocalSyncInFlight) return;
+    calendarLocalSyncInFlight = true;
+    if (exportBtn) exportBtn.disabled = true;
+    renderCalendarExportGuide(false);
+    renderCalendarExportStatus('カレンダーを確認しています…');
+
+    const activeGenerationRef = { value: Date.now() };
+    const generation = activeGenerationRef.value;
+
+    try {
+      if (!CALENDAR_EXPORT_LOCAL_API_URL) {
+        renderCalendarExportGuide(true);
+        renderCalendarExportStatus(
+          'カレンダー連携が起動していません。PCでローカル連携を起動してから、もう一度お試しください。'
+        );
+        return;
+      }
+
+      let health;
+      try {
+        health = await fetchCalendarLocalApi(CALENDAR_LOCAL_API_HEALTH_URL, {
+          method: 'GET',
+          timeoutMs: 8000,
+          generation,
+          activeGenerationRef
+        });
+      } catch (error) {
+        if (error && error.code === 'timeout') {
+          renderCalendarExportStatus(mapCalendarLocalApiError('timeout'));
+          return;
+        }
+        if (error && error.code === 'stale_response') return;
+        renderCalendarExportGuide(true);
+        renderCalendarExportStatus(mapCalendarLocalApiError('not_running'));
+        return;
+      }
+
+      if (!health.res.ok || !health.body || health.body.ok !== true) {
+        renderCalendarExportGuide(true);
+        renderCalendarExportStatus(mapCalendarLocalApiError('not_running'));
+        return;
+      }
+
+      renderCalendarExportStatus('Googleカレンダーから最新予定を取得しています…');
+
+      let sync;
+      try {
+        sync = await fetchCalendarLocalApi(CALENDAR_LOCAL_API_SYNC_URL, {
+          method: 'POST',
+          timeoutMs: CALENDAR_LOCAL_API_TIMEOUT_MS,
+          generation,
+          activeGenerationRef
+        });
+      } catch (error) {
+        if (error && error.code === 'timeout') {
+          renderCalendarExportStatus(mapCalendarLocalApiError('timeout'));
+          return;
+        }
+        if (error && error.code === 'stale_response') return;
+        renderCalendarExportGuide(true);
+        renderCalendarExportStatus(mapCalendarLocalApiError('network'));
+        return;
+      }
+
+      if (!sync.res.ok || !sync.body || sync.body.ok !== true || !sync.body.payload) {
+        const code = sync.body && sync.body.code;
+        renderCalendarExportStatus(mapCalendarLocalApiError(code || 'failed', {
+          code,
+          status: sync.res.status
+        }));
+        return;
+      }
+
+      if (typeof CalendarCandidateBrain === 'undefined') {
+        renderCalendarExportStatus(mapCalendarLocalApiError('parse'));
+        return;
+      }
+
+      let parsed;
+      try {
+        parsed = CalendarCandidateBrain.parseBudilCalendarEventsJson(JSON.stringify(sync.body.payload));
+      } catch (_) {
+        renderCalendarExportStatus(mapCalendarLocalApiError('parse'));
+        return;
+      }
+
+      if ((parsed.errors || []).length) {
+        renderCalendarExportStatus(mapCalendarLocalApiError('parse'));
+        return;
+      }
+      if (parsed.meta && parsed.meta.schemaVersion != null && Number(parsed.meta.schemaVersion) !== 1) {
+        renderCalendarExportStatus(mapCalendarLocalApiError('parse'));
+        return;
+      }
+
+      applyCalendarCandidateParsed(parsed);
+      const preview = lastCalendarCandidatePreview;
+      if (!preview) {
+        renderCalendarExportStatus(mapCalendarLocalApiError('parse'));
+        return;
+      }
+
+      let commitResult;
+      try {
+        commitResult = commitSavableCalendarCandidates(preview, false);
+      } catch (_) {
+        renderCalendarExportStatus(mapCalendarLocalApiError('save'));
+        return;
+      }
+
+      finalizeCalendarCandidateSaveUi(commitResult.summary, commitResult.saved, {
+        skipNavigate: true,
+        showEmptyToast: false
+      });
+
+      const meta = {
+        fetchedAt: (sync.body.meta && sync.body.meta.fetchedAt) || (sync.body.payload && sync.body.payload.fetchedAt) || '',
+        itemCount: sync.body.meta && sync.body.meta.itemCount != null
+          ? sync.body.meta.itemCount
+          : ((sync.body.payload && sync.body.payload.items) || []).length
+      };
+      lastCalendarJsonFileMeta = {
+        fileName: 'local-api:/sync',
+        lastModified: meta.fetchedAt ? Date.parse(meta.fetchedAt) : Date.now(),
+        readCount: meta.itemCount,
+        targetPeriod: formatCalendarJsonTargetPeriod({
+          targetPeriod: (sync.body.meta && sync.body.meta.targetPeriod) || (sync.body.payload && sync.body.payload.targetPeriod)
+        })
+      };
+      renderCalendarJsonFileMeta({ parsed });
+      renderCalendarExportStatus(
+        formatCalendarLocalSyncSuccessMessage(meta, commitResult.summary),
+        'success'
+      );
+    } finally {
+      activeGenerationRef.value = generation + 1;
+      calendarLocalSyncInFlight = false;
+      if (exportBtn) exportBtn.disabled = false;
+    }
   }
 
   function handleCalendarCandidateJsonFile(file) {
@@ -9395,40 +9658,8 @@
   function saveAllCalendarCandidates(force) {
     const preview = lastCalendarCandidatePreview;
     if (!preview || !(preview.items || []).length) return;
-    const past = getCalendarPastRecoveryOptions();
-    const summary = past.enabled
-      ? { readCount: preview.items.length, savedCount: 0, duplicateCount: 0, excludedCount: 0, savableCount: preview.items.length, revenueRegistered: false }
-      : getCalendarFutureImportSummary(preview);
-    const savableItems = past.enabled
-      ? preview.items
-      : preview.items.filter(item => CalendarCandidateBrain.isFutureImportSavable(item, force));
-    let saved = 0;
-    savableItems.forEach(item => {
-      if (!past.enabled && !CalendarCandidateBrain.isFutureImportSavable(item, force)) return;
-      if (item.isDuplicate && !force) return;
-      const payload = CalendarCandidateBrain.createWorkOrderPayload(
-        item.candidate,
-        resolveCalendarCandidateSaveExtras(item, preview)
-      );
-      Storage.addWorkOrder(payload);
-      saved += 1;
-    });
-    summary.savedCount = saved;
-    summary.revenueRegistered = false;
-    lastCalendarCandidateImportResult = summary;
-    lastCalendarCandidatePreview = null;
-    const pasteEl = document.getElementById('calendar-candidate-paste');
-    if (pasteEl) pasteEl.value = '';
-    const previewPanel = document.getElementById('calendar-candidate-preview');
-    if (previewPanel) previewPanel.classList.add('hidden');
-    renderCalendarCandidateImportResult(summary, { phase: 'result' });
-    refreshCalendarCandidateViews();
-    if (saved > 0) {
-      navigateAfterAction('calendar-import-save', `作業予定に${saved}件保存しました。売上予定を確認してください。`);
-    } else {
-      showAppToast('保存対象がありませんでした');
-      scrollToTopOrTarget(null);
-    }
+    const { summary, saved } = commitSavableCalendarCandidates(preview, force);
+    finalizeCalendarCandidateSaveUi(summary, saved);
   }
 
   function refreshCalendarCandidateViews() {
@@ -9675,9 +9906,12 @@
       exportGuide.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-copy-calendar-path]');
         if (!btn) return;
-        const path = btn.dataset.copyCalendarPath === 'json'
+        const kind = btn.dataset.copyCalendarPath;
+        const path = kind === 'json'
           ? CALENDAR_EXPORT_JSON_PATH
-          : CALENDAR_EXPORT_BAT_PATH;
+          : kind === 'local-api'
+            ? 'C:\\dev\\calendar-sync-worker\\start-budil-calendar-local-api.bat'
+            : CALENDAR_EXPORT_BAT_PATH;
         copyText(path).then(() => showAppToast('パスをコピーしました')).catch(() => alert('コピーに失敗しました'));
       });
     }
