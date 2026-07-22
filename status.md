@@ -19,7 +19,9 @@
 - 保存判定は `commitSavableCalendarCandidates` に共通化し、手動「すべて保存」も同経路を再利用（複製しない）
 - 取得件数／新規／重複／対象外／最終取得日時を表示。失敗時は既存データを変更しない
 - 手動JSON取込は非常用として維持
-- worker loopback APIを正本とし、Google Calendarは読取専用。workerは現時点で手動起動（Windows自動起動は次工程）
+- worker loopback APIを正本とし、Google Calendarは読取専用
+- worker自動起動: Windowsタスク `Budil Calendar Local API`（現在ユーザーのログオン時、`127.0.0.1:43821` 限定）。登録/解除は worker の `scripts/register-budil-calendar-local-api-task.ps1` / `unregister-...`。失敗時は `start-budil-calendar-local-api.bat` を手動起動
+- PC再起動後の最終確認（公開Budilの「Googleカレンダーを更新」）はユーザー操作待ち
 - 新規 verify-v41215-calendar-local-api-one-button.mjs 追加
 - 現行合格は引き続き `node scripts/verify-current.mjs`
 

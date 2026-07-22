@@ -26,7 +26,7 @@
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.15 |
 | 最新バージョン | v4.12.15 |
-| v4.12.15 Googleカレンダーを更新（local API 1ボタン化） | 実装中／verify・公開確認後に正式合格を記録 |
+| v4.12.15 Googleカレンダーを更新（local API 1ボタン化） | 工程2公開PNA合格／工程3ログオン自動起動設定済み／PC再起動後の最終確認はユーザー待ち |
 | v4.12.14 作業予定削除 + 売上確定入金日自動入力 | 正式合格本体 `2bbf0a6` / verify-current 73/73 / 公開URLで v4.12.14 確認済み / main push済み |
 | v4.12.13 操作フィードバックの明確化 | 正式合格本体 `f3847f7` / 説明文最終修正 `a725f01` / verify-current 72/72 / 公開URLで v4.12.13 確認済み / main push済み |
 | v4.12.12 売上一覧の単独依頼元ボタン廃止 | 正式合格 commit `a287b7d` / verify-current 71/71 / 公開URLで v4.12.12 確認済み / main push済み |
@@ -86,7 +86,8 @@
 - **正本**: worker `http://127.0.0.1:43821`（`/health` `/sync`）。Google Calendarは読取専用
 - **UI**: 既存 `#btn-calendar-export-latest` を「Googleカレンダーを更新」に配線。手動JSON取込は非常用として維持
 - **保存**: 既存判定を `commitSavableCalendarCandidates` に共通化。複製しない。失敗時は既存データを変更しない
-- **起動**: workerは現時点で手動起動（`start-budil-calendar-local-api.bat`）。Windows自動起動は次工程
+- **起動**: Windowsログオン時にタスク `Budil Calendar Local API` で自動起動（`127.0.0.1:43821`）。登録/解除は worker `scripts/register-budil-calendar-local-api-task.ps1` / `unregister-budil-calendar-local-api-task.ps1`。失敗時は `start-budil-calendar-local-api.bat` を手動起動
+- **注意**: PC再起動後の最終確認はユーザー操作待ち（公開Budilで「Googleカレンダーを更新」）
 - **現行合格**: `node scripts/verify-current.mjs`
 - **新規**: `node scripts/verify-v41215-calendar-local-api-one-button.mjs`
 

@@ -2,6 +2,27 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.15 工程3 Windowsログオン時 Local API 自動起動（2026-07-22）
+
+**日付**: 2026-07-22
+
+**判断内容**:
+- タスク名 `Budil Calendar Local API` を現在ユーザーのログオン時に起動し、公開Budilの「Googleカレンダーを更新」を手動batなしで使えるようにする
+- bind/port は変更せず `127.0.0.1:43821` 固定。管理者権限不要。二重起動はタスク設定 IgnoreNew + アプリ側 port_in_use で防止
+- 既存 `calendar-sync-at-logon`（sync:today）は別目的のため変更・削除しない
+- Google Calendarは読取専用。工程3では POST /sync（実Google読取）を実行しない
+- PC再起動・ログオフによる最終確認はユーザーが行う
+
+**変更ファイル（worker）**:
+- scripts/run-budil-calendar-local-api-hidden.ps1
+- scripts/register-budil-calendar-local-api-task.ps1
+- scripts/unregister-budil-calendar-local-api-task.ps1
+- scripts/verify-budil-calendar-local-api-task.ps1
+- README.md / package.json
+
+**変更ファイル（Budil・文書のみ）**:
+- status.md, handoff.md, decision-log.md
+
 ## v4.12.15 Googleカレンダー更新1ボタン化（Budil接続）（2026-07-22）
 
 **日付**: 2026-07-22
@@ -12,7 +33,7 @@
 - 既存 `#btn-calendar-export-latest` を再利用し、入口を増やさない。手動JSON取込は非常用として残す
 - 保存判定は既存 `isFutureImportSavable` / `saveAllCalendarCandidates` 経路を共通関数化し、複製しない
 - API失敗・parse失敗・timeout時は既存作業予定を変更しない
-- workerは現時点で手動起動。Windows自動起動は次工程
+- workerは Windowsログオン時タスク `Budil Calendar Local API` で自動起動（工程3）。失敗時は手動bat
 
 **変更ファイル**:
 - js/app.js（local API接続、timeout、多重実行防止、共通保存、成功／エラー表示）
