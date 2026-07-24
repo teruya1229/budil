@@ -14940,6 +14940,176 @@
     });
   }
 
+  /* ── 広告番頭連携（共通JSON） ── */
+  let adBantouImportCache = null;
+  let adBantouPendingOverwrite = null;
+
+  function showAdBantouMessage(type, text) {
+    const el = document.getElementById('ad-bantou-import-message');
+    if (!el) return;
+    el.classList.remove('hidden');
+    el.style.background = type === 'error' ? '#fef2f2' : (type === 'warning' ? '#fffbeb' : '#ecfdf5');
+    el.style.color = type === 'error' ? '#b91c1c' : (type === 'warning' ? '#b45309' : '#057a55');
+    el.style.padding = '10px 12px';
+    el.style.borderRadius = '8px';
+    el.style.marginBottom = '10px';
+    el.textContent = text || '';
+  }
+
+  function hideAdBantouDupDialog() {
+    const el = document.getElementById('ad-bantou-dup-dialog');
+    if (el) el.classList.add('hidden');
+    adBantouPendingOverwrite = null;
+  }
+
+  function clearAdBantouPreview() {
+    adBantouImportCache = null;
+    hideAdBantouDupDialog();
+    const preview = document.getElementById('ad-bantou-import-preview');
+    const body = document.getElementById('ad-bantou-preview-body');
+    const clearBtn = document.getElementById('btn-ad-bantou-clear');
+    if (preview) preview.classList.add('hidden');
+    if (body) body.innerHTML = '';
+    if (clearBtn) clearBtn.disabled = true;
+  }
+
+  function renderAdBantouMonthSummary() {
+    const summaryEl = document.getElementById('ad-bantou-month-summary');
+    const listEl = document.getElementById('ad-bantou-records-list');
+    if (!summaryEl || typeof AdBridge === 'undefined' || typeof Storage === 'undefined') return;
+    const records = Storage.getAdPerformanceRecords();
+    const summary = AdBridge.summarizeMonth(records);
+    const cards = [
+      ['今月の広告費', AdBridge.formatMetric(summary.cost, 'yen')],
+      ['今月の表示回数', AdBridge.formatMetric(summary.impressions, 'int')],
+      ['今月のクリック数', AdBridge.formatMetric(summary.clicks, 'int')],
+      ['今月の問い合わせ', AdBridge.formatMetric(summary.inquiries, 'int')],
+      ['今月の成約', AdBridge.formatMetric(summary.contracts, 'int')],
+      ['今月の広告経由売上', AdBridge.formatMetric(summary.sales, 'yen')],
+      ['CPA', AdBridge.formatMetric(summary.cpa, 'yen')],
+      ['成約単価', AdBridge.formatMetric(summary.costPerContract, 'yen')],
+      ['ROAS', AdBridge.formatMetric(summary.roas, 'ratio')]
+    ];
+    summaryEl.innerHTML = cards.map(([label, value]) =>
+      `<div class="analytics-kpi-item"><div class="analytics-kpi-label">${esc(label)}</div><div class="analytics-kpi-value">${esc(value)}</div></div>`
+    ).join('');
+    if (listEl) {
+      const monthRecords = records
+        .filter(r => r && String(r.date || '').slice(0, 7) === summary.month)
+        .slice(0, 20);
+      if (!monthRecords.length) {
+        listEl.innerHTML = '<p class="placeholder-text">今月の広告実績はまだありません。</p>';
+      } else {
+        listEl.innerHTML = '<ul class="analytics-records-list">' + monthRecords.map(r =>
+          `<li><strong>${esc(r.date)}</strong> ${esc(r.campaignName || '')} / 費用 ${esc(AdBridge.formatMetric(r.cost, 'yen'))} / クリック ${esc(AdBridge.formatMetric(r.clicks, 'int'))}` +
+          ` <button type="button" class="btn btn-sm btn-secondary" data-adperf-delete="${esc(r.recordId)}">削除</button></li>`
+        ).join('') + '</ul>';
+        listEl.querySelectorAll('[data-adperf-delete]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-adperf-delete');
+            if (!id) return;
+            if (!confirm('この広告実績を削除しますか？（売上データには影響しません）')) return;
+            Storage.deleteAdPerformanceRecord(id);
+            showAdBantouMessage('success', '広告実績を削除しました。');
+            renderAdBantouMonthSummary();
+          });
+        });
+      }
+    }
+  }
+
+  function renderAdBantouPreview(records) {
+    const preview = document.getElementById('ad-bantou-import-preview');
+    const body = document.getElementById('ad-bantou-preview-body');
+    const clearBtn = document.getElementById('btn-ad-bantou-clear');
+    if (!preview || !body || typeof AdBridge === 'undefined') return;
+    body.innerHTML = records.map((rec, idx) => {
+      const rows = AdBridge.previewRows(rec).map(([k, v]) =>
+        `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`
+      ).join('');
+      return `<article class="browser-bantou-preview-block" style="margin-bottom:12px;padding:12px;border:1px solid #e5e7eb;border-radius:8px;">` +
+        `<p><strong>${idx + 1}件目</strong> <code>${esc(rec.recordId || '')}</code></p>` +
+        `<dl class="browser-bantou-preview-kpi" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">${rows}</dl>` +
+        `</article>`;
+    }).join('');
+    preview.classList.remove('hidden');
+    if (clearBtn) clearBtn.disabled = false;
+  }
+
+  function loadAdBantouRaw(raw, importSource) {
+    if (typeof AdBridge === 'undefined') {
+      showAdBantouMessage('error', 'AdBridge が読み込まれていません。');
+      return;
+    }
+    const parsed = AdBridge.parseCommonJson(raw);
+    if (!parsed.ok) {
+      clearAdBantouPreview();
+      showAdBantouMessage('error', parsed.error);
+      return;
+    }
+    adBantouImportCache = {
+      records: parsed.records,
+      importSource: importSource || 'clipboard'
+    };
+    hideAdBantouDupDialog();
+    renderAdBantouPreview(parsed.records);
+    showAdBantouMessage('success', parsed.records.length + '件を読み込みました。内容を確認して「確定して保存」を押してください。');
+  }
+
+  async function importAdBantouFromClipboard() {
+    if (!(navigator.clipboard && navigator.clipboard.readText)) {
+      showAdBantouMessage('warning', 'このブラウザではクリップボード読込に非対応です。JSONファイル取込を使ってください。');
+      return;
+    }
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text || !String(text).trim()) {
+        showAdBantouMessage('error', 'クリップボードが空です。広告番頭で「Budil用にコピー」を実行してください。');
+        return;
+      }
+      loadAdBantouRaw(String(text).trim(), 'clipboard');
+    } catch (err) {
+      showAdBantouMessage('error', 'クリップボードを読めませんでした。ブラウザの権限を確認するか、JSONファイル取込を使ってください。');
+    }
+  }
+
+  function commitAdBantouImport(overwrite) {
+    if (!adBantouImportCache || !adBantouImportCache.records || !adBantouImportCache.records.length) {
+      showAdBantouMessage('error', '保存するプレビューがありません。');
+      return;
+    }
+    const source = adBantouImportCache.importSource || 'clipboard';
+    const records = adBantouImportCache.records;
+    if (!overwrite) {
+      const duplicates = records.filter(rec => Storage.findAdPerformanceByRecordId(rec.recordId));
+      if (duplicates.length) {
+        adBantouPendingOverwrite = true;
+        const dupEl = document.getElementById('ad-bantou-dup-dialog');
+        const dupText = document.getElementById('ad-bantou-dup-text');
+        if (dupText) {
+          dupText.textContent = '同じ日付・キャンペーンの広告データが既にあります（' + duplicates.length + '件）。更新するかキャンセルしてください。';
+        }
+        if (dupEl) dupEl.classList.remove('hidden');
+        showAdBantouMessage('warning', '同じ日付・キャンペーンの広告データが既にあります');
+        return;
+      }
+    }
+    let created = 0;
+    let updated = 0;
+    records.forEach(rec => {
+      const payload = { ...rec, importSource: source };
+      const result = Storage.upsertAdPerformanceRecord(payload, { overwrite: !!overwrite });
+      if (result.ok && result.created) created += 1;
+      else if (result.ok && result.updated) updated += 1;
+    });
+    clearAdBantouPreview();
+    renderAdBantouMonthSummary();
+    const parts = [];
+    if (created) parts.push('新規 ' + created + '件');
+    if (updated) parts.push('更新 ' + updated + '件');
+    showAdBantouMessage('success', '広告実績を保存しました（' + (parts.join(' / ') || '変更なし') + '）。');
+  }
+
   function renderAnalyticsView() {
     try {
       const policyEl = document.getElementById('analytics-policy-text');
@@ -14960,6 +15130,7 @@
       renderAnalyticsPickupBridge(ctx);
       renderBrowserBantouPrompt();
       renderExternalCheckHistory('analytics-check-history');
+      renderAdBantouMonthSummary();
     } catch (err) {
       console.error('[Budil] renderAnalyticsView', err);
     }
@@ -15000,6 +15171,63 @@
     if (sampleBtn && !sampleBtn.dataset.bound) {
       sampleBtn.dataset.bound = '1';
       sampleBtn.addEventListener('click', fillBrowserBantouSample);
+    }
+
+    const adClipBtn = document.getElementById('btn-ad-bantou-clipboard');
+    if (adClipBtn && !adClipBtn.dataset.bound) {
+      adClipBtn.dataset.bound = '1';
+      adClipBtn.addEventListener('click', importAdBantouFromClipboard);
+    }
+    const adFileBtn = document.getElementById('btn-ad-bantou-file');
+    const adFileInput = document.getElementById('ad-bantou-file-input');
+    if (adFileBtn && adFileInput && !adFileBtn.dataset.bound) {
+      adFileBtn.dataset.bound = '1';
+      adFileBtn.addEventListener('click', () => {
+        adFileInput.value = '';
+        adFileInput.click();
+      });
+      adFileInput.addEventListener('change', () => {
+        const file = adFileInput.files && adFileInput.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => loadAdBantouRaw(String(reader.result || ''), 'file');
+        reader.onerror = () => showAdBantouMessage('error', 'ファイルの読み込みに失敗しました。');
+        reader.readAsText(file, 'UTF-8');
+      });
+    }
+    const adConfirmBtn = document.getElementById('btn-ad-bantou-confirm');
+    if (adConfirmBtn && !adConfirmBtn.dataset.bound) {
+      adConfirmBtn.dataset.bound = '1';
+      adConfirmBtn.addEventListener('click', () => commitAdBantouImport(false));
+    }
+    const adCancelBtn = document.getElementById('btn-ad-bantou-cancel');
+    if (adCancelBtn && !adCancelBtn.dataset.bound) {
+      adCancelBtn.dataset.bound = '1';
+      adCancelBtn.addEventListener('click', () => {
+        clearAdBantouPreview();
+        showAdBantouMessage('warning', '取込をキャンセルしました。');
+      });
+    }
+    const adClearBtn = document.getElementById('btn-ad-bantou-clear');
+    if (adClearBtn && !adClearBtn.dataset.bound) {
+      adClearBtn.dataset.bound = '1';
+      adClearBtn.addEventListener('click', () => {
+        clearAdBantouPreview();
+        showAdBantouMessage('warning', 'プレビューをクリアしました。');
+      });
+    }
+    const adDupUpdateBtn = document.getElementById('btn-ad-bantou-dup-update');
+    if (adDupUpdateBtn && !adDupUpdateBtn.dataset.bound) {
+      adDupUpdateBtn.dataset.bound = '1';
+      adDupUpdateBtn.addEventListener('click', () => commitAdBantouImport(true));
+    }
+    const adDupCancelBtn = document.getElementById('btn-ad-bantou-dup-cancel');
+    if (adDupCancelBtn && !adDupCancelBtn.dataset.bound) {
+      adDupCancelBtn.dataset.bound = '1';
+      adDupCancelBtn.addEventListener('click', () => {
+        hideAdBantouDupDialog();
+        showAdBantouMessage('warning', '更新をキャンセルしました。既存データは変更していません。');
+      });
     }
   }
 

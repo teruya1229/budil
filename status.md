@@ -1,6 +1,6 @@
 ﻿# Budil status
 
-## 正式な現行verify環境（v4.12.15）
+## 正式な現行verify環境（v4.12.16）
 
 - **正式環境**: Budil 単独 clone ではなく、親階層に sibling の `calendar-sync-worker` がある開発環境
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
@@ -8,6 +8,18 @@
 - **禁止**: Budil root での npm install
 - **現行合格コマンド**: `node scripts/verify-current.mjs`（74本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.16 実装内容（広告番頭連携・最短MVP）
+
+- 表示バージョンを v4.12.16 に更新
+- index.html の主要 JS/CSS cache buster を v4.12.16 に統一
+- 集客チェック内に「広告番頭連携」を追加（左メニュー新規追加なし）
+- クリップボード取込・JSONファイル取込・保存前プレビュー
+- recordId による重複防止・明示更新
+- 今月の広告集計（JST基準の月次判定）
+- 保存先は `budil_ad_performance`（売上・利益・GA4・解析履歴とは分離）
+- バックアップ・復元キーに `budil_ad_performance` を追加
+- 現行合格は引き続き `node scripts/verify-current.mjs`
 
 ## v4.12.15 実装内容（Googleカレンダー更新1ボタン化・Budil接続）
 

@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.12.15',
+  BUDIL_VERSION: 'v4.12.16',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -24,6 +24,7 @@ const Storage = {
     EXPENSE_RECORDS: 'budil_expense_records',
     ANALYTICS_RECORDS: 'budil_analytics_records',
     ANALYTICS_SNAPSHOTS: 'budil_analytics_snapshots',
+    AD_PERFORMANCE: 'budil_ad_performance',
     EXTERNAL_CHECK_REPORTS: 'budil_external_check_reports',
     ACTION_CANDIDATES: 'budil_action_candidates',
     ACTION_CANDIDATE_STATES: 'budil_action_candidate_states',
@@ -1645,6 +1646,64 @@ const Storage = {
     return this.getAnalyticsSnapshots().find(s =>
       s && s.rawTextHash === hash && (!period || String(s.periodLabel || '').trim() === period)
     ) || null;
+  },
+
+  getAdPerformanceRecords() {
+    const raw = this.get(this.KEYS.AD_PERFORMANCE, []);
+    return Array.isArray(raw) ? raw : [];
+  },
+
+  saveAdPerformanceRecords(list) {
+    this.set(this.KEYS.AD_PERFORMANCE, Array.isArray(list) ? list : []);
+  },
+
+  findAdPerformanceByRecordId(recordId) {
+    const id = String(recordId || '').trim();
+    if (!id) return null;
+    return this.getAdPerformanceRecords().find(r => r && String(r.recordId || '') === id) || null;
+  },
+
+  upsertAdPerformanceRecord(item, { overwrite = false } = {}) {
+    const list = this.getAdPerformanceRecords();
+    const now = new Date().toISOString();
+    const normalized = typeof AdBridge !== 'undefined'
+      ? AdBridge.normalizeForStore(item, item && item.importSource)
+      : { ...(item || {}), updatedAt: now, importedAt: (item && item.importedAt) || now };
+    const recordId = String(normalized.recordId || '').trim();
+    if (!recordId) return { ok: false, error: 'recordId がありません。' };
+    const idx = list.findIndex(r => r && String(r.recordId || '') === recordId);
+    if (idx >= 0) {
+      if (!overwrite) {
+        return { ok: false, duplicate: true, existing: list[idx], record: normalized };
+      }
+      const prev = list[idx];
+      const updated = {
+        ...normalized,
+        id: prev.id || ('adperf-' + this.generateId()),
+        importedAt: prev.importedAt || normalized.importedAt || now,
+        updatedAt: now
+      };
+      list[idx] = updated;
+      this.saveAdPerformanceRecords(list);
+      return { ok: true, updated: true, record: updated };
+    }
+    const created = {
+      ...normalized,
+      id: 'adperf-' + this.generateId(),
+      importedAt: normalized.importedAt || now,
+      updatedAt: now
+    };
+    list.unshift(created);
+    this.saveAdPerformanceRecords(list);
+    return { ok: true, created: true, record: created };
+  },
+
+  deleteAdPerformanceRecord(idOrRecordId) {
+    const key = String(idOrRecordId || '').trim();
+    if (!key) return;
+    this.saveAdPerformanceRecords(this.getAdPerformanceRecords().filter(r =>
+      r && r.id !== key && String(r.recordId || '') !== key
+    ));
   },
 
   getMonthlyResults() {

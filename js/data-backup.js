@@ -3,7 +3,7 @@
  */
 const DataBackup = {
   VERSION: '4.0',
-  APP_VERSION: 'v4.12.15',
+  APP_VERSION: 'v4.12.16',
 
   PAYMENT_FIELDS: [
     'paymentMethod',
@@ -34,6 +34,7 @@ const DataBackup = {
     'budil_expense_records',
     'budil_analytics_records',
     'budil_analytics_snapshots',
+    'budil_ad_performance',
     'budil_external_check_reports',
     'budil_action_candidates',
     'budil_action_candidate_states',

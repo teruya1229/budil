@@ -2,6 +2,26 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.16 広告番頭連携・最短MVP（2026-07-24）
+
+**日付**: 2026-07-24
+
+**判断内容**:
+- 広告番頭とBudilを物理統合せず、共通JSON（clipboard / ファイル）で最短連携する
+- 入口は既存「集客チェック」内のみ。左メニューや独立画面は追加しない
+- 広告実績は `budil_ad_performance` に分離し、売上・利益・GA4・解析履歴へ混ぜない
+- 重複は recordId（日付__campaignKey__adType）で判定し、更新は明示操作のみ
+- 月次集計は JST 基準。バックアップ／復元対象に広告実績キーを含める
+
+**変更ファイル**:
+- index.html（広告番頭連携UI、表示バージョン・cache buster）
+- js/ad-bridge.js（新規：共通JSON検証・正規化・月次集計）
+- js/app.js（取込・プレビュー・保存・重複更新UI）
+- js/storage.js / js/data-backup.js（広告実績CRUD・バックアップキー・バージョン）
+- status.md, handoff.md, decision-log.md
+
+**現行合格コマンド**: `node scripts/verify-current.mjs`
+
 ## v4.12.15 工程3 Windowsログオン時 Local API 自動起動（2026-07-22）
 
 **日付**: 2026-07-22
