@@ -111,7 +111,8 @@ ode scripts/verify-v41217-marketing-one-button.mjs
 - **UI**: 既存 `#btn-calendar-export-latest` を「Googleカレンダーを更新」に配線。手動JSON取込は非常用として維持
 - **保存**: 既存判定を `commitSavableCalendarCandidates` に共通化。複製しない。失敗時は既存データを変更しない
 - **起動**: Windowsログオン時にタスク `Budil Calendar Local API` で自動起動（`127.0.0.1:43821`）。登録/解除は worker `scripts/register-budil-calendar-local-api-task.ps1` / `unregister-budil-calendar-local-api-task.ps1`。失敗時は `start-budil-calendar-local-api.bat` を手動起動
-- **注意**: PC再起動後の最終確認はユーザー操作待ち（公開Budilで「Googleカレンダーを更新」）
+- **Browser番頭**: タスク `Browser Bantou Canonical Chrome` でログオン時自動起動（正本profile / `127.0.0.1:9222`）。集客API READYの前提
+- **注意**: PC再起動後の最終確認はユーザー操作待ち（公開Budilで「Googleカレンダーを更新」／集客取得）
 - **現行合格**: `node scripts/verify-current.mjs`
 - **新規**: `node scripts/verify-v41215-calendar-local-api-one-button.mjs`
 

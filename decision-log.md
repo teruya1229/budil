@@ -45,6 +45,23 @@ ode scripts/verify-current.mjs
 
 **現行合格コマンド**: `node scripts/verify-current.mjs`
 
+## Browser番頭 Windowsログオン自動起動（2026-07-24）
+
+**日付**: 2026-07-24
+
+**判断内容**:
+- 集客Local API（43822）は起動済みでも、READYには Browser番頭 CDP（9222）が必要
+- タスク名 `Browser Bantou Canonical Chrome` を現在ユーザーのログオン時（約15秒遅延）に起動し、既存 `browser-ai.ps1 start` のみ再利用する
+- 正本profile `C:\dev\chrome-mcp-profile` / bind `127.0.0.1:9222` 固定。管理者権限なし。CONFLICT時は起動しない
+- Budil本体コード・バージョンは変更しない。PC再起動後の最終確認はユーザー操作待ち
+
+**変更ファイル（browser-bantou）**:
+- scripts/run-browser-bantou-at-logon.ps1 等
+- MARKETING_SYNC.md / RUNBOOK.md / PROJECT_STATE.md
+
+**変更ファイル（Budil・文書のみ）**:
+- status.md, handoff.md, decision-log.md
+
 ## v4.12.15 工程3 Windowsログオン時 Local API 自動起動（2026-07-22）
 
 **日付**: 2026-07-22

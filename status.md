@@ -48,7 +48,8 @@ ode scripts/verify-current.mjs
 - 手動JSON取込は非常用として維持
 - worker loopback APIを正本とし、Google Calendarは読取専用
 - worker自動起動: Windowsタスク `Budil Calendar Local API`（現在ユーザーのログオン時、`127.0.0.1:43821` 限定）。登録/解除は worker の `scripts/register-budil-calendar-local-api-task.ps1` / `unregister-...`。失敗時は `start-budil-calendar-local-api.bat` を手動起動
-- PC再起動後の最終確認（公開Budilの「Googleカレンダーを更新」）はユーザー操作待ち
+- Browser番頭自動起動: Windowsタスク `Browser Bantou Canonical Chrome`（ログオン時、正本profile / CDP `127.0.0.1:9222`）。集客API READYの前提。登録は browser-bantou の `scripts/register-browser-bantou-at-logon-task.ps1`
+- PC再起動後の最終確認（公開Budilの「Googleカレンダーを更新」／集客1ボタン）はユーザー操作待ち
 - 新規 verify-v41215-calendar-local-api-one-button.mjs 追加
 - 現行合格は引き続き `node scripts/verify-current.mjs`
 
