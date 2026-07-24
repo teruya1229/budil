@@ -17,16 +17,17 @@
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` の依存関係（googleapis 等）。依存は `hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（74本）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（75本）
 - **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
 
 ## 現在の最新状態
 
 | 項目 | 値 |
 |------|-----|
-| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.16 |
-| 最新バージョン | v4.12.16 |
-| v4.12.16 広告番頭連携・最短MVP | 実装・受け入れA判定済み／commit待ち（push前） |
+| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.17 |
+| 最新バージョン | v4.12.17 |
+| v4.12.17 集客チェック1ボタン取得 | 実装・公開予定／Browser番頭ローカルcommit対象 |
+| v4.12.16 広告番頭連携・最短MVP | 実装・受け入れA判定済み |
 | v4.12.15 Googleカレンダーを更新（local API 1ボタン化） | 工程2公開PNA合格／工程3ログオン自動起動設定済み／PC再起動後の最終確認はユーザー待ち |
 | v4.12.14 作業予定削除 + 売上確定入金日自動入力 | 正式合格本体 `2bbf0a6` / verify-current 73/73 / 公開URLで v4.12.14 確認済み / main push済み |
 | v4.12.13 操作フィードバックの明確化 | 正式合格本体 `f3847f7` / 説明文最終修正 `a725f01` / verify-current 72/72 / 公開URLで v4.12.13 確認済み / main push済み |
@@ -80,6 +81,18 @@
 | v4.10.23 確定売上定義統一commit | 9a6d161 |
 | v4.10.22 本体修正commit | ee8eec3 |
 | ブランチ | `main` push 済み |
+
+## v4.12.17 集客チェック1ボタン取得（2026-07-24）
+
+- **目的**: 集客チェックから1ボタンで Google広告・GA4・Search Console を取得し保存する
+- **入口**: 集客チェック内「集客データを取得して保存」（手動取込は非常用）
+- **取得**: Browser番頭 http://127.0.0.1:43822。対象キャンペーン完全一致のみ
+- **表示**: 検索語句、GA4クリック内訳、Search Console、API READY、自動起動状態
+- **保存**: 同日再取得は upsert。0 / 未取得 / 失敗を分離。売上・利益・受付・予定へ非干渉
+- **起動**: Windowsログオン時タスク Budil Marketing Local API（PC再起動後の最終確認はユーザー待ち）
+- **現行合格**: 
+ode scripts/verify-current.mjs / 
+ode scripts/verify-v41217-marketing-one-button.mjs
 
 ## v4.12.16 広告番頭連携・最短MVP（2026-07-24）
 

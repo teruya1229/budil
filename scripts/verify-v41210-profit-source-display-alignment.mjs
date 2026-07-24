@@ -1,5 +1,5 @@
 /**
- * Budil v4.12.15 - profit source display aligned with revenue analysis.
+ * Budil v4.12.17 - profit source display aligned with revenue analysis.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/profit-brain.js', 'js/revenue-summary-brain.js', 'js/rev
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.12.15 profit-source-display-alignment ==');
+console.log('== v4.12.17 profit-source-display-alignment ==');
 
 const indexHtml = load('index.html');
 const storageJs = load('js/storage.js');
@@ -30,15 +30,15 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.15'), 'index.html should show v4.12.15');
-assert(indexHtml.includes('js/app.js?v=4.12.15'), 'app.js cache buster should be v4.12.15');
-assert(indexHtml.includes('js/profit-brain.js?v=4.12.15'), 'profit-brain cache buster should be v4.12.15');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.15'"), 'storage version should be v4.12.15');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.15'"), 'data-backup version should be v4.12.15');
+assert(indexHtml.includes('v4.12.17'), 'index.html should show v4.12.17');
+assert(indexHtml.includes('js/app.js?v=4.12.17'), 'app.js cache buster should be v4.12.17');
+assert(indexHtml.includes('js/profit-brain.js?v=4.12.17'), 'profit-brain cache buster should be v4.12.17');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.17'"), 'storage version should be v4.12.17');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.17'"), 'data-backup version should be v4.12.17');
 assert(!indexHtml.includes('?v=4.12.9'), 'old cache buster v4.12.9 should be gone');
-assert(statusMd.includes('v4.12.15'), 'status.md should document v4.12.15');
-assert(handoffMd.includes('v4.12.15'), 'handoff.md should document v4.12.15');
-assert(decisionLog.includes('v4.12.15'), 'decision-log.md should record v4.12.15');
+assert(statusMd.includes('v4.12.17'), 'status.md should document v4.12.17');
+assert(handoffMd.includes('v4.12.17'), 'handoff.md should document v4.12.17');
+assert(decisionLog.includes('v4.12.17'), 'decision-log.md should record v4.12.17');
 
 console.log('== wiring ==');
 assert(profitJs.includes('resolveRevenueSourceLabel'), 'ProfitBrain should expose resolveRevenueSourceLabel');
@@ -185,4 +185,4 @@ console.log('== localStorage / record.source untouched ==');
 assert(!profitJs.includes('localStorage'), 'profit-brain must not touch localStorage');
 assert(!profitJs.includes('record.source ='), 'profit-brain must not rewrite record.source');
 
-console.log('\nAll v4.12.15 profit-source-display-alignment checks passed.');
+console.log('\nAll v4.12.17 profit-source-display-alignment checks passed.');

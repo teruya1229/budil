@@ -28,6 +28,15 @@ const AnalyticsBrain = {
     low: '優先度低め'
   },
 
+  normalizeMetricValue(item, key, fallback = 0) {
+    const value = item ? item[key] : null;
+    if (item && item.importSource === 'browser-bantou' && (value === null || value === undefined || value === '')) {
+      return null;
+    }
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  },
+
   normalizeRecord(raw) {
     const item = raw && typeof raw === 'object' ? { ...raw } : {};
     const queries = item.searchQueries;
@@ -44,15 +53,15 @@ const AnalyticsBrain = {
       url: item.url || '',
       pageType: this.PAGE_TYPES.includes(item.pageType) ? item.pageType : (item.pageType || 'その他'),
       serviceTag: this.SERVICE_TAGS.includes(item.serviceTag) ? item.serviceTag : (item.serviceTag || 'その他'),
-      views: Number(item.views) || 0,
-      activeUsers: Number(item.activeUsers) || 0,
-      avgEngagementSeconds: Number(item.avgEngagementSeconds) || 0,
-      eventCount: Number(item.eventCount) || 0,
-      bounceRate: item.bounceRate != null ? Number(item.bounceRate) : 0,
-      ctaClicks: Number(item.ctaClicks) || 0,
-      lineClicks: Number(item.lineClicks) || 0,
-      bookingClicks: Number(item.bookingClicks) || 0,
-      phoneClicks: Number(item.phoneClicks) || 0,
+      views: this.normalizeMetricValue(item, 'views'),
+      activeUsers: this.normalizeMetricValue(item, 'activeUsers'),
+      avgEngagementSeconds: this.normalizeMetricValue(item, 'avgEngagementSeconds'),
+      eventCount: this.normalizeMetricValue(item, 'eventCount'),
+      bounceRate: this.normalizeMetricValue(item, 'bounceRate'),
+      ctaClicks: this.normalizeMetricValue(item, 'ctaClicks'),
+      lineClicks: this.normalizeMetricValue(item, 'lineClicks'),
+      bookingClicks: this.normalizeMetricValue(item, 'bookingClicks'),
+      phoneClicks: this.normalizeMetricValue(item, 'phoneClicks'),
       searchQueriesText,
       searchQueries: Array.isArray(item.searchQueries) ? item.searchQueries : [],
       sourceMemo: item.sourceMemo || '',

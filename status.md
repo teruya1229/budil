@@ -1,13 +1,28 @@
 ﻿# Budil status
 
-## 正式な現行verify環境（v4.12.16）
+## 正式な現行verify環境（v4.12.17）
 
-- **正式環境**: Budil 単独 clone ではなく、親階層に sibling の `calendar-sync-worker` がある開発環境
-- **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
-- **必須**: `hub/functions` 側の依存関係（googleapis 等）。`hub/functions` で npm install
+- **正式環境**: Budil 単独 clone ではなく、親階層に sibling の calendar-sync-worker がある開発環境
+- **必須**: ../calendar-sync-worker/run-budil-calendar-export.bat
+- **必須**: hub/functions 側の依存関係（googleapis 等）。hub/functions で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（74本。省略・除外・緩和なし）
+- **現行合格コマンド**: 
+ode scripts/verify-current.mjs（75本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.17 実装内容（集客チェック1ボタン取得）
+
+- 表示バージョンを v4.12.17 に更新
+- index.html の主要 JS/CSS cache buster を v4.12.17 に統一
+- 集客チェックに「集客データを取得して保存」1ボタンを追加（Browser番頭ローカルAPI連携）
+- Google広告・GA4・Search Consoleを取得（対象キャンペーンは完全一致照合）
+- Google広告検索語句、GA4 CTA・LINE・予約・電話クリック内訳を表示
+- 同日再取得は upsert（重複防止）。0 / 未取得 / 失敗を分離表示
+- 集客APIのログオン時自動起動状態と API READY を表示
+- スマホ表示・コントラスト改善。手動取込は非常用として維持
+- 新規 verify-v41217-marketing-one-button.mjs 追加
+- 現行合格は引き続き 
+ode scripts/verify-current.mjs
 
 ## v4.12.16 実装内容（広告番頭連携・最短MVP）
 

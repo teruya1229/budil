@@ -7051,11 +7051,356 @@ body {
 }
 
 .browser-bantou-preview {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1rem;
+  opacity: 1;
+}
+
+/* v4.12.17 集客チェック one-button Browser番頭連携 */
+.card-marketing-auto-sync {
+  border: 2px solid var(--primary);
+  background:
+    linear-gradient(135deg, rgba(59, 130, 246, 0.12), transparent 55%),
+    var(--bg-card);
+  box-shadow: 0 0 24px rgba(59, 130, 246, 0.12);
+}
+
+.marketing-auto-sync-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.marketing-auto-sync-header h2 {
+  margin-bottom: 0.4rem;
+  font-size: 1.2rem;
+}
+
+.marketing-auto-sync-eyebrow {
+  margin: 0 0 0.25rem;
+  color: #93c5fd;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.marketing-auto-sync-button {
+  flex: 0 0 auto;
+  min-height: 52px;
+  padding: 0.8rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 700;
+  white-space: normal;
+}
+
+.marketing-auto-sync-button[aria-busy="true"] {
+  cursor: wait;
+}
+
+.marketing-auto-progress {
+  margin: 1rem 0;
+}
+
+.marketing-auto-progress-bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.marketing-auto-progress-bar span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ai-gradient);
+  transition: width 0.25s ease;
+}
+
+.marketing-auto-progress p {
+  margin: 0.4rem 0 0;
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.marketing-auto-source-status,
+.marketing-auto-metric-grid {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.marketing-auto-source-status,
+.marketing-auto-metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.marketing-source-card,
+.marketing-auto-metric-grid > div {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text);
+}
+
+.marketing-source-card span,
+.marketing-auto-metric-grid span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.marketing-source-card strong,
+.marketing-auto-metric-grid strong {
+  display: block;
+  margin: 0.15rem 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.marketing-source-card small {
+  display: block;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.marketing-source-card.is-success {
+  border-color: var(--accent);
+}
+
+.marketing-source-card.is-partial {
+  border-color: var(--warning);
+}
+
+.marketing-source-card.is-error {
+  border-color: var(--danger);
+}
+
+.marketing-auto-last-result,
+.marketing-auto-save-result,
+.marketing-auto-summary {
+  margin-top: 0.85rem;
+  padding: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text);
+}
+
+.marketing-auto-last-result p,
+.marketing-auto-save-result p,
+.marketing-auto-insights p {
+  margin: 0.2rem 0;
+  color: var(--text);
+}
+
+.marketing-auto-save-result h3,
+.marketing-auto-summary h3 {
+  margin: 0 0 0.55rem;
+  color: var(--text);
+  font-size: 0.96rem;
+}
+
+.marketing-save-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.marketing-save-grid span {
+  padding: 0.45rem;
+  border-radius: 6px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.marketing-save-grid strong {
+  color: var(--text);
+}
+
+.marketing-auto-insights {
+  margin-top: 0.7rem;
+}
+
+.marketing-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.7rem;
+}
+
+.marketing-detail-grid section {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text);
+}
+
+.marketing-detail-grid h4 {
+  margin: 0 0 0.45rem;
+  color: var(--text);
+}
+
+.marketing-detail-grid p {
+  margin: 0.25rem 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.marketing-auto-insights ul,
+.marketing-auto-save-result ul {
+  margin: 0.45rem 0 0;
+  padding-left: 1.2rem;
+  color: var(--text);
+}
+
+.marketing-manual-tools {
+  padding: 0;
+}
+
+.marketing-manual-tools > summary {
+  padding: 1rem 1.25rem;
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.marketing-manual-tools-note {
+  padding: 0 1.25rem 0.75rem;
+  color: var(--text-muted);
+}
+
+#marketing-manual-tools-body {
+  padding: 0 1rem 1rem;
+}
+
+#marketing-manual-tools-body > .card {
+  margin-bottom: 0.8rem;
+  padding: 1rem;
+  background: var(--bg-input);
+}
+
+.card-ad-bantou-import .browser-bantou-preview,
+.card-ad-bantou-import .browser-bantou-preview *,
+.ad-performance-preview-card,
+.ad-performance-preview-card * {
+  opacity: 1 !important;
+}
+
+.card-ad-bantou-import .browser-bantou-preview h3 {
+  color: var(--text);
+}
+
+.ad-performance-preview-card {
+  margin-bottom: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text);
+}
+
+.ad-performance-preview-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-bottom: 0.7rem;
+}
+
+.ad-performance-preview-header strong {
+  color: var(--text);
+}
+
+.ad-performance-preview-header code {
+  max-width: 75%;
+  color: var(--primary);
+  font-size: 0.74rem;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.ad-performance-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.ad-preview-metric {
+  min-width: 0;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-input);
+}
+
+.ad-preview-metric dt {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.ad-preview-metric dd {
+  margin: 0.15rem 0 0;
+  color: var(--text);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.ad-preview-metric.is-missing {
+  border-style: dashed;
+}
+
+.ad-preview-metric.is-missing dd {
+  color: var(--warning);
+}
+
+.ad-preview-metric.is-error dd {
+  color: var(--danger);
+}
+
+@media (max-width: 600px) {
+  .marketing-auto-sync-header {
+    display: grid;
+  }
+
+  .marketing-auto-sync-button {
+    width: 100%;
+  }
+
+  .marketing-auto-source-status,
+  .marketing-auto-metric-grid,
+  .marketing-detail-grid,
+  .marketing-save-grid,
+  .ad-performance-preview-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ad-performance-preview-header {
+    display: grid;
+  }
+
+  .ad-performance-preview-header code {
+    max-width: 100%;
+  }
+
+  .card-marketing-auto-sync,
+  .marketing-manual-tools > summary,
+  #marketing-manual-tools-body {
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+  }
 }
 
 .browser-bantou-preview-summary {

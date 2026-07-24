@@ -2,6 +2,29 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.17 集客チェック1ボタン取得（2026-07-24）
+
+**日付**: 2026-07-24
+
+**判断内容**:
+- 集客チェックの主操作を「集客データを取得して保存」1ボタンに据える
+- 取得は Browser番頭ローカルAPI（127.0.0.1:43822）経由。広告番頭リポジトリは変更しない
+- Google広告は対象キャンペーン名の完全一致のみ許可。旧キャンペーンは取得しない
+- Google広告検索語句、GA4 CTA・LINE・予約・電話クリック、Search Consoleを表示
+- 同日再取得は upsert。0 / 未取得 / 失敗を分離。売上・利益・受付・予定へ混ぜない
+- API状態とログオン時自動起動状態を表示。手動取込は非常用として維持
+
+**変更ファイル**:
+- index.html / css/style.css（1ボタンUI、表示バージョン・cache buster、スマホ・コントラスト）
+- js/app.js（ローカルAPI連携・保存・upsert・状態表示）
+- js/ad-bridge.js / js/analytics-brain.js（集計・内訳表示）
+- js/data-backup.js（APP_VERSION）
+- scripts/verify-v41217-marketing-one-button.mjs
+- status.md, handoff.md, decision-log.md
+
+**現行合格コマンド**: 
+ode scripts/verify-current.mjs
+
 ## v4.12.16 広告番頭連携・最短MVP（2026-07-24）
 
 **日付**: 2026-07-24

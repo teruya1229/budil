@@ -38,9 +38,9 @@ const executiveBrain = load('js/executive-brain.js');
 const revenueBrain = load('js/revenue-brain.js');
 
 // ── バージョン確認 ────────────────────────────────────────────
-assert(indexHtml.includes('v4.12.15'), 'index.html should show v4.12.15');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.15'"), 'storage.js BUDIL_VERSION should be v4.10.41');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.15'"), 'data-backup APP_VERSION should be v4.10.41');
+assert(indexHtml.includes('v4.12.17'), 'index.html should show v4.12.17');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.17'"), 'storage.js BUDIL_VERSION should be v4.10.41');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.17'"), 'data-backup APP_VERSION should be v4.10.41');
 console.log('  [OK] バージョン v4.10.27');
 
 // ── NG文言チェック (通常UI) ────────────────────────────────────

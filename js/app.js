@@ -14779,8 +14779,8 @@
     </tr></thead><tbody>${list.map(r => `<tr class="${selectedAnalyticsId === r.id ? 'selected' : ''}">
       <td>${esc(r.date || '—')}</td>
       <td>${esc(r.pageName)}</td>
-      <td>${r.views}</td>
-      <td>${r.bounceRate}%</td>
+      <td>${formatMarketingMetric(r.views)}</td>
+      <td>${r.bounceRate === null || r.bounceRate === undefined ? '未取得' : formatMarketingMetric(r.bounceRate, 'percent')}</td>
       <td>${r.demandScore}</td>
       <td><span class="analytics-score-label">${esc(r.scoreLabel || '—')}</span></td>
       <td><button type="button" class="btn btn-sm btn-secondary" data-analytics-open="${esc(r.id)}">詳細</button></td>
@@ -14802,7 +14802,7 @@
     el.innerHTML = `
       <p class="analytics-meta"><strong>${esc(record.pageName)}</strong> / ${esc(record.pageType)} / ${esc(record.serviceTag)}</p>
       <p class="analytics-meta">URL：${record.url ? `<a href="${esc(record.url)}" target="_blank" rel="noopener noreferrer">${esc(record.url)}</a>` : '—'}</p>
-      <p class="analytics-meta">表示${record.views} / ユーザー${record.activeUsers} / エンゲージ${record.avgEngagementSeconds}秒 / イベント${record.eventCount} / クリック${clicks}</p>
+      <p class="analytics-meta">表示${formatMarketingMetric(record.views)} / ユーザー${formatMarketingMetric(record.activeUsers)} / エンゲージ${formatMarketingMetric(record.avgEngagementSeconds)}秒 / イベント${formatMarketingMetric(record.eventCount)} / クリック${formatMarketingMetric(clicks)}</p>
       <div class="analytics-detail-block">
         <h3>需要スコア：${record.demandScore}点（${esc(record.scoreLabel)}）</h3>
       </div>
@@ -14940,6 +14940,543 @@
     });
   }
 
+  /* ── Browser番頭 集客データ自動取得 ── */
+  const MARKETING_LOCAL_API_BASE = 'http://127.0.0.1:43822';
+  const MARKETING_LOCAL_API_TIMEOUT_MS = 90000;
+  const MARKETING_SYNC_SOURCE = 'browser-bantou-marketing';
+  const MARKETING_SYNC_STEPS = [
+    'Browser番頭確認中',
+    'Google広告取得中',
+    'GA4取得中',
+    'Search Console取得中',
+    'データ検証中',
+    'Budil保存中',
+    '完了'
+  ];
+  let marketingSyncInFlight = false;
+  let lastMarketingSyncResult = null;
+  let lastMarketingHealth = null;
+
+  function organizeMarketingManualTools() {
+    const body = document.getElementById('marketing-manual-tools-body');
+    if (!body || body.dataset.organized) return;
+    [
+      document.querySelector('.card-ad-bantou-import'),
+      document.querySelector('.card-browser-bantou'),
+      document.getElementById('analytics-record-form')?.closest('.card')
+    ].filter(Boolean).forEach(card => body.appendChild(card));
+    body.dataset.organized = '1';
+  }
+
+  function getLatestMarketingSnapshot() {
+    if (typeof Storage === 'undefined') return null;
+    return Storage.getAnalyticsSnapshots().find(item =>
+      item && item.source === MARKETING_SYNC_SOURCE && item.marketingSync
+    ) || null;
+  }
+
+  function marketingStatusLabel(status) {
+    if (status === 'success') return '成功';
+    if (status === 'partial') return '一部失敗';
+    if (status === 'error') return '失敗';
+    return '未取得';
+  }
+
+  function setMarketingProgress(stepIndex, overrideText) {
+    const textEl = document.getElementById('marketing-auto-progress-text');
+    const fillEl = document.getElementById('marketing-auto-progress-fill');
+    const safeIndex = Math.max(0, Math.min(MARKETING_SYNC_STEPS.length - 1, Number(stepIndex) || 0));
+    if (textEl) textEl.textContent = overrideText || MARKETING_SYNC_STEPS[safeIndex];
+    if (fillEl) fillEl.style.width = Math.round((safeIndex / (MARKETING_SYNC_STEPS.length - 1)) * 100) + '%';
+  }
+
+  function formatMarketingDateTime(value) {
+    if (!value) return '未取得';
+    const d = new Date(value);
+    if (!Number.isFinite(d.getTime())) return String(value);
+    return d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+  }
+
+  function formatMarketingMetric(value, kind) {
+    if (value === null || value === undefined || value === '' || !Number.isFinite(Number(value))) return '未取得';
+    const n = Number(value);
+    if (kind === 'yen') return '¥' + Math.round(n).toLocaleString('ja-JP');
+    if (kind === 'percent') return n.toLocaleString('ja-JP', { maximumFractionDigits: 1 }) + '%';
+    return n.toLocaleString('ja-JP', { maximumFractionDigits: 1 });
+  }
+
+  function formatMarketingEventCategory(category) {
+    const item = category || {};
+    if (item.value !== null && item.value !== undefined && Number.isFinite(Number(item.value))) {
+      return Number(item.value).toLocaleString('ja-JP');
+    }
+    if (item.status === 'not-configured') return 'イベント未設定';
+    if (item.status === 'pending') return 'GA4反映待ち';
+    if (item.status === 'error') return '取得失敗';
+    return item.reason || '未取得';
+  }
+
+  async function requestMarketingLocalApi(path, method = 'GET') {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), MARKETING_LOCAL_API_TIMEOUT_MS);
+    try {
+      const response = await fetch(MARKETING_LOCAL_API_BASE + path, {
+        method,
+        mode: 'cors',
+        cache: 'no-store',
+        headers: method === 'POST' ? { 'Content-Type': 'application/json' } : undefined,
+        body: method === 'POST' ? JSON.stringify({ requestedAt: new Date().toISOString() }) : undefined,
+        signal: controller.signal
+      });
+      if (!response.ok) {
+        throw new Error('HTTP ' + response.status);
+      }
+      const payload = await response.json();
+      if (!payload || typeof payload !== 'object') throw new Error('JSON検証失敗');
+      return payload;
+    } catch (err) {
+      if (err && err.name === 'AbortError') throw new Error('タイムアウト');
+      if (/Failed to fetch|NetworkError|fetch/i.test(err && err.message ? err.message : '')) {
+        throw new Error('Browser番頭が停止中');
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function validateMarketingServiceResult(result, serviceName) {
+    if (!result || typeof result !== 'object') return serviceName + ': JSON検証失敗';
+    if (!['success', 'partial', 'error'].includes(result.status)) return serviceName + ': 取得状態が不正です';
+    if (!Array.isArray(result.errors)) return serviceName + ': エラー情報が不正です';
+    if ((serviceName === 'Google広告' || serviceName === 'GA4') && !Array.isArray(result.records)) {
+      return serviceName + ': records がありません';
+    }
+    if (serviceName === 'Search Console' && (!Array.isArray(result.queries) || !Array.isArray(result.pages))) {
+      return serviceName + ': queries/pages がありません';
+    }
+    return '';
+  }
+
+  function inferMarketingPageType(path) {
+    const text = String(path || '').toLowerCase();
+    if (text.includes('complete-disassembly')) return '完全分解LP';
+    if (text.includes('ai-chouhyou')) return 'AI帳票番頭LP';
+    if (text.includes('faq')) return 'FAQ';
+    if (text.includes('blog') || text.includes('articles') || text.includes('posts')) return '記事';
+    return 'その他';
+  }
+
+  function inferMarketingServiceTag(path) {
+    const text = String(path || '').toLowerCase();
+    if (text.includes('complete-disassembly')) return '完全分解';
+    if (text.includes('ai-chouhyou')) return 'AI帳票番頭';
+    return 'エアコンクリーニング';
+  }
+
+  function upsertMarketingAdRecords(records, saveStats) {
+    (records || []).forEach(record => {
+      const existed = Storage.findAdPerformanceByRecordId(record.recordId);
+      const saved = Storage.upsertAdPerformanceRecord(
+        { ...record, importSource: 'browser-bantou' },
+        { overwrite: true }
+      );
+      if (!saved.ok) throw new Error(saved.error || '広告データのlocalStorage保存失敗');
+      if (existed) saveStats.updated += 1;
+      else saveStats.created += 1;
+    });
+  }
+
+  function upsertMarketingGa4Records(records, saveStats) {
+    (records || []).forEach(record => {
+      const pagePath = String(record.pagePath || record.url || '').trim();
+      const existing = Storage.getAnalyticsRecords().find(item =>
+        item && item.importSource === 'browser-bantou'
+        && item.date === record.date
+        && String(item.pagePath || item.url || '').trim() === pagePath
+      );
+      const payload = {
+        ...record,
+        pagePath,
+        pageName: record.pageName || pagePath || 'GA4ページ',
+        url: record.url || pagePath,
+        pageType: record.pageType || inferMarketingPageType(pagePath),
+        serviceTag: record.serviceTag || inferMarketingServiceTag(pagePath),
+        sourceMemo: 'Browser番頭 / GA4',
+        importSource: 'browser-bantou',
+        status: 'open'
+      };
+      if (existing) {
+        Storage.updateAnalyticsRecord(existing.id, payload);
+        saveStats.updated += 1;
+      } else {
+        Storage.addAnalyticsRecord(payload);
+        saveStats.created += 1;
+      }
+    });
+  }
+
+  function buildMarketingInsights(serviceResults, previousSnapshot) {
+    const ga4 = serviceResults.ga4 || {};
+    const sc = serviceResults.searchConsole || {};
+    const pages = Array.isArray(ga4.records) ? ga4.records : [];
+    const queries = Array.isArray(sc.queries) ? sc.queries : [];
+    const topPage = pages.slice().sort((a, b) => Number(b.views || 0) - Number(a.views || 0))[0];
+    const ctaKnown = pages.filter(page =>
+      [page.ctaClicks, page.lineClicks, page.bookingClicks, page.phoneClicks]
+        .some(value => value !== null && value !== undefined)
+    );
+    const weakCta = ctaKnown.find(page =>
+      Number(page.views || 0) > 0
+      && [page.ctaClicks, page.lineClicks, page.bookingClicks, page.phoneClicks]
+        .reduce((sum, value) => sum + (Number(value) || 0), 0) === 0
+    );
+    const currentImpressions = sc.totals && sc.totals.impressions;
+    const previousImpressions = previousSnapshot && previousSnapshot.metrics
+      ? previousSnapshot.metrics.searchImpressions
+      : null;
+    const delta = Number.isFinite(Number(currentImpressions)) && Number.isFinite(Number(previousImpressions))
+      ? Number(currentImpressions) - Number(previousImpressions)
+      : null;
+    const insights = [];
+    if (delta !== null) insights.push('Search Console表示増減: ' + (delta >= 0 ? '+' : '') + delta.toLocaleString('ja-JP'));
+    if (queries.length) insights.push('検索クエリ上位: ' + queries.slice(0, 3).map(item => item.query).join(' / '));
+    if (weakCta) insights.push('CTAが弱いページ: ' + (weakCta.pagePath || weakCta.pageName));
+    else if (!ctaKnown.length) insights.push('CTAクリックは未取得のため判定保留');
+    if (topPage) insights.push('次に見るべきページ: ' + (topPage.pagePath || topPage.pageName));
+    if (!pages.length || !queries.length || !ctaKnown.length) {
+      insights.push('データ不足のため判定保留');
+    }
+    return { insights, topPage, weakCta, delta };
+  }
+
+  function upsertMarketingSnapshot(serviceResults, saveStats, startedAt) {
+    const list = Storage.getAnalyticsSnapshots();
+    const previous = list.find(item => item && item.source === MARKETING_SYNC_SOURCE);
+    const ga4 = serviceResults.ga4 || {};
+    const sc = serviceResults.searchConsole || {};
+    const ads = serviceResults.googleAds || {};
+    const ga4Records = Array.isArray(ga4.records) ? ga4.records : [];
+    const adRecords = Array.isArray(ads.records) ? ads.records : [];
+    const analysis = buildMarketingInsights(serviceResults, previous);
+    const metrics = {
+      accessCount: ga4Records.reduce((sum, item) => sum + (Number(item.views) || 0), 0),
+      users: ga4Records.reduce((sum, item) => sum + (Number(item.activeUsers) || 0), 0),
+      inquiryClicks: null,
+      searchImpressions: sc.totals ? sc.totals.impressions : null,
+      searchClicks: sc.totals ? sc.totals.clicks : null,
+      searchCtr: sc.totals ? sc.totals.ctr : null,
+      adCost: adRecords.reduce((sum, item) => sum + (Number(item.cost) || 0), 0),
+      adImpressions: adRecords.reduce((sum, item) => sum + (Number(item.impressions) || 0), 0),
+      adClicks: adRecords.reduce((sum, item) => sum + (Number(item.clicks) || 0), 0)
+    };
+    const completedAt = new Date().toISOString();
+    const failedServices = Object.values(serviceResults).filter(item => !item || item.status !== 'success').length;
+    const record = {
+      ...(previous || {}),
+      id: previous ? previous.id : ('analytics-snapshot-' + Storage.generateId()),
+      source: MARKETING_SYNC_SOURCE,
+      periodLabel: sc.period || ga4.period || TODAY(),
+      importedAt: completedAt,
+      createdAt: previous ? previous.createdAt : completedAt,
+      hasData: ga4Records.length > 0 || adRecords.length > 0 || (sc.queries || []).length > 0,
+      metrics,
+      pages: ga4Records.map(item => ({
+        pageName: item.pageName || item.pagePath,
+        url: item.pagePath || item.url,
+        views: item.views
+      })),
+      insights: analysis.insights,
+      actionCandidates: analysis.insights.filter(text => !text.includes('判定保留')).slice(0, 4),
+      searchConsole: {
+        queries: sc.queries || [],
+        pages: sc.pages || [],
+        totals: sc.totals || {},
+        sourceUrl: sc.sourceUrl || '',
+        fetchedAt: sc.fetchedAt || ''
+      },
+      marketingSync: {
+        startedAt,
+        completedAt,
+        status: failedServices ? (failedServices === 3 ? 'error' : 'partial') : 'success',
+        totalRecords: adRecords.length + ga4Records.length + (sc.queries || []).length + (sc.pages || []).length,
+        services: serviceResults,
+        health: lastMarketingHealth,
+        saveStats
+      }
+    };
+    const idx = list.findIndex(item => item && item.id === record.id);
+    if (idx >= 0) {
+      list[idx] = record;
+      saveStats.updated += 1;
+    } else {
+      list.unshift(record);
+      saveStats.created += 1;
+    }
+    Storage.saveAnalyticsSnapshots(list);
+    return record;
+  }
+
+  function renderMarketingOperationalSummary(snapshot) {
+    const el = document.getElementById('marketing-auto-summary');
+    if (!el) return;
+    const sync = snapshot && snapshot.marketingSync;
+    if (!sync) {
+      el.innerHTML = '<p class="placeholder-text">取得後に、今日の広告実績・ページ需要・検索クエリ・次の打ち手を表示します。</p>';
+      return;
+    }
+    const services = sync.services || {};
+    const ads = services.googleAds || {};
+    const ga4 = services.ga4 || {};
+    const sc = services.searchConsole || {};
+    const adRecords = ads.records || [];
+    const ga4Records = ga4.records || [];
+    const queries = sc.queries || [];
+    const eventDetails = ga4.eventDetails || {};
+    const eventCategories = eventDetails.categories || {};
+    const adTotals = adRecords.reduce((acc, item) => {
+      ['cost', 'impressions', 'clicks'].forEach(key => {
+        if (item[key] !== null && item[key] !== undefined) acc[key] += Number(item[key]) || 0;
+      });
+      return acc;
+    }, { cost: 0, impressions: 0, clicks: 0 });
+    const topPage = ga4Records.slice().sort((a, b) => Number(b.views || 0) - Number(a.views || 0))[0];
+    const primaryAd = adRecords[0] || {};
+    const searchTerms = Array.isArray(primaryAd.searchTerms) ? primaryAd.searchTerms : null;
+    const topTerms = searchTerms
+      ? searchTerms.slice(0, 5).map(item => {
+          if (typeof item === 'string') return item;
+          const clickText = formatMarketingMetric(item.clicks);
+          const costText = formatMarketingMetric(item.cost, 'yen');
+          const keyword = item.matchedKeyword || '未取得';
+          return `${item.term}（クリック ${clickText} / 費用 ${costText} / KW ${keyword}）`;
+        }).join(' / ')
+      : '';
+    const insights = snapshot.insights || [];
+    el.innerHTML = `
+      <h3>取得後の集客サマリー</h3>
+      <div class="marketing-auto-metric-grid">
+        <div><span>今日の広告費</span><strong>${formatMarketingMetric(adRecords.length ? adTotals.cost : null, 'yen')}</strong></div>
+        <div><span>今日の表示回数</span><strong>${formatMarketingMetric(adRecords.length ? adTotals.impressions : null)}</strong></div>
+        <div><span>今日のクリック数</span><strong>${formatMarketingMetric(adRecords.length ? adTotals.clicks : null)}</strong></div>
+        <div><span>GA4ページ需要</span><strong>${topPage ? esc((topPage.pagePath || topPage.pageName) + ' / ' + formatMarketingMetric(topPage.views)) : '未取得'}</strong></div>
+      </div>
+      <div class="marketing-detail-grid">
+        <section>
+          <h4>Google広告</h4>
+          <p><strong>キャンペーン：</strong>${esc(primaryAd.campaignName || '未取得')}</p>
+          <p><strong>ステータス：</strong>${esc(primaryAd.status || '未取得')}</p>
+          <p><strong>検索語句期間：</strong>${esc(primaryAd.searchTermPeriod || '未取得')}</p>
+          <p><strong>検索語句上位：</strong>${esc(searchTerms === null ? '未取得' : (topTerms || '0件'))}</p>
+          <p><strong>未取得理由：</strong>${esc(primaryAd.searchTermReason || 'なし')}</p>
+        </section>
+        <section>
+          <h4>GA4クリック内訳</h4>
+          <p><strong>対象期間：</strong>${esc(ga4.eventPeriod || '未取得')} ${esc(ga4.eventPeriodDate || '')}</p>
+          <p><strong>CTA：</strong>${esc(formatMarketingEventCategory(eventCategories.cta))}</p>
+          <p><strong>LINE：</strong>${esc(formatMarketingEventCategory(eventCategories.line))}</p>
+          <p><strong>予約：</strong>${esc(formatMarketingEventCategory(eventCategories.reservation))}</p>
+          <p><strong>電話：</strong>${esc(formatMarketingEventCategory(eventCategories.phone))}</p>
+          <p><strong>イベント名：</strong>${esc((eventDetails.events || []).map(item => item.eventName).join(' / ') || '未取得')}</p>
+        </section>
+      </div>
+      <div class="marketing-auto-insights">
+        <p><strong>検索クエリ上位：</strong>${queries.length ? esc(queries.slice(0, 5).map(item => item.query).join(' / ')) : '未取得'}</p>
+        <p><strong>次の打ち手：</strong>${esc(insights.find(text => /CTAが弱い|次に見るべき/.test(text)) || 'データ不足のため判定保留')}</p>
+        <ul>${insights.map(text => `<li>${esc(text)}</li>`).join('')}</ul>
+      </div>
+    `;
+  }
+
+  function renderMarketingSyncStatus(snapshotOverride) {
+    const snapshot = snapshotOverride || getLatestMarketingSnapshot();
+    const sync = snapshot && snapshot.marketingSync;
+    const services = sync ? (sync.services || {}) : {};
+    const sourceEl = document.getElementById('marketing-auto-source-status');
+    const lastEl = document.getElementById('marketing-auto-last-result');
+    const saveEl = document.getElementById('marketing-auto-save-result');
+    const health = lastMarketingHealth || (sync && sync.health) || {};
+    if (sourceEl) {
+      const defs = [
+        ['googleAds', 'Google広告'],
+        ['ga4', 'GA4'],
+        ['searchConsole', 'Search Console']
+      ];
+      const apiStatus = health.apiStatus || (health.ok ? 'READY' : 'STOPPED');
+      const autoStart = health.autoStart || {};
+      const apiCard = `<div class="marketing-source-card is-${esc(apiStatus === 'READY' ? 'success' : 'error')}">
+        <span>集客API</span>
+        <strong>${esc(apiStatus)}</strong>
+        <small>自動起動: ${autoStart.configured ? '設定済み' : '未設定'} / ${health.checkedAt ? formatMarketingDateTime(health.checkedAt) : '未応答'}</small>
+      </div>`;
+      sourceEl.innerHTML = apiCard + defs.map(([key, label]) => {
+        const result = services[key] || {};
+        const count = key === 'searchConsole'
+          ? (result.queries || []).length + (result.pages || []).length
+          : (result.records || []).length;
+        return `<div class="marketing-source-card is-${esc(result.status || 'idle')}">
+          <span>${esc(label)}</span>
+          <strong>${marketingStatusLabel(result.status)}</strong>
+          <small>${count}件 / ${result.fetchedAt ? formatMarketingDateTime(result.fetchedAt) : '未取得'}</small>
+        </div>`;
+      }).join('');
+    }
+    if (lastEl) {
+      lastEl.innerHTML = sync
+        ? `<p><strong>最終取得日時：</strong>${esc(formatMarketingDateTime(sync.completedAt))}</p>
+           <p><strong>最終取得結果：</strong>${esc(marketingStatusLabel(sync.status))} / ${Number(sync.totalRecords || 0).toLocaleString('ja-JP')}件</p>`
+        : '<p><strong>最終取得日時：</strong>未取得</p><p><strong>最終取得結果：</strong>未取得</p>';
+    }
+    if (saveEl) {
+      const stats = sync && sync.saveStats;
+      if (!stats) {
+        saveEl.classList.add('hidden');
+        saveEl.innerHTML = '';
+      } else {
+        saveEl.classList.remove('hidden');
+        const errors = (stats.errors || []).length
+          ? `<ul>${stats.errors.map(error => `<li>${esc(error)}</li>`).join('')}</ul>`
+          : '<p>エラー詳細：なし</p>';
+        saveEl.innerHTML = `
+          <h3>保存結果</h3>
+          <div class="marketing-save-grid">
+            <span>新規 <strong>${stats.created}</strong>件</span>
+            <span>更新 <strong>${stats.updated}</strong>件</span>
+            <span>重複スキップ <strong>${stats.duplicates}</strong>件</span>
+            <span>取得失敗 <strong>${stats.failed}</strong>件</span>
+          </div>
+          <p>保存日時：${esc(formatMarketingDateTime(stats.savedAt))}</p>
+          <p>保存前 ${stats.beforeCount}件 → 保存後 ${stats.afterCount}件</p>
+          ${errors}
+        `;
+      }
+    }
+    renderMarketingOperationalSummary(snapshot);
+  }
+
+  async function runMarketingAutoSync() {
+    if (marketingSyncInFlight) return;
+    const button = document.getElementById('btn-marketing-auto-sync');
+    const startedAt = new Date().toISOString();
+    marketingSyncInFlight = true;
+    if (button) {
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+    }
+    const serviceResults = {};
+    let terminalError = '';
+    const saveStats = {
+      created: 0,
+      updated: 0,
+      duplicates: 0,
+      failed: 0,
+      beforeCount: Storage.getAdPerformanceRecords().length + Storage.getAnalyticsRecords().length + Storage.getAnalyticsSnapshots().length,
+      afterCount: 0,
+      savedAt: '',
+      errors: []
+    };
+    try {
+      setMarketingProgress(0);
+      const health = await requestMarketingLocalApi('/health');
+      lastMarketingHealth = health;
+      if (!health.cdpReady) throw new Error(health.error || '正本Chromeが見つかりません');
+      if (health.login && Object.values(health.login).some(state => state === 'not-logged-in')) {
+        throw new Error('Chrome未ログイン');
+      }
+
+      const requests = [
+        ['googleAds', 'Google広告', '/collect/google-ads', 1],
+        ['ga4', 'GA4', '/collect/ga4', 2],
+        ['searchConsole', 'Search Console', '/collect/search-console', 3]
+      ];
+      for (const [key, label, path, step] of requests) {
+        setMarketingProgress(step);
+        try {
+          const result = await requestMarketingLocalApi(path, 'POST');
+          const validationError = validateMarketingServiceResult(result, label);
+          if (validationError) {
+            serviceResults[key] = { status: 'error', errors: [validationError], records: [], queries: [], pages: [] };
+          } else {
+            serviceResults[key] = result;
+          }
+        } catch (err) {
+          serviceResults[key] = {
+            status: 'error',
+            errors: [label + ': ' + (err && err.message ? err.message : '取得失敗')],
+            records: [],
+            queries: [],
+            pages: []
+          };
+        }
+        if (serviceResults[key].status !== 'success') {
+          saveStats.failed += 1;
+          saveStats.errors.push(...(serviceResults[key].errors || [label + ': 取得失敗']));
+        }
+      }
+
+      setMarketingProgress(4);
+      if (!Object.values(serviceResults).some(result =>
+        (result.records || []).length || (result.queries || []).length || (result.pages || []).length
+      )) {
+        throw new Error('取得失敗：保存できるデータがありません');
+      }
+
+      setMarketingProgress(5);
+      upsertMarketingAdRecords(serviceResults.googleAds.records || [], saveStats);
+      upsertMarketingGa4Records(serviceResults.ga4.records || [], saveStats);
+      const snapshot = upsertMarketingSnapshot(serviceResults, saveStats, startedAt);
+      saveStats.savedAt = new Date().toISOString();
+      saveStats.afterCount = Storage.getAdPerformanceRecords().length + Storage.getAnalyticsRecords().length + Storage.getAnalyticsSnapshots().length;
+      snapshot.marketingSync.saveStats = saveStats;
+      const snapshots = Storage.getAnalyticsSnapshots();
+      const snapshotIndex = snapshots.findIndex(item => item && item.id === snapshot.id);
+      if (snapshotIndex >= 0) {
+        snapshots[snapshotIndex] = snapshot;
+        Storage.saveAnalyticsSnapshots(snapshots);
+      }
+      lastMarketingSyncResult = snapshot;
+      setMarketingProgress(6, snapshot.marketingSync.status === 'success' ? '完了' : '一部取得失敗');
+      renderAnalyticsView();
+      renderDashboard();
+    } catch (err) {
+      const message = err && err.message ? err.message : '取得失敗';
+      terminalError = message;
+      if (!lastMarketingHealth || !lastMarketingHealth.ok) {
+        const storedHealth = getLatestMarketingSnapshot()?.marketingSync?.health || {};
+        lastMarketingHealth = {
+          ok: false,
+          apiStatus: /Browser番頭が停止中|Failed to fetch|NetworkError|HTTP/.test(message) ? 'STOPPED' : 'ERROR',
+          checkedAt: new Date().toISOString(),
+          autoStart: (lastMarketingHealth && lastMarketingHealth.autoStart)
+            || storedHealth.autoStart
+            || { configured: false }
+        };
+      }
+      saveStats.failed += 1;
+      saveStats.errors.push(message);
+      setMarketingProgress(0, message.includes('タイムアウト') ? 'タイムアウト' : '取得失敗');
+      const saveEl = document.getElementById('marketing-auto-save-result');
+      if (saveEl) {
+        saveEl.classList.remove('hidden');
+        saveEl.innerHTML = `<h3>取得失敗</h3><p>${esc(message)}</p>`;
+      }
+    } finally {
+      marketingSyncInFlight = false;
+      if (button) {
+        button.disabled = false;
+        button.removeAttribute('aria-busy');
+      }
+      renderMarketingSyncStatus(lastMarketingSyncResult || undefined);
+      if (terminalError) {
+        const saveEl = document.getElementById('marketing-auto-save-result');
+        if (saveEl) {
+          saveEl.classList.remove('hidden');
+          saveEl.innerHTML = `<h3>取得失敗</h3><p>${esc(terminalError)}</p>`;
+        }
+      }
+    }
+  }
+
   /* ── 広告番頭連携（共通JSON） ── */
   let adBantouImportCache = null;
   let adBantouPendingOverwrite = null;
@@ -15024,12 +15561,14 @@
     const clearBtn = document.getElementById('btn-ad-bantou-clear');
     if (!preview || !body || typeof AdBridge === 'undefined') return;
     body.innerHTML = records.map((rec, idx) => {
-      const rows = AdBridge.previewRows(rec).map(([k, v]) =>
-        `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`
+      const rows = AdBridge.previewRows(rec).map(([k, v]) => {
+        const stateClass = v === '未取得' ? ' is-missing' : (v === '取得失敗' ? ' is-error' : '');
+        return `<div class="ad-preview-metric${stateClass}"><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`;
+      }
       ).join('');
-      return `<article class="browser-bantou-preview-block" style="margin-bottom:12px;padding:12px;border:1px solid #e5e7eb;border-radius:8px;">` +
-        `<p><strong>${idx + 1}件目</strong> <code>${esc(rec.recordId || '')}</code></p>` +
-        `<dl class="browser-bantou-preview-kpi" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">${rows}</dl>` +
+      return `<article class="browser-bantou-preview-block ad-performance-preview-card">` +
+        `<div class="ad-performance-preview-header"><strong>${idx + 1}件目</strong><code>${esc(rec.recordId || 'recordId未取得')}</code></div>` +
+        `<dl class="browser-bantou-preview-kpi ad-performance-preview-grid">${rows}</dl>` +
         `</article>`;
     }).join('');
     preview.classList.remove('hidden');
@@ -15131,12 +15670,19 @@
       renderBrowserBantouPrompt();
       renderExternalCheckHistory('analytics-check-history');
       renderAdBantouMonthSummary();
+      renderMarketingSyncStatus(lastMarketingSyncResult || undefined);
     } catch (err) {
       console.error('[Budil] renderAnalyticsView', err);
     }
   }
 
   function initAnalytics() {
+    organizeMarketingManualTools();
+    const marketingSyncBtn = document.getElementById('btn-marketing-auto-sync');
+    if (marketingSyncBtn && !marketingSyncBtn.dataset.bound) {
+      marketingSyncBtn.dataset.bound = '1';
+      marketingSyncBtn.addEventListener('click', runMarketingAutoSync);
+    }
     const form = document.getElementById('analytics-record-form');
     if (form && !form.dataset.bound) {
       form.dataset.bound = '1';
