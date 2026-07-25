@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Budil v4.12.4 - monthly close checklist workflow verification.
  */
 import { readFileSync } from 'node:fs';
@@ -46,11 +46,11 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.17'), 'index.html should show v4.12.17');
-assert(indexHtml.includes('js/app.js?v=4.12.17'), 'app.js cache buster should be v4.12.17');
-assert(indexHtml.includes('css/style.css?v=4.12.17'), 'style.css cache buster should be v4.12.17');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.17'"), 'storage.js version should be v4.12.17');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.17'"), 'data-backup version should be v4.12.17');
+assert(indexHtml.includes('v4.12.18'), 'index.html should show v4.12.18');
+assert(indexHtml.includes('js/app.js?v=4.12.18'), 'app.js cache buster should be v4.12.18');
+assert(indexHtml.includes('css/style.css?v=4.12.18'), 'style.css cache buster should be v4.12.18');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.18'"), 'storage.js version should be v4.12.18');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.18'"), 'data-backup version should be v4.12.18');
 
 console.log('== monthly close page structure ==');
 const viewMonthly = indexHtml.slice(

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+﻿import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -83,4 +83,4 @@ assert(searchTermNormalized.searchTerms[0].clicks === 1, 'search-term zero/value
 assert(bridge.safeDiv(0, 57) === 0, 'real zero survives ratio calculation');
 assert(bridge.safeDiv(null, 57) === null, 'missing numerator stays missing in ratio calculation');
 
-console.log('\nAll v4.12.17 marketing one-button checks passed.');
+console.log('\nAll v4.12.18 marketing one-button checks passed.');

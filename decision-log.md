@@ -2,6 +2,26 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.18 集客KPI 12/15 実用化（2026-07-25）
+
+**日付**: 2026-07-25
+
+**判断内容**:
+- 追加認証なしで取得可能な7項目を実装し、KPI取得を 5/15 → 12/15 にする
+- GA4画面内部APIで確認した正式名を使用：`newUsers` / `sessions` / `sessionDefaultChannelGrouping=Organic Search`
+- クリック系は既存 `eventDetails.categories` を写像。予約は `cta_click` + `cta_target=air_reserve`。generic CTAは導線合計へ加算しない
+- `metricStatus`（ok / not_connected / error / unknown）を追加。GBP3項目は未接続。0件成功と取得失敗を分離
+- KPI取得数と保存データ行数を分離。SC平均掲載順位は補足のみ（15項目外）
+- 12/15でも全面完成・完全合格とは表示・報告しない
+
+**変更ファイル**:
+- Browser番頭: marketing_local_api.py / tests / MARKETING_SYNC.md
+- Budil: js/app.js / css/style.css / index.html / storage・data-backup バージョン
+- scripts/verify-v41218-marketing-kpi-12-of-15.mjs
+- status.md, handoff.md, decision-log.md
+
+**現行合格コマンド**: `node scripts/verify-current.mjs`
+
 ## v4.12.17 集客チェック1ボタン取得（2026-07-24）
 
 **日付**: 2026-07-24

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Budil v4.12.4 - calendar import result shows tamazawa candidate verification.
  */
 import { readFileSync } from 'node:fs';
@@ -52,11 +52,11 @@ const tamazawaItem = {
 };
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.17'), 'index.html should show v4.12.17');
-assert(indexHtml.includes('js/app.js?v=4.12.17'), 'app.js cache buster should be v4.12.17');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.17'), 'calendar brain cache buster should be v4.12.17');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.17'"), 'storage.js version should be v4.12.17');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.17'"), 'data-backup version should be v4.12.17');
+assert(indexHtml.includes('v4.12.18'), 'index.html should show v4.12.18');
+assert(indexHtml.includes('js/app.js?v=4.12.18'), 'app.js cache buster should be v4.12.18');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.18'), 'calendar brain cache buster should be v4.12.18');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.18'"), 'storage.js version should be v4.12.18');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.18'"), 'data-backup version should be v4.12.18');
 
 console.log('== import result UI wiring ==');
 assert(appJs.includes('renderCalendarImportResultBreakdownHtml'), 'import result breakdown renderer should exist');
@@ -165,7 +165,7 @@ console.log('== excluded controls remain ==');
     const preview = CalendarCandidateBrain.buildImportPreview(${JSON.stringify(parsed)}, []);
     return CalendarCandidateBrain.attachFutureImportPreview(preview, '${TODAY}');
   })()`, ctx);
-  assert(preview.items[0].futureImport.status === 'eligible', 'holiday with amount should remain eligible (v4.12.17 soft override)');
+  assert(preview.items[0].futureImport.status === 'eligible', 'holiday with amount should remain eligible (v4.12.18 soft override)');
   assert(preview.items[1].futureImport.status === 'excluded', 'no-amount should stay excluded');
 }
 

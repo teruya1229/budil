@@ -1,14 +1,26 @@
 ﻿# Budil status
 
-## 正式な現行verify環境（v4.12.17）
+## 正式な現行verify環境（v4.12.18）
 
 - **正式環境**: Budil 単独 clone ではなく、親階層に sibling の calendar-sync-worker がある開発環境
 - **必須**: ../calendar-sync-worker/run-budil-calendar-export.bat
 - **必須**: hub/functions 側の依存関係（googleapis 等）。hub/functions で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: 
-ode scripts/verify-current.mjs（75本。省略・除外・緩和なし）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（76本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.18 実装内容（集客KPI 12/15 実用化）
+
+- 表示バージョンを v4.12.18 に更新
+- index.html の主要 JS/CSS cache buster を v4.12.18 に統一
+- GA4追加3指標：新規ユーザー（newUsers）／セッション（sessions）／自然検索流入セッション（sessionDefaultChannelGrouping=Organic Search）
+- 既存イベント写像：LINE／電話／予約フォーム（cta_click+air_reserve）／問い合わせ導線合計
+- metricStatus（ok / not_connected / error / unknown）をsnapshotへ追加。GBP3項目は未接続
+- KPI取得数と保存データ行数を分離表示。SC平均掲載順位は補足表示（15項目外）
+- データ対象期間（GA4ページ／GA4イベント／SC／広告）と取得日時を区別表示
+- 新規 verify-v41218-marketing-kpi-12-of-15.mjs 追加
+- 現行合格は引き続き `node scripts/verify-current.mjs`
+- 12/15でも全面完成・完全合格とは扱わない（GBP未接続3項目あり）
 
 ## v4.12.17 実装内容（集客チェック1ボタン取得）
 

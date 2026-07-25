@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Budil v4.12.5 - operational workflow rehearsal verification.
  */
 import { readFileSync } from 'node:fs';
@@ -82,11 +82,11 @@ const STORAGE_KEY_SNIPPETS = [
 console.log('== v4.12.5 operational-workflow-rehearsal ==');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.17'), 'index.html should show v4.12.17');
-assert(indexHtml.includes('js/app.js?v=4.12.17'), 'app.js cache buster should be v4.12.17');
-assert(indexHtml.includes('css/style.css?v=4.12.17'), 'style.css cache buster should be v4.12.17');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.17'"), 'storage version should be v4.12.17');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.17'"), 'data-backup version should be v4.12.17');
+assert(indexHtml.includes('v4.12.18'), 'index.html should show v4.12.18');
+assert(indexHtml.includes('js/app.js?v=4.12.18'), 'app.js cache buster should be v4.12.18');
+assert(indexHtml.includes('css/style.css?v=4.12.18'), 'style.css cache buster should be v4.12.18');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.18'"), 'storage version should be v4.12.18');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.18'"), 'data-backup version should be v4.12.18');
 assert(!indexHtml.includes('?v=4.12.7'), 'old cache buster v4.12.7 should be gone');
 
 console.log('== empty src / layout safety ==');

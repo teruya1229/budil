@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Budil v4.10.38 主導線・主従整理リグレッションverify
  *
  * 確認内容：
@@ -38,9 +38,9 @@ const executiveBrain = load('js/executive-brain.js');
 const revenueBrain = load('js/revenue-brain.js');
 
 // ── バージョン確認 ────────────────────────────────────────────
-assert(indexHtml.includes('v4.12.17'), 'index.html should show v4.12.17');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.17'"), 'storage.js BUDIL_VERSION should be v4.10.41');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.17'"), 'data-backup APP_VERSION should be v4.10.41');
+assert(indexHtml.includes('v4.12.18'), 'index.html should show v4.12.18');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.18'"), 'storage.js BUDIL_VERSION should be v4.10.41');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.18'"), 'data-backup APP_VERSION should be v4.10.41');
 console.log('  [OK] バージョン v4.10.27');
 
 // ── NG文言チェック (通常UI) ────────────────────────────────────

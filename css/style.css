@@ -7527,6 +7527,29 @@ body {
   overflow-wrap: anywhere;
 }
 
+.analytics-kpi-card.is-missing strong,
+.analytics-kpi-row.is-missing strong,
+.analytics-kpi-card.is-not-connected strong,
+.analytics-kpi-row.is-not-connected strong {
+  color: #92400e;
+}
+
+.analytics-kpi-card.is-error strong,
+.analytics-kpi-row.is-error strong {
+  color: #b91c1c;
+}
+
+.analytics-kpi-row-supplement {
+  border-style: dashed;
+  background: #f8fafc;
+}
+
+.marketing-kpi-note {
+  color: #334155;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
 .analytics-kpi-subgrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

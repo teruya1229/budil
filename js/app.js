@@ -14230,12 +14230,52 @@
     alert('アナリティクスデータを保存しました。');
   }
 
-  function kpiMetricValue(value, suffix = '') {
+  const MARKETING_KPI_METRIC_KEYS = [
+    'accessCount', 'users', 'newUsers', 'sessions', 'searchTraffic',
+    'lineClicks', 'phoneTaps', 'formClicks', 'inquiryClicks',
+    'searchImpressions', 'searchClicks', 'searchCtr',
+    'gbpViews', 'gbpClicks', 'gbpPhone'
+  ];
+
+  function resolveKpiMetricStatus(key, value, metricStatus) {
+    const statusMap = metricStatus || {};
+    if (statusMap[key]) return statusMap[key];
+    if (value !== null && value !== undefined && value !== '') return 'ok';
+    return 'unknown';
+  }
+
+  function kpiMetricValue(value, suffix = '', status = null) {
+    if (status === 'not_connected') return '未接続';
+    if (status === 'error') return '取得失敗';
+    if (status === 'unknown') return '未確認';
+    if (status === 'ok') {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return '0';
+      const text = Number.isInteger(n)
+        ? n.toLocaleString('ja-JP')
+        : n.toLocaleString('ja-JP', { maximumFractionDigits: 1 });
+      return esc(text + suffix);
+    }
     if (value === null || value === undefined || value === '') return '未確認';
     const n = Number(value);
     if (!Number.isFinite(n)) return esc(String(value));
     const text = Number.isInteger(n) ? n.toLocaleString('ja-JP') : n.toLocaleString('ja-JP', { maximumFractionDigits: 1 });
     return esc(text + suffix);
+  }
+
+  function kpiMetricStatusClass(status) {
+    if (status === 'not_connected') return ' is-not-connected';
+    if (status === 'error') return ' is-error';
+    if (status === 'unknown') return ' is-missing';
+    return '';
+  }
+
+  function countOkMarketingKpis(snapshot) {
+    const m = (snapshot && snapshot.metrics) || {};
+    const statusMap = (snapshot && snapshot.metricStatus) || {};
+    return MARKETING_KPI_METRIC_KEYS.reduce((count, key) => (
+      resolveKpiMetricStatus(key, m[key], statusMap) === 'ok' ? count + 1 : count
+    ), 0);
   }
 
   function snapshotHasKpiData(snapshot) {
@@ -14248,29 +14288,39 @@
 
   function renderKpiMetricRows(snapshot) {
     const m = (snapshot && snapshot.metrics) || {};
+    const statusMap = (snapshot && snapshot.metricStatus) || {};
     const rows = [
-      ['アクセス数', m.accessCount],
-      ['ユーザー数', m.users],
-      ['新規ユーザー', m.newUsers],
-      ['セッション数', m.sessions],
-      ['検索流入', m.searchTraffic],
-      ['LINEクリック', m.lineClicks],
-      ['電話タップ', m.phoneTaps],
-      ['フォームクリック', m.formClicks],
-      ['問い合わせ導線クリック', m.inquiryClicks],
-      ['SC表示回数', m.searchImpressions],
-      ['SCクリック数', m.searchClicks],
-      ['検索CTR', m.searchCtr, '%'],
-      ['GBP表示', m.gbpViews],
-      ['GBPクリック', m.gbpClicks],
-      ['GBP電話', m.gbpPhone]
+      ['アクセス数', 'accessCount'],
+      ['ユーザー数', 'users'],
+      ['新規ユーザー', 'newUsers'],
+      ['セッション数', 'sessions'],
+      ['自然検索流入セッション', 'searchTraffic'],
+      ['LINEクリック', 'lineClicks'],
+      ['電話タップ', 'phoneTaps'],
+      ['予約フォームクリック', 'formClicks'],
+      ['問い合わせ導線クリック', 'inquiryClicks'],
+      ['SC表示回数', 'searchImpressions'],
+      ['SCクリック数', 'searchClicks'],
+      ['検索CTR', 'searchCtr', '%'],
+      ['GBP表示', 'gbpViews'],
+      ['GBPクリック', 'gbpClicks'],
+      ['GBP電話', 'gbpPhone']
     ];
-    return rows.map(([label, value, suffix]) => `
-      <div class="analytics-kpi-row">
+    const scPosition = m.searchAvgPosition;
+    const scPositionStatus = resolveKpiMetricStatus('searchAvgPosition', scPosition, statusMap);
+    const scPositionHtml = `
+      <div class="analytics-kpi-row analytics-kpi-row-supplement${kpiMetricStatusClass(scPositionStatus)}">
+        <span>SC平均掲載順位（補足）</span>
+        <strong>${kpiMetricValue(scPosition, '', scPositionStatus)}</strong>
+      </div>`;
+    return rows.map(([label, key, suffix]) => {
+      const status = resolveKpiMetricStatus(key, m[key], statusMap);
+      return `
+      <div class="analytics-kpi-row${kpiMetricStatusClass(status)}">
         <span>${esc(label)}</span>
-        <strong>${kpiMetricValue(value, suffix || '')}</strong>
-      </div>
-    `).join('');
+        <strong>${kpiMetricValue(m[key], suffix || '', status)}</strong>
+      </div>`;
+    }).join('') + scPositionHtml;
   }
 
   function renderKpiTopPages(snapshot) {
@@ -14339,17 +14389,27 @@
       return;
     }
     const m = snapshot.metrics || {};
+    const statusMap = snapshot.metricStatus || {};
     const anomaly = (snapshot.insights || []).some(i => /異常|ノイズ|減少|少ない|確認/.test(i));
+    const okCount = countOkMarketingKpis(snapshot);
+    const periods = snapshot.periodDetails || {};
+    const periodLines = [
+      periods.ga4Pages ? `GA4ページ：${periods.ga4Pages}` : '',
+      periods.ga4Events ? `GA4イベント：${periods.ga4Events}` : '',
+      periods.searchConsole ? `Search Console：${periods.searchConsole}` : '',
+      periods.googleAds ? `Google広告：${periods.googleAds}` : ''
+    ].filter(Boolean);
     el.innerHTML = `
       <div class="analytics-kpi-meta">
-        <p><strong>対象期間：</strong>${esc(snapshot.periodLabel || snapshot.periodStart || snapshot.periodEnd || '未確認')}</p>
-        <p><strong>保存日時：</strong>${esc((snapshot.importedAt || snapshot.createdAt || '').slice(0, 16).replace('T', ' ') || '—')}</p>
+        <p><strong>KPI取得数：</strong>${okCount}/15項目取得</p>
+        <p><strong>取得日時：</strong>${esc((snapshot.importedAt || snapshot.createdAt || '').slice(0, 16).replace('T', ' ') || '—')}</p>
+        <p><strong>データ対象期間：</strong>${esc(periodLines.length ? periodLines.join(' / ') : (snapshot.periodLabel || snapshot.periodStart || snapshot.periodEnd || '未確認'))}</p>
       </div>
       <div class="analytics-kpi-card-grid">
-        <div class="analytics-kpi-card"><span>対象期間アクセス</span><strong>${kpiMetricValue(m.accessCount)}</strong></div>
-        <div class="analytics-kpi-card"><span>検索流入</span><strong>${kpiMetricValue(m.searchTraffic)}</strong></div>
-        <div class="analytics-kpi-card"><span>問い合わせ導線クリック</span><strong>${kpiMetricValue(m.inquiryClicks)}</strong></div>
-        <div class="analytics-kpi-card"><span>GBP電話タップ</span><strong>${kpiMetricValue(m.gbpPhone)}</strong></div>
+        <div class="analytics-kpi-card${kpiMetricStatusClass(resolveKpiMetricStatus('accessCount', m.accessCount, statusMap))}"><span>対象期間アクセス</span><strong>${kpiMetricValue(m.accessCount, '', resolveKpiMetricStatus('accessCount', m.accessCount, statusMap))}</strong></div>
+        <div class="analytics-kpi-card${kpiMetricStatusClass(resolveKpiMetricStatus('searchTraffic', m.searchTraffic, statusMap))}"><span>自然検索流入セッション</span><strong>${kpiMetricValue(m.searchTraffic, '', resolveKpiMetricStatus('searchTraffic', m.searchTraffic, statusMap))}</strong></div>
+        <div class="analytics-kpi-card${kpiMetricStatusClass(resolveKpiMetricStatus('inquiryClicks', m.inquiryClicks, statusMap))}"><span>問い合わせ導線クリック</span><strong>${kpiMetricValue(m.inquiryClicks, '', resolveKpiMetricStatus('inquiryClicks', m.inquiryClicks, statusMap))}</strong></div>
+        <div class="analytics-kpi-card${kpiMetricStatusClass(resolveKpiMetricStatus('gbpPhone', m.gbpPhone, statusMap))}"><span>GBP電話タップ</span><strong>${kpiMetricValue(m.gbpPhone, '', resolveKpiMetricStatus('gbpPhone', m.gbpPhone, statusMap))}</strong></div>
         <div class="analytics-kpi-card"><span>異常あり/なし</span><strong>${anomaly ? '要確認' : '大きな異常なし'}</strong></div>
       </div>
       <div class="analytics-kpi-subgrid">
@@ -14374,7 +14434,7 @@
         <h3>改善リストへ追加</h3>
         ${renderKpiActionCandidates(snapshot)}
       </div>
-      <p class="analytics-kpi-note">未確認の項目は0ではありません。貼り付け内容から抽出できた範囲のみ表示しています。</p>
+      <p class="analytics-kpi-note">未確認・未接続・取得失敗は0ではありません。KPI取得数は取得成功（0件含む）のみを数えます。GBP未接続の間は全面完成とは扱いません。</p>
     `;
     bindActionCandidateButtons(el);
   }
@@ -15150,6 +15210,149 @@
     return { insights, topPage, weakCta, delta };
   }
 
+  function mapMarketingEventCategoryMetric(category, ga4Failed) {
+    if (ga4Failed) {
+      return { value: null, status: 'error', reason: 'GA4取得失敗' };
+    }
+    const item = category || {};
+    if (item.status === 'success' && item.value !== null && item.value !== undefined && Number.isFinite(Number(item.value))) {
+      return { value: Number(item.value), status: 'ok', reason: null };
+    }
+    if (item.status === 'error') {
+      return { value: null, status: 'error', reason: item.reason || '取得失敗' };
+    }
+    if (item.status === 'pending' || item.status === 'not-configured') {
+      return { value: null, status: 'unknown', reason: item.reason || null };
+    }
+    if (item.value !== null && item.value !== undefined && Number.isFinite(Number(item.value))) {
+      return { value: Number(item.value), status: 'ok', reason: null };
+    }
+    return { value: null, status: 'unknown', reason: item.reason || null };
+  }
+
+  function buildMarketingSnapshotMetrics(serviceResults) {
+    const ga4 = serviceResults.ga4 || {};
+    const sc = serviceResults.searchConsole || {};
+    const ads = serviceResults.googleAds || {};
+    const ga4Records = Array.isArray(ga4.records) ? ga4.records : [];
+    const adRecords = Array.isArray(ads.records) ? ads.records : [];
+    const totals = ga4.totals || {};
+    const categories = ((ga4.eventDetails || {}).categories) || {};
+    const ga4Failed = ga4.status === 'error';
+    const scFailed = sc.status === 'error';
+    const metrics = {};
+    const metricStatus = {};
+    const metricReasons = {};
+
+    const setMetric = (key, value, status, reason) => {
+      metrics[key] = value;
+      metricStatus[key] = status;
+      if (reason) metricReasons[key] = reason;
+    };
+
+    const preferTotalOrSum = (totalValue, sumValue, failed) => {
+      if (totalValue !== null && totalValue !== undefined && Number.isFinite(Number(totalValue))) {
+        return { value: Number(totalValue), status: 'ok' };
+      }
+      if (failed && !ga4Records.length) return { value: null, status: 'error' };
+      if (ga4Records.length) return { value: sumValue, status: 'ok' };
+      return { value: null, status: failed ? 'error' : 'unknown' };
+    };
+
+    const access = preferTotalOrSum(
+      totals.screenPageViews,
+      ga4Records.reduce((sum, item) => sum + (Number(item.views) || 0), 0),
+      ga4Failed
+    );
+    setMetric('accessCount', access.value, access.status);
+
+    const users = preferTotalOrSum(
+      totals.activeUsers,
+      ga4Records.reduce((sum, item) => sum + (Number(item.activeUsers) || 0), 0),
+      ga4Failed
+    );
+    setMetric('users', users.value, users.status);
+
+    const assignGa4Total = (key, totalValue, errorHint) => {
+      if (totalValue !== null && totalValue !== undefined && Number.isFinite(Number(totalValue))) {
+        setMetric(key, Number(totalValue), 'ok');
+        return;
+      }
+      const hasExplicitError = (ga4.errors || []).some(text => String(text).includes(errorHint));
+      setMetric(key, null, (ga4Failed || hasExplicitError) ? 'error' : 'unknown');
+    };
+    assignGa4Total('newUsers', totals.newUsers, 'newUsers');
+    assignGa4Total('sessions', totals.sessions, 'sessions');
+    assignGa4Total('searchTraffic', totals.organicSearchSessions, 'Organic Search');
+
+    const line = mapMarketingEventCategoryMetric(categories.line, ga4Failed && !ga4.eventDetails);
+    const phone = mapMarketingEventCategoryMetric(categories.phone, ga4Failed && !ga4.eventDetails);
+    const form = mapMarketingEventCategoryMetric(categories.reservation, ga4Failed && !ga4.eventDetails);
+    setMetric('lineClicks', line.value, line.status, line.reason);
+    setMetric('phoneTaps', phone.value, phone.status, phone.reason);
+    setMetric('formClicks', form.value, form.status, form.reason);
+
+    if (line.status === 'error' || phone.status === 'error' || form.status === 'error') {
+      setMetric('inquiryClicks', null, 'error', '問い合わせ導線の取得失敗');
+    } else if (line.status === 'ok' && phone.status === 'ok' && form.status === 'ok') {
+      // LINE + 電話 + 予約フォームのみ。generic CTAは加算しない
+      setMetric('inquiryClicks', Number(line.value) + Number(phone.value) + Number(form.value), 'ok');
+    } else {
+      setMetric('inquiryClicks', null, 'unknown');
+    }
+
+    const assignSc = (key, value) => {
+      if (value !== null && value !== undefined && Number.isFinite(Number(value))) {
+        setMetric(key, Number(value), 'ok');
+        return;
+      }
+      setMetric(key, null, scFailed ? 'error' : 'unknown');
+    };
+    assignSc('searchImpressions', sc.totals ? sc.totals.impressions : null);
+    assignSc('searchClicks', sc.totals ? sc.totals.clicks : null);
+    assignSc('searchCtr', sc.totals ? sc.totals.ctr : null);
+    if (sc.totals && sc.totals.position !== null && sc.totals.position !== undefined && Number.isFinite(Number(sc.totals.position))) {
+      metrics.searchAvgPosition = Number(sc.totals.position);
+      metricStatus.searchAvgPosition = 'ok';
+    } else {
+      metrics.searchAvgPosition = null;
+      metricStatus.searchAvgPosition = scFailed ? 'error' : 'unknown';
+    }
+
+    setMetric('gbpViews', null, 'not_connected', 'GBP取得機能が未接続');
+    setMetric('gbpClicks', null, 'not_connected', 'GBP取得機能が未接続');
+    setMetric('gbpPhone', null, 'not_connected', 'GBP取得機能が未接続');
+
+    metrics.adCost = adRecords.reduce((sum, item) => sum + (Number(item.cost) || 0), 0);
+    metrics.adImpressions = adRecords.reduce((sum, item) => sum + (Number(item.impressions) || 0), 0);
+    metrics.adClicks = adRecords.reduce((sum, item) => sum + (Number(item.clicks) || 0), 0);
+
+    return { metrics, metricStatus, metricReasons };
+  }
+
+  function buildMarketingPeriodDetails(serviceResults) {
+    const ga4 = serviceResults.ga4 || {};
+    const sc = serviceResults.searchConsole || {};
+    const ads = serviceResults.googleAds || {};
+    const primaryAd = (ads.records || [])[0] || {};
+    const ga4Pages = ga4.periodLabel
+      ? `${ga4.periodLabel}${ga4.period ? `（${ga4.period}）` : ''}`
+      : (ga4.period || '');
+    let ga4Events = '';
+    if (ga4.eventPeriod || ga4.eventPeriodDate) {
+      const label = ga4.eventPeriod || '';
+      const date = ga4.eventPeriodDate || '';
+      ga4Events = [label, date ? `（${date}）` : ''].join('').trim();
+    }
+    return {
+      ga4Pages: ga4Pages || '未取得',
+      ga4Events: ga4Events || '未取得',
+      searchConsole: sc.period || '未取得',
+      googleAds: primaryAd.searchTermPeriod || '今日',
+      fetchedAt: ga4.fetchedAt || sc.fetchedAt || ads.fetchedAt || ''
+    };
+  }
+
   function upsertMarketingSnapshot(serviceResults, saveStats, startedAt) {
     const list = Storage.getAnalyticsSnapshots();
     const previous = list.find(item => item && item.source === MARKETING_SYNC_SOURCE);
@@ -15159,28 +15362,28 @@
     const ga4Records = Array.isArray(ga4.records) ? ga4.records : [];
     const adRecords = Array.isArray(ads.records) ? ads.records : [];
     const analysis = buildMarketingInsights(serviceResults, previous);
-    const metrics = {
-      accessCount: ga4Records.reduce((sum, item) => sum + (Number(item.views) || 0), 0),
-      users: ga4Records.reduce((sum, item) => sum + (Number(item.activeUsers) || 0), 0),
-      inquiryClicks: null,
-      searchImpressions: sc.totals ? sc.totals.impressions : null,
-      searchClicks: sc.totals ? sc.totals.clicks : null,
-      searchCtr: sc.totals ? sc.totals.ctr : null,
-      adCost: adRecords.reduce((sum, item) => sum + (Number(item.cost) || 0), 0),
-      adImpressions: adRecords.reduce((sum, item) => sum + (Number(item.impressions) || 0), 0),
-      adClicks: adRecords.reduce((sum, item) => sum + (Number(item.clicks) || 0), 0)
-    };
+    const built = buildMarketingSnapshotMetrics(serviceResults);
+    const periodDetails = buildMarketingPeriodDetails(serviceResults);
     const completedAt = new Date().toISOString();
     const failedServices = Object.values(serviceResults).filter(item => !item || item.status !== 'success').length;
+    const totalRecords = adRecords.length + ga4Records.length + (sc.queries || []).length + (sc.pages || []).length;
     const record = {
       ...(previous || {}),
       id: previous ? previous.id : ('analytics-snapshot-' + Storage.generateId()),
       source: MARKETING_SYNC_SOURCE,
-      periodLabel: sc.period || ga4.period || TODAY(),
+      periodLabel: [
+        periodDetails.ga4Pages,
+        periodDetails.ga4Events,
+        periodDetails.searchConsole
+      ].filter(text => text && text !== '未取得').join(' / ') || sc.period || ga4.period || TODAY(),
+      periodDetails,
       importedAt: completedAt,
       createdAt: previous ? previous.createdAt : completedAt,
-      hasData: ga4Records.length > 0 || adRecords.length > 0 || (sc.queries || []).length > 0,
-      metrics,
+      hasData: ga4Records.length > 0 || adRecords.length > 0 || (sc.queries || []).length > 0
+        || Object.values(built.metrics).some(v => v !== null && v !== undefined),
+      metrics: built.metrics,
+      metricStatus: built.metricStatus,
+      metricReasons: built.metricReasons,
       pages: ga4Records.map(item => ({
         pageName: item.pageName || item.pagePath,
         url: item.pagePath || item.url,
@@ -15199,7 +15402,11 @@
         startedAt,
         completedAt,
         status: failedServices ? (failedServices === 3 ? 'error' : 'partial') : 'success',
-        totalRecords: adRecords.length + ga4Records.length + (sc.queries || []).length + (sc.pages || []).length,
+        totalRecords,
+        kpiOkCount: MARKETING_KPI_METRIC_KEYS.reduce((count, key) => (
+          built.metricStatus[key] === 'ok' ? count + 1 : count
+        ), 0),
+        kpiTotalCount: MARKETING_KPI_METRIC_KEYS.length,
         services: serviceResults,
         health: lastMarketingHealth,
         saveStats
@@ -15253,36 +15460,56 @@
         }).join(' / ')
       : '';
     const insights = snapshot.insights || [];
+    const periodDetails = snapshot.periodDetails || buildMarketingPeriodDetails(services);
+    const okCount = sync.kpiOkCount != null ? sync.kpiOkCount : countOkMarketingKpis(snapshot);
+    const saveCount = Number(sync.totalRecords || 0);
+    const scPosition = snapshot.metrics ? snapshot.metrics.searchAvgPosition : null;
+    const scPositionStatus = resolveKpiMetricStatus(
+      'searchAvgPosition',
+      scPosition,
+      snapshot.metricStatus || {}
+    );
     el.innerHTML = `
       <h3>取得後の集客サマリー</h3>
       <div class="marketing-auto-metric-grid">
+        <div><span>KPI取得数</span><strong>${okCount}/15項目取得</strong></div>
+        <div><span>保存データ行数</span><strong>${saveCount.toLocaleString('ja-JP')}件</strong></div>
         <div><span>今日の広告費</span><strong>${formatMarketingMetric(adRecords.length ? adTotals.cost : null, 'yen')}</strong></div>
-        <div><span>今日の表示回数</span><strong>${formatMarketingMetric(adRecords.length ? adTotals.impressions : null)}</strong></div>
         <div><span>今日のクリック数</span><strong>${formatMarketingMetric(adRecords.length ? adTotals.clicks : null)}</strong></div>
         <div><span>GA4ページ需要</span><strong>${topPage ? esc((topPage.pagePath || topPage.pageName) + ' / ' + formatMarketingMetric(topPage.views)) : '未取得'}</strong></div>
+        <div><span>SC平均掲載順位</span><strong>${kpiMetricValue(scPosition, '', scPositionStatus)}</strong></div>
       </div>
       <div class="marketing-detail-grid">
         <section>
           <h4>Google広告</h4>
           <p><strong>キャンペーン：</strong>${esc(primaryAd.campaignName || '未取得')}</p>
           <p><strong>ステータス：</strong>${esc(primaryAd.status || '未取得')}</p>
-          <p><strong>検索語句期間：</strong>${esc(primaryAd.searchTermPeriod || '未取得')}</p>
+          <p><strong>検索語句期間：</strong>${esc(primaryAd.searchTermPeriod || periodDetails.googleAds || '未取得')}</p>
           <p><strong>検索語句上位：</strong>${esc(searchTerms === null ? '未取得' : (topTerms || '0件'))}</p>
           <p><strong>未取得理由：</strong>${esc(primaryAd.searchTermReason || 'なし')}</p>
         </section>
         <section>
           <h4>GA4クリック内訳</h4>
-          <p><strong>対象期間：</strong>${esc(ga4.eventPeriod || '未取得')} ${esc(ga4.eventPeriodDate || '')}</p>
+          <p><strong>GA4ページ期間：</strong>${esc(periodDetails.ga4Pages || '未取得')}</p>
+          <p><strong>GA4イベント期間：</strong>${esc(periodDetails.ga4Events || ((ga4.eventPeriod || '未取得') + ' ' + (ga4.eventPeriodDate || '')))}</p>
           <p><strong>CTA：</strong>${esc(formatMarketingEventCategory(eventCategories.cta))}</p>
           <p><strong>LINE：</strong>${esc(formatMarketingEventCategory(eventCategories.line))}</p>
-          <p><strong>予約：</strong>${esc(formatMarketingEventCategory(eventCategories.reservation))}</p>
+          <p><strong>予約フォーム：</strong>${esc(formatMarketingEventCategory(eventCategories.reservation))}</p>
           <p><strong>電話：</strong>${esc(formatMarketingEventCategory(eventCategories.phone))}</p>
           <p><strong>イベント名：</strong>${esc((eventDetails.events || []).map(item => item.eventName).join(' / ') || '未取得')}</p>
+        </section>
+        <section>
+          <h4>Search Console</h4>
+          <p><strong>対象期間：</strong>${esc(periodDetails.searchConsole || sc.period || '未取得')}</p>
+          <p><strong>表示回数：</strong>${esc(formatMarketingMetric(sc.totals ? sc.totals.impressions : null))}</p>
+          <p><strong>クリック数：</strong>${esc(formatMarketingMetric(sc.totals ? sc.totals.clicks : null))}</p>
+          <p><strong>平均掲載順位（補足）：</strong>${kpiMetricValue(scPosition, '', scPositionStatus)}</p>
         </section>
       </div>
       <div class="marketing-auto-insights">
         <p><strong>検索クエリ上位：</strong>${queries.length ? esc(queries.slice(0, 5).map(item => item.query).join(' / ')) : '未取得'}</p>
         <p><strong>次の打ち手：</strong>${esc(insights.find(text => /CTAが弱い|次に見るべき/.test(text)) || 'データ不足のため判定保留')}</p>
+        <p class="marketing-kpi-note">KPI取得数は取得成功項目のみ。保存データ行数とは別集計です。GBPは未接続のため全面完成とは扱いません。</p>
         <ul>${insights.map(text => `<li>${esc(text)}</li>`).join('')}</ul>
       </div>
     `;
@@ -15322,9 +15549,14 @@
       }).join('');
     }
     if (lastEl) {
+      const okCount = sync
+        ? (sync.kpiOkCount != null ? sync.kpiOkCount : countOkMarketingKpis(snapshot))
+        : 0;
       lastEl.innerHTML = sync
         ? `<p><strong>最終取得日時：</strong>${esc(formatMarketingDateTime(sync.completedAt))}</p>
-           <p><strong>最終取得結果：</strong>${esc(marketingStatusLabel(sync.status))} / ${Number(sync.totalRecords || 0).toLocaleString('ja-JP')}件</p>`
+           <p><strong>最終取得結果：</strong>${esc(marketingStatusLabel(sync.status))}</p>
+           <p><strong>KPI取得数：</strong>${okCount}/15項目取得</p>
+           <p><strong>保存データ行数：</strong>${Number(sync.totalRecords || 0).toLocaleString('ja-JP')}件</p>`
         : '<p><strong>最終取得日時：</strong>未取得</p><p><strong>最終取得結果：</strong>未取得</p>';
     }
     if (saveEl) {

@@ -1,6 +1,6 @@
 ﻿# Budil handoff
 
-最終更新: 2026-07-24
+最終更新: 2026-07-25
 
 ## 正本
 
@@ -17,16 +17,17 @@
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` の依存関係（googleapis 等）。依存は `hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（75本）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（76本）
 - **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
 
 ## 現在の最新状態
 
 | 項目 | 値 |
 |------|-----|
-| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.17 |
-| 最新バージョン | v4.12.17 |
-| v4.12.17 集客チェック1ボタン取得 | 実装・公開予定／Browser番頭ローカルcommit対象 |
+| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.18 |
+| 最新バージョン | v4.12.18 |
+| v4.12.18 集客KPI 12/15 実用化 | 実装中／GBP3項目は未接続のため全面完成とは扱わない |
+| v4.12.17 集客チェック1ボタン取得 | 実装済み／Browser番頭ローカルcommit対象 |
 | v4.12.16 広告番頭連携・最短MVP | 実装・受け入れA判定済み |
 | v4.12.15 Googleカレンダーを更新（local API 1ボタン化） | 工程2公開PNA合格／工程3ログオン自動起動設定済み／PC再起動後の最終確認はユーザー待ち |
 | v4.12.14 作業予定削除 + 売上確定入金日自動入力 | 正式合格本体 `2bbf0a6` / verify-current 73/73 / 公開URLで v4.12.14 確認済み / main push済み |

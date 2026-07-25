@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Budil v4.10.38 — 利益ラベル整合性 verification.
  *
  * 確認内容:
@@ -37,10 +37,10 @@ const storageJs = load('js/storage.js');
 const dataBackupJs = load('js/data-backup.js');
 
 // --- バージョン確認 ---
-assert(indexHtml.includes('v4.12.17'), 'index.html should show v4.12.17');
-assert(indexHtml.includes('js/app.js?v=4.12.17'), 'app.js cache buster should be v4.12.17');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.17'"), 'storage.js version should be v4.12.17');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.17'"), 'data-backup version should be v4.12.17');
+assert(indexHtml.includes('v4.12.18'), 'index.html should show v4.12.18');
+assert(indexHtml.includes('js/app.js?v=4.12.18'), 'app.js cache buster should be v4.12.18');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.18'"), 'storage.js version should be v4.12.18');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.18'"), 'data-backup version should be v4.12.18');
 
 // --- ProfitBrain の見込み利益フォールバック修正確認 ---
 console.log('== ProfitBrain plannedForecastProfit fallback check ==');
