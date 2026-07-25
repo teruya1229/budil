@@ -38,8 +38,8 @@ assert(app.includes('SC平均掲載順位'), 'SC average position is displayed')
 assert(app.includes('periodDetails'), 'period details are stored');
 assert(app.includes('organicSearchSessions'), 'organicSearchSessions is consumed');
 assert(!app.includes('inquiryClicks: null'), 'fixed inquiryClicks:null is removed');
-assert(!/全面完成(?!とは扱いません)/.test(app), 'does not claim full completion');
-assert(!/完全合格/.test(app), 'does not claim full pass');
+assert(!app.includes('全面完成'), 'does not claim full completion');
+assert(!app.includes('完全合格'), 'does not claim full pass');
 assert(css.includes('.is-not-connected'), 'not_connected readable style exists');
 assert(css.includes('.analytics-kpi-row-supplement'), 'SC supplement style exists');
 

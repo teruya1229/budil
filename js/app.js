@@ -14434,7 +14434,7 @@
         <h3>改善リストへ追加</h3>
         ${renderKpiActionCandidates(snapshot)}
       </div>
-      <p class="analytics-kpi-note">未確認・未接続・取得失敗は0ではありません。KPI取得数は取得成功（0件含む）のみを数えます。GBP未接続の間は全面完成とは扱いません。</p>
+      <p class="analytics-kpi-note">未確認・未接続・取得失敗は0ではありません。KPI取得数は取得成功（0件含む）のみを数えます。GBP未接続の間は未完了項目が残ります。</p>
     `;
     bindActionCandidateButtons(el);
   }
@@ -15509,7 +15509,7 @@
       <div class="marketing-auto-insights">
         <p><strong>検索クエリ上位：</strong>${queries.length ? esc(queries.slice(0, 5).map(item => item.query).join(' / ')) : '未取得'}</p>
         <p><strong>次の打ち手：</strong>${esc(insights.find(text => /CTAが弱い|次に見るべき/.test(text)) || 'データ不足のため判定保留')}</p>
-        <p class="marketing-kpi-note">KPI取得数は取得成功項目のみ。保存データ行数とは別集計です。GBPは未接続のため全面完成とは扱いません。</p>
+        <p class="marketing-kpi-note">KPI取得数は取得成功項目のみ。保存データ行数とは別集計です。GBPは未接続のため未完了項目が残ります。</p>
         <ul>${insights.map(text => `<li>${esc(text)}</li>`).join('')}</ul>
       </div>
     `;
