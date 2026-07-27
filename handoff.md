@@ -26,7 +26,7 @@
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.20 |
 | 最新バージョン | v4.12.20 |
-| v4.12.20 集客チェック1ボタン自動起動修正 | Browser番頭ローカルcommit `06c0c2d` / Budil push・公開確認待ち |
+| v4.12.20 集客チェック1ボタン自動起動修正 | 正式合格 Budil `89ae5d8` / Browser番頭 `06c0c2d` / verify-current 78本 / 公開URLで READY取得確認 / STOPPEDからcollect共通READY保証で復旧確認 |
 | v4.12.19 全売上編集ボタン復旧 | 正式合格 commit `e62c687` / verify-current 77本合格 / 公開URLで v4.12.19・編集フォーム展開確認（保存せずキャンセル） |
 | v4.12.18 集客KPI 12/15 実用化 | 公開済み `c94da67`／KPI 12/15・GBP3項目は未接続／全面完成扱いはしない |
 | v4.12.17 集客チェック1ボタン取得 | 実装済み／Browser番頭ローカルcommit対象 |
