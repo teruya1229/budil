@@ -1,6 +1,6 @@
 ﻿# Budil handoff
 
-最終更新: 2026-07-25
+最終更新: 2026-07-27
 
 ## 正本
 
@@ -17,15 +17,16 @@
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` の依存関係（googleapis 等）。依存は `hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（76本）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（77本）
 - **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
 
 ## 現在の最新状態
 
 | 項目 | 値 |
 |------|-----|
-| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.18 |
-| 最新バージョン | v4.12.18 |
+| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.19 |
+| 最新バージョン | v4.12.19 |
+| v4.12.19 全売上編集ボタン復旧 | 正式合格／`openRevenueEdit` が手入力 details を開くよう修正／確定・入金済みも同一ID更新 |
 | v4.12.18 集客KPI 12/15 実用化 | 公開済み `c94da67`／KPI 12/15・GBP3項目は未接続／全面完成扱いはしない |
 | v4.12.17 集客チェック1ボタン取得 | 実装済み／Browser番頭ローカルcommit対象 |
 | v4.12.16 広告番頭連携・最短MVP | 実装・受け入れA判定済み |

@@ -2,6 +2,27 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.19 全売上編集ボタン復旧（2026-07-27）
+
+**日付**: 2026-07-27
+
+**判断内容**:
+- 売上一覧を含む既存売上の「編集」が機能しない重大バグを修正する（新機能ではない）
+- 根本原因は、編集フォームが閉じた `<details id="revenue-manual-input-details">` 内にあり、`openRevenueEdit` が details を開いていなかったこと
+- 既存フォームを使い、遷移＋details展開＋既存値投入＋同一売上ID更新に統一する
+- 確定済み・入金済みも編集可。編集だけで確定／入金状態や関連IDを解除しない
+- 請求書・見積書の自動上書きはしない
+
+**変更ファイル**:
+- js/app.js（`openRevenueEdit`）
+- index.html / js/storage.js / js/data-backup.js（表示バージョン・cache buster）
+- scripts/verify-v41219-revenue-edit-all-entries.mjs
+- scripts/verify-current.mjs / 既存 verify のバージョンピン
+- status.md / handoff.md / decision-log.md
+
+**次にやること**:
+- verify-current 全合格後に commit / push / 公開URL確認（実データは保存せずキャンセル）
+
 ## v4.12.18 集客KPI 12/15 実用化（2026-07-25）
 
 **日付**: 2026-07-25

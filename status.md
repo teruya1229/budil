@@ -1,13 +1,23 @@
 ﻿# Budil status
 
-## 正式な現行verify環境（v4.12.18）
+## 正式な現行verify環境（v4.12.19）
 
 - **正式環境**: Budil 単独 clone ではなく、親階層に sibling の calendar-sync-worker がある開発環境
 - **必須**: ../calendar-sync-worker/run-budil-calendar-export.bat
 - **必須**: hub/functions 側の依存関係（googleapis 等）。hub/functions で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（76本。省略・除外・緩和なし）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（77本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.19 実装内容（全売上編集ボタン復旧）
+
+- 表示バージョンを v4.12.19 に更新
+- index.html の主要 JS/CSS cache buster を v4.12.19 に統一
+- 根本原因: 売上編集フォームが閉じた `<details id="revenue-manual-input-details">` 内にあり、`openRevenueEdit` が開いていなかった
+- 修正: 既存 `openRevenueEdit` で売上画面へ遷移し、details を開いて既存値を投入、同一売上IDを更新
+- 確定済み・入金済みも編集可。関連ID維持。新規画面・新モーダルなし
+- 新規 verify-v41219-revenue-edit-all-entries.mjs 追加
+- 現行合格は引き続き `node scripts/verify-current.mjs`
 
 ## v4.12.18 実装内容（集客KPI 12/15 実用化）
 

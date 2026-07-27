@@ -19280,6 +19280,8 @@
   function openRevenueEdit(id) {
     const record = RevenueBrain.normalizeRevenueRecord(Storage.getRevenueRecords().find(r => r.id === id));
     if (!record) return;
+    // 売上一覧・入金予定・受付など全入口から、既存の手入力フォーム（details内）を開いて編集する
+    navigateToView('revenue');
     fillRevenueSelects();
     fillRevenuePaymentSelects();
     document.getElementById('revenue-edit-id').value = id;
@@ -19308,7 +19310,9 @@
     setRevenueFormIntakeNote('');
     setRevenueFormSubmitLabel('保存');
     document.getElementById('btn-revenue-cancel').classList.remove('hidden');
-    document.getElementById('revenue-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const details = document.getElementById('revenue-manual-input-details');
+    if (details) details.open = true;
+    setTimeout(() => scrollToElement('#revenue-form'), 120);
   }
 
   function getRevenueFormData() {
