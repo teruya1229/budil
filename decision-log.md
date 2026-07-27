@@ -2,7 +2,25 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
-## v4.12.19 全売上編集ボタン復旧（2026-07-27）
+## v4.12.20 集客チェック1ボタン取得の自動起動修正（2026-07-27）
+
+**日付**: 2026-07-27
+
+**判断内容**:
+- 公開ページから `/health` の `cdpReady=false` だけで取得を終了していたのが根本原因
+- 集客APIはログオン自動起動済みでも、Browser番頭に約37秒の起動空白がある
+- 新常駐サービスや独自URLスキームは作らず、既存 `browser-ai.ps1 start` をcollect開始時の共通READY保証から1回だけ呼ぶ
+- `/health` は API稼働・API自動起動設定・Browser状態・CDP・Browser自動起動設定を分離する
+- 失敗時は保存済みデータを消さず、「前回取得値」として表示する
+
+**変更ファイル**:
+- Browser番頭: `marketing_local_api.py` / `marketing-api.ps1` / tests / `MARKETING_SYNC.md`
+- Budil: `js/app.js` / `index.html` / `js/storage.js` / `js/data-backup.js`
+- `scripts/verify-v41220-marketing-auto-start.mjs` / `scripts/verify-current.mjs`
+- `status.md` / `handoff.md` / `decision-log.md`
+
+**次にやること**:
+- Browser番頭ローカルcommit、Budil commit/push、公開URLで READY / STOPPED 実機確認
 
 **日付**: 2026-07-27
 

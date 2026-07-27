@@ -15002,10 +15002,13 @@
 
   /* ── Browser番頭 集客データ自動取得 ── */
   const MARKETING_LOCAL_API_BASE = 'http://127.0.0.1:43822';
-  const MARKETING_LOCAL_API_TIMEOUT_MS = 90000;
+  const MARKETING_LOCAL_API_TIMEOUT_MS = 150000;
+  const MARKETING_HEALTH_RETRY_MS = 45000;
+  const MARKETING_HEALTH_RETRY_INTERVAL_MS = 1500;
   const MARKETING_SYNC_SOURCE = 'browser-bantou-marketing';
   const MARKETING_SYNC_STEPS = [
-    'Browser番頭確認中',
+    '集客APIへ接続確認中',
+    'Browser番頭を確認中／起動中',
     'Google広告取得中',
     'GA4取得中',
     'Search Console取得中',
@@ -15013,9 +15016,12 @@
     'Budil保存中',
     '完了'
   ];
+  const MARKETING_API_UNREACHABLE_MESSAGE =
+    '集客APIへ接続できません。APIが未起動、またはChromeのローカルネットワーク許可で遮断されている可能性があります。';
   let marketingSyncInFlight = false;
   let lastMarketingSyncResult = null;
   let lastMarketingHealth = null;
+  let lastMarketingRunMeta = null;
 
   function organizeMarketingManualTools() {
     const body = document.getElementById('marketing-manual-tools-body');
@@ -15076,9 +15082,9 @@
     return item.reason || '未取得';
   }
 
-  async function requestMarketingLocalApi(path, method = 'GET') {
+  async function requestMarketingLocalApi(path, method = 'GET', timeoutMs = MARKETING_LOCAL_API_TIMEOUT_MS) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), MARKETING_LOCAL_API_TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await fetch(MARKETING_LOCAL_API_BASE + path, {
         method,
@@ -15097,12 +15103,82 @@
     } catch (err) {
       if (err && err.name === 'AbortError') throw new Error('タイムアウト');
       if (/Failed to fetch|NetworkError|fetch/i.test(err && err.message ? err.message : '')) {
-        throw new Error('Browser番頭が停止中');
+        throw new Error(MARKETING_API_UNREACHABLE_MESSAGE);
       }
       throw err;
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  async function waitForMarketingHealth(maxMs = MARKETING_HEALTH_RETRY_MS) {
+    const started = Date.now();
+    let lastError = null;
+    while (Date.now() - started <= maxMs) {
+      try {
+        const health = await requestMarketingLocalApi('/health', 'GET', 5000);
+        return health;
+      } catch (err) {
+        lastError = err;
+        const remaining = maxMs - (Date.now() - started);
+        if (remaining <= 0) break;
+        await new Promise(resolve => setTimeout(resolve, Math.min(MARKETING_HEALTH_RETRY_INTERVAL_MS, remaining)));
+      }
+    }
+    throw lastError || new Error(MARKETING_API_UNREACHABLE_MESSAGE);
+  }
+
+  function marketingApiStatusLabel(health) {
+    if (!health) return '確認不能';
+    if (health._connection === 'checking') return '確認中';
+    if (health._connection === 'unreachable') return '接続不可';
+    if (health.apiRunning === true || health.apiStatus === 'READY' || health.ok === true) return '稼働中';
+    if (health.apiStatus === 'ERROR' || health.ok === false) return '接続不可';
+    return '確認不能';
+  }
+
+  function marketingAutoStartLabel(autoStart) {
+    if (!autoStart || typeof autoStart !== 'object') return '確認不能';
+    if (autoStart.configured === true) return 'あり';
+    if (autoStart.configured === false) return 'なし';
+    return '確認不能';
+  }
+
+  function marketingBrowserStatusLabel(status, opts) {
+    const options = opts || {};
+    if (options.starting) return '起動中';
+    const value = String(status || '').toUpperCase();
+    if (value === 'READY') return 'READY';
+    if (value === 'UNVERIFIED') return 'UNVERIFIED';
+    if (value === 'STOPPED' || value === 'NOT_STARTED') return '停止中';
+    if (value === 'CONFLICT') return 'CONFLICT';
+    if (value === 'UNKNOWN' || !value) return '確認不能';
+    return value;
+  }
+
+  function marketingCdpStatusLabel(health) {
+    if (!health || health._connection === 'unreachable') return '確認不能';
+    if (health.cdpReady === true || health.cdpStatus === 'READY') return '稼働中';
+    if (health.cdpReady === false || health.cdpStatus === 'STOPPED') return '停止中';
+    return '確認不能';
+  }
+
+  function isMarketingBrowserEnsureFailure(result) {
+    const code = String((result && result.errorCode) || '');
+    return [
+      'BROWSER_CONFLICT',
+      'BROWSER_STATUS_UNKNOWN',
+      'BROWSER_START_FAILED',
+      'BROWSER_READY_TIMEOUT',
+      'CDP_UNAVAILABLE'
+    ].includes(code);
+  }
+
+  function marketingBrowserFailureMessage(result) {
+    if (!result) return 'Browser番頭の起動または確認に失敗しました';
+    if (result.message) return String(result.message);
+    if (Array.isArray(result.errors) && result.errors.length) return String(result.errors[0]);
+    return 'Browser番頭の起動または確認に失敗しました';
   }
 
   function validateMarketingServiceResult(result, serviceName) {
@@ -15523,20 +15599,46 @@
     const lastEl = document.getElementById('marketing-auto-last-result');
     const saveEl = document.getElementById('marketing-auto-save-result');
     const health = lastMarketingHealth || (sync && sync.health) || {};
+    const runMeta = lastMarketingRunMeta || {};
     if (sourceEl) {
       const defs = [
         ['googleAds', 'Google広告'],
         ['ga4', 'GA4'],
         ['searchConsole', 'Search Console']
       ];
-      const apiStatus = health.apiStatus || (health.ok ? 'READY' : 'STOPPED');
-      const autoStart = health.autoStart || {};
-      const apiCard = `<div class="marketing-source-card is-${esc(apiStatus === 'READY' ? 'success' : 'error')}">
-        <span>集客API</span>
-        <strong>${esc(apiStatus)}</strong>
-        <small>自動起動: ${autoStart.configured ? '設定済み' : '未設定'} / ${health.checkedAt ? formatMarketingDateTime(health.checkedAt) : '未応答'}</small>
-      </div>`;
-      sourceEl.innerHTML = apiCard + defs.map(([key, label]) => {
+      const apiAutoStart = health.apiAutoStart || health.autoStart || {};
+      const browserAutoStart = health.browserAutoStart || {};
+      const apiLabel = marketingApiStatusLabel(health);
+      const browserLabel = marketingBrowserStatusLabel(
+        health.browserStatus || runMeta.browserStatus,
+        { starting: !!runMeta.browserStarting }
+      );
+      const cdpLabel = marketingCdpStatusLabel(health);
+      const checkedAt = health.checkedAt
+        ? formatMarketingDateTime(health.checkedAt)
+        : '未確認';
+      const statusCards = `
+        <div class="marketing-source-card is-${esc(apiLabel === '稼働中' ? 'success' : (apiLabel === '確認中' ? 'idle' : 'error'))}">
+          <span>集客API</span>
+          <strong>${esc(apiLabel)}</strong>
+          <small>最終確認: ${esc(checkedAt)}</small>
+        </div>
+        <div class="marketing-source-card is-${esc(apiAutoStart.configured ? 'success' : 'idle')}">
+          <span>API自動起動設定</span>
+          <strong>${esc(marketingAutoStartLabel(apiAutoStart))}</strong>
+          <small>現在稼働とは別表示</small>
+        </div>
+        <div class="marketing-source-card is-${esc(/READY|UNVERIFIED|起動中/.test(browserLabel) ? 'success' : (browserLabel === '確認不能' ? 'idle' : 'error'))}">
+          <span>Browser番頭</span>
+          <strong>${esc(browserLabel)}</strong>
+          <small>自動起動設定: ${esc(marketingAutoStartLabel(browserAutoStart))}</small>
+        </div>
+        <div class="marketing-source-card is-${esc(cdpLabel === '稼働中' ? 'success' : (cdpLabel === '確認不能' ? 'idle' : 'error'))}">
+          <span>CDP</span>
+          <strong>${esc(cdpLabel)}</strong>
+          <small>9222</small>
+        </div>`;
+      sourceEl.innerHTML = statusCards + defs.map(([key, label]) => {
         const result = services[key] || {};
         const count = key === 'searchConsole'
           ? (result.queries || []).length + (result.pages || []).length
@@ -15552,35 +15654,48 @@
       const okCount = sync
         ? (sync.kpiOkCount != null ? sync.kpiOkCount : countOkMarketingKpis(snapshot))
         : 0;
+      const previousBlock = runMeta.failed && sync
+        ? `<p><strong>前回取得値：</strong>${esc(marketingStatusLabel(sync.status))} / ${esc(formatMarketingDateTime(sync.completedAt))}</p>
+           <p><strong>実際の最終成功日時：</strong>${esc(formatMarketingDateTime(sync.completedAt))}</p>
+           <p><strong>今回の取得失敗理由：</strong>${esc(runMeta.failureReason || '取得失敗')}</p>`
+        : '';
       lastEl.innerHTML = sync
         ? `<p><strong>最終取得日時：</strong>${esc(formatMarketingDateTime(sync.completedAt))}</p>
            <p><strong>最終取得結果：</strong>${esc(marketingStatusLabel(sync.status))}</p>
            <p><strong>KPI取得数：</strong>${okCount}/15項目取得</p>
-           <p><strong>保存データ行数：</strong>${Number(sync.totalRecords || 0).toLocaleString('ja-JP')}件</p>`
-        : '<p><strong>最終取得日時：</strong>未取得</p><p><strong>最終取得結果：</strong>未取得</p>';
+           <p><strong>保存データ行数：</strong>${Number(sync.totalRecords || 0).toLocaleString('ja-JP')}件</p>
+           ${previousBlock}`
+        : `<p><strong>最終取得日時：</strong>未取得</p><p><strong>最終取得結果：</strong>未取得</p>
+           ${runMeta.failed ? `<p><strong>今回の取得失敗理由：</strong>${esc(runMeta.failureReason || '取得失敗')}</p>` : ''}`;
     }
     if (saveEl) {
-      const stats = sync && sync.saveStats;
-      if (!stats) {
-        saveEl.classList.add('hidden');
-        saveEl.innerHTML = '';
-      } else {
+      if (runMeta.failed && !runMeta.saved) {
         saveEl.classList.remove('hidden');
-        const errors = (stats.errors || []).length
-          ? `<ul>${stats.errors.map(error => `<li>${esc(error)}</li>`).join('')}</ul>`
-          : '<p>エラー詳細：なし</p>';
-        saveEl.innerHTML = `
-          <h3>保存結果</h3>
-          <div class="marketing-save-grid">
-            <span>新規 <strong>${stats.created}</strong>件</span>
-            <span>更新 <strong>${stats.updated}</strong>件</span>
-            <span>重複スキップ <strong>${stats.duplicates}</strong>件</span>
-            <span>取得失敗 <strong>${stats.failed}</strong>件</span>
-          </div>
-          <p>保存日時：${esc(formatMarketingDateTime(stats.savedAt))}</p>
-          <p>保存前 ${stats.beforeCount}件 → 保存後 ${stats.afterCount}件</p>
-          ${errors}
-        `;
+        saveEl.innerHTML = `<h3>今回の取得結果</h3><p>${esc(runMeta.failureReason || '取得失敗')}</p>
+          <p>保存済みデータは削除していません。今回の成功としては扱いません。</p>`;
+      } else {
+        const stats = sync && sync.saveStats;
+        if (!stats) {
+          saveEl.classList.add('hidden');
+          saveEl.innerHTML = '';
+        } else {
+          saveEl.classList.remove('hidden');
+          const errors = (stats.errors || []).length
+            ? `<ul>${stats.errors.map(error => `<li>${esc(error)}</li>`).join('')}</ul>`
+            : '<p>エラー詳細：なし</p>';
+          saveEl.innerHTML = `
+            <h3>保存結果</h3>
+            <div class="marketing-save-grid">
+              <span>新規 <strong>${stats.created}</strong>件</span>
+              <span>更新 <strong>${stats.updated}</strong>件</span>
+              <span>重複スキップ <strong>${stats.duplicates}</strong>件</span>
+              <span>取得失敗 <strong>${stats.failed}</strong>件</span>
+            </div>
+            <p>保存日時：${esc(formatMarketingDateTime(stats.savedAt))}</p>
+            <p>保存前 ${stats.beforeCount}件 → 保存後 ${stats.afterCount}件</p>
+            ${errors}
+          `;
+        }
       }
     }
     renderMarketingOperationalSummary(snapshot);
@@ -15591,6 +15706,13 @@
     const button = document.getElementById('btn-marketing-auto-sync');
     const startedAt = new Date().toISOString();
     marketingSyncInFlight = true;
+    lastMarketingRunMeta = {
+      failed: false,
+      saved: false,
+      browserStarting: false,
+      browserStatus: '',
+      failureReason: ''
+    };
     if (button) {
       button.disabled = true;
       button.setAttribute('aria-busy', 'true');
@@ -15608,23 +15730,44 @@
       errors: []
     };
     try {
-      setMarketingProgress(0);
-      const health = await requestMarketingLocalApi('/health');
+      setMarketingProgress(0, '集客APIへ接続確認中');
+      lastMarketingHealth = { _connection: 'checking', checkedAt: new Date().toISOString() };
+      renderMarketingSyncStatus(getLatestMarketingSnapshot() || undefined);
+
+      const health = await waitForMarketingHealth();
       lastMarketingHealth = health;
-      if (!health.cdpReady) throw new Error(health.error || '正本Chromeが見つかりません');
-      if (health.login && Object.values(health.login).some(state => state === 'not-logged-in')) {
-        throw new Error('Chrome未ログイン');
-      }
+      lastMarketingRunMeta.browserStatus = health.browserStatus || '';
+      renderMarketingSyncStatus(getLatestMarketingSnapshot() || undefined);
+
+      // healthのcdpReady=falseだけでは終了しない。collect側でREADY保証する。
+      setMarketingProgress(1, health.cdpReady ? 'Browser番頭を確認中' : 'Browser番頭を確認中／起動中');
+      lastMarketingRunMeta.browserStarting = !health.cdpReady;
+      renderMarketingSyncStatus(getLatestMarketingSnapshot() || undefined);
 
       const requests = [
-        ['googleAds', 'Google広告', '/collect/google-ads', 1],
-        ['ga4', 'GA4', '/collect/ga4', 2],
-        ['searchConsole', 'Search Console', '/collect/search-console', 3]
+        ['googleAds', 'Google広告', '/collect/google-ads', 2],
+        ['ga4', 'GA4', '/collect/ga4', 3],
+        ['searchConsole', 'Search Console', '/collect/search-console', 4]
       ];
       for (const [key, label, path, step] of requests) {
         setMarketingProgress(step);
         try {
           const result = await requestMarketingLocalApi(path, 'POST');
+          if (result && result.browserStatus) {
+            lastMarketingRunMeta.browserStatus = result.browserStatus;
+            if (lastMarketingHealth) {
+              lastMarketingHealth = {
+                ...lastMarketingHealth,
+                browserStatus: result.browserStatus,
+                cdpReady: result.cdpReady != null ? result.cdpReady : lastMarketingHealth.cdpReady,
+                checkedAt: new Date().toISOString()
+              };
+            }
+          }
+          lastMarketingRunMeta.browserStarting = false;
+          if (isMarketingBrowserEnsureFailure(result)) {
+            throw new Error(marketingBrowserFailureMessage(result));
+          }
           const validationError = validateMarketingServiceResult(result, label);
           if (validationError) {
             serviceResults[key] = { status: 'error', errors: [validationError], records: [], queries: [], pages: [] };
@@ -15632,30 +15775,36 @@
             serviceResults[key] = result;
           }
         } catch (err) {
+          lastMarketingRunMeta.browserStarting = false;
+          const message = err && err.message ? err.message : '取得失敗';
+          if (/BROWSER_|Browser番頭|正本Chrome|CDP|READY待機|CONFLICT|状態を確認できない|起動に失敗/.test(message)) {
+            throw err;
+          }
           serviceResults[key] = {
             status: 'error',
-            errors: [label + ': ' + (err && err.message ? err.message : '取得失敗')],
+            errors: [label + ': ' + message],
             records: [],
             queries: [],
             pages: []
           };
         }
-        if (serviceResults[key].status !== 'success') {
+        if (serviceResults[key] && serviceResults[key].status !== 'success') {
           saveStats.failed += 1;
           saveStats.errors.push(...(serviceResults[key].errors || [label + ': 取得失敗']));
         }
       }
 
-      setMarketingProgress(4);
-      if (!Object.values(serviceResults).some(result =>
+      setMarketingProgress(5);
+      const hasSavable = Object.values(serviceResults).some(result =>
         (result.records || []).length || (result.queries || []).length || (result.pages || []).length
-      )) {
+      );
+      if (!hasSavable) {
         throw new Error('取得失敗：保存できるデータがありません');
       }
 
-      setMarketingProgress(5);
-      upsertMarketingAdRecords(serviceResults.googleAds.records || [], saveStats);
-      upsertMarketingGa4Records(serviceResults.ga4.records || [], saveStats);
+      setMarketingProgress(6);
+      upsertMarketingAdRecords((serviceResults.googleAds && serviceResults.googleAds.records) || [], saveStats);
+      upsertMarketingGa4Records((serviceResults.ga4 && serviceResults.ga4.records) || [], saveStats);
       const snapshot = upsertMarketingSnapshot(serviceResults, saveStats, startedAt);
       saveStats.savedAt = new Date().toISOString();
       saveStats.afterCount = Storage.getAdPerformanceRecords().length + Storage.getAnalyticsRecords().length + Storage.getAnalyticsSnapshots().length;
@@ -15667,19 +15816,41 @@
         Storage.saveAnalyticsSnapshots(snapshots);
       }
       lastMarketingSyncResult = snapshot;
-      setMarketingProgress(6, snapshot.marketingSync.status === 'success' ? '完了' : '一部取得失敗');
+      lastMarketingRunMeta.saved = true;
+      lastMarketingRunMeta.failed = snapshot.marketingSync.status === 'error';
+      if (lastMarketingRunMeta.failed) {
+        lastMarketingRunMeta.failureReason = (saveStats.errors || []).join(' / ') || '一部または全部の取得に失敗';
+      }
+      setMarketingProgress(7, snapshot.marketingSync.status === 'success' ? '完了' : '一部取得失敗');
       renderAnalyticsView();
       renderDashboard();
     } catch (err) {
       const message = err && err.message ? err.message : '取得失敗';
       terminalError = message;
-      if (!lastMarketingHealth || !lastMarketingHealth.ok) {
+      lastMarketingRunMeta.failed = true;
+      lastMarketingRunMeta.saved = false;
+      lastMarketingRunMeta.browserStarting = false;
+      lastMarketingRunMeta.failureReason = message;
+      if (!lastMarketingHealth || lastMarketingHealth._connection === 'checking') {
         const storedHealth = getLatestMarketingSnapshot()?.marketingSync?.health || {};
+        const unreachable = message === MARKETING_API_UNREACHABLE_MESSAGE
+          || /集客APIへ接続できません|Failed to fetch|NetworkError|HTTP/.test(message);
         lastMarketingHealth = {
           ok: false,
-          apiStatus: /Browser番頭が停止中|Failed to fetch|NetworkError|HTTP/.test(message) ? 'STOPPED' : 'ERROR',
+          apiRunning: false,
+          apiStatus: unreachable ? 'UNREACHABLE' : 'ERROR',
+          _connection: unreachable ? 'unreachable' : 'error',
           checkedAt: new Date().toISOString(),
-          autoStart: (lastMarketingHealth && lastMarketingHealth.autoStart)
+          cdpReady: false,
+          browserStatus: lastMarketingRunMeta.browserStatus || 'UNKNOWN',
+          apiAutoStart: (lastMarketingHealth && (lastMarketingHealth.apiAutoStart || lastMarketingHealth.autoStart))
+            || storedHealth.apiAutoStart
+            || storedHealth.autoStart
+            || { configured: false },
+          browserAutoStart: (lastMarketingHealth && lastMarketingHealth.browserAutoStart)
+            || storedHealth.browserAutoStart
+            || { configured: false },
+          autoStart: (lastMarketingHealth && (lastMarketingHealth.apiAutoStart || lastMarketingHealth.autoStart))
             || storedHealth.autoStart
             || { configured: false }
         };
@@ -15687,23 +15858,19 @@
       saveStats.failed += 1;
       saveStats.errors.push(message);
       setMarketingProgress(0, message.includes('タイムアウト') ? 'タイムアウト' : '取得失敗');
-      const saveEl = document.getElementById('marketing-auto-save-result');
-      if (saveEl) {
-        saveEl.classList.remove('hidden');
-        saveEl.innerHTML = `<h3>取得失敗</h3><p>${esc(message)}</p>`;
-      }
     } finally {
       marketingSyncInFlight = false;
       if (button) {
         button.disabled = false;
         button.removeAttribute('aria-busy');
       }
-      renderMarketingSyncStatus(lastMarketingSyncResult || undefined);
+      renderMarketingSyncStatus(lastMarketingSyncResult || getLatestMarketingSnapshot() || undefined);
       if (terminalError) {
         const saveEl = document.getElementById('marketing-auto-save-result');
         if (saveEl) {
           saveEl.classList.remove('hidden');
-          saveEl.innerHTML = `<h3>取得失敗</h3><p>${esc(terminalError)}</p>`;
+          saveEl.innerHTML = `<h3>今回の取得結果</h3><p>${esc(terminalError)}</p>
+            <p>保存済みデータは削除していません。今回の成功としては扱いません。</p>`;
         }
       }
     }

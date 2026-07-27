@@ -1,4 +1,4 @@
-﻿import { readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,14 +26,14 @@ assert(html.includes('id="btn-marketing-auto-sync"'), 'one-button sync control e
 assert(html.includes('集客データを取得して保存'), 'main button label is exact');
 assert(html.includes('id="marketing-manual-tools"'), 'manual fallback details exists');
 assert(app.includes("MARKETING_LOCAL_API_BASE = 'http://127.0.0.1:43822'"), 'loopback API is fixed');
-assert(app.includes('MARKETING_LOCAL_API_TIMEOUT_MS = 90000'), '90 second timeout exists');
+assert(app.includes('MARKETING_LOCAL_API_TIMEOUT_MS = 150000'), 'extended timeout covers browser start wait');
 assert(app.includes('marketingSyncInFlight'), 'repeat click guard exists');
 assert(app.includes('upsertMarketingAdRecords'), 'ad upsert exists');
 assert(app.includes('upsertMarketingGa4Records'), 'GA4 upsert exists');
 assert(app.includes('upsertMarketingSnapshot'), 'Search Console snapshot upsert exists');
 assert(app.includes('formatMarketingEventCategory'), 'GA4 event state formatter exists');
 assert(app.includes('searchTermPeriod'), 'Google Ads search-term period is rendered');
-assert(app.includes('自動起動:'), 'API auto-start state is rendered');
+assert(app.includes('自動起動設定'), 'API auto-start state is rendered');
 assert(app.includes('データ不足のため判定保留'), 'insufficient-data decision exists');
 assert(!app.includes('localStorage.clear'), 'localStorage.clear is not introduced');
 assert(analytics.includes("item.importSource === 'browser-bantou'"), 'automated missing values remain null');
@@ -83,4 +83,4 @@ assert(searchTermNormalized.searchTerms[0].clicks === 1, 'search-term zero/value
 assert(bridge.safeDiv(0, 57) === 0, 'real zero survives ratio calculation');
 assert(bridge.safeDiv(null, 57) === null, 'missing numerator stays missing in ratio calculation');
 
-console.log('\nAll v4.12.19 marketing one-button checks passed.');
+console.log('\nAll v4.12.20 marketing one-button checks passed.');

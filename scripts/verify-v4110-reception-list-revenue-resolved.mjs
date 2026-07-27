@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Budil v4.12.4 - reception list revenue resolved display verification.
  */
 import { readFileSync } from 'node:fs';
@@ -40,12 +40,12 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.19'), 'index.html should show v4.12.19');
-assert(indexHtml.includes('js/app.js?v=4.12.19'), 'app.js cache buster should be v4.12.19');
-assert(indexHtml.includes('js/reception-brain.js?v=4.12.19'), 'reception-brain cache buster should remain v4.11.0');
-assert(indexHtml.includes('js/revenue-brain.js?v=4.12.19'), 'revenue-brain cache buster should be v4.12.19');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.19'"), 'storage.js version should be v4.12.19');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.19'"), 'data-backup version should be v4.12.19');
+assert(indexHtml.includes('v4.12.20'), 'index.html should show v4.12.20');
+assert(indexHtml.includes('js/app.js?v=4.12.20'), 'app.js cache buster should be v4.12.20');
+assert(indexHtml.includes('js/reception-brain.js?v=4.12.20'), 'reception-brain cache buster should remain v4.11.0');
+assert(indexHtml.includes('js/revenue-brain.js?v=4.12.20'), 'revenue-brain cache buster should be v4.12.20');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.20'"), 'storage.js version should be v4.12.20');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.20'"), 'data-backup version should be v4.12.20');
 
 console.log('== reception list display helpers ==');
 assert(revenueJs.includes('resolveRevenueForIntake'), 'resolveRevenueForIntake should exist');

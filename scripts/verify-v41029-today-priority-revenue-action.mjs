@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Budil v4.10.38 緊急修正 — 今日の最優先から受付売上確定導線 verification.
  */
 import { readFileSync } from 'node:fs';
@@ -41,10 +41,10 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.19'), 'index.html should show v4.12.19');
-assert(indexHtml.includes('js/app.js?v=4.12.19'), 'app.js cache buster should be v4.12.19');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.19'"), 'storage.js version should be v4.12.19');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.19'"), 'data-backup version should be v4.12.19');
+assert(indexHtml.includes('v4.12.20'), 'index.html should show v4.12.20');
+assert(indexHtml.includes('js/app.js?v=4.12.20'), 'app.js cache buster should be v4.12.20');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.20'"), 'storage.js version should be v4.12.20');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.20'"), 'data-backup version should be v4.12.20');
 
 console.log('== priority action button wiring ==');
 assert(appJs.includes('data-exec-priority-fill-revenue'), 'exec priority should expose fill-revenue button');
