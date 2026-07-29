@@ -20,6 +20,7 @@
 - 「保存前→保存後」→「保存済みレコード合計：保存前→保存後」（広告実績+解析レコード+スナップショット）
 - 新規 verify-v41221-marketing-display-timezone-counts.mjs 追加
 - 現行合格は引き続き `node scripts/verify-current.mjs`
+- 公開URLで v4.12.21 確認済み（取得日時JST統一・件数ラベル・同日upsert・375px横スクロールなし）
 
 ## v4.12.20 実装内容（集客チェック1ボタン取得の自動起動修正）
 

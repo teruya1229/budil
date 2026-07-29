@@ -18,7 +18,7 @@
 - `status.md` / `handoff.md` / `decision-log.md`
 
 **次にやること**:
-- Budil commit/push、公開URLで1ボタン取得・JST表示・件数ラベル・再取得upsert確認
+- 完了。公開URLで v4.12.21・JST表示・件数ラベル・同日upsert確認済み
 
 ## v4.12.20 集客チェック1ボタン取得の自動起動修正（2026-07-27）
 

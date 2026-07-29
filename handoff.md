@@ -26,7 +26,7 @@
 |------|-----|
 | 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.21 |
 | 最新バージョン | v4.12.21 |
-| v4.12.21 集客チェック表示（JST・件数ラベル） | 実装中。9時間差はアクセスKPI取得日時の ISO slice。Browser番頭は `+09:00` 生成のため変更なし |
+| v4.12.21 集客チェック表示（JST・件数ラベル） | 正式合格 Budil `524ae32` / Browser番頭変更なし `f83b267` / verify-current 79本 / 公開URLで JST表示・件数ラベル・同日upsert・375px確認済み |
 | v4.12.20 集客チェック1ボタン自動起動修正 | 正式合格 Budil `89ae5d8` / Browser番頭 `06c0c2d` / verify-current 78本 / 公開URLで READY取得確認 / STOPPEDからcollect共通READY保証で復旧確認 |
 | v4.12.19 全売上編集ボタン復旧 | 正式合格 commit `e62c687` / verify-current 77本合格 / 公開URLで v4.12.19・編集フォーム展開確認（保存せずキャンセル） |
 | v4.12.18 集客KPI 12/15 実用化 | 公開済み `c94da67`／KPI 12/15・GBP3項目は未接続／全面完成扱いはしない |
