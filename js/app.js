@@ -850,17 +850,62 @@
     if (view === 'receivables') renderReceivablesView();
     if (view === 'documents') renderDocumentsView();
     if (view === 'data') renderDataManagement();
+    updateMobileTopbarLabel(view);
+  }
+
+  function setMobileNavOpen(open) {
+    const app = document.querySelector('.app');
+    const toggle = document.getElementById('mobile-nav-toggle');
+    const backdrop = document.getElementById('mobile-nav-backdrop');
+    if (!app) return;
+    app.classList.toggle('is-mobile-nav-open', !!open);
+    if (toggle) {
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      toggle.setAttribute('aria-label', open ? 'メニューを閉じる' : 'メニューを開く');
+    }
+    if (backdrop) backdrop.hidden = !open;
+    document.body.classList.toggle('is-mobile-nav-lock', !!open);
+  }
+
+  function updateMobileTopbarLabel(view) {
+    const labelEl = document.getElementById('mobile-topbar-view-label');
+    if (!labelEl) return;
+    const active = document.querySelector('.nav-item-main.active .nav-label');
+    const text = (active && active.textContent) ? active.textContent.trim() : (view || 'Budil');
+    labelEl.textContent = text || 'Budil';
+  }
+
+  function initMobileNavigation() {
+    const toggle = document.getElementById('mobile-nav-toggle');
+    const backdrop = document.getElementById('mobile-nav-backdrop');
+    if (toggle) {
+      toggle.addEventListener('click', () => {
+        const app = document.querySelector('.app');
+        const open = !(app && app.classList.contains('is-mobile-nav-open'));
+        setMobileNavOpen(open);
+      });
+    }
+    if (backdrop) {
+      backdrop.addEventListener('click', () => setMobileNavOpen(false));
+    }
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape') setMobileNavOpen(false);
+    });
   }
 
   function initNavigation() {
+    initMobileNavigation();
     document.querySelectorAll('.nav-item').forEach(btn => {
       btn.addEventListener('click', () => {
         const view = btn.dataset.view;
         setNavActive(view);
         switchView(view);
         scrollNavTarget(btn.dataset.scroll);
+        updateMobileTopbarLabel(view);
+        setMobileNavOpen(false);
       });
     });
+    updateMobileTopbarLabel('dashboard');
   }
 
   // ── ダッシュボード ──
@@ -12939,7 +12984,7 @@
       el.innerHTML = '<p class="placeholder-text">経費はまだ登録されていません。</p>';
       return;
     }
-    el.innerHTML = `<table class="profit-table"><thead><tr>
+    el.innerHTML = `<div class="table-wrap profit-table-wrap"><table class="profit-table"><thead><tr>
       <th>日付</th><th>カテゴリ</th><th>金額</th><th>支払先</th><th>紐付け</th><th></th>
     </tr></thead><tbody>${list.map(e => {
       const links = [
@@ -12955,7 +13000,7 @@
         <td>${esc(links)}</td>
         <td><button type="button" class="btn btn-sm btn-secondary" data-profit-edit-expense="${esc(e.id)}">編集</button></td>
       </tr>`;
-    }).join('')}</tbody></table>`;
+    }).join('')}</tbody></table></div>`;
     el.querySelectorAll('[data-profit-edit-expense]').forEach(btn => {
       btn.addEventListener('click', () => fillProfitExpenseForm(btn.dataset.profitEditExpense));
     });
@@ -14834,7 +14879,7 @@
       el.innerHTML = '<p class="placeholder-text">ページ別データはまだありません。GA4から手入力してください。</p>';
       return;
     }
-    el.innerHTML = `<table class="analytics-table"><thead><tr>
+    el.innerHTML = `<div class="table-wrap analytics-table-wrap"><table class="analytics-table"><thead><tr>
       <th>日付</th><th>ページ</th><th>表示</th><th>直帰率</th><th>スコア</th><th>ラベル</th><th></th>
     </tr></thead><tbody>${list.map(r => `<tr class="${selectedAnalyticsId === r.id ? 'selected' : ''}">
       <td>${esc(r.date || '—')}</td>
@@ -14844,7 +14889,7 @@
       <td>${r.demandScore}</td>
       <td><span class="analytics-score-label">${esc(r.scoreLabel || '—')}</span></td>
       <td><button type="button" class="btn btn-sm btn-secondary" data-analytics-open="${esc(r.id)}">詳細</button></td>
-    </tr>`).join('')}</tbody></table>`;
+    </tr>`).join('')}</tbody></table></div>`;
     el.querySelectorAll('[data-analytics-open]').forEach(btn => {
       btn.addEventListener('click', () => fillAnalyticsForm(btn.dataset.analyticsOpen));
     });

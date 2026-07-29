@@ -1,5 +1,5 @@
 /**
- * Budil v4.12.21 集客KPI 12/15 実用化 verify
+ * Budil v4.12.22 集客KPI 12/15 実用化 verify
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -22,9 +22,9 @@ for (const file of ['js/app.js', 'js/analytics-brain.js']) {
   execFileSync(process.execPath, ['--check', join(root, file)], { stdio: 'inherit' });
 }
 
-assert(html.includes('v4.12.21'), 'index.html shows v4.12.21');
-assert(html.includes('js/app.js?v=4.12.21'), 'app.js cache buster is v4.12.21');
-assert(html.includes('css/style.css?v=4.12.21'), 'style.css cache buster is v4.12.21');
+assert(html.includes('v4.12.22'), 'index.html shows v4.12.22');
+assert(html.includes('js/app.js?v=4.12.22'), 'app.js cache buster is v4.12.22');
+assert(html.includes('css/style.css?v=4.12.22'), 'style.css cache buster is v4.12.22');
 assert(app.includes('buildMarketingSnapshotMetrics'), 'metrics builder exists');
 assert(app.includes('metricStatus'), 'metricStatus is persisted');
 assert(app.includes('KPI取得数'), 'KPI取得数 label exists');
@@ -188,4 +188,4 @@ assert(app.includes('upsertMarketingSnapshot'), '16. one-button upsert retained'
 assert(app.includes('upsertMarketingGa4Records'), '16b. GA4 upsert retained');
 assert(app.includes('marketingSyncInFlight'), '16c. repeat-click guard retained');
 
-console.log('\nAll v4.12.21 marketing KPI 12/15 checks passed.');
+console.log('\nAll v4.12.22 marketing KPI 12/15 checks passed.');

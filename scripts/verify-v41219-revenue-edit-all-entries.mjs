@@ -1,5 +1,5 @@
 /**
- * Budil v4.12.21 - all revenue edit entries open existing form and update same ID.
+ * Budil v4.12.22 - all revenue edit entries open existing form and update same ID.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -23,7 +23,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.12.21 revenue-edit-all-entries ==');
+console.log('== v4.12.22 revenue-edit-all-entries ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -37,18 +37,18 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.21'), 'index.html should show v4.12.21');
-assert(indexHtml.includes('js/app.js?v=4.12.21'), 'app.js cache buster should be v4.12.21');
-assert(indexHtml.includes('js/storage.js?v=4.12.21'), 'storage cache buster should be v4.12.21');
-assert(indexHtml.includes('js/revenue-brain.js?v=4.12.21'), 'revenue-brain cache buster should be v4.12.21');
-assert(indexHtml.includes('css/style.css?v=4.12.21'), 'style.css cache buster should be v4.12.21');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.21'"), 'storage version should be v4.12.21');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.21'"), 'data-backup version should be v4.12.21');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.21'"), 'verify-current EXPECTED_VERSION should be v4.12.21');
+assert(indexHtml.includes('v4.12.22'), 'index.html should show v4.12.22');
+assert(indexHtml.includes('js/app.js?v=4.12.22'), 'app.js cache buster should be v4.12.22');
+assert(indexHtml.includes('js/storage.js?v=4.12.22'), 'storage cache buster should be v4.12.22');
+assert(indexHtml.includes('js/revenue-brain.js?v=4.12.22'), 'revenue-brain cache buster should be v4.12.22');
+assert(indexHtml.includes('css/style.css?v=4.12.22'), 'style.css cache buster should be v4.12.22');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.22'"), 'storage version should be v4.12.22');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.22'"), 'data-backup version should be v4.12.22');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.22'"), 'verify-current EXPECTED_VERSION should be v4.12.22');
 assert(!indexHtml.includes('?v=4.12.18'), 'old cache buster v4.12.18 should be gone');
-assert(statusMd.includes('v4.12.21'), 'status.md should document v4.12.21');
-assert(handoffMd.includes('v4.12.21'), 'handoff.md should document v4.12.21');
-assert(decisionLog.includes('v4.12.21'), 'decision-log.md should record v4.12.21');
+assert(statusMd.includes('v4.12.22'), 'status.md should document v4.12.22');
+assert(handoffMd.includes('v4.12.22'), 'handoff.md should document v4.12.22');
+assert(decisionLog.includes('v4.12.22'), 'decision-log.md should record v4.12.22');
 
 console.log('== existing form / no new modal ==');
 assert(indexHtml.includes('id="revenue-manual-input-details"'), 'manual input details must remain');
@@ -239,4 +239,4 @@ function createSandbox() {
   assert(result.hit.relatedRevenueId === 'rel-keep-001', 'persisted relatedRevenueId must remain');
 }
 
-console.log('All v4.12.21 revenue-edit-all-entries checks passed.');
+console.log('All v4.12.22 revenue-edit-all-entries checks passed.');

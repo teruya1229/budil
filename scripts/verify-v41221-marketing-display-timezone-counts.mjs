@@ -1,5 +1,5 @@
 /**
- * Budil v4.12.21 - 集客チェック表示（JST統一・件数ラベル明確化）verify
+ * Budil v4.12.22 - 集客チェック表示（JST統一・件数ラベル明確化）verify
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -25,15 +25,15 @@ const decisionLog = load('decision-log.md');
 
 execFileSync(process.execPath, ['--check', join(root, 'js/app.js')], { stdio: 'inherit' });
 
-assert(html.includes('v4.12.21'), 'index.html shows v4.12.21');
-assert(html.includes('js/app.js?v=4.12.21'), 'app.js cache buster is v4.12.21');
-assert(html.includes('css/style.css?v=4.12.21'), 'style.css cache buster is v4.12.21');
-assert(storage.includes("BUDIL_VERSION: 'v4.12.21'"), 'storage version is v4.12.21');
-assert(dataBackup.includes("APP_VERSION: 'v4.12.21'"), 'data-backup version is v4.12.21');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.21'"), 'verify-current pins v4.12.21');
-assert(statusMd.includes('v4.12.21'), 'status.md documents v4.12.21');
-assert(handoffMd.includes('v4.12.21'), 'handoff.md documents v4.12.21');
-assert(decisionLog.includes('v4.12.21'), 'decision-log.md records v4.12.21');
+assert(html.includes('v4.12.22'), 'index.html shows v4.12.22');
+assert(html.includes('js/app.js?v=4.12.22'), 'app.js cache buster is v4.12.22');
+assert(html.includes('css/style.css?v=4.12.22'), 'style.css cache buster is v4.12.22');
+assert(storage.includes("BUDIL_VERSION: 'v4.12.22'"), 'storage version is v4.12.22');
+assert(dataBackup.includes("APP_VERSION: 'v4.12.22'"), 'data-backup version is v4.12.22');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.22'"), 'verify-current pins v4.12.22');
+assert(statusMd.includes('v4.12.22'), 'status.md documents v4.12.22');
+assert(handoffMd.includes('v4.12.22'), 'handoff.md documents v4.12.22');
+assert(decisionLog.includes('v4.12.22'), 'decision-log.md records v4.12.22');
 
 assert(app.includes('function formatMarketingDateTime'), 'formatMarketingDateTime exists');
 assert(app.includes("timeZone: 'Asia/Tokyo'"), 'Asia/Tokyo display is used');
@@ -151,4 +151,4 @@ assert(app.includes('findAdPerformanceByRecordId'), '13b. ad recordId upsert key
 assert(app.includes('item.date === record.date'), '13c. ga4 date+path upsert key remains');
 assert(app.includes('source === MARKETING_SYNC_SOURCE') || app.includes("source: MARKETING_SYNC_SOURCE"), '13d. snapshot source upsert remains');
 
-console.log('\nAll v4.12.21 marketing display timezone/counts checks passed.');
+console.log('\nAll v4.12.22 marketing display timezone/counts checks passed.');

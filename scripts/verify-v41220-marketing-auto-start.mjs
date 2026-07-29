@@ -1,5 +1,5 @@
 /**
- * Budil v4.12.21 - 集客チェック1ボタン取得の自動起動修正 verify
+ * Budil v4.12.22 - 集客チェック1ボタン取得の自動起動修正 verify
  */
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -24,11 +24,11 @@ const decisionLog = load('decision-log.md');
 
 execFileSync(process.execPath, ['--check', join(root, 'js/app.js')], { stdio: 'inherit' });
 
-assert(html.includes('v4.12.21'), 'index.html shows v4.12.21');
-assert(html.includes('js/app.js?v=4.12.21'), 'app.js cache buster is v4.12.21');
-assert(storage.includes("BUDIL_VERSION: 'v4.12.21'"), 'storage version is v4.12.21');
-assert(dataBackup.includes("APP_VERSION: 'v4.12.21'"), 'data-backup version is v4.12.21');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.21'"), 'verify-current pins v4.12.21');
+assert(html.includes('v4.12.22'), 'index.html shows v4.12.22');
+assert(html.includes('js/app.js?v=4.12.22'), 'app.js cache buster is v4.12.22');
+assert(storage.includes("BUDIL_VERSION: 'v4.12.22'"), 'storage version is v4.12.22');
+assert(dataBackup.includes("APP_VERSION: 'v4.12.22'"), 'data-backup version is v4.12.22');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.22'"), 'verify-current pins v4.12.22');
 
 assert(app.includes('waitForMarketingHealth'), 'health retry helper exists');
 assert(app.includes('MARKETING_HEALTH_RETRY_MS = 45000'), 'health retry window is 45s');
@@ -49,9 +49,9 @@ assert(!app.includes('if (!health.cdpReady) throw'), 'health cdpReady alone no l
 assert(!app.includes('localStorage.clear'), 'localStorage.clear is not introduced');
 assert(!/売上登録|作業完了後|作業後確定/.test(app), 'NG terms are not revived in app.js');
 
-assert(statusMd.includes('v4.12.21'), 'status.md documents v4.12.21');
-assert(handoffMd.includes('v4.12.21'), 'handoff.md documents v4.12.21');
-assert(decisionLog.includes('v4.12.21'), 'decision-log.md records v4.12.21');
+assert(statusMd.includes('v4.12.22'), 'status.md documents v4.12.22');
+assert(handoffMd.includes('v4.12.22'), 'handoff.md documents v4.12.22');
+assert(decisionLog.includes('v4.12.22'), 'decision-log.md records v4.12.22');
 
 function MARKETING_API_UNREACHABLE_SNIPPET() {
   return '集客APIへ接続できません。APIが未起動、またはChromeのローカルネットワーク許可で遮断されている可能性があります。';
@@ -78,4 +78,4 @@ assert(runSource.includes('lastMarketingRunMeta.saved = true'), 'save flag only 
 assert(runSource.includes('保存済みデータは削除していません'), 'failure keeps stored data messaging');
 assert((runSource.match(/requestMarketingLocalApi\(path, 'POST'\)/g) || []).length === 1, 'each service posts once per loop iteration helper');
 
-console.log('\nAll v4.12.21 marketing auto-start checks passed.');
+console.log('\nAll v4.12.22 marketing auto-start checks passed.');

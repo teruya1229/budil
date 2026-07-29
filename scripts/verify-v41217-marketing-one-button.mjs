@@ -83,4 +83,4 @@ assert(searchTermNormalized.searchTerms[0].clicks === 1, 'search-term zero/value
 assert(bridge.safeDiv(0, 57) === 0, 'real zero survives ratio calculation');
 assert(bridge.safeDiv(null, 57) === null, 'missing numerator stays missing in ratio calculation');
 
-console.log('\nAll v4.12.21 marketing one-button checks passed.');
+console.log('\nAll v4.12.22 marketing one-button checks passed.');

@@ -2,6 +2,25 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.22 スマホ実用化（2026-07-29）
+
+**日付**: 2026-07-29
+
+**判断内容**:
+- 公開版390px実測で、≤768pxの60pxアイコンレールによりナビラベルが非表示で実用不能だった
+- 主要入力が14pxでiPhone自動ズーム対象。利益・集客テーブルは親にoverflowがなく要素はみ出し
+- 既存ナビ項目を維持したドロワー型モバイルメニューへ変更（新規メニュー項目なし）
+- 表示・操作性のみ。業務ロジック・localStorage・端末間同期は変更しない
+
+**変更ファイル**:
+- `index.html` / `css/style.css` / `js/app.js`（ナビ開閉・テーブルwrapのみ）
+- `js/storage.js` / `js/data-backup.js`（バージョンのみ）
+- `scripts/verify-v41222-mobile-practical.mjs` / `scripts/verify-current.mjs` / 現行verifyピン
+- `status.md` / `handoff.md` / `decision-log.md`
+
+**次にやること**:
+- commit/push、公開URLで375/390/430/PC確認
+
 ## v4.12.21 集客チェック表示：JST統一・件数ラベル明確化（2026-07-29）
 
 **日付**: 2026-07-29

@@ -1,13 +1,25 @@
 ﻿# Budil status
 
-## 正式な現行verify環境（v4.12.21）
+## 正式な現行verify環境（v4.12.22）
 
 - **正式環境**: Budil 単独 clone ではなく、親階層に sibling の calendar-sync-worker がある開発環境
 - **必須**: ../calendar-sync-worker/run-budil-calendar-export.bat
 - **必須**: hub/functions 側の依存関係（googleapis 等）。hub/functions で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（79本。省略・除外・緩和なし）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（80本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.22 実装内容（スマホ実用化）
+
+- 表示バージョンを v4.12.22 に更新
+- index.html の主要 JS/CSS cache buster を v4.12.22 に統一
+- 旧≤768pxの60pxアイコンレールを廃止し、ドロワー型モバイルメニューへ変更（既存ナビ項目は維持）
+- モバイル時: 入力16px以上、主要ボタン44px以上、フォーム1列、テーブルは内側横スクロール
+- safe-area（viewport-fit=cover）を考慮
+- PC表示のサイドバー幅・情報量は維持
+- 業務ロジック・localStorageキー・保存形式は変更なし
+- 新規 verify-v41222-mobile-practical.mjs 追加
+- 現行合格は引き続き `node scripts/verify-current.mjs`
 
 ## v4.12.21 実装内容（集客チェック表示：JST統一・件数ラベル明確化）
 

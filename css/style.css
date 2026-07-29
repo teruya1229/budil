@@ -2532,51 +2532,9 @@ body {
   }
 }
 
+/* v4.12.22: ≤900px のドロワー型ナビへ移行（旧60pxアイコンレールは廃止） */
 @media (max-width: 768px) {
-  .sidebar {
-    width: 60px;
-  }
-
-  .logo-text,
-  .nav-hint,
-  .nav-group-hint,
-  .nav-group-title,
-  .nav-label,
-  .nav-item-sub,
-  .sidebar-footer {
-    display: none;
-  }
-
-  .logo {
-    justify-content: center;
-    padding: 16px 10px;
-  }
-
-  .nav {
-    padding: 8px 6px;
-    gap: 4px;
-  }
-
-  .nav-group {
-    border: none;
-    background: transparent;
-    padding: 0;
-  }
-
-  .nav-group-items {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 0;
-  }
-
-  .nav-item-main {
-    justify-content: center;
-    padding: 10px;
-  }
-
   .main {
-    margin-left: 60px;
     padding: 20px 16px;
   }
 }
@@ -13308,5 +13266,354 @@ body.sales-page {
   .month-end-expense-stats,
   .month-end-documents-stats {
     grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================================
+   v4.12.22 スマホ実用化（既存画面レスポンシブ）
+   - ドロワー型ナビ（旧60pxアイコンレール廃止）
+   - 入力16px以上 / タップ44px以上
+   - フォーム1列 / テーブル横スクロールは内側のみ
+   ========================================================= */
+
+.mobile-topbar,
+.mobile-nav-backdrop {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  :root {
+    --mobile-topbar-height: 56px;
+  }
+
+  .app {
+    flex-direction: column;
+  }
+
+  body.is-mobile-nav-lock {
+    overflow: hidden;
+  }
+
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 120;
+    width: 100%;
+    flex: 0 0 auto;
+    min-height: var(--mobile-topbar-height);
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px;
+    background: var(--bg-sidebar);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mobile-nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-input);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  .mobile-nav-toggle-bars,
+  .mobile-nav-toggle-bars::before,
+  .mobile-nav-toggle-bars::after {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: currentColor;
+    border-radius: 1px;
+    content: "";
+  }
+
+  .mobile-nav-toggle-bars {
+    position: relative;
+  }
+
+  .mobile-nav-toggle-bars::before {
+    position: absolute;
+    top: -6px;
+    left: 0;
+  }
+
+  .mobile-nav-toggle-bars::after {
+    position: absolute;
+    top: 6px;
+    left: 0;
+  }
+
+  .mobile-topbar-brand {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .mobile-topbar-brand strong {
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+
+  .mobile-topbar-brand small {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 140;
+    background: rgba(0, 0, 0, 0.45);
+  }
+
+  .mobile-nav-backdrop[hidden] {
+    display: none !important;
+  }
+
+  .sidebar {
+    width: min(86vw, 320px);
+    max-width: 320px;
+    transform: translateX(-105%);
+    transition: transform 0.2s ease;
+    z-index: 150;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: none;
+  }
+
+  .app.is-mobile-nav-open .sidebar {
+    transform: translateX(0);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.35);
+  }
+
+  .logo-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .nav-hint {
+    display: block;
+  }
+
+  .nav-group-hint {
+    display: block;
+  }
+
+  .nav-group-title {
+    display: flex;
+  }
+
+  .nav-label {
+    display: inline;
+  }
+
+  .nav-item-sub {
+    display: flex;
+  }
+
+  .sidebar-footer {
+    display: block;
+  }
+
+  .nav-item,
+  .nav-item-main,
+  .nav-item-sub {
+    justify-content: flex-start;
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+
+  .main {
+    margin-left: 0 !important;
+    width: 100%;
+    max-width: 100%;
+    padding: 12px 12px calc(20px + env(safe-area-inset-bottom, 0px));
+    min-width: 0;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]):not([type="color"]),
+  select,
+  textarea,
+  .form-group input,
+  .form-group select,
+  .form-group textarea,
+  .card-input {
+    font-size: 16px !important;
+    min-height: 44px;
+    max-width: 100%;
+  }
+
+  textarea,
+  .form-group textarea {
+    min-height: 96px;
+  }
+
+  .btn,
+  button.btn,
+  .btn-sm {
+    min-height: 44px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .btn-sm {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .form-row,
+  .form-row-2,
+  .form-row-3 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .form-actions,
+  .analytics-action-btns,
+  .analytics-record-form .form-actions,
+  .profit-expense-form .form-actions,
+  .data-table .actions,
+  .documents-table .actions,
+  .monthly-results-table .actions,
+  .month-end-checklist-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .form-actions .btn,
+  .analytics-action-btns .btn,
+  .data-table .actions .btn,
+  .documents-table .actions .btn {
+    flex: 1 1 auto;
+    min-width: min(100%, 140px);
+  }
+
+  .table-wrap,
+  .profit-table-wrap,
+  .revenue-table-wrap,
+  .revenue-agg-table-wrap,
+  .receivables-table-wrap,
+  .monthly-results-table-wrap,
+  .month-end-table-wrap,
+  .documents-table-wrap,
+  .analytics-table-wrap {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: scroll;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .analytics-table,
+  .profit-table,
+  .data-table,
+  .revenue-agg-table,
+  .documents-table,
+  .doc-table,
+  .month-end-table {
+    min-width: 520px;
+  }
+
+  #view-analytics .card:has(> .analytics-table),
+  #view-profit .card:has(> .profit-table),
+  #view-revenue .card:has(table),
+  #view-documents .card:has(table) {
+    overflow-x: scroll;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .card,
+  .card-wide,
+  .view,
+  .dashboard-grid,
+  .revenue-layout,
+  .demand-layout,
+  .messages-grid {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .card,
+  .card-wide {
+    padding: 14px;
+  }
+
+  h1,
+  h2,
+  .view-header h1,
+  .view-header h2 {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .exec-home-receivables,
+  .revenue-summary-grid,
+  .month-end-profit-grid,
+  .marketing-auto-metric-grid,
+  .marketing-detail-grid,
+  .analytics-kpi-card-grid,
+  .data-mgmt-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .modal,
+  .dialog,
+  [class*="modal-dialog"],
+  .customer-memo-edit-modal,
+  .app-modal {
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal .form-actions,
+  .dialog .form-actions,
+  [class*="modal"] .form-actions {
+    position: sticky;
+    bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--bg-card);
+  }
+}
+
+@media (max-width: 430px) {
+  .main {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .card,
+  .card-wide {
+    padding: 12px;
+  }
+}
+
+@media (min-width: 901px) {
+  .mobile-topbar,
+  .mobile-nav-backdrop {
+    display: none !important;
+  }
+
+  .app.is-mobile-nav-open .sidebar {
+    transform: none;
+  }
+
+  body.is-mobile-nav-lock {
+    overflow: auto;
   }
 }
