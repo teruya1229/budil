@@ -20,6 +20,7 @@
 - 業務ロジック・localStorageキー・保存形式は変更なし
 - 新規 verify-v41222-mobile-practical.mjs 追加
 - 現行合格は引き続き `node scripts/verify-current.mjs`
+- 公開URLで v4.12.22 確認済み（375/390/430/PC・ドロワーナビ・body横スクロールなし）
 
 ## v4.12.21 実装内容（集客チェック表示：JST統一・件数ラベル明確化）
 
