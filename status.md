@@ -1,13 +1,25 @@
 ﻿# Budil status
 
-## 正式な現行verify環境（v4.12.20）
+## 正式な現行verify環境（v4.12.21）
 
 - **正式環境**: Budil 単独 clone ではなく、親階層に sibling の calendar-sync-worker がある開発環境
 - **必須**: ../calendar-sync-worker/run-budil-calendar-export.bat
 - **必須**: hub/functions 側の依存関係（googleapis 等）。hub/functions で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（78本。省略・除外・緩和なし）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（79本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.21 実装内容（集客チェック表示：JST統一・件数ラベル明確化）
+
+- 表示バージョンを v4.12.21 に更新
+- index.html の主要 JS/CSS cache buster を v4.12.21 に統一
+- 9時間差の最初の発生箇所: アクセスKPIの取得日時が `importedAt`（UTC `Z`）を `.slice(0,16).replace('T',' ')` で壁時計表示していた
+- Browser番頭 `now_iso()` は初回から `datetime.now(JST).isoformat`（`+09:00`）。Browser番頭は変更なし
+- 取得日時表示を `formatMarketingDateTime`（Asia/Tokyo）へ統一。単純+9時間加算なし
+- 「保存データ行数」→「今回取得したデータ行数」（ads+GA4+SC queries+SC pages）
+- 「保存前→保存後」→「保存済みレコード合計：保存前→保存後」（広告実績+解析レコード+スナップショット）
+- 新規 verify-v41221-marketing-display-timezone-counts.mjs 追加
+- 現行合格は引き続き `node scripts/verify-current.mjs`
 
 ## v4.12.20 実装内容（集客チェック1ボタン取得の自動起動修正）
 

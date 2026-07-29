@@ -1,5 +1,5 @@
 /**
- * Budil v4.12.20 - Google Calendar one-button local API sync + auto-save.
+ * Budil v4.12.21 - Google Calendar one-button local API sync + auto-save.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -17,7 +17,7 @@ for (const file of ['js/app.js', 'js/storage.js', 'js/calendar-candidate-brain.j
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.12.20 calendar-local-api-one-button ==');
+console.log('== v4.12.21 calendar-local-api-one-button ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -30,17 +30,17 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.20'), 'index.html should show v4.12.20');
-assert(indexHtml.includes('js/app.js?v=4.12.20'), 'app.js cache buster should be v4.12.20');
-assert(indexHtml.includes('css/style.css?v=4.12.20'), 'style.css cache buster should be v4.12.20');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.20'), 'calendar-candidate cache buster should be v4.12.20');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.20'"), 'storage version should be v4.12.20');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.20'"), 'data-backup version should be v4.12.20');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.20'"), 'verify-current EXPECTED_VERSION should be v4.12.20');
+assert(indexHtml.includes('v4.12.21'), 'index.html should show v4.12.21');
+assert(indexHtml.includes('js/app.js?v=4.12.21'), 'app.js cache buster should be v4.12.21');
+assert(indexHtml.includes('css/style.css?v=4.12.21'), 'style.css cache buster should be v4.12.21');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.21'), 'calendar-candidate cache buster should be v4.12.21');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.21'"), 'storage version should be v4.12.21');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.21'"), 'data-backup version should be v4.12.21');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.21'"), 'verify-current EXPECTED_VERSION should be v4.12.21');
 assert(!indexHtml.includes('?v=4.12.14'), 'old cache buster v4.12.14 should be gone');
-assert(statusMd.includes('v4.12.20'), 'status.md should document v4.12.20');
-assert(handoffMd.includes('v4.12.20'), 'handoff.md should document v4.12.20');
-assert(decisionLog.includes('v4.12.20'), 'decision-log.md should record v4.12.20');
+assert(statusMd.includes('v4.12.21'), 'status.md should document v4.12.21');
+assert(handoffMd.includes('v4.12.21'), 'handoff.md should document v4.12.21');
+assert(decisionLog.includes('v4.12.21'), 'decision-log.md should record v4.12.21');
 
 console.log('== UI wiring ==');
 assert((indexHtml.match(/id="btn-calendar-export-latest"/g) || []).length === 1, 'exactly one update button');
@@ -276,4 +276,4 @@ function createBrainSandbox() {
   );
 }
 
-console.log('\nAll v4.12.20 calendar-local-api-one-button checks passed.');
+console.log('\nAll v4.12.21 calendar-local-api-one-button checks passed.');

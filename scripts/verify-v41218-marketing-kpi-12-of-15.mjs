@@ -1,5 +1,5 @@
 /**
- * Budil v4.12.20 集客KPI 12/15 実用化 verify
+ * Budil v4.12.21 集客KPI 12/15 実用化 verify
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -22,13 +22,15 @@ for (const file of ['js/app.js', 'js/analytics-brain.js']) {
   execFileSync(process.execPath, ['--check', join(root, file)], { stdio: 'inherit' });
 }
 
-assert(html.includes('v4.12.20'), 'index.html shows v4.12.20');
-assert(html.includes('js/app.js?v=4.12.20'), 'app.js cache buster is v4.12.20');
-assert(html.includes('css/style.css?v=4.12.20'), 'style.css cache buster is v4.12.20');
+assert(html.includes('v4.12.21'), 'index.html shows v4.12.21');
+assert(html.includes('js/app.js?v=4.12.21'), 'app.js cache buster is v4.12.21');
+assert(html.includes('css/style.css?v=4.12.21'), 'style.css cache buster is v4.12.21');
 assert(app.includes('buildMarketingSnapshotMetrics'), 'metrics builder exists');
 assert(app.includes('metricStatus'), 'metricStatus is persisted');
 assert(app.includes('KPI取得数'), 'KPI取得数 label exists');
-assert(app.includes('保存データ行数'), '保存データ行数 label exists');
+assert(app.includes('今回取得したデータ行数'), '今回取得したデータ行数 label exists');
+assert(!app.includes('保存データ行数'), '旧ラベル 保存データ行数 is removed');
+assert(app.includes('保存済みレコード合計'), '保存済みレコード合計 label exists');
 assert(app.includes('自然検索流入セッション'), 'organic search label is explicit');
 assert(app.includes('予約フォームクリック'), 'form click label is 予約フォームクリック');
 assert(app.includes('GBP取得機能が未接続'), 'GBP not_connected reason exists');
@@ -186,4 +188,4 @@ assert(app.includes('upsertMarketingSnapshot'), '16. one-button upsert retained'
 assert(app.includes('upsertMarketingGa4Records'), '16b. GA4 upsert retained');
 assert(app.includes('marketingSyncInFlight'), '16c. repeat-click guard retained');
 
-console.log('\nAll v4.12.20 marketing KPI 12/15 checks passed.');
+console.log('\nAll v4.12.21 marketing KPI 12/15 checks passed.');

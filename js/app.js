@@ -14402,7 +14402,7 @@
     el.innerHTML = `
       <div class="analytics-kpi-meta">
         <p><strong>KPI取得数：</strong>${okCount}/15項目取得</p>
-        <p><strong>取得日時：</strong>${esc((snapshot.importedAt || snapshot.createdAt || '').slice(0, 16).replace('T', ' ') || '—')}</p>
+        <p><strong>取得日時：</strong>${esc(formatMarketingDateTime(snapshot.importedAt || snapshot.createdAt || '') || '—')}</p>
         <p><strong>データ対象期間：</strong>${esc(periodLines.length ? periodLines.join(' / ') : (snapshot.periodLabel || snapshot.periodStart || snapshot.periodEnd || '未確認'))}</p>
       </div>
       <div class="analytics-kpi-card-grid">
@@ -15057,9 +15057,14 @@
   }
 
   function formatMarketingDateTime(value) {
-    if (!value) return '未取得';
-    const d = new Date(value);
-    if (!Number.isFinite(d.getTime())) return String(value);
+    if (value === null || value === undefined || value === '') return '未取得';
+    const raw = String(value).trim();
+    if (!raw) return '未取得';
+    // Z / ±offset 付きは絶対時刻として解釈し、表示だけ Asia/Tokyo へ変換する。
+    // 壁時計への単純加算や無条件の Z 付与はしない（二重変換防止）。
+    // offset なしは Date の通常解析に任せ、生成元を決め打ちしない。
+    const d = new Date(raw);
+    if (!Number.isFinite(d.getTime())) return raw;
     return d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
   }
 
@@ -15549,7 +15554,7 @@
       <h3>取得後の集客サマリー</h3>
       <div class="marketing-auto-metric-grid">
         <div><span>KPI取得数</span><strong>${okCount}/15項目取得</strong></div>
-        <div><span>保存データ行数</span><strong>${saveCount.toLocaleString('ja-JP')}件</strong></div>
+        <div><span>今回取得したデータ行数</span><strong>${saveCount.toLocaleString('ja-JP')}件</strong></div>
         <div><span>今日の広告費</span><strong>${formatMarketingMetric(adRecords.length ? adTotals.cost : null, 'yen')}</strong></div>
         <div><span>今日のクリック数</span><strong>${formatMarketingMetric(adRecords.length ? adTotals.clicks : null)}</strong></div>
         <div><span>GA4ページ需要</span><strong>${topPage ? esc((topPage.pagePath || topPage.pageName) + ' / ' + formatMarketingMetric(topPage.views)) : '未取得'}</strong></div>
@@ -15585,7 +15590,7 @@
       <div class="marketing-auto-insights">
         <p><strong>検索クエリ上位：</strong>${queries.length ? esc(queries.slice(0, 5).map(item => item.query).join(' / ')) : '未取得'}</p>
         <p><strong>次の打ち手：</strong>${esc(insights.find(text => /CTAが弱い|次に見るべき/.test(text)) || 'データ不足のため判定保留')}</p>
-        <p class="marketing-kpi-note">KPI取得数は取得成功項目のみ。保存データ行数とは別集計です。GBPは未接続のため未完了項目が残ります。</p>
+        <p class="marketing-kpi-note">KPI取得数は取得成功項目のみ。今回取得したデータ行数と保存済みレコード合計は、数え方が異なります。GBPは未接続のため未完了項目が残ります。</p>
         <ul>${insights.map(text => `<li>${esc(text)}</li>`).join('')}</ul>
       </div>
     `;
@@ -15663,7 +15668,7 @@
         ? `<p><strong>最終取得日時：</strong>${esc(formatMarketingDateTime(sync.completedAt))}</p>
            <p><strong>最終取得結果：</strong>${esc(marketingStatusLabel(sync.status))}</p>
            <p><strong>KPI取得数：</strong>${okCount}/15項目取得</p>
-           <p><strong>保存データ行数：</strong>${Number(sync.totalRecords || 0).toLocaleString('ja-JP')}件</p>
+           <p><strong>今回取得したデータ行数：</strong>${Number(sync.totalRecords || 0).toLocaleString('ja-JP')}件</p>
            ${previousBlock}`
         : `<p><strong>最終取得日時：</strong>未取得</p><p><strong>最終取得結果：</strong>未取得</p>
            ${runMeta.failed ? `<p><strong>今回の取得失敗理由：</strong>${esc(runMeta.failureReason || '取得失敗')}</p>` : ''}`;
@@ -15692,7 +15697,7 @@
               <span>取得失敗 <strong>${stats.failed}</strong>件</span>
             </div>
             <p>保存日時：${esc(formatMarketingDateTime(stats.savedAt))}</p>
-            <p>保存前 ${stats.beforeCount}件 → 保存後 ${stats.afterCount}件</p>
+            <p>保存済みレコード合計：保存前 ${stats.beforeCount}件 → 保存後 ${stats.afterCount}件</p>
             ${errors}
           `;
         }

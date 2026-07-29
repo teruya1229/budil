@@ -1,5 +1,5 @@
 /**
- * Budil v4.12.20 - profit target month view.
+ * Budil v4.12.21 - profit target month view.
  * Static wiring checks + month-spanning execution asserts (A–E).
  */
 import { readFileSync } from 'node:fs';
@@ -26,7 +26,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.12.20 profit-target-month ==');
+console.log('== v4.12.21 profit-target-month ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -41,17 +41,17 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.20'), 'index.html should show v4.12.20');
-assert(indexHtml.includes('js/app.js?v=4.12.20'), 'app.js cache buster should be v4.12.20');
-assert(indexHtml.includes('js/profit-brain.js?v=4.12.20'), 'profit-brain cache buster should be v4.12.20');
-assert(indexHtml.includes('css/style.css?v=4.12.20'), 'style.css cache buster should be v4.12.20');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.20'"), 'storage version should be v4.12.20');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.20'"), 'data-backup version should be v4.12.20');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.20'"), 'verify-current EXPECTED_VERSION should be v4.12.20');
+assert(indexHtml.includes('v4.12.21'), 'index.html should show v4.12.21');
+assert(indexHtml.includes('js/app.js?v=4.12.21'), 'app.js cache buster should be v4.12.21');
+assert(indexHtml.includes('js/profit-brain.js?v=4.12.21'), 'profit-brain cache buster should be v4.12.21');
+assert(indexHtml.includes('css/style.css?v=4.12.21'), 'style.css cache buster should be v4.12.21');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.21'"), 'storage version should be v4.12.21');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.21'"), 'data-backup version should be v4.12.21');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.21'"), 'verify-current EXPECTED_VERSION should be v4.12.21');
 assert(!indexHtml.includes('?v=4.12.10'), 'old cache buster v4.12.10 should be gone');
-assert(statusMd.includes('v4.12.20'), 'status.md should document v4.12.20');
-assert(handoffMd.includes('v4.12.20'), 'handoff.md should document v4.12.20');
-assert(decisionLog.includes('v4.12.20'), 'decision-log.md should record v4.12.20');
+assert(statusMd.includes('v4.12.21'), 'status.md should document v4.12.21');
+assert(handoffMd.includes('v4.12.21'), 'handoff.md should document v4.12.21');
+assert(decisionLog.includes('v4.12.21'), 'decision-log.md should record v4.12.21');
 assert(statusMd.includes('d483339') && statusMd.includes('bdd4eaa'), 'status.md should record body + docs commits');
 assert(handoffMd.includes('d483339') && handoffMd.includes('bdd4eaa'), 'handoff.md should record body + docs commits');
 assert(decisionLog.includes('d483339') && decisionLog.includes('bdd4eaa'), 'decision-log.md should record body + docs commits');
@@ -380,4 +380,4 @@ console.log('== E. profit rates / persistence invariants (runtime) ==');
   assert(profitJs.includes('buildProfitSummaryFromMonthly') || load('js/monthly-results-brain.js').includes('buildProfitSummaryFromMonthly'), 'monthly summary overlay remains summary-only');
 }
 
-console.log('\nAll v4.12.20 profit-target-month checks passed.');
+console.log('\nAll v4.12.21 profit-target-month checks passed.');

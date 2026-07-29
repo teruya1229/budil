@@ -1,5 +1,5 @@
 /**
- * Budil v4.12.20 - work order delete + completion payment date defaults.
+ * Budil v4.12.21 - work order delete + completion payment date defaults.
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -24,7 +24,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.12.20 work-order-delete-payment-date ==');
+console.log('== v4.12.21 work-order-delete-payment-date ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -38,18 +38,18 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.20'), 'index.html should show v4.12.20');
-assert(indexHtml.includes('js/app.js?v=4.12.20'), 'app.js cache buster should be v4.12.20');
-assert(indexHtml.includes('js/storage.js?v=4.12.20'), 'storage cache buster should be v4.12.20');
-assert(indexHtml.includes('js/work-completion-brain.js?v=4.12.20'), 'work-completion-brain cache buster should be v4.12.20');
-assert(indexHtml.includes('css/style.css?v=4.12.20'), 'style.css cache buster should be v4.12.20');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.20'"), 'storage version should be v4.12.20');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.20'"), 'data-backup version should be v4.12.20');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.20'"), 'verify-current EXPECTED_VERSION should be v4.12.20');
+assert(indexHtml.includes('v4.12.21'), 'index.html should show v4.12.21');
+assert(indexHtml.includes('js/app.js?v=4.12.21'), 'app.js cache buster should be v4.12.21');
+assert(indexHtml.includes('js/storage.js?v=4.12.21'), 'storage cache buster should be v4.12.21');
+assert(indexHtml.includes('js/work-completion-brain.js?v=4.12.21'), 'work-completion-brain cache buster should be v4.12.21');
+assert(indexHtml.includes('css/style.css?v=4.12.21'), 'style.css cache buster should be v4.12.21');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.21'"), 'storage version should be v4.12.21');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.21'"), 'data-backup version should be v4.12.21');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.21'"), 'verify-current EXPECTED_VERSION should be v4.12.21');
 assert(!indexHtml.includes('?v=4.12.14'), 'old cache buster v4.12.14 should be gone');
-assert(statusMd.includes('v4.12.20'), 'status.md should document v4.12.20');
-assert(handoffMd.includes('v4.12.20'), 'handoff.md should document v4.12.20');
-assert(decisionLog.includes('v4.12.20'), 'decision-log.md should record v4.12.20');
+assert(statusMd.includes('v4.12.21'), 'status.md should document v4.12.21');
+assert(handoffMd.includes('v4.12.21'), 'handoff.md should document v4.12.21');
+assert(decisionLog.includes('v4.12.21'), 'decision-log.md should record v4.12.21');
 
 console.log('== D. clear vs delete UI wiring ==');
 assert(indexHtml.includes('id="btn-work-order-delete"'), 'delete button required');
@@ -323,4 +323,4 @@ console.log('== H. canonical invariants ==');
   assert(storageJs.includes("KEYS.WORK_ORDERS"), 'work order key unchanged');
 }
 
-console.log('\nAll v4.12.20 work-order-delete-payment-date checks passed.');
+console.log('\nAll v4.12.21 work-order-delete-payment-date checks passed.');

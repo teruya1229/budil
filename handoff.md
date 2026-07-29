@@ -1,6 +1,6 @@
 ﻿# Budil handoff
 
-最終更新: 2026-07-27
+最終更新: 2026-07-29
 
 ## 正本
 
@@ -17,15 +17,16 @@
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` の依存関係（googleapis 等）。依存は `hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（78本）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（79本）
 - **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
 
 ## 現在の最新状態
 
 | 項目 | 値 |
 |------|-----|
-| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.20 |
-| 最新バージョン | v4.12.20 |
+| 最新公開URL | https://teruya1229.github.io/budil/?v=4.12.21 |
+| 最新バージョン | v4.12.21 |
+| v4.12.21 集客チェック表示（JST・件数ラベル） | 実装中。9時間差はアクセスKPI取得日時の ISO slice。Browser番頭は `+09:00` 生成のため変更なし |
 | v4.12.20 集客チェック1ボタン自動起動修正 | 正式合格 Budil `89ae5d8` / Browser番頭 `06c0c2d` / verify-current 78本 / 公開URLで READY取得確認 / STOPPEDからcollect共通READY保証で復旧確認 |
 | v4.12.19 全売上編集ボタン復旧 | 正式合格 commit `e62c687` / verify-current 77本合格 / 公開URLで v4.12.19・編集フォーム展開確認（保存せずキャンセル） |
 | v4.12.18 集客KPI 12/15 実用化 | 公開済み `c94da67`／KPI 12/15・GBP3項目は未接続／全面完成扱いはしない |

@@ -39,11 +39,11 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.20'), 'index.html should show v4.12.20');
-assert(indexHtml.includes('js/app.js?v=4.12.20'), 'app.js cache buster should be v4.12.20');
-assert(indexHtml.includes('css/style.css?v=4.12.20'), 'style.css cache buster should be v4.10.41');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.20'"), 'storage.js version should be v4.12.20');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.20'"), 'data-backup version should be v4.12.20');
+assert(indexHtml.includes('v4.12.21'), 'index.html should show v4.12.21');
+assert(indexHtml.includes('js/app.js?v=4.12.21'), 'app.js cache buster should be v4.12.21');
+assert(indexHtml.includes('css/style.css?v=4.12.21'), 'style.css cache buster should be v4.10.41');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.21'"), 'storage.js version should be v4.12.21');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.21'"), 'data-backup version should be v4.12.21');
 
 console.log('== layout structure ==');
 assert(documentsJs.includes('doc-sheet-left'), 'left header block should exist');

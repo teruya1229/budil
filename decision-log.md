@@ -2,6 +2,24 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.21 集客チェック表示：JST統一・件数ラベル明確化（2026-07-29）
+
+**日付**: 2026-07-29
+
+**判断内容**:
+- 公開画面の実値確認で、媒体 `fetchedAt` は `2026-07-28T18:43:18+09:00`、Budil `completedAt`/`savedAt`/`importedAt` は `...Z`（UTC）
+- 9時間差の最初の発生箇所はアクセスKPI「取得日時」の `.slice(0,16).replace('T',' ')`（UTC壁時計表示）。`formatMarketingDateTime` 側は既に Asia/Tokyo
+- Browser番頭 `now_iso()` は初回コミットから JST `+09:00`。offsetなしUTC生成はコード上確認できず、Browser番頭は変更しない
+- 件数は計算を変えずラベルのみ明確化。「今回取得したデータ行数」（4配列合計）と「保存済みレコード合計」（3保存領域トップレベル件数）
+
+**変更ファイル**:
+- Budil: `js/app.js` / `index.html` / `js/storage.js` / `js/data-backup.js`
+- `scripts/verify-v41221-marketing-display-timezone-counts.mjs` / `scripts/verify-v41218-marketing-kpi-12-of-15.mjs` / `scripts/verify-current.mjs`
+- `status.md` / `handoff.md` / `decision-log.md`
+
+**次にやること**:
+- Budil commit/push、公開URLで1ボタン取得・JST表示・件数ラベル・再取得upsert確認
+
 ## v4.12.20 集客チェック1ボタン取得の自動起動修正（2026-07-27）
 
 **日付**: 2026-07-27
