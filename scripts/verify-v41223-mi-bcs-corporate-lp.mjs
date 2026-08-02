@@ -247,6 +247,20 @@ const noCorpRow = api2.buildCorporateLpMetrics({
 });
 assert(noCorpRow.ga4.pv.status === 'ok' && noCorpRow.ga4.pv.value === 0, 'PV: success + no match under full page list = データなし(0)');
 assert(noCorpRow.searchConsole.status === 'ok' && noCorpRow.searchConsole.impressions === 0, 'SC: success + no match under cap = データなし(0)');
+assert(noCorpRow.searchConsole.ctr === null, 'SC: no matched row -> ctr has no basis to average, stays null');
+assert(noCorpRow.searchConsole.position === null, 'SC: no matched row -> position has no basis to average, stays null');
+assert(
+  api2.corporateLpMetricValue(noCorpRow.searchConsole.ctr, '%', noCorpRow.searchConsole.status) === 'データなし',
+  'CTR display for no-match SC row is データなし, not 0% (数値がない状態を0と表示しない)'
+);
+assert(
+  api2.corporateLpMetricValue(noCorpRow.searchConsole.position, '', noCorpRow.searchConsole.status) === 'データなし',
+  '平均掲載順位 display for no-match SC row is データなし, not 0'
+);
+assert(
+  api2.corporateLpMetricValue(noCorpRow.searchConsole.impressions, '', noCorpRow.searchConsole.status) === '0',
+  'impressions display for no-match SC row stays a real 0 (success + 0 = 0)'
+);
 
 // (c) GA4 collector error -> 取得失敗, not silently 0
 const ga4Error = api2.buildCorporateLpMetrics({
@@ -295,6 +309,8 @@ assert(api2.corporateLpMetricValue(3, '', 'ok') === '3', 'ok renders the numeric
 assert(api2.corporateLpMetricValue(null, '', 'error') === '取得失敗', 'error renders 取得失敗');
 assert(api2.corporateLpMetricValue(null, '', 'unknown') === '未確認', 'unknown renders 未確認');
 assert(api2.corporateLpMetricValue(null, '', 'before_tracking') === '計測開始前', 'before_tracking renders 計測開始前');
+assert(api2.corporateLpMetricValue(0, '', 'ok') === '0', 'ok with real 0 still renders 0 (success + 0 = 0)');
+assert(api2.corporateLpMetricValue(null, '%', 'ok') === 'データなし', 'ok with null value (no rows to average) renders データなし, not 0');
 
 // -- CTA double counting / generic CTA not added ---------------------------
 const buildCorpFnSrc = extractFn(app, 'buildCorporateLpMetrics');

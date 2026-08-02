@@ -15615,6 +15615,9 @@
 
   function corporateLpMetricValue(value, suffix, status) {
     if (status === 'before_tracking') return '計測開始前';
+    // status='ok'でも value が null/undefined（平均・CTR算出元データなし等）の場合は
+    // 「数値がない状態を0と表示しない」ため、0への丸め込みを避けてデータなし表示にする。
+    if (status === 'ok' && (value === null || value === undefined)) return 'データなし';
     return kpiMetricValue(value, suffix, status);
   }
 
