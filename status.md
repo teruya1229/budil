@@ -6,8 +6,19 @@
 - **必須**: ../calendar-sync-worker/run-budil-calendar-export.bat
 - **必須**: hub/functions 側の依存関係（googleapis 等）。hub/functions で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（80本。省略・除外・緩和なし）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（81本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.22 hotfix：GA4ページ canonical path 集約（2026-08-02）
+
+- バージョン番号・index.html cache buster・CSSは変更なし（v4.12.22のまま）
+- 保存済みレコードは変更せず、読み込み・集計・表示レイヤーのみ
+- `AnalyticsBrain.normalizePagePath` / `resolveCanonicalPagePath` / `aggregatePageRecordsByCanonicalPath` を追加
+- 同一 date + canonical path を1行に合算（query/hash/末尾スラッシュ差・旧新タイトル差を吸収）
+- 適用: `getAnalyticsContext` / `renderKpiTopPages` / `buildMarketingInsights` / `renderMarketingOperationalSummary` / `renderAnalyticsRecordsList`
+- 新規 `scripts/verify-v41222-ga4-canonical-page-path.mjs`
+- 実装commit: `39e989c` / verify-current 81本合格 / 公開URL `?v=39e989c` で hard reload 確認済み
+- 実機スマートフォン確認は未完了
 
 ## v4.12.22 実装内容（スマホ実用化）
 

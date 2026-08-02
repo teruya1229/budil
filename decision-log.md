@@ -2,6 +2,24 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.22 hotfix：GA4ページ canonical path 集約（2026-08-02）
+
+**日付**: 2026-08-02
+
+**判断内容**:
+- GA4の page_title 由来値が Budil では `pageName` として保存・描画され、同一URLでも旧タイトル・新タイトルが別行になっていた
+- 保存構造・upsert・localStorageキーは維持し、読み込み・集計・表示レイヤーだけで date + canonical path 集約する
+- バージョン番号と cache buster（v4.12.22）は今回変更しない
+
+**変更ファイル**:
+- `js/analytics-brain.js` / `js/app.js`
+- `scripts/verify-v41222-ga4-canonical-page-path.mjs`
+- `status.md` / `handoff.md` / `decision-log.md`（docs commit）
+
+**次にやること**:
+- 実機スマートフォンでの表示確認
+- 旧タイトル＋新タイトルが同居する端末localStorageでの合算表示確認
+
 ## v4.12.22 スマホ実用化（2026-07-29）
 
 **日付**: 2026-07-29
