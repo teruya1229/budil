@@ -6,8 +6,19 @@
 - **必須**: ../calendar-sync-worker/run-budil-calendar-export.bat
 - **必須**: hub/functions 側の依存関係（googleapis 等）。hub/functions で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（81本。省略・除外・緩和なし）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（82本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.22 hotfix：SC平均掲載順位に直近24時間を明記（2026-08-02）
+
+- バージョン番号・index.html cache buster・CSSは変更なし（v4.12.22のまま）
+- 表示ラベルのみ変更。Search Console取得・集計・保存処理は変更なし
+- KPI補足行: `SC平均掲載順位（補足）` → `SC平均掲載順位（直近24時間・補足）`
+- 取得後の集客サマリー: `SC平均掲載順位` → `SC平均掲載順位（直近24時間・補足）`
+- Search Console詳細の「対象期間：直近24時間」・表示回数・クリック数・詳細欄の平均掲載順位ラベルは維持
+- 新規 `scripts/verify-v41222-sc-avg-position-24h-label.mjs`
+- 実装commit: `cad488f` / verify-current 82本合格 / 公開URL `?v=cad488f` で hard reload 確認済み
+- 実機スマートフォン確認は未完了
 
 ## v4.12.22 hotfix：GA4ページ canonical path 集約（2026-08-02）
 

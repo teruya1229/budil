@@ -17,15 +17,16 @@
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` の依存関係（googleapis 等）。依存は `hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（81本）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（82本）
 - **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
 
 ## 現在の最新状態
 
 | 項目 | 値 |
 |------|-----|
-| 最新公開URL | https://teruya1229.github.io/budil/?v=39e989c |
+| 最新公開URL | https://teruya1229.github.io/budil/?v=cad488f |
 | 最新バージョン | v4.12.22（表示・cache buster維持） |
+| v4.12.22 hotfix SC平均掲載順位（直近24時間・補足）明記 | 正式合格 Budil `cad488f` / バージョン番号変更なし / 表示ラベルのみ / 取得・集計・保存変更なし / verify-current 82本 / 公開 hard reload で新ラベル・対象期間直近24時間・数値維持確認 / 実機スマホ未完了 |
 | v4.12.22 hotfix GA4 canonical path集約 | 正式合格 Budil `39e989c` / バージョン番号変更なし / verify-current 81本 / 公開 hard reload で `normalizePagePath` 反映確認 / ローカルfixtureで旧3+新4=1行7確認 / 実機スマホ未完了 |
 | v4.12.22 スマホ実用化 | 正式合格 Budil `407d440` / 記録 `7037f28` / Browser番頭変更なし `f83b267` / verify-current 80本 / 公開URLで375・390・430・PC確認済み。端末間同期は既存どおり端末localStorage正本（新規同期なし） |
 | v4.12.21 集客チェック表示（JST・件数ラベル） | 正式合格 Budil `524ae32` / Browser番頭変更なし `f83b267` / verify-current 79本 / 公開URLで JST表示・件数ラベル・同日upsert・375px確認済み |
