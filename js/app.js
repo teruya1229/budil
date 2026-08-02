@@ -14376,8 +14376,10 @@
   }
 
   function renderKpiTopPages(snapshot) {
+    // MI.BCS法人LPは家庭向けLP別上位へ混ぜず、専用カードでのみ表示する。
+    const rawPages = ((snapshot && snapshot.pages) || []).filter(p => !AnalyticsBrain.isCorporateLpIdentifier(p));
     const pages = AnalyticsBrain.aggregatePageRecordsByCanonicalPath(
-      (snapshot && snapshot.pages) || [],
+      rawPages,
       { groupByDate: false }
     );
     if (!pages.length) return '<p class="placeholder-text">LP別アクセスは未確認です。</p>';
@@ -15326,8 +15328,11 @@
   function buildMarketingInsights(serviceResults, previousSnapshot) {
     const ga4 = serviceResults.ga4 || {};
     const sc = serviceResults.searchConsole || {};
+    // MI.BCS法人LPは「次に見るべき家庭ページ」「CTAが弱い家庭ページ」判定へ混ぜない。
+    const householdGa4Records = (Array.isArray(ga4.records) ? ga4.records : [])
+      .filter(r => !AnalyticsBrain.isCorporateLpIdentifier(r));
     const pages = AnalyticsBrain.aggregatePageRecordsByCanonicalPath(
-      Array.isArray(ga4.records) ? ga4.records : [],
+      householdGa4Records,
       { groupByDate: false }
     );
     const queries = Array.isArray(sc.queries) ? sc.queries : [];
@@ -15503,6 +15508,146 @@
     };
   }
 
+  // MI.BCS法人LP: 計測実装commit 06d186e（2026-08-02 21:13:18 JST公開反映開始）。
+  // これより確実に前と判断できる期間だけ「計測開始前」を使う。同日・範囲不明では断定しない。
+  const CORPORATE_LP_GA4_MEASUREMENT_START_DATE = '2026-08-02';
+  const CORPORATE_LP_GA4_MEASUREMENT_NOTE =
+    '法人LP計測は2026-08-02 21:13:18 JST公開反映（commit 06d186e）以降のみ有効。家庭LPの値は流用していません。';
+  // Search Console取得はページ表の上位のみ（Browser番頭側でヘッダ除く最大25行）。
+  // 上限に達している場合、0件一致は「データなし」と断定できない。
+  const SEARCH_CONSOLE_PAGE_LIST_CAP = 25;
+
+  function buildCorporateLpMetrics(services) {
+    const svc = services || {};
+    const ga4 = svc.ga4 || {};
+    const sc = svc.searchConsole || {};
+    const ga4Failed = ga4.status === 'error';
+    const scFailed = sc.status === 'error';
+
+    let pv;
+    if (!Array.isArray(ga4.records)) {
+      pv = {
+        value: null,
+        status: ga4Failed ? 'error' : 'unknown',
+        reason: ga4Failed ? 'GA4取得失敗' : 'GA4ページ別データが未取得（旧データ形式など）'
+      };
+    } else if (ga4.period && String(ga4.period) < CORPORATE_LP_GA4_MEASUREMENT_START_DATE) {
+      pv = { value: null, status: 'before_tracking', reason: '対象期間は法人LP計測開始より前' };
+    } else {
+      const matched = AnalyticsBrain.aggregatePageRecordsByCanonicalPath(
+        ga4.records.filter(r => AnalyticsBrain.isCorporateLpIdentifier(r)),
+        { groupByDate: false }
+      );
+      if (matched.length) {
+        const views = matched.reduce((sum, r) => sum + (Number(r.views) || 0), 0);
+        pv = { value: views, status: 'ok', reason: null };
+      } else if (ga4Failed) {
+        pv = { value: null, status: 'error', reason: 'GA4取得失敗' };
+      } else {
+        // GA4ページ別レポートは全ページを対象に取得しているため、0件一致=データなし。
+        pv = { value: 0, status: 'ok', reason: null };
+      }
+    }
+
+    // LINE/電話はイベント全体値のみで、ページ別内訳をBrowser番頭が保持していない。
+    // 全体値を法人値へ流用・推測配分しない（generic ctaと同じclickでも二重加算しない）。
+    const eventAttributionReason = 'LINE・電話クリックはページ別内訳が未取得のため（Browser番頭は全体値のみ集計）';
+    const eventsStatus = ga4Failed ? 'error' : 'unknown';
+    const eventsReason = ga4Failed ? 'GA4取得失敗' : eventAttributionReason;
+    const line = { value: null, status: eventsStatus, reason: eventsReason };
+    const phone = { value: null, status: eventsStatus, reason: eventsReason };
+    const inquiry = {
+      value: null,
+      status: eventsStatus,
+      reason: ga4Failed ? 'GA4取得失敗' : '法人LINE・電話が未確認のため問い合わせ合計も未確認'
+    };
+    const mailCta = null; // cta_typeがLP別に保持されていないため非表示（推測表示しない）
+
+    let searchConsole;
+    if (!Array.isArray(sc.pages)) {
+      searchConsole = {
+        status: scFailed ? 'error' : 'unknown',
+        reason: scFailed ? 'Search Console取得失敗' : 'Search Consoleページ情報が未取得（旧データ形式など）'
+      };
+    } else {
+      const matched = sc.pages.filter(p => AnalyticsBrain.isCorporateLpIdentifier(p));
+      if (matched.length) {
+        const impressions = matched.reduce((sum, p) => sum + (Number(p.impressions) || 0), 0);
+        const clicks = matched.reduce((sum, p) => sum + (Number(p.clicks) || 0), 0);
+        let weightedSum = 0;
+        let weightTotal = 0;
+        matched.forEach(p => {
+          const w = Number(p.impressions) || 0;
+          const pos = Number(p.position);
+          if (Number.isFinite(pos) && w > 0) {
+            weightedSum += pos * w;
+            weightTotal += w;
+          }
+        });
+        const position = weightTotal > 0
+          ? weightedSum / weightTotal
+          : (matched.length === 1 && Number.isFinite(Number(matched[0].position)) ? Number(matched[0].position) : null);
+        const ctr = impressions > 0
+          ? (clicks / impressions) * 100
+          : (matched.length === 1 && Number.isFinite(Number(matched[0].ctr)) ? Number(matched[0].ctr) : null);
+        searchConsole = { status: 'ok', impressions, clicks, ctr, position, reason: null };
+      } else if (scFailed) {
+        searchConsole = { status: 'error', reason: 'Search Console取得失敗' };
+      } else if (sc.pages.length >= SEARCH_CONSOLE_PAGE_LIST_CAP) {
+        searchConsole = { status: 'unknown', reason: 'Search Console取得結果が上位ページ表示分のみのため、法人LPの有無を断定できません' };
+      } else {
+        // 取得成功した全ページ行が上限未満＝取得漏れの疑いなし。0件一致=データなし。
+        searchConsole = { status: 'ok', impressions: 0, clicks: 0, ctr: null, position: null, reason: null };
+      }
+    }
+
+    return {
+      ga4: { pv, line, phone, inquiry, mailCta },
+      searchConsole,
+      ga4Period: ga4.periodLabel ? `${ga4.periodLabel}${ga4.period ? `（${ga4.period}）` : ''}` : (ga4.period || '未取得'),
+      searchConsolePeriod: sc.period || '未取得',
+      fetchedAt: {
+        ga4: ga4.fetchedAt || '',
+        searchConsole: sc.fetchedAt || ''
+      }
+    };
+  }
+
+  function corporateLpMetricValue(value, suffix, status) {
+    if (status === 'before_tracking') return '計測開始前';
+    return kpiMetricValue(value, suffix, status);
+  }
+
+  function renderCorporateLpCard(services) {
+    const m = buildCorporateLpMetrics(services);
+    const sc = m.searchConsole || {};
+    const scPositionLabel = m.searchConsolePeriod === '直近24時間'
+      ? '平均掲載順位（直近24時間・補足）'
+      : '平均掲載順位';
+    const mailRow = m.ga4.mailCta
+      ? `<div><span>メールCTA（参考）</span><strong>${corporateLpMetricValue(m.ga4.mailCta.value, '', m.ga4.mailCta.status)}</strong></div>`
+      : '';
+    return `
+      <section class="corporate-lp-card" aria-label="MI.BCS法人LP">
+        <h4>MI.BCS法人LP</h4>
+        <p class="corporate-lp-note">家庭向けLPとは別枠です。既存の家庭向け集計・上位ページ・問い合わせ合計へは加算していません。</p>
+        <div class="corporate-lp-metric-grid">
+          <div><span>Search Console 表示回数</span><strong>${corporateLpMetricValue(sc.impressions, '', sc.status)}</strong></div>
+          <div><span>Search Console クリック数</span><strong>${corporateLpMetricValue(sc.clicks, '', sc.status)}</strong></div>
+          <div><span>CTR</span><strong>${corporateLpMetricValue(sc.ctr, '%', sc.status)}</strong></div>
+          <div><span>${esc(scPositionLabel)}</span><strong>${corporateLpMetricValue(sc.position, '', sc.status)}</strong></div>
+          <div><span>GA4ページビュー</span><strong>${corporateLpMetricValue(m.ga4.pv.value, '', m.ga4.pv.status)}</strong></div>
+          <div><span>LINEクリック</span><strong>${corporateLpMetricValue(m.ga4.line.value, '', m.ga4.line.status)}</strong></div>
+          <div><span>電話クリック</span><strong>${corporateLpMetricValue(m.ga4.phone.value, '', m.ga4.phone.status)}</strong></div>
+          <div><span>問い合わせ合計</span><strong>${corporateLpMetricValue(m.ga4.inquiry.value, '', m.ga4.inquiry.status)}</strong></div>
+          ${mailRow}
+        </div>
+        <p class="corporate-lp-meta"><strong>GA4対象期間：</strong>${esc(m.ga4Period)}　<strong>Search Console対象期間：</strong>${esc(m.searchConsolePeriod)}</p>
+        <p class="corporate-lp-meta"><strong>取得日時：</strong>GA4 ${esc(formatMarketingDateTime(m.fetchedAt.ga4))} / SC ${esc(formatMarketingDateTime(m.fetchedAt.searchConsole))}</p>
+        <p class="corporate-lp-meta corporate-lp-measurement-note">${esc(CORPORATE_LP_GA4_MEASUREMENT_NOTE)}</p>
+      </section>`;
+  }
+
   function upsertMarketingSnapshot(serviceResults, saveStats, startedAt) {
     const list = Storage.getAnalyticsSnapshots();
     const previous = list.find(item => item && item.source === MARKETING_SYNC_SOURCE);
@@ -15587,8 +15732,10 @@
     const ga4 = services.ga4 || {};
     const sc = services.searchConsole || {};
     const adRecords = ads.records || [];
+    // MI.BCS法人LPは家庭向けGA4ページ需要へ混ぜず、専用カードでのみ表示する。
+    const householdGa4Records = (ga4.records || []).filter(r => !AnalyticsBrain.isCorporateLpIdentifier(r));
     const ga4Records = AnalyticsBrain.aggregatePageRecordsByCanonicalPath(
-      ga4.records || [],
+      householdGa4Records,
       { groupByDate: false }
     );
     const queries = sc.queries || [];
@@ -15659,6 +15806,7 @@
           <p><strong>平均掲載順位（補足）：</strong>${kpiMetricValue(scPosition, '', scPositionStatus)}</p>
         </section>
       </div>
+      ${renderCorporateLpCard(services)}
       <div class="marketing-auto-insights">
         <p><strong>検索クエリ上位：</strong>${queries.length ? esc(queries.slice(0, 5).map(item => item.query).join(' / ')) : '未取得'}</p>
         <p><strong>次の打ち手：</strong>${esc(insights.find(text => /CTAが弱い|次に見るべき/.test(text)) || 'データ不足のため判定保留')}</p>

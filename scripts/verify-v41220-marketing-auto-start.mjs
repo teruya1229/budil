@@ -24,11 +24,11 @@ const decisionLog = load('decision-log.md');
 
 execFileSync(process.execPath, ['--check', join(root, 'js/app.js')], { stdio: 'inherit' });
 
-assert(html.includes('v4.12.22'), 'index.html shows v4.12.22');
-assert(html.includes('js/app.js?v=4.12.22'), 'app.js cache buster is v4.12.22');
-assert(storage.includes("BUDIL_VERSION: 'v4.12.22'"), 'storage version is v4.12.22');
-assert(dataBackup.includes("APP_VERSION: 'v4.12.22'"), 'data-backup version is v4.12.22');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.22'"), 'verify-current pins v4.12.22');
+assert(html.includes('v4.12.23'), 'index.html shows v4.12.23');
+assert(html.includes('js/app.js?v=4.12.23'), 'app.js cache buster is v4.12.23');
+assert(storage.includes("BUDIL_VERSION: 'v4.12.23'"), 'storage version is v4.12.23');
+assert(dataBackup.includes("APP_VERSION: 'v4.12.23'"), 'data-backup version is v4.12.23');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.23'"), 'verify-current pins v4.12.23');
 
 assert(app.includes('waitForMarketingHealth'), 'health retry helper exists');
 assert(app.includes('MARKETING_HEALTH_RETRY_MS = 45000'), 'health retry window is 45s');
@@ -49,9 +49,9 @@ assert(!app.includes('if (!health.cdpReady) throw'), 'health cdpReady alone no l
 assert(!app.includes('localStorage.clear'), 'localStorage.clear is not introduced');
 assert(!/売上登録|作業完了後|作業後確定/.test(app), 'NG terms are not revived in app.js');
 
-assert(statusMd.includes('v4.12.22'), 'status.md documents v4.12.22');
-assert(handoffMd.includes('v4.12.22'), 'handoff.md documents v4.12.22');
-assert(decisionLog.includes('v4.12.22'), 'decision-log.md records v4.12.22');
+assert(statusMd.includes('v4.12.23'), 'status.md documents v4.12.23');
+assert(handoffMd.includes('v4.12.23'), 'handoff.md documents v4.12.23');
+assert(decisionLog.includes('v4.12.23'), 'decision-log.md records v4.12.23');
 
 function MARKETING_API_UNREACHABLE_SNIPPET() {
   return '集客APIへ接続できません。APIが未起動、またはChromeのローカルネットワーク許可で遮断されている可能性があります。';

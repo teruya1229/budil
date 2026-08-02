@@ -84,6 +84,28 @@ const AnalyticsBrain = {
     return '';
   },
 
+  // MI.BCS法人LP識別の正式条件はここ1か所のみ。他箇所で別判定を作らないこと。
+  CORPORATE_LP_PAGE_TYPE: 'mi_bcs_lp',
+  CORPORATE_LP_CANONICAL_PATHS: ['/mi-bcs/', '/mi-bcs'],
+
+  isCorporateLpIdentifier(record) {
+    const item = record && typeof record === 'object' ? record : {};
+    const pageType = String(item.pageType || item.page_type || '').trim().toLowerCase();
+    if (pageType === this.CORPORATE_LP_PAGE_TYPE) return true;
+    const candidates = [
+      item.pageSlug, item.page_slug,
+      item.pagePath, item.pagePathPlusQueryString, item.pageLocation,
+      item.page, item.url
+    ];
+    for (let i = 0; i < candidates.length; i += 1) {
+      const raw = candidates[i];
+      if (raw === undefined || raw === null || raw === '') continue;
+      const normalized = this.normalizePagePath(raw);
+      if (this.CORPORATE_LP_CANONICAL_PATHS.indexOf(normalized) >= 0) return true;
+    }
+    return false;
+  },
+
   pageRecordTimestamp(record) {
     const item = record && typeof record === 'object' ? record : {};
     return item.fetchedAt || item.importedAt || item.updatedAt || item.createdAt || item.date || '';
@@ -471,7 +493,10 @@ const AnalyticsBrain = {
   },
 
   filterActive(records) {
-    return this.enrichAll(records).filter(r => r.status !== 'archived');
+    // MI.BCS法人LPは「MI.BCS法人LP」独立枠でのみ表示し、家庭向けLP群・需要判断へは混ぜない。
+    return this.enrichAll(records)
+      .filter(r => r.status !== 'archived')
+      .filter(r => !this.isCorporateLpIdentifier(r));
   },
 
   getTopDemandPages(records, limit) {

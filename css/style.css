@@ -7223,6 +7223,67 @@ body {
   color: var(--text);
 }
 
+/* MI.BCS法人LP: 家庭向けカードと混同しないよう視覚的に独立させる最小限のスタイル */
+.corporate-lp-card {
+  margin-top: 0.7rem;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text);
+}
+
+.corporate-lp-card h4 {
+  margin: 0 0 0.35rem;
+  color: var(--text);
+  font-size: 0.96rem;
+}
+
+.corporate-lp-note {
+  margin: 0 0 0.6rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.corporate-lp-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.corporate-lp-metric-grid > div {
+  min-width: 0;
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-input);
+}
+
+.corporate-lp-metric-grid span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.corporate-lp-metric-grid strong {
+  display: block;
+  margin: 0.15rem 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.corporate-lp-meta {
+  margin: 0.5rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.corporate-lp-measurement-note {
+  color: var(--warning);
+}
+
 .marketing-manual-tools {
   padding: 0;
 }
@@ -7341,7 +7402,8 @@ body {
   .marketing-auto-metric-grid,
   .marketing-detail-grid,
   .marketing-save-grid,
-  .ad-performance-preview-grid {
+  .ad-performance-preview-grid,
+  .corporate-lp-metric-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -13566,7 +13628,8 @@ body.sales-page {
   .marketing-auto-metric-grid,
   .marketing-detail-grid,
   .analytics-kpi-card-grid,
-  .data-mgmt-grid {
+  .data-mgmt-grid,
+  .corporate-lp-metric-grid {
     grid-template-columns: 1fr !important;
   }
 

@@ -52,11 +52,11 @@ const tamazawaItem = {
 };
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.22'), 'index.html should show v4.12.22');
-assert(indexHtml.includes('js/app.js?v=4.12.22'), 'app.js cache buster should be v4.12.22');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.22'), 'calendar brain cache buster should be v4.12.22');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.22'"), 'storage.js version should be v4.12.22');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.22'"), 'data-backup version should be v4.12.22');
+assert(indexHtml.includes('v4.12.23'), 'index.html should show v4.12.23');
+assert(indexHtml.includes('js/app.js?v=4.12.23'), 'app.js cache buster should be v4.12.23');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.23'), 'calendar brain cache buster should be v4.12.23');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.23'"), 'storage.js version should be v4.12.23');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.23'"), 'data-backup version should be v4.12.23');
 
 console.log('== import result UI wiring ==');
 assert(appJs.includes('renderCalendarImportResultBreakdownHtml'), 'import result breakdown renderer should exist');
