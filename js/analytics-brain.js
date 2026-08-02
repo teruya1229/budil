@@ -37,6 +37,185 @@ const AnalyticsBrain = {
     return Number.isFinite(n) ? n : fallback;
   },
 
+  PAGE_METRIC_SUM_KEYS: [
+    'views', 'pageViews', 'screenPageViews', 'activeUsers', 'users', 'newUsers',
+    'sessions', 'eventCount', 'ctaClicks', 'lineClicks', 'bookingClicks',
+    'phoneClicks', 'phoneTaps', 'formClicks', 'clicks'
+  ],
+
+  normalizePagePath(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value !== 'string' && typeof value !== 'number') return '';
+    let text = String(value).trim();
+    if (!text) return '';
+    try {
+      if (/^https?:\/\//i.test(text)) {
+        text = new URL(text).pathname || '';
+      } else {
+        text = text.split('#')[0].split('?')[0];
+        if (text && !text.startsWith('/') && /[^\/]+\.[^\/]+\/.+/.test(text)) {
+          const slash = text.indexOf('/');
+          text = slash >= 0 ? text.slice(slash) : text;
+        }
+      }
+    } catch (_err) {
+      text = String(value).trim().split('#')[0].split('?')[0];
+    }
+    text = String(text || '').trim();
+    if (!text) return '';
+    if (!text.startsWith('/')) text = '/' + text;
+    text = text.replace(/\/{2,}/g, '/');
+    if (text === '/complete-disassembly') text = '/complete-disassembly/';
+    return text;
+  },
+
+  resolveCanonicalPagePath(record) {
+    const item = record && typeof record === 'object' ? record : {};
+    const candidates = [
+      item.pagePath,
+      item.pagePathPlusQueryString,
+      item.pageLocation,
+      item.url
+    ];
+    for (let i = 0; i < candidates.length; i += 1) {
+      const normalized = this.normalizePagePath(candidates[i]);
+      if (normalized) return normalized;
+    }
+    return '';
+  },
+
+  pageRecordTimestamp(record) {
+    const item = record && typeof record === 'object' ? record : {};
+    return item.fetchedAt || item.importedAt || item.updatedAt || item.createdAt || item.date || '';
+  },
+
+  sumNullablePageMetric(records, key) {
+    let present = false;
+    let anyFinite = false;
+    let sum = 0;
+    (records || []).forEach(item => {
+      if (!item || typeof item !== 'object' || !Object.prototype.hasOwnProperty.call(item, key)) return;
+      present = true;
+      const value = item[key];
+      if (value === null || value === undefined || value === '') return;
+      const n = Number(value);
+      if (!Number.isFinite(n)) return;
+      anyFinite = true;
+      sum += n;
+    });
+    if (!present) return { skip: true };
+    return { value: anyFinite ? sum : null };
+  },
+
+  averageOrLatestPageMetric(records, key) {
+    const list = Array.isArray(records) ? records : [];
+    let present = false;
+    let weightedSum = 0;
+    let weightTotal = 0;
+    list.forEach(item => {
+      if (!item || typeof item !== 'object' || !Object.prototype.hasOwnProperty.call(item, key)) return;
+      present = true;
+      const value = item[key];
+      if (value === null || value === undefined || value === '') return;
+      const n = Number(value);
+      if (!Number.isFinite(n)) return;
+      const weight = Number(item.views);
+      if (Number.isFinite(weight) && weight > 0) {
+        weightedSum += n * weight;
+        weightTotal += weight;
+      }
+    });
+    if (!present) return { skip: true };
+    if (weightTotal > 0) return { value: weightedSum / weightTotal };
+    const sorted = list.slice().sort((a, b) =>
+      String(this.pageRecordTimestamp(b)).localeCompare(String(this.pageRecordTimestamp(a)))
+    );
+    for (let i = 0; i < sorted.length; i += 1) {
+      const item = sorted[i];
+      if (!item || !Object.prototype.hasOwnProperty.call(item, key)) continue;
+      const value = item[key];
+      if (value === null || value === undefined || value === '') continue;
+      const n = Number(value);
+      if (Number.isFinite(n)) return { value: n };
+    }
+    return { value: null };
+  },
+
+  pickLatestPageTitle(records) {
+    const sorted = (records || []).slice().sort((a, b) =>
+      String(this.pageRecordTimestamp(b)).localeCompare(String(this.pageRecordTimestamp(a)))
+    );
+    for (let i = 0; i < sorted.length; i += 1) {
+      const title = String((sorted[i] && (sorted[i].pageName || sorted[i].displayTitle)) || '').trim();
+      if (title) return title;
+    }
+    return '';
+  },
+
+  aggregatePageRecordsByCanonicalPath(records, options) {
+    const opts = options && typeof options === 'object' ? options : {};
+    const groupByDate = !!opts.groupByDate;
+    const list = Array.isArray(records) ? records : [];
+    const groups = new Map();
+    const order = [];
+
+    list.forEach((raw, index) => {
+      const record = raw && typeof raw === 'object' ? raw : {};
+      const canonical = this.resolveCanonicalPagePath(record);
+      let key;
+      if (canonical) {
+        key = groupByDate ? `${String(record.date || '')}|${canonical}` : canonical;
+      } else {
+        key = `__nopath__|${record.id || ('idx:' + index)}`;
+      }
+      if (!groups.has(key)) {
+        groups.set(key, []);
+        order.push(key);
+      }
+      groups.get(key).push(record);
+    });
+
+    return order.map(key => {
+      const group = groups.get(key) || [];
+      if (!group.length) return {};
+      if (key.indexOf('__nopath__|') === 0) {
+        return { ...group[0] };
+      }
+      const canonical = this.resolveCanonicalPagePath(group[0]) || key.split('|').pop();
+      const latestTitle = this.pickLatestPageTitle(group);
+      const baseSorted = group.slice().sort((a, b) =>
+        String(this.pageRecordTimestamp(b)).localeCompare(String(this.pageRecordTimestamp(a)))
+      );
+      const newest = baseSorted[0] || group[0];
+      const merged = {
+        ...newest,
+        pagePath: canonical,
+        url: canonical,
+        canonicalPath: canonical,
+        displayTitle: latestTitle || canonical,
+        pageName: latestTitle || canonical
+      };
+      this.PAGE_METRIC_SUM_KEYS.forEach(metricKey => {
+        const summed = this.sumNullablePageMetric(group, metricKey);
+        if (summed.skip) {
+          if (Object.prototype.hasOwnProperty.call(merged, metricKey)) delete merged[metricKey];
+          return;
+        }
+        merged[metricKey] = summed.value;
+      });
+      ['bounceRate', 'avgEngagementSeconds'].forEach(metricKey => {
+        const averaged = this.averageOrLatestPageMetric(group, metricKey);
+        if (averaged.skip) {
+          if (Object.prototype.hasOwnProperty.call(merged, metricKey)) delete merged[metricKey];
+          return;
+        }
+        merged[metricKey] = averaged.value;
+      });
+      if (groupByDate && newest && newest.date) merged.date = newest.date;
+      return merged;
+    });
+  },
+
   normalizeRecord(raw) {
     const item = raw && typeof raw === 'object' ? { ...raw } : {};
     const queries = item.searchQueries;

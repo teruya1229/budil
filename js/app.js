@@ -14143,14 +14143,21 @@
         r && r.date && r.date >= range.startDate && r.date <= range.endDate
       );
     }
-    const activeAll = AnalyticsBrain.filterActive(range ? records : allRecords);
-    const ctx = AnalyticsBrain.buildContext(activeAll, today);
-    ctx.browserBantou = AnalyticsBrain.getBrowserBantouMeta(
-      range ? records : allRecords, today
+    const sourceRecords = range ? records : allRecords;
+    const activeAll = AnalyticsBrain.filterActive(sourceRecords);
+    const aggregatedActive = AnalyticsBrain.aggregatePageRecordsByCanonicalPath(
+      activeAll,
+      { groupByDate: true }
     );
+    const ctx = AnalyticsBrain.buildContext(aggregatedActive, today);
+    ctx.browserBantou = AnalyticsBrain.getBrowserBantouMeta(sourceRecords, today);
     if (!range) {
       const displayRecords = AnalyticsBrain.selectRecordsForDisplay(allRecords, today);
-      const displayCtx = AnalyticsBrain.buildContext(displayRecords, today);
+      const displayAggregated = AnalyticsBrain.aggregatePageRecordsByCanonicalPath(
+        displayRecords,
+        { groupByDate: true }
+      );
+      const displayCtx = AnalyticsBrain.buildContext(displayAggregated, today);
       ctx.todayConclusion = displayCtx.todayConclusion;
       ctx.strongCount = displayCtx.strongCount;
       ctx.bounceCount = displayCtx.bounceCount;
@@ -14369,14 +14376,21 @@
   }
 
   function renderKpiTopPages(snapshot) {
-    const pages = (snapshot && snapshot.pages) || [];
+    const pages = AnalyticsBrain.aggregatePageRecordsByCanonicalPath(
+      (snapshot && snapshot.pages) || [],
+      { groupByDate: false }
+    );
     if (!pages.length) return '<p class="placeholder-text">LP別アクセスは未確認です。</p>';
-    return `<ol class="analytics-kpi-page-list">${pages.slice(0, 3).map(p => `
+    return `<ol class="analytics-kpi-page-list">${pages.slice(0, 3).map(p => {
+      const pathLabel = p.canonicalPath || p.pagePath || p.url || 'LP';
+      const title = String(p.displayTitle || p.pageName || '').trim();
+      const label = title && title !== pathLabel ? `${pathLabel}（${title}）` : pathLabel;
+      return `
       <li>
-        <span>${esc(p.pageName || p.url || 'LP')}</span>
+        <span>${esc(label)}</span>
         <strong>${kpiMetricValue(p.views)}</strong>
-      </li>
-    `).join('')}</ol>`;
+      </li>`;
+    }).join('')}</ol>`;
   }
 
   function buildRevenueGoalKpiHtml() {
@@ -14881,15 +14895,22 @@
     }
     el.innerHTML = `<div class="table-wrap analytics-table-wrap"><table class="analytics-table"><thead><tr>
       <th>日付</th><th>ページ</th><th>表示</th><th>直帰率</th><th>スコア</th><th>ラベル</th><th></th>
-    </tr></thead><tbody>${list.map(r => `<tr class="${selectedAnalyticsId === r.id ? 'selected' : ''}">
+    </tr></thead><tbody>${list.map(r => {
+      const pathLabel = r.canonicalPath || r.pagePath || r.url || '';
+      const title = String(r.displayTitle || r.pageName || '').trim();
+      const pageLabel = pathLabel
+        ? (title && title !== pathLabel ? `${pathLabel}（${title}）` : pathLabel)
+        : (title || '—');
+      return `<tr class="${selectedAnalyticsId === r.id ? 'selected' : ''}">
       <td>${esc(r.date || '—')}</td>
-      <td>${esc(r.pageName)}</td>
+      <td>${esc(pageLabel)}</td>
       <td>${formatMarketingMetric(r.views)}</td>
       <td>${r.bounceRate === null || r.bounceRate === undefined ? '未取得' : formatMarketingMetric(r.bounceRate, 'percent')}</td>
       <td>${r.demandScore}</td>
       <td><span class="analytics-score-label">${esc(r.scoreLabel || '—')}</span></td>
       <td><button type="button" class="btn btn-sm btn-secondary" data-analytics-open="${esc(r.id)}">詳細</button></td>
-    </tr>`).join('')}</tbody></table></div>`;
+    </tr>`;
+    }).join('')}</tbody></table></div>`;
     el.querySelectorAll('[data-analytics-open]').forEach(btn => {
       btn.addEventListener('click', () => fillAnalyticsForm(btn.dataset.analyticsOpen));
     });
@@ -15305,7 +15326,10 @@
   function buildMarketingInsights(serviceResults, previousSnapshot) {
     const ga4 = serviceResults.ga4 || {};
     const sc = serviceResults.searchConsole || {};
-    const pages = Array.isArray(ga4.records) ? ga4.records : [];
+    const pages = AnalyticsBrain.aggregatePageRecordsByCanonicalPath(
+      Array.isArray(ga4.records) ? ga4.records : [],
+      { groupByDate: false }
+    );
     const queries = Array.isArray(sc.queries) ? sc.queries : [];
     const topPage = pages.slice().sort((a, b) => Number(b.views || 0) - Number(a.views || 0))[0];
     const ctaKnown = pages.filter(page =>
@@ -15327,9 +15351,9 @@
     const insights = [];
     if (delta !== null) insights.push('Search Console表示増減: ' + (delta >= 0 ? '+' : '') + delta.toLocaleString('ja-JP'));
     if (queries.length) insights.push('検索クエリ上位: ' + queries.slice(0, 3).map(item => item.query).join(' / '));
-    if (weakCta) insights.push('CTAが弱いページ: ' + (weakCta.pagePath || weakCta.pageName));
+    if (weakCta) insights.push('CTAが弱いページ: ' + (weakCta.canonicalPath || weakCta.pagePath || weakCta.pageName));
     else if (!ctaKnown.length) insights.push('CTAクリックは未取得のため判定保留');
-    if (topPage) insights.push('次に見るべきページ: ' + (topPage.pagePath || topPage.pageName));
+    if (topPage) insights.push('次に見るべきページ: ' + (topPage.canonicalPath || topPage.pagePath || topPage.pageName));
     if (!pages.length || !queries.length || !ctaKnown.length) {
       insights.push('データ不足のため判定保留');
     }
@@ -15563,7 +15587,10 @@
     const ga4 = services.ga4 || {};
     const sc = services.searchConsole || {};
     const adRecords = ads.records || [];
-    const ga4Records = ga4.records || [];
+    const ga4Records = AnalyticsBrain.aggregatePageRecordsByCanonicalPath(
+      ga4.records || [],
+      { groupByDate: false }
+    );
     const queries = sc.queries || [];
     const eventDetails = ga4.eventDetails || {};
     const eventCategories = eventDetails.categories || {};
@@ -15602,7 +15629,7 @@
         <div><span>今回取得したデータ行数</span><strong>${saveCount.toLocaleString('ja-JP')}件</strong></div>
         <div><span>今日の広告費</span><strong>${formatMarketingMetric(adRecords.length ? adTotals.cost : null, 'yen')}</strong></div>
         <div><span>今日のクリック数</span><strong>${formatMarketingMetric(adRecords.length ? adTotals.clicks : null)}</strong></div>
-        <div><span>GA4ページ需要</span><strong>${topPage ? esc((topPage.pagePath || topPage.pageName) + ' / ' + formatMarketingMetric(topPage.views)) : '未取得'}</strong></div>
+        <div><span>GA4ページ需要</span><strong>${topPage ? esc((topPage.canonicalPath || topPage.pagePath || topPage.pageName) + ' / ' + formatMarketingMetric(topPage.views)) : '未取得'}</strong></div>
         <div><span>SC平均掲載順位</span><strong>${kpiMetricValue(scPosition, '', scPositionStatus)}</strong></div>
       </div>
       <div class="marketing-detail-grid">
