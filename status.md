@@ -1,13 +1,38 @@
 ﻿# Budil status
 
-## 正式な現行verify環境（v4.12.22）
+## 正式な現行verify環境（v4.12.23）
 
 - **正式環境**: Budil 単独 clone ではなく、親階層に sibling の calendar-sync-worker がある開発環境
 - **必須**: ../calendar-sync-worker/run-budil-calendar-export.bat
 - **必須**: hub/functions 側の依存関係（googleapis 等）。hub/functions で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（82本。省略・除外・緩和なし）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（83本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.23 実装内容（集客チェック：MI.BCS法人LP独立表示）
+
+- 対象: 「集客チェック」の取得後の集客サマリーに、MI.BCS法人LP（https://teruya1229.github.io/mi-bcs/）専用の独立カードを追加
+- 事前診断（保存なしdiag）で確認した実データ：
+  - GA4ページ別レポートには既に `/mi-bcs/`（views/activeUsers/eventCount）が存在（既存GA4プロパティ内の同一ページ別レポートに反映されていた）
+  - LINE/電話イベントはページ別内訳をBrowser番頭が保持しない仕様（`eventDetails.categories.line/phone.pagePath` は常にnull）。追加ナビゲーションはcollect_ga4の75秒タイムアウトに抵触するリスクがあるため見送り
+  - Search Console `pages` は `page`（完全URL）フィールドで、直近24時間に `/mi-bcs/` の行は未確認（取得件数は上限未満で取得漏れの疑いなし）
+  - 上記診断により **Browser番頭（marketing_local_api.py）は無変更** で実装
+- `js/analytics-brain.js`: `AnalyticsBrain.isCorporateLpIdentifier`を新設（page_type=mi_bcs_lp、またはcanonical pathname=/mi-bcs/の完全一致のみ）。`filterActive`で法人LPを除外し、家庭向け需要判断（topDemand/highBounce/todayConclusion等）へ混ぜない
+- `js/app.js`:
+  - `buildCorporateLpMetrics`: GA4ページ別レコード・Search Consoleページ別レコードを法人LP識別子でフィルタし、法人PV・SC表示回数/クリック数/CTR/加重平均掲載順位を集計
+  - LINE・電話・問い合わせ合計はページ別内訳が確立できないため常に「未確認」（推測配分・全体値流用・0への変換をしない）
+  - メールCTAはcta_typeがLP別に保持されていないため非表示
+  - `renderKpiTopPages` / `buildMarketingInsights` / `renderMarketingOperationalSummary`のGA4ページ需要から法人LPを除外し、家庭向け上位・次に見るべきページ・CTAが弱いページ判定へ混ざらないようにした
+  - GA4計測開始注記（06d186e、2026-08-02 21:13:18 JST公開反映）を明記し、確実に前と判断できる期間だけ「計測開始前」を使用
+- `css/style.css`: `.corporate-lp-card`等、法人LPカード専用の最小スタイルを追加（既存レイアウト・表示順は変更なし）
+- 既存localStorageキー・保存構造・売上/予定/受付系は変更なし。保存済み法人GA4レコードも削除していない（表示・集計対象を分けるだけ）
+- 新規 `scripts/verify-v41223-mi-bcs-corporate-lp.mjs`
+- 現行合格は引き続き `node scripts/verify-current.mjs`（83本）
+- 実装commit `e951443` push・公開確認後、法人LPに一致するSearch Console行が0件の期間でCTR・平均掲載順位が「0%」「0」と表示される不具合を公開URLの実確認で発見
+  - `corporateLpMetricValue`がstatus='ok'のnull値（算出元データなしのctr/position）をkpiMetricValueへそのまま渡し、`Number(null)=0`で丸め込まれていたのが原因
+  - hotfix `67661d4` で、status='ok'かつvalueがnull/undefinedの場合は「データなし」を返すよう修正（impressions/clicksなど実際の0は「0」のまま維持）。verify-v41223へ該当ケースの検証を追加（現行83本、緩和なし）
+  - 公開URL hard reload再確認でCTR・平均掲載順位が「データなし」表示に修正されたことを確認
+- 実機スマートフォン確認は未完了
 
 ## v4.12.22 hotfix：SC平均掲載順位に直近24時間を明記（2026-08-02）
 

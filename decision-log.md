@@ -2,6 +2,36 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.23 集客チェック：MI.BCS法人LP独立表示（2026-08-02）
+
+**日付**: 2026-08-02
+
+**判断内容**:
+- MI.BCS法人LP（https://teruya1229.github.io/mi-bcs/）は独自GA4計測（measurement ID: G-X8LKLFDL3G、page_type: mi_bcs_lp、page_slug: /mi-bcs/）を持つが、Browser番頭のGA4取得は既存プロパティ(523827227)の画面のみを見ている
+- 保存なし診断で実データを確認した結果、GA4ページ別レポートには`/mi-bcs/`の行が既に反映されていた（同一プロパティのページ別レポートに集約されている）ため、法人PVはこの既存レコードをcanonical pathで抽出して集計する
+- LINE/電話イベントはBrowser番頭がページ別内訳を保持しない設計（`eventDetails.categories.line/phone.pagePath`は常にnull）。ページ別内訳を得るには`collect_ga4`へ追加ナビゲーションが必要だが、既存処理が75秒タイムアウトへ接近しているため追加せず、Browser番頭は無変更とした
+- 法人LINE・電話・問い合わせ合計は「未確認」固定とし、全体値の流用・推測配分・0への変換はしない
+- 法人LP判定は`AnalyticsBrain.isCorporateLpIdentifier`1か所のみで行い、page_type完全一致 or canonical pathname `/mi-bcs/` 完全一致（末尾スラッシュ差のみ吸収、部分一致は禁止）
+- 家庭向けLP別上位・ページ需要ランキング・「次に見るべきページ」「CTAが弱いページ」判定から法人LPを除外し、既存の家庭向け集計式・表示順は変更しない
+- GA4計測開始注記（06d186e、2026-08-02 21:13:18 JST公開反映）を明記し、期間が確実にそれより前と判断できる場合のみ「計測開始前」を使用。当日など重なる場合は断定しない
+- バージョンを v4.12.23 とした（新機能ではなく既存「取得後の集客サマリー」への表示追加＋既存集計からの除外のため）
+
+**変更ファイル**:
+- `js/analytics-brain.js` / `js/app.js` / `css/style.css` / `index.html`（バージョン表記）/ `js/storage.js` / `js/data-backup.js`
+- `scripts/verify-v41223-mi-bcs-corporate-lp.mjs`（新規）/ `scripts/verify-current.mjs`（バージョンassert）
+- `status.md` / `handoff.md` / `decision-log.md`（docs commit）
+- Browser番頭（`marketing_local_api.py`等）は変更なし
+
+**次にやること**:
+- 実機スマートフォンでの表示確認
+- mi-bcsの実トラフィックが増えた際の法人PV・SC指標の継続確認
+- 将来的にLP別LINE/電話内訳が必要になった場合は、Browser番頭側のタイムアウト余裕を確認した上で別途検討する
+
+**hotfix追記（2026-08-02、commit `67661d4`）**:
+- 実装commit `e951443` push後の公開URL実確認で、法人LPに一致するSearch Console行が0件の期間はCTR・平均掲載順位が「0%」「0」と表示される不具合を発見（「数値がない状態を0と表示しない」に反する）
+- 原因: `corporateLpMetricValue`がstatus='ok'のnull値（算出元行なしのctr/position）をkpiMetricValueへ渡し、`Number(null)=0`として丸め込まれていた
+- 対応: status='ok'かつvalueがnull/undefinedの場合は「データなし」を返すよう`corporateLpMetricValue`を修正（impressions/clicksの実際の0は「0」のまま維持）。verify-v41223へ回帰防止の検証を追加し、公開URLで修正反映を確認済み
+
 ## v4.12.22 hotfix：GA4ページ canonical path 集約（2026-08-02）
 
 **日付**: 2026-08-02
