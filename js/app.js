@@ -14362,7 +14362,7 @@
     const scPositionStatus = resolveKpiMetricStatus('searchAvgPosition', scPosition, statusMap);
     const scPositionHtml = `
       <div class="analytics-kpi-row analytics-kpi-row-supplement${kpiMetricStatusClass(scPositionStatus)}">
-        <span>SC平均掲載順位（補足）</span>
+        <span>SC平均掲載順位（直近24時間・補足）</span>
         <strong>${kpiMetricValue(scPosition, '', scPositionStatus)}</strong>
       </div>`;
     return rows.map(([label, key, suffix]) => {
@@ -15630,7 +15630,7 @@
         <div><span>今日の広告費</span><strong>${formatMarketingMetric(adRecords.length ? adTotals.cost : null, 'yen')}</strong></div>
         <div><span>今日のクリック数</span><strong>${formatMarketingMetric(adRecords.length ? adTotals.clicks : null)}</strong></div>
         <div><span>GA4ページ需要</span><strong>${topPage ? esc((topPage.canonicalPath || topPage.pagePath || topPage.pageName) + ' / ' + formatMarketingMetric(topPage.views)) : '未取得'}</strong></div>
-        <div><span>SC平均掲載順位</span><strong>${kpiMetricValue(scPosition, '', scPositionStatus)}</strong></div>
+        <div><span>SC平均掲載順位（直近24時間・補足）</span><strong>${kpiMetricValue(scPosition, '', scPositionStatus)}</strong></div>
       </div>
       <div class="marketing-detail-grid">
         <section>
