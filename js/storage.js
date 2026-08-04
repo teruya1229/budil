@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.12.23',
+  BUDIL_VERSION: 'v4.12.24',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -1389,120 +1389,164 @@ const Storage = {
       };
     }
 
-    const workOrderBackup = this.createSafetyBackup({
-      reason: 'before_delete_work_order',
-      targetKey: this.KEYS.WORK_ORDERS,
-      targetId: woId,
-      beforeCount: beforeWorkOrders.length,
-      data: beforeWorkOrders
-    });
+    // Backup + the actual work-order deletion must happen first and must not be
+    // left half-done: if either throws (e.g. localStorage write failure), we
+    // stop immediately so a mid-process exception can never unlink related
+    // reception/expense/task records while leaving the work order itself in place.
+    let workOrderBackup;
+    try {
+      workOrderBackup = this.createSafetyBackup({
+        reason: 'before_delete_work_order',
+        targetKey: this.KEYS.WORK_ORDERS,
+        targetId: woId,
+        beforeCount: beforeWorkOrders.length,
+        data: beforeWorkOrders
+      });
+      this.saveWorkOrders(nextWorkOrders);
+    } catch (err) {
+      this.recordOperationLog({
+        action: 'delete_work_order_blocked',
+        targetKey: this.KEYS.WORK_ORDERS,
+        targetId: woId,
+        reason: 'save_failed',
+        message: String((err && err.message) || err),
+        beforeCount: beforeWorkOrders.length
+      });
+      return {
+        ok: false,
+        error: 'save_failed',
+        message: String((err && err.message) || err),
+        beforeCount: beforeWorkOrders.length,
+        afterCount: beforeWorkOrders.length
+      };
+    }
+
+    // From here the work order is already deleted. Unlinking related records is
+    // best-effort per step: a failure here must not be reported back as an
+    // overall save failure (the deletion itself already succeeded).
+    const unlinkErrors = [];
 
     let receptionUnlinked = 0;
-    const intakes = this.getReceptionIntakes();
-    let intakesChanged = false;
-    const nextIntakes = intakes.map(intake => {
-      if (!intake) return intake;
-      const ids = Array.isArray(intake.relatedWorkOrderIds)
-        ? intake.relatedWorkOrderIds.map(x => String(x || '').trim()).filter(Boolean)
-        : [];
-      const primary = String(intake.relatedWorkOrderId || '').trim();
-      const hadId = ids.includes(woId) || primary === woId;
-      if (!hadId) return intake;
-      intakesChanged = true;
-      receptionUnlinked += 1;
-      const nextIds = ids.filter(x => x !== woId);
-      let nextPrimary = primary === woId ? (nextIds[0] || '') : primary;
-      if (nextPrimary && !nextIds.includes(nextPrimary)) nextIds.unshift(nextPrimary);
-      if (!nextPrimary) nextPrimary = nextIds[0] || '';
-      let nextStatus = intake.status;
-      if (!nextIds.length && String(intake.status || '') === 'work_scheduled') {
-        const taskIds = Array.isArray(intake.relatedTaskIds) ? intake.relatedTaskIds.filter(Boolean) : [];
-        if (taskIds.length) nextStatus = 'task_created';
-        else if (String(intake.relatedLeadId || '').trim()) nextStatus = 'lead_created';
-        else nextStatus = 'new';
-      }
-      return {
-        ...intake,
-        relatedWorkOrderId: nextPrimary,
-        relatedWorkOrderIds: nextIds,
-        status: nextStatus,
-        updatedAt: new Date().toISOString()
-      };
-    });
     let receptionBackup = null;
-    if (intakesChanged) {
-      receptionBackup = this.createSafetyBackup({
-        reason: 'before_unlink_reception_from_deleted_work_order',
-        targetKey: this.KEYS.RECEPTION_INTAKES,
-        targetId: woId,
-        beforeCount: intakes.length,
-        data: intakes
+    try {
+      const intakes = this.getReceptionIntakes();
+      let intakesChanged = false;
+      const nextIntakes = intakes.map(intake => {
+        if (!intake) return intake;
+        const ids = Array.isArray(intake.relatedWorkOrderIds)
+          ? intake.relatedWorkOrderIds.map(x => String(x || '').trim()).filter(Boolean)
+          : [];
+        const primary = String(intake.relatedWorkOrderId || '').trim();
+        const hadId = ids.includes(woId) || primary === woId;
+        if (!hadId) return intake;
+        intakesChanged = true;
+        receptionUnlinked += 1;
+        const nextIds = ids.filter(x => x !== woId);
+        let nextPrimary = primary === woId ? (nextIds[0] || '') : primary;
+        if (nextPrimary && !nextIds.includes(nextPrimary)) nextIds.unshift(nextPrimary);
+        if (!nextPrimary) nextPrimary = nextIds[0] || '';
+        let nextStatus = intake.status;
+        if (!nextIds.length && String(intake.status || '') === 'work_scheduled') {
+          const taskIds = Array.isArray(intake.relatedTaskIds) ? intake.relatedTaskIds.filter(Boolean) : [];
+          if (taskIds.length) nextStatus = 'task_created';
+          else if (String(intake.relatedLeadId || '').trim()) nextStatus = 'lead_created';
+          else nextStatus = 'new';
+        }
+        return {
+          ...intake,
+          relatedWorkOrderId: nextPrimary,
+          relatedWorkOrderIds: nextIds,
+          status: nextStatus,
+          updatedAt: new Date().toISOString()
+        };
       });
-      this.saveReceptionIntakes(nextIntakes);
+      if (intakesChanged) {
+        receptionBackup = this.createSafetyBackup({
+          reason: 'before_unlink_reception_from_deleted_work_order',
+          targetKey: this.KEYS.RECEPTION_INTAKES,
+          targetId: woId,
+          beforeCount: intakes.length,
+          data: intakes
+        });
+        this.saveReceptionIntakes(nextIntakes);
+      }
+    } catch (err) {
+      unlinkErrors.push({ step: 'reception', message: String((err && err.message) || err) });
     }
 
     let expenseUnlinked = 0;
-    const expenses = this.getExpenseRecords();
-    let expensesChanged = false;
-    const nextExpenses = expenses.map(e => {
-      if (!e || String(e.relatedWorkOrderId || '').trim() !== woId) return e;
-      expensesChanged = true;
-      expenseUnlinked += 1;
-      return { ...e, relatedWorkOrderId: '', updatedAt: new Date().toISOString() };
-    });
     let expenseBackup = null;
-    if (expensesChanged) {
-      expenseBackup = this.createSafetyBackup({
-        reason: 'before_unlink_expense_from_deleted_work_order',
-        targetKey: this.KEYS.EXPENSE_RECORDS,
-        targetId: woId,
-        beforeCount: expenses.length,
-        data: expenses
+    try {
+      const expenses = this.getExpenseRecords();
+      let expensesChanged = false;
+      const nextExpenses = expenses.map(e => {
+        if (!e || String(e.relatedWorkOrderId || '').trim() !== woId) return e;
+        expensesChanged = true;
+        expenseUnlinked += 1;
+        return { ...e, relatedWorkOrderId: '', updatedAt: new Date().toISOString() };
       });
-      this.saveExpenseRecords(nextExpenses);
+      if (expensesChanged) {
+        expenseBackup = this.createSafetyBackup({
+          reason: 'before_unlink_expense_from_deleted_work_order',
+          targetKey: this.KEYS.EXPENSE_RECORDS,
+          targetId: woId,
+          beforeCount: expenses.length,
+          data: expenses
+        });
+        this.saveExpenseRecords(nextExpenses);
+      }
+    } catch (err) {
+      unlinkErrors.push({ step: 'expense', message: String((err && err.message) || err) });
     }
 
     let taskUnlinked = 0;
-    const taskStore = this.getDailyActionTasksData();
-    const manualTasks = Array.isArray(taskStore.manualTasks) ? taskStore.manualTasks : [];
-    let tasksChanged = false;
-    const nextManualTasks = manualTasks.map(t => {
-      if (!t || String(t.workOrderId || '').trim() !== woId) return t;
-      tasksChanged = true;
-      taskUnlinked += 1;
-      return { ...t, workOrderId: '', updatedAt: new Date().toISOString() };
-    });
     let taskBackup = null;
-    if (tasksChanged) {
-      taskBackup = this.createSafetyBackup({
-        reason: 'before_unlink_manual_task_from_deleted_work_order',
-        targetKey: this.KEYS.DAILY_ACTION_TASKS,
-        targetId: woId,
-        beforeCount: manualTasks.length,
-        data: taskStore
+    try {
+      const taskStore = this.getDailyActionTasksData();
+      const manualTasks = Array.isArray(taskStore.manualTasks) ? taskStore.manualTasks : [];
+      let tasksChanged = false;
+      const nextManualTasks = manualTasks.map(t => {
+        if (!t || String(t.workOrderId || '').trim() !== woId) return t;
+        tasksChanged = true;
+        taskUnlinked += 1;
+        return { ...t, workOrderId: '', updatedAt: new Date().toISOString() };
       });
-      this.saveDailyActionTasksData({
-        ...taskStore,
-        manualTasks: nextManualTasks
-      });
+      if (tasksChanged) {
+        taskBackup = this.createSafetyBackup({
+          reason: 'before_unlink_manual_task_from_deleted_work_order',
+          targetKey: this.KEYS.DAILY_ACTION_TASKS,
+          targetId: woId,
+          beforeCount: manualTasks.length,
+          data: taskStore
+        });
+        this.saveDailyActionTasksData({
+          ...taskStore,
+          manualTasks: nextManualTasks
+        });
+      }
+    } catch (err) {
+      unlinkErrors.push({ step: 'task', message: String((err && err.message) || err) });
     }
 
-    this.saveWorkOrders(nextWorkOrders);
-    this.recordOperationLog({
-      action: 'delete_work_order',
-      targetKey: this.KEYS.WORK_ORDERS,
-      targetId: woId,
-      beforeCount: beforeWorkOrders.length,
-      afterCount: nextWorkOrders.length,
-      safeBackupId: workOrderBackup.id,
-      receptionBackupId: receptionBackup ? receptionBackup.id : '',
-      expenseBackupId: expenseBackup ? expenseBackup.id : '',
-      taskBackupId: taskBackup ? taskBackup.id : '',
-      receptionUnlinked,
-      expenseUnlinked,
-      taskUnlinked,
-      unlinkedCount: receptionUnlinked + expenseUnlinked + taskUnlinked
-    });
+    try {
+      this.recordOperationLog({
+        action: 'delete_work_order',
+        targetKey: this.KEYS.WORK_ORDERS,
+        targetId: woId,
+        beforeCount: beforeWorkOrders.length,
+        afterCount: nextWorkOrders.length,
+        safeBackupId: workOrderBackup.id,
+        receptionBackupId: receptionBackup ? receptionBackup.id : '',
+        expenseBackupId: expenseBackup ? expenseBackup.id : '',
+        taskBackupId: taskBackup ? taskBackup.id : '',
+        receptionUnlinked,
+        expenseUnlinked,
+        taskUnlinked,
+        unlinkedCount: receptionUnlinked + expenseUnlinked + taskUnlinked,
+        unlinkErrors: unlinkErrors.length ? unlinkErrors : undefined
+      });
+    } catch (_) { /* logging failure must not undo an already-completed deletion */ }
+
     return {
       ok: true,
       targetId: woId,
@@ -1511,7 +1555,8 @@ const Storage = {
       safeBackupId: workOrderBackup.id,
       receptionUnlinked,
       expenseUnlinked,
-      taskUnlinked
+      taskUnlinked,
+      unlinkErrors
     };
   },
 

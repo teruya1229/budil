@@ -43,16 +43,16 @@ const TOUCH_LABEL = 'カード：タッチ決済';
 console.log('== v4.12.6 touch-card-payment-cycle ==');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.23'), 'index.html should show v4.12.23');
-assert(indexHtml.includes('js/app.js?v=4.12.23'), 'app.js cache buster should be v4.12.23');
-assert(indexHtml.includes('css/style.css?v=4.12.23'), 'style.css cache buster should be v4.12.23');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.23'"), 'storage version should be v4.12.23');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.23'"), 'data-backup version should be v4.12.23');
+assert(indexHtml.includes('v4.12.24'), 'index.html should show v4.12.24');
+assert(indexHtml.includes('js/app.js?v=4.12.24'), 'app.js cache buster should be v4.12.24');
+assert(indexHtml.includes('css/style.css?v=4.12.24'), 'style.css cache buster should be v4.12.24');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.24'"), 'storage version should be v4.12.24');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.24'"), 'data-backup version should be v4.12.24');
 assert(!indexHtml.includes('?v=4.12.7'), 'old cache buster v4.12.7 should be gone from index');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.23'), 'calendar-candidate cache buster should be v4.12.23');
-assert(statusMd.includes('v4.12.23'), 'status.md should document v4.12.23');
-assert(handoffMd.includes('v4.12.23'), 'handoff.md should document v4.12.23');
-assert(decisionLog.includes('v4.12.23'), 'decision-log.md should record v4.12.23');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.24'), 'calendar-candidate cache buster should be v4.12.24');
+assert(statusMd.includes('v4.12.24'), 'status.md should document v4.12.24');
+assert(handoffMd.includes('v4.12.24'), 'handoff.md should document v4.12.24');
+assert(decisionLog.includes('v4.12.24'), 'decision-log.md should record v4.12.24');
 assert(statusMd.includes('v4.12.6'), 'status.md should retain v4.12.6 history');
 
 console.log('== payment method options ==');

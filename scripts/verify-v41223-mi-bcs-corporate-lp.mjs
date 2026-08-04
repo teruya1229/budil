@@ -1,5 +1,5 @@
 /**
- * Budil v4.12.23 - 「集客チェック」MI.BCS法人LP独立表示 verify
+ * Budil v4.12.24 - 「集客チェック」MI.BCS法人LP独立表示 verify
  */
 import { readFileSync } from 'node:fs';
 import { createContext, runInContext } from 'node:vm';
@@ -30,16 +30,16 @@ for (const file of ['js/app.js', 'js/analytics-brain.js']) {
 }
 
 // -- version / cache buster ------------------------------------------------
-assert(html.includes('v4.12.23'), 'index.html shows v4.12.23');
-assert(html.includes('js/app.js?v=4.12.23'), 'app.js cache buster is v4.12.23');
-assert(html.includes('css/style.css?v=4.12.23'), 'style.css cache buster is v4.12.23');
-assert(html.includes('js/analytics-brain.js?v=4.12.23'), 'analytics-brain.js cache buster is v4.12.23');
-assert(storage.includes("BUDIL_VERSION: 'v4.12.23'"), 'storage version is v4.12.23');
-assert(dataBackup.includes("APP_VERSION: 'v4.12.23'"), 'data-backup version is v4.12.23');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.23'"), 'verify-current pins v4.12.23');
-assert(statusMd.includes('v4.12.23'), 'status.md documents v4.12.23');
-assert(handoffMd.includes('v4.12.23'), 'handoff.md documents v4.12.23');
-assert(decisionLog.includes('v4.12.23'), 'decision-log.md records v4.12.23');
+assert(html.includes('v4.12.24'), 'index.html shows v4.12.24');
+assert(html.includes('js/app.js?v=4.12.24'), 'app.js cache buster is v4.12.24');
+assert(html.includes('css/style.css?v=4.12.24'), 'style.css cache buster is v4.12.24');
+assert(html.includes('js/analytics-brain.js?v=4.12.24'), 'analytics-brain.js cache buster is v4.12.24');
+assert(storage.includes("BUDIL_VERSION: 'v4.12.24'"), 'storage version is v4.12.24');
+assert(dataBackup.includes("APP_VERSION: 'v4.12.24'"), 'data-backup version is v4.12.24');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.24'"), 'verify-current pins v4.12.24');
+assert(statusMd.includes('v4.12.24'), 'status.md documents v4.12.24');
+assert(handoffMd.includes('v4.12.24'), 'handoff.md documents v4.12.24');
+assert(decisionLog.includes('v4.12.24'), 'decision-log.md records v4.12.24');
 
 // -- shared identifier: single choke point ---------------------------------
 assert(brainSrc.includes('isCorporateLpIdentifier'), 'isCorporateLpIdentifier exists in AnalyticsBrain');
@@ -326,4 +326,4 @@ assert(!app.includes('localStorage.clear()'), 'localStorage.clear is not introdu
 });
 assert(!/CORPORATE_LP[^\n]*localStorage\.setItem/.test(app), 'no new dedicated localStorage key for corporate LP');
 
-console.log('\nAll v4.12.23 MI.BCS corporate LP checks passed.');
+console.log('\nAll v4.12.24 MI.BCS corporate LP checks passed.');

@@ -1,13 +1,28 @@
 ﻿# Budil status
 
-## 正式な現行verify環境（v4.12.23）
+## 正式な現行verify環境（v4.12.24）
 
 - **正式環境**: Budil 単独 clone ではなく、親階層に sibling の calendar-sync-worker がある開発環境
 - **必須**: ../calendar-sync-worker/run-budil-calendar-export.bat
 - **必須**: hub/functions 側の依存関係（googleapis 等）。hub/functions で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（83本。省略・除外・緩和なし）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（84本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.24 修正内容（「Budilから予定を削除」の例外安全化）
+
+- 症状: 作業予定を編集状態で開いた際の赤い「Budilから予定を削除」ボタンが、環境によっては押しても反応がないように見える
+- 非破壊診断（公開URL v4.12.23、Browser番頭共通Chrome）: `confirm()`確認ダイアログはクリックで正しく発火（切り分けA「確認ダイアログが出ない」は否定）。Consoleエラーなし
+- ローカル診断（localhost、テスト予定2件・isTest付き）: 通常データでは確認→削除→一覧再描画→フォーム解除→成功トースト表示までConsoleエラーなく完走することを確認。実データ環境固有の状態は再現できていない
+- コードレビューで確定した実際の欠陥: `Storage.deleteWorkOrder()`内の複数回のlocalStorage書き込み（安全バックアップ・受付/経費/タスクの解除・本体保存）に例外処理がなく、`js/app.js`の`deleteWorkOrderFromForm()`も`Storage.deleteWorkOrder()`呼び出しをtry/catchで囲んでいなかった。書き込み例外（容量超過等）が発生すると、無反応に見えるまま失敗し、かつ本体削除より前に関連データの解除保存が先行していたため「関連データだけ解除され、本体の作業予定は消えない」部分更新が起こり得る構造だった
+- 修正（最小差分）:
+  - `js/storage.js` `deleteWorkOrder()`: 安全バックアップ＋本体保存（`saveWorkOrders`）を最初にtry/catchで実行し、失敗時は何も変更せず`{ ok:false, error:'save_failed' }`を返す。受付・経費・タスクの解除は本体削除が確定した後に個別try/catchで実行し、失敗しても本体削除の成功を取り消さない（`unlinkErrors`に記録するのみ）
+  - `js/app.js` `deleteWorkOrderFromForm()`: `Storage.deleteWorkOrder(id)`呼び出しをtry/catchで囲み、例外時・`save_failed`時に「保存に失敗したため、作業予定を削除できませんでした」を明示。保存失敗時に「削除しました」を表示しない
+  - 売上確定済み予定の削除禁止（revenue_locked）、Googleカレンダー削除なし、再取込による再表示の既存仕様、localStorageキーは変更なし
+- 新規 `scripts/verify-v41224-work-order-delete-ui.mjs`（QuotaExceededError相当の書込み失敗を模擬し、本体保存失敗時の無変更・部分更新防止・利用者通知を検証）
+- 既存verify（v4.10-v4.12系）のバージョンassertを`v4.12.24`へ更新。現行合格は`node scripts/verify-current.mjs`（84本、省略・除外・緩和なし）
+- ローカル（localhost、テストデータのみ）で実際の削除操作（確認→OK→削除）を実行し、対象1件のみ削除・残す予定は維持・フォーム解除・成功トースト表示・Consoleエラーなしを確認
+- 公開環境での実データ削除確認は未実施（確認ダイアログはキャンセルのみ）。実機スマートフォン確認も未完了
 
 ## v4.12.23 実装内容（集客チェック：MI.BCS法人LP独立表示）
 

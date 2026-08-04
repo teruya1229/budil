@@ -17,15 +17,15 @@
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` の依存関係（googleapis 等）。依存は `hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（83本）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（84本）
 - **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
 
 ## 現在の最新状態
 
 | 項目 | 値 |
 |------|-----|
-| 最新公開URL | https://teruya1229.github.io/budil/?v=67661d4 |
-| 最新バージョン | v4.12.23 |
+| 最新バージョン | v4.12.24 |
+| v4.12.24 「Budilから予定を削除」例外安全化 | `js/storage.js` deleteWorkOrder()を本体保存優先＋各書込みtry/catch化、`js/app.js` deleteWorkOrderFromForm()をtry/catch化し保存失敗を明示通知。verify-current 84本 / ローカル（テストデータ）で確認→削除→再描画→トーストの完走を確認 / 公開実データ削除確認未実施・実機スマホ確認未完了 |
 | v4.12.23 集客チェック：MI.BCS法人LP独立表示 | 正式合格 Budil `e951443`（実装）+ `67661d4`（CTR/掲載順位0表示hotfix） / Browser番頭変更なし（tracked clean、diag結果のみ利用） / verify-current 83本 / 公開 hard reload でMI.BCS法人LPカード独立表示・家庭向け上位に混在なし・CTR/掲載順位「データなし」表示・GA4「計測開始前」表示を確認 / 実機スマホ未完了 |
 | v4.12.22 hotfix SC平均掲載順位（直近24時間・補足）明記 | 正式合格 Budil `cad488f` / バージョン番号変更なし / 表示ラベルのみ / 取得・集計・保存変更なし / verify-current 82本 / 公開 hard reload で新ラベル・対象期間直近24時間・数値維持確認 / 実機スマホ未完了 |
 | v4.12.22 hotfix GA4 canonical path集約 | 正式合格 Budil `39e989c` / バージョン番号変更なし / verify-current 81本 / 公開 hard reload で `normalizePagePath` 反映確認 / ローカルfixtureで旧3+新4=1行7確認 / 実機スマホ未完了 |

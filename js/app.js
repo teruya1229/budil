@@ -8857,12 +8857,20 @@
       '削除してよろしいですか？'
     );
     if (!ok) return;
-    const result = Storage.deleteWorkOrder(id);
+    let result;
+    try {
+      result = Storage.deleteWorkOrder(id);
+    } catch (err) {
+      alert('保存に失敗したため、作業予定を削除できませんでした。空き容量などをご確認のうえ、もう一度お試しください。');
+      return;
+    }
     if (!result || !result.ok) {
       if (result && result.error === 'revenue_locked') {
         alert('売上確定済みの予定は削除できません。先に売上明細との関係を確認してください。');
       } else if (result && result.error === 'target_not_found') {
         alert('対象の作業予定が見つかりませんでした。');
+      } else if (result && result.error === 'save_failed') {
+        alert('保存に失敗したため、作業予定を削除できませんでした。空き容量などをご確認のうえ、もう一度お試しください。');
       } else {
         alert('作業予定を削除できませんでした。');
       }
