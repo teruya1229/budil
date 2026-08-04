@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.12.24',
+  BUDIL_VERSION: 'v4.12.25',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -76,7 +76,22 @@ const Storage = {
   },
 
   saveSafetyBackups(list) {
-    this.set(this.KEYS.SAFETY_BACKUPS, Array.isArray(list) ? list.slice(0, this.SAFETY_BACKUP_LIMIT) : []);
+    // `list` is newest-first (unshift on create). If the write fails (e.g. the
+    // origin's localStorage capacity is exceeded), we must not lose the newest
+    // backup just because older ones no longer fit. Drop the OLDEST entries
+    // one at a time and retry, instead of clearing all backups at once. If even
+    // a single (newest) backup cannot be saved, rethrow so the caller can stop
+    // the destructive action instead of proceeding without a safety net.
+    let attempt = Array.isArray(list) ? list.slice(0, this.SAFETY_BACKUP_LIMIT) : [];
+    for (;;) {
+      try {
+        this.set(this.KEYS.SAFETY_BACKUPS, attempt);
+        return;
+      } catch (err) {
+        if (attempt.length <= 1) throw err;
+        attempt = attempt.slice(0, -1);
+      }
+    }
   },
 
   getOperationLogs() {
@@ -1393,6 +1408,11 @@ const Storage = {
     // left half-done: if either throws (e.g. localStorage write failure), we
     // stop immediately so a mid-process exception can never unlink related
     // reception/expense/task records while leaving the work order itself in place.
+    // The backup only stores the single deleted record (+ its original index),
+    // not the whole work-order list: cloning the entire list on every delete is
+    // what previously made budil_safety_backups grow large enough to risk
+    // exceeding the origin's localStorage capacity.
+    const targetIndex = beforeWorkOrders.findIndex(w => String(w && w.id || '').trim() === woId);
     let workOrderBackup;
     try {
       workOrderBackup = this.createSafetyBackup({
@@ -1400,7 +1420,7 @@ const Storage = {
         targetKey: this.KEYS.WORK_ORDERS,
         targetId: woId,
         beforeCount: beforeWorkOrders.length,
-        data: beforeWorkOrders
+        data: { deletedWorkOrder: target, index: targetIndex }
       });
       this.saveWorkOrders(nextWorkOrders);
     } catch (err) {

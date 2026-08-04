@@ -1,13 +1,31 @@
 ﻿# Budil status
 
-## 正式な現行verify環境（v4.12.24）
+## 正式な現行verify環境（v4.12.25）
 
 - **正式環境**: Budil 単独 clone ではなく、親階層に sibling の calendar-sync-worker がある開発環境
 - **必須**: ../calendar-sync-worker/run-budil-calendar-export.bat
 - **必須**: hub/functions 側の依存関係（googleapis 等）。hub/functions で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（84本。省略・除外・緩和なし）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（85本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.25 修正内容（作業予定削除の安全バックアップ容量超過対策）
+
+- 症状: 公開v4.12.24で「Budilから予定を削除」を実行すると「保存に失敗したため、作業予定を削除できませんでした...」のアラートが表示され、予定が削除されない（v4.12.24で追加した例外捕捉自体は正常動作。保存失敗そのものが未解消）
+- 実データ診断（公開URL、Browser番頭共通Chrome、キー名・概算バイト数のみ確認・内容は見ない）:
+  - localStorage全体は約870KB（`budil_work_orders`が約840KBで大半を占める）
+  - `budil_work_orders`は11件、平均約76KB/件。うち`candidateMeta`フィールド1つで全体の98.5%（約827KB）を占める
+  - `budil_safety_backups`は現時点で1件・約837バイトのみ（無関係な売上削除時のもの）。`budil_operation_logs`にも`delete_work_order`関連ログは0件で、このブラウザプロファイル上では実際の失敗時の例外名・メッセージを再現できなかった
+  - 上記より、実データを変更せずに実際の例外名を確定することはできなかったため、確定原因として断定せず、localhost別originの再現データで容量上限を模擬して構造的欠陥を検証した
+- コードレビューで確認した実際の欠陥: `Storage.deleteWorkOrder()`の削除前安全バックアップが、削除対象1件だけでなく`beforeWorkOrders`（作業予定一覧全体）を毎回複製して`budil_safety_backups`へ追加していた。`candidateMeta`のように1件が大きいレコード構成では、削除操作を繰り返すたびに大きな複製が`SAFETY_BACKUP_LIMIT`（30件）まで積み重なり得る構造で、origin全体のlocalStorage容量を圧迫し得ることを確認した
+- 修正（最小差分）:
+  - `js/storage.js` `deleteWorkOrder()`: 削除前安全バックアップのdataを「作業予定一覧全体の複製」から「削除対象1件＋元の配列位置（index）」だけの最小情報に変更（他の予定の情報は含まれない。削除対象1件の復元に必要な情報は保持）
+  - `js/storage.js` `saveSafetyBackups()`: 保存が失敗した場合、新しいバックアップを保持したまま最も古いバックアップから1件ずつ外して再試行するよう変更（SAFETY_BACKUP_LIMIT=30の方針は維持、全件を一度に削除しない）。新しいバックアップ1件だけでも保存できない場合は例外を再送出し、呼び出し元（`deleteWorkOrder`）の既存の`save_failed`処理で作業予定を削除せず失敗を明示する（v4.12.24で導入済みのtry/catch構造を活用、追加のUI変更なし）
+  - 売上確定済み予定の削除禁止（revenue_locked）、Googleカレンダー削除なし、再取込による再表示の既存仕様、localStorageキー・SAFETY_BACKUP_LIMIT方針は変更なし
+- 新規 `scripts/verify-v41225-work-order-delete-storage-capacity.mjs`（安全バックアップの単一予定化・容量超過時の最小限整理・単一バックアップも保存不可時の失敗表示・部分更新防止・売上確定ロック・関連解除の非削除を検証）
+- 既存verify（v4.10-v4.12系）のバージョンassertを`v4.12.25`へ更新。現行合格は`node scripts/verify-current.mjs`（85本、省略・除外・緩和なし）
+- ローカル（localhost、テストデータのみ、容量逼迫を模擬）で実際の削除操作を実行し、対象1件のみ削除・コンパクトな安全バックアップ作成・残す予定の維持・Consoleエラーなしを確認
+- 公開環境での実データ削除確認は未実施。実機スマートフォン確認も未完了
 
 ## v4.12.24 修正内容（「Budilから予定を削除」の例外安全化）
 

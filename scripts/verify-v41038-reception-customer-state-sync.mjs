@@ -41,10 +41,10 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.12.24'), 'index.html should show v4.12.24');
-assert(indexHtml.includes('js/app.js?v=4.12.24'), 'app.js cache buster should be v4.12.24');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.24'"), 'storage.js version should be v4.12.24');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.24'"), 'data-backup version should be v4.12.24');
+assert(indexHtml.includes('v4.12.25'), 'index.html should show v4.12.25');
+assert(indexHtml.includes('js/app.js?v=4.12.25'), 'app.js cache buster should be v4.12.25');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.25'"), 'storage.js version should be v4.12.25');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.25'"), 'data-backup version should be v4.12.25');
 
 console.log('== resolve helpers ==');
 assert(revenueJs.includes('resolveRevenueForIntake'), 'resolveRevenueForIntake should exist');

@@ -1,5 +1,5 @@
 /**
- * Budil v4.12.24 - work order delete: exception safety + partial-update prevention.
+ * Budil v4.12.25 - work order delete: exception safety + partial-update prevention.
  *
  * Symptom investigated: pressing "Budilから予定を削除" appeared to do nothing.
  * Non-destructive browser diagnosis on the public URL (v4.12.23) confirmed the
@@ -44,7 +44,7 @@ for (const file of [
   execSync(`node --check "${join(root, file)}"`, { stdio: 'inherit' });
 }
 
-console.log('== v4.12.24 work-order-delete exception safety ==');
+console.log('== v4.12.25 work-order-delete exception safety ==');
 
 const indexHtml = load('index.html');
 const appJs = load('js/app.js');
@@ -56,16 +56,16 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.24'), 'index.html should show v4.12.24');
-assert(indexHtml.includes('js/app.js?v=4.12.24'), 'app.js cache buster should be v4.12.24');
-assert(indexHtml.includes('js/storage.js?v=4.12.24'), 'storage cache buster should be v4.12.24');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.24'"), 'storage version should be v4.12.24');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.24'"), 'data-backup version should be v4.12.24');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.24'"), 'verify-current EXPECTED_VERSION should be v4.12.24');
+assert(indexHtml.includes('v4.12.25'), 'index.html should show v4.12.25');
+assert(indexHtml.includes('js/app.js?v=4.12.25'), 'app.js cache buster should be v4.12.25');
+assert(indexHtml.includes('js/storage.js?v=4.12.25'), 'storage cache buster should be v4.12.25');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.25'"), 'storage version should be v4.12.25');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.25'"), 'data-backup version should be v4.12.25');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.25'"), 'verify-current EXPECTED_VERSION should be v4.12.25');
 assert(!indexHtml.includes('?v=4.12.23'), 'old cache buster v4.12.23 should be gone');
-assert(statusMd.includes('v4.12.24'), 'status.md should document v4.12.24');
-assert(handoffMd.includes('v4.12.24'), 'handoff.md should document v4.12.24');
-assert(decisionLog.includes('v4.12.24'), 'decision-log.md should record v4.12.24');
+assert(statusMd.includes('v4.12.25'), 'status.md should document v4.12.25');
+assert(handoffMd.includes('v4.12.25'), 'handoff.md should document v4.12.25');
+assert(decisionLog.includes('v4.12.25'), 'decision-log.md should record v4.12.25');
 
 console.log('== UI wiring: delete button + one-shot click handler ==');
 assert(indexHtml.includes('id="btn-work-order-delete"'), 'delete button required');
@@ -259,4 +259,4 @@ console.log('== F. no unrelated spec changes ==');
   assert(!appJs.includes('localStorage.clear()'), 'localStorage.clear must not be introduced');
 }
 
-console.log('\nAll v4.12.24 work-order-delete exception safety checks passed.');
+console.log('\nAll v4.12.25 work-order-delete exception safety checks passed.');

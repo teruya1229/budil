@@ -31,16 +31,16 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.24'), 'index.html should show v4.12.24');
-assert(indexHtml.includes('js/app.js?v=4.12.24'), 'app.js cache buster should be v4.12.24');
-assert(indexHtml.includes('css/style.css?v=4.12.24'), 'style.css cache buster should be v4.12.24');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.24'"), 'storage version should be v4.12.24');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.24'"), 'data-backup version should be v4.12.24');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.24'"), 'verify-current EXPECTED_VERSION should be v4.12.24');
+assert(indexHtml.includes('v4.12.25'), 'index.html should show v4.12.25');
+assert(indexHtml.includes('js/app.js?v=4.12.25'), 'app.js cache buster should be v4.12.25');
+assert(indexHtml.includes('css/style.css?v=4.12.25'), 'style.css cache buster should be v4.12.25');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.25'"), 'storage version should be v4.12.25');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.25'"), 'data-backup version should be v4.12.25');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.25'"), 'verify-current EXPECTED_VERSION should be v4.12.25');
 assert(!indexHtml.includes('?v=4.12.11'), 'old cache buster v4.12.11 should be gone');
-assert(statusMd.includes('v4.12.24'), 'status.md should document v4.12.24');
-assert(handoffMd.includes('v4.12.24'), 'handoff.md should document v4.12.24');
-assert(decisionLog.includes('v4.12.24'), 'decision-log.md should record v4.12.24');
+assert(statusMd.includes('v4.12.25'), 'status.md should document v4.12.25');
+assert(handoffMd.includes('v4.12.25'), 'handoff.md should document v4.12.25');
+assert(decisionLog.includes('v4.12.25'), 'decision-log.md should record v4.12.25');
 
 console.log('== standalone source row action removed ==');
 assert(!appJs.includes('data-revenue-check-source'), 'data-revenue-check-source must be removed');
