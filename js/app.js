@@ -14,6 +14,8 @@
   let selectedFollowUpTargetId = null;
   let followUpPriorityFocusId = null;
   let followUpCardExpandedKey = null;
+  // v4.12.27: 今日やるフォロー一括選択（selectedFollowUpTargetIdとは別管理、localStorageへ保存しない）
+  let selectedFollowUpBulkIds = new Set();
   let currentSalesTab = 'email';
   let currentSalesMessages = null;
   let pickupBulkPreview = [];
@@ -11577,6 +11579,81 @@
     return nextFollowUp;
   }
 
+  // v4.12.27: 一括「必要無し」「対応済み」保存後、選択対象だけが実際に変更されたことを再取得して確認する
+  function verifyFollowUpBulkSaved(target, expectedFollowUp) {
+    if (!target.workOrderId && !target.revenueId) return false;
+    const matches = fu => {
+      if (!fu) return false;
+      const f = FollowUpBrain.normalizeFollowUp(fu);
+      return f.thanksStatus === expectedFollowUp.thanksStatus
+        && f.reviewStatus === expectedFollowUp.reviewStatus
+        && f.repeatStatus === expectedFollowUp.repeatStatus;
+    };
+    if (target.workOrderId) {
+      const wo = Storage.getWorkOrders().find(w => w.id === target.workOrderId);
+      if (!matches(wo && wo.followUp)) return false;
+    }
+    if (target.revenueId) {
+      const rev = Storage.getRevenueRecords().find(r => r.id === target.revenueId);
+      if (!matches(rev && rev.followUp)) return false;
+    }
+    return true;
+  }
+
+  // v4.12.27: 「今日やるフォロー」一括「必要無し」「対応済み」処理（既存saveFollowUpForTarget/Storage APIを利用、新規localStorageキーなし）
+  function runFollowUpBulkDisposition(disposition) {
+    const ids = Array.from(selectedFollowUpBulkIds);
+    if (!ids.length) return;
+    const label = disposition === 'completed' ? '対応済み' : '必要無し';
+    const confirmMsg = disposition === 'not_needed'
+      ? `選択した${ids.length}件を「必要無し」にします。未対応のフォローは省略扱いとなり、「フォロー済み / 対応不要」へ移動します。売上・受付・作業予定は削除しません。よろしいですか？`
+      : `選択した${ids.length}件を「対応済み」にします。BudilからLINEや口コミ依頼の送信は行いません。既にご自身で対応済みの案件だけ選択してください。よろしいですか？`;
+    if (!confirm(confirmMsg)) return;
+
+    const now = new Date().toISOString();
+    let successCount = 0;
+    let failCount = 0;
+
+    ids.forEach(id => {
+      try {
+        const target = findFollowUpTarget(id);
+        if (!target || (!target.workOrderId && !target.revenueId)) {
+          failCount++;
+          return;
+        }
+        const nextFollowUp = FollowUpBrain.resolveBulkFollowUpDisposition(target.followUp, disposition, now);
+        if (target.workOrderId) {
+          Storage.updateWorkOrder(target.workOrderId, { followUp: nextFollowUp });
+        }
+        if (target.revenueId) {
+          Storage.updateRevenueRecord(target.revenueId, { followUp: nextFollowUp });
+        }
+        if (verifyFollowUpBulkSaved(target, nextFollowUp)) {
+          successCount++;
+          selectedFollowUpBulkIds.delete(id);
+        } else {
+          failCount++;
+        }
+      } catch (err) {
+        console.error('[Budil] follow-up bulk disposition failed', id, err);
+        failCount++;
+      }
+    });
+
+    renderFollowUpView();
+    renderDashboard();
+    renderExecutiveHome();
+    renderMorningExecutiveSections();
+    renderDailyActionTasks();
+    renderRevenueView();
+
+    if (failCount > 0) {
+      showAppToast(`成功${successCount}件／失敗${failCount}件（${label}）`);
+    } else if (successCount > 0) {
+      showAppToast(`${successCount}件を${label}にしました`);
+    }
+  }
+
   function addLeadFollowUpActivity(target, type, extra) {
     if (!target.leadId) return;
     const log = FollowUpBrain.buildLeadActivityLog(target, type, extra);
@@ -11840,8 +11917,7 @@
       ? '<p class="follow-up-priority-badge">今日の最優先から確認中</p>'
       : '';
     const gridClass = compact ? 'follow-up-row-grid follow-up-row-grid-compact' : 'follow-up-row-grid';
-    return `
-      <div class="follow-up-list-row follow-up-bucket-${esc(target.bucket || 'pending')}${selected ? ' selected' : ''}${priorityFocus ? ' priority-focus' : ''}" data-follow-up-target="${esc(target.id)}">
+    const rowBodyHtml = `
         ${priorityBadge}
         <div class="${gridClass}">
           <span class="follow-up-row-date" title="作業日">${esc(target.workDate || '—')}</span>
@@ -11860,7 +11936,23 @@
           ${revenueBtn}
           ${memoEditBtn}
         </div>
-        ${expandedType ? renderFollowUpCardExpandedBlock(target, expandedType, cardCtx.profile) : ''}
+        ${expandedType ? renderFollowUpCardExpandedBlock(target, expandedType, cardCtx.profile) : ''}`;
+    if (opts.bulkSelect) {
+      const customerLabel = target.customerName || 'お客様';
+      const checkboxId = `follow-bulk-check-${target.id}`;
+      return `
+      <div class="follow-up-list-row follow-up-bucket-${esc(target.bucket || 'pending')}${selected ? ' selected' : ''}${priorityFocus ? ' priority-focus' : ''}" data-follow-up-target="${esc(target.id)}">
+        <div class="follow-up-row-with-select">
+          <label class="follow-up-bulk-checkbox-label" for="${esc(checkboxId)}" aria-label="${esc(customerLabel)}を一括選択">
+            <input type="checkbox" id="${esc(checkboxId)}" class="follow-up-bulk-checkbox" data-follow-bulk-checkbox="${esc(target.id)}"${opts.bulkChecked ? ' checked' : ''}>
+          </label>
+          <div class="follow-up-row-body">${rowBodyHtml}
+          </div>
+        </div>
+      </div>`;
+    }
+    return `
+      <div class="follow-up-list-row follow-up-bucket-${esc(target.bucket || 'pending')}${selected ? ' selected' : ''}${priorityFocus ? ' priority-focus' : ''}" data-follow-up-target="${esc(target.id)}">${rowBodyHtml}
       </div>`;
   }
 
@@ -12097,11 +12189,74 @@
     alert('毎日やることに追加しました。');
   }
 
+  function renderFollowUpTodayBulkBar(list) {
+    const bar = document.getElementById('follow-up-today-bulk-bar');
+    if (!bar) return;
+    if (!list.length) {
+      bar.innerHTML = '';
+      bar.classList.add('hidden');
+      return;
+    }
+    bar.classList.remove('hidden');
+    const count = selectedFollowUpBulkIds.size;
+    bar.innerHTML = `
+      <div class="follow-up-bulk-bar-inner">
+        <span class="follow-up-bulk-count">${count}件選択</span>
+        <div class="follow-up-bulk-bar-buttons">
+          <button type="button" class="btn btn-sm btn-secondary" data-follow-bulk-select-all>全選択</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-follow-bulk-deselect>選択解除</button>
+          <button type="button" class="btn btn-sm btn-not-needed" data-follow-bulk-not-needed${count === 0 ? ' disabled' : ''}>選択分を必要無し</button>
+          <button type="button" class="btn btn-sm btn-primary" data-follow-bulk-done${count === 0 ? ' disabled' : ''}>選択分を対応済み</button>
+        </div>
+      </div>`;
+    const selectAllBtn = bar.querySelector('[data-follow-bulk-select-all]');
+    if (selectAllBtn) {
+      selectAllBtn.addEventListener('click', () => {
+        list.forEach(t => selectedFollowUpBulkIds.add(t.id));
+        renderFollowUpTodayList();
+      });
+    }
+    const deselectBtn = bar.querySelector('[data-follow-bulk-deselect]');
+    if (deselectBtn) {
+      deselectBtn.addEventListener('click', () => {
+        selectedFollowUpBulkIds.clear();
+        renderFollowUpTodayList();
+      });
+    }
+    const notNeededBtn = bar.querySelector('[data-follow-bulk-not-needed]');
+    if (notNeededBtn) {
+      notNeededBtn.addEventListener('click', () => runFollowUpBulkDisposition('not_needed'));
+    }
+    const doneBtn = bar.querySelector('[data-follow-bulk-done]');
+    if (doneBtn) {
+      doneBtn.addEventListener('click', () => runFollowUpBulkDisposition('completed'));
+    }
+  }
+
+  function bindFollowUpBulkCheckboxEvents(el) {
+    el.querySelectorAll('[data-follow-bulk-checkbox]').forEach(checkbox => {
+      checkbox.addEventListener('click', e => e.stopPropagation());
+      checkbox.addEventListener('change', e => {
+        e.stopPropagation();
+        const id = checkbox.dataset.followBulkCheckbox;
+        if (checkbox.checked) selectedFollowUpBulkIds.add(id);
+        else selectedFollowUpBulkIds.delete(id);
+        renderFollowUpTodayList();
+      });
+    });
+  }
+
   function renderFollowUpTodayList() {
     const el = document.getElementById('follow-up-today-list');
     if (!el) return;
     const { cardCtx, buckets } = getFollowUpListBuckets();
     const list = buckets.todayAction || [];
+    // v4.12.27: 一括選択は現在表示中の項目だけに限定（表示から外れたIDは選択解除）
+    const visibleIds = new Set(list.map(t => t.id));
+    Array.from(selectedFollowUpBulkIds).forEach(id => {
+      if (!visibleIds.has(id)) selectedFollowUpBulkIds.delete(id);
+    });
+    renderFollowUpTodayBulkBar(list);
     if (!list.length) {
       el.innerHTML = '<p class="placeholder-text">今日対応するフォローはありません。</p>';
       return;
@@ -12113,9 +12268,12 @@
         compact: true,
         selected: t.id === selectedFollowUpTargetId,
         priorityFocus: t.id === focusId,
-        cardCtx
+        cardCtx,
+        bulkSelect: true,
+        bulkChecked: selectedFollowUpBulkIds.has(t.id)
       })).join('')}`;
     bindFollowUpCardEvents(el);
+    bindFollowUpBulkCheckboxEvents(el);
   }
 
   function renderFollowUpTargetsList() {

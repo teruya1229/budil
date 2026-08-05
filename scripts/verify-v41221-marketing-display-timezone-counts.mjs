@@ -25,12 +25,12 @@ const decisionLog = load('decision-log.md');
 
 execFileSync(process.execPath, ['--check', join(root, 'js/app.js')], { stdio: 'inherit' });
 
-assert(html.includes('v4.12.26'), 'index.html shows v4.12.26');
-assert(html.includes('js/app.js?v=4.12.26'), 'app.js cache buster is v4.12.26');
-assert(html.includes('css/style.css?v=4.12.26'), 'style.css cache buster is v4.12.26');
-assert(storage.includes("BUDIL_VERSION: 'v4.12.26'"), 'storage version is v4.12.26');
-assert(dataBackup.includes("APP_VERSION: 'v4.12.26'"), 'data-backup version is v4.12.26');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.26'"), 'verify-current pins v4.12.26');
+assert(html.includes('v4.12.27'), 'index.html shows v4.12.26');
+assert(html.includes('js/app.js?v=4.12.27'), 'app.js cache buster is v4.12.26');
+assert(html.includes('css/style.css?v=4.12.27'), 'style.css cache buster is v4.12.26');
+assert(storage.includes("BUDIL_VERSION: 'v4.12.27'"), 'storage version is v4.12.26');
+assert(dataBackup.includes("APP_VERSION: 'v4.12.27'"), 'data-backup version is v4.12.26');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.27'"), 'verify-current pins v4.12.26');
 assert(statusMd.includes('v4.12.25'), 'status.md documents v4.12.25');
 assert(handoffMd.includes('v4.12.25'), 'handoff.md documents v4.12.25');
 assert(decisionLog.includes('v4.12.25'), 'decision-log.md records v4.12.25');

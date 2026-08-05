@@ -2,6 +2,41 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.27 フォロー：今日やるフォロー 一括「必要無し」「対応済み」（2026-08-05）
+
+**日付**: 2026-08-05
+
+**背景**: 「今日やるフォロー」に日数が経過して今さらフォローしない案件や元請け案件などフォロー自体が不要な案件が多数表示され、1件ずつの個別処理では整理に時間がかかっていた。
+
+**調査経過**:
+- `rules.md` / `status.md` / `handoff.md` / `decision-log.md`を確認し、branchはmain、`HEAD`と`origin/main`が正本想定（`6957ee0` v4.12.26）と一致、tracked未コミット変更・未追跡ファイルなしを確認
+- `js/follow-up-brain.js`で`followUp`の既存状態（`thanksStatus` / `reviewStatus`: pending・done・skipped、`repeatStatus`: pending・planned・done・skipped）、`isFollowUpRecordCompleted()`（3項目解決済みで「フォロー済み / 対応不要」へ移動）を確認
+- `js/app.js`で`saveFollowUpForTarget()`（`Storage.updateWorkOrder` / `Storage.updateRevenueRecord`で関連する作業予定・売上の両方へ同じfollowUpを同期保存）、`renderFollowUpTodayList()`（「今日やるフォロー」＝`buckets.todayAction`）、`renderFollowUpListRow()`の行構造を確認
+
+**判断内容**:
+- 一括の状態変換は`FollowUpBrain`に副作用のない純粋関数`resolveBulkFollowUpDisposition(followUp, disposition, now)`として追加し、Storageへの書き込みは行わない方針とした
+- 保存は既存`saveFollowUpForTarget()`と同じ`Storage.updateWorkOrder` / `Storage.updateRevenueRecord`のみを利用し、新しいlocalStorageキーは追加しない
+- 選択状態`selectedFollowUpBulkIds`は既存`selectedFollowUpTargetId`と別管理のモジュール内`Set`とし、localStorageへは保存しない（画面操作中のみ保持）方針とした
+- 全選択は現在「今日やるフォロー」に表示中の`buckets.todayAction`だけを対象にし、表示から外れたIDは再描画のたびに選択解除する（データ変化後に見えない項目を誤って一括処理しないため）
+- 保存後は該当work order/revenueを再取得して実際に反映されたかを確認し（`verifyFollowUpBulkSaved`）、成功・失敗を個別に集計。失敗したIDは選択状態を残し、全件成功したかのような表示はしない方針とした
+- 「対応済み」は`thanksSentAt` / `reviewRequestedAt`を、実際にpending→doneへ変更した場合のみ設定し、既にdoneだった項目の既存履歴は上書きしない
+- LINE・口コミ依頼等の自動送信、毎日やること・リピート候補の新規作成は一括処理からは一切行わない
+- チェックボックスのクリック/change イベントは`stopPropagation`し、既存のカード展開・個別ボタン動作に影響しないようにした
+
+**変更ファイル**:
+- `js/follow-up-brain.js`（`resolveBulkFollowUpDisposition`純粋関数を追加）
+- `js/app.js`（`selectedFollowUpBulkIds`状態、一括UIの描画・チェックボックスの行追加、`runFollowUpBulkDisposition` / `verifyFollowUpBulkSaved`）
+- `css/style.css`（`.follow-up-bulk-bar`等、390px折り返し対応のスタイル追加）
+- `index.html`（`#follow-up-today-bulk-bar`コンテナ追加、バージョン表記・cache buster v4.12.27）
+- `js/data-backup.js` / `js/storage.js`（バージョン表記 v4.12.27）
+- `scripts/verify-v41227-follow-up-bulk-resolution.mjs`（新規）/ `scripts/verify-current.mjs`（バージョンassert）/ 既存verify（v4.10-v4.12系、82ファイル）のバージョンassert一括更新
+- `status.md` / `handoff.md` / `decision-log.md`（docs）
+
+**次にやること**:
+- ローカル別originのテスト専用fixtureでの一括「必要無し」「対応済み」の実動作確認（本エントリ作成時点では未実施、確認後に本ログ・status.md・handoff.mdを更新）
+- 実機スマートフォンでの表示確認（未実施）
+- 公開URLでの反映確認（cache buster・一括UI表示・0件時disabled・Consoleエラー・横スクロール、実データは変更しない）
+
 ## v4.12.26 集客チェック：薄色カード文字色修正（2026-08-05）
 
 **日付**: 2026-08-05

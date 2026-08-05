@@ -40,13 +40,13 @@ for (const file of ['js/app.js', 'js/analytics-brain.js']) {
 }
 
 console.log('== version / cache buster ==');
-assert(html.includes('v4.12.26'), 'index.html shows v4.12.26');
-assert(html.includes('js/app.js?v=4.12.26'), 'app.js cache buster is v4.12.26');
-assert(html.includes('css/style.css?v=4.12.26'), 'style.css cache buster is v4.12.26');
-assert(html.includes('js/analytics-brain.js?v=4.12.26'), 'analytics-brain.js cache buster is v4.12.26');
-assert(storage.includes("BUDIL_VERSION: 'v4.12.26'"), 'storage version is v4.12.26');
-assert(dataBackup.includes("APP_VERSION: 'v4.12.26'"), 'data-backup version is v4.12.26');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.26'"), 'verify-current pins v4.12.26');
+assert(html.includes('v4.12.27'), 'index.html shows current version v4.12.27');
+assert(html.includes('js/app.js?v=4.12.27'), 'app.js cache buster is current v4.12.27');
+assert(html.includes('css/style.css?v=4.12.27'), 'style.css cache buster is current v4.12.27');
+assert(html.includes('js/analytics-brain.js?v=4.12.27'), 'analytics-brain.js cache buster is current v4.12.27');
+assert(storage.includes("BUDIL_VERSION: 'v4.12.27'"), 'storage version is current v4.12.27');
+assert(dataBackup.includes("APP_VERSION: 'v4.12.27'"), 'data-backup version is current v4.12.27');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.12.27'"), 'verify-current pins current v4.12.27');
 assert(!html.includes('?v=4.12.25'), 'old cache buster v4.12.25 should be gone');
 assert(statusMd.includes('v4.12.26'), 'status.md documents v4.12.26');
 assert(handoffMd.includes('v4.12.26'), 'handoff.md documents v4.12.26');

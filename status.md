@@ -1,13 +1,34 @@
 ﻿# Budil status
 
-## 正式な現行verify環境（v4.12.26）
+## 正式な現行verify環境（v4.12.27）
 
 - **正式環境**: Budil 単独 clone ではなく、親階層に sibling の calendar-sync-worker がある開発環境
 - **必須**: ../calendar-sync-worker/run-budil-calendar-export.bat
 - **必須**: hub/functions 側の依存関係（googleapis 等）。hub/functions で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（86本。省略・除外・緩和なし）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（87本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.27 実装内容（フォロー：今日やるフォロー 一括「必要無し」「対応済み」）
+
+- 背景: 「今日やるフォロー」には日数が経過して今さらフォローしない案件や元請け案件など、フォロー自体が不要な案件が多数表示されており、1件ずつの個別処理では整理に時間がかかっていた
+- 実装（既存保存形式利用、フォロー抽出ロジック・自動送信は変更なし）:
+  - `index.html`: 「今日やるフォロー」カードの一覧上部に一括操作欄コンテナ（`#follow-up-today-bulk-bar`）を追加
+  - `js/app.js`:
+    - 新規状態 `selectedFollowUpBulkIds`（`Set`、`selectedFollowUpTargetId`とは別管理、localStorageへ保存しない）
+    - `renderFollowUpListRow()` に `bulkSelect` オプションを追加し、「今日やるフォロー」の各行左側にチェックボックス（`aria-label`に顧客名を含む）を表示。チェックボックスのクリック/change は`stopPropagation`し、既存のカード展開・文面表示ボタンの動作に影響しない
+    - `renderFollowUpTodayBulkBar()`：選択件数・全選択・選択解除・「選択分を必要無し」・「選択分を対応済み」を表示。全選択は現在の`buckets.todayAction`（表示中の項目）だけを対象にする。0件選択時は一括処理ボタンを`disabled`にする
+    - `renderFollowUpTodayList()`：再描画のたびに、表示から外れたIDを`selectedFollowUpBulkIds`から自動的に除外（表示中の項目だけを選択対象に保つ）
+    - `runFollowUpBulkDisposition(disposition)`：確認ダイアログ後、選択された各対象について`FollowUpBrain.resolveBulkFollowUpDisposition()`で次のfollowUp状態を計算し、既存の`Storage.updateWorkOrder` / `Storage.updateRevenueRecord`だけで保存（workOrderId・revenueIdの両方がある場合は両方へ同じ状態を保存）。保存後に`verifyFollowUpBulkSaved()`で該当レコードを再取得し、実際に反映されたものだけを成功として選択解除、失敗したIDは選択状態を残す。成功/失敗を個別に集計し、失敗がある場合は「成功N件／失敗N件」、全件成功時は「N件を必要無しにしました」「N件を対応済みにしました」を表示。処理後は`renderFollowUpView` / `renderDashboard` / `renderExecutiveHome` / `renderMorningExecutiveSections` / `renderDailyActionTasks` / `renderRevenueView`のみ再描画
+  - `js/follow-up-brain.js`: 純粋関数 `resolveBulkFollowUpDisposition(followUp, disposition, now)` を追加（Storageへは書き込まない）。
+    - `disposition: 'not_needed'` → `thanksStatus`/`reviewStatus`が`pending`、`repeatStatus`が`pending`または`planned`のものだけを`skipped`へ変更。既に`done`のものは`done`のまま、既に`skipped`のものは`skipped`のまま維持。`thanksSentAt` / `reviewRequestedAt`などの既存履歴は変更しない
+    - `disposition: 'completed'` → 同条件で`done`へ変更。`thanksStatus`を`done`に変更した場合のみ`thanksSentAt`を、`reviewStatus`を`done`に変更した場合のみ`reviewRequestedAt`を現在時刻に設定（既にdoneだったものは上書きしない）。LINE・口コミ依頼等の自動送信、リピート候補・毎日やることの新規作成は一切行わない
+  - `css/style.css`: `.follow-up-bulk-bar` / `.follow-up-bulk-bar-inner` / `.follow-up-bulk-bar-buttons` / `.follow-up-row-with-select` / `.follow-up-bulk-checkbox-label` を追加。一括操作欄は`flex-wrap: wrap`で390pxでも自然に折り返し、チェックボックスは20×20pxでタップしやすいサイズ。共通テーマ・既存の`.btn-primary` / `.btn-secondary` / `.btn-not-needed`の配色は変更なし（「必要無し」は既存`.btn-not-needed`、「対応済み」は既存`.btn-primary`を流用）
+  - 既存の個別「お礼LINE文を開く」「口コミ依頼文を開く」「リピート案内文を開く」「今回はスルー」「売上を見る」「フォロー済み / 対応不要」一覧、`saveFollowUpForTarget()` / `markFollowUpDone()`は変更なし。新しいlocalStorageキーは追加していない
+- 新規 `scripts/verify-v41227-follow-up-bulk-resolution.mjs`（一括UIの存在、選択状態の分離・非永続化・現在表示中項目への限定、`resolveBulkFollowUpDisposition`の純粋性と状態変換（pending/planned→skipped or done、done/skipped維持、必要時のみ日時設定）、保存後の再取得確認、部分失敗時の集計・トースト文言、自動送信なし、既存個別操作の維持、390px横スクロールなしを検証）
+- 既存verify（v4.10-v4.12系、82ファイル）のバージョンassertを`v4.12.27`へ一括更新。現行合格は`node scripts/verify-current.mjs`（87本、省略・除外・緩和なし）
+- ローカル（Browser番頭共通Chrome、Chrome DevTools MCP、localhost別origin専用テストfixture）での実機能確認は本エントリ作成時点では未実施。確認完了後にこの節を更新する
+- 実機スマートフォンでの表示確認は未完了
 
 ## v4.12.26 修正内容（集客チェック：薄色カード文字色修正）
 

@@ -6588,6 +6588,64 @@ body {
   margin-top: 0.35rem;
 }
 
+/* v4.12.27: 今日やるフォロー 一括「必要無し」「対応済み」 */
+.follow-up-bulk-bar {
+  margin: 0 0 0.75rem;
+  padding: 0.6rem 0.8rem;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 8px;
+}
+
+.follow-up-bulk-bar.hidden {
+  display: none;
+}
+
+.follow-up-bulk-bar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.follow-up-bulk-count {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.follow-up-bulk-bar-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.follow-up-row-with-select {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.follow-up-row-with-select .follow-up-row-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.follow-up-bulk-checkbox-label {
+  display: flex;
+  align-items: center;
+  padding-top: 0.2rem;
+  cursor: pointer;
+}
+
+.follow-up-bulk-checkbox-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
 .card-follow-up-collapsed > summary {
   cursor: pointer;
   font-weight: 600;

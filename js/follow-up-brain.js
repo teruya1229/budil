@@ -758,6 +758,28 @@ const FollowUpBrain = {
     return '要確認';
   },
 
+  // v4.12.27: 「今日やるフォロー」一括「必要無し」「対応済み」の状態変換（副作用なしの純粋関数、Storageへは書き込まない）
+  resolveBulkFollowUpDisposition(followUp, disposition, now) {
+    const f = this.normalizeFollowUp(followUp);
+    if (disposition !== 'not_needed' && disposition !== 'completed') return f;
+    const ts = now || new Date().toISOString();
+    const targetStatus = disposition === 'completed' ? 'done' : 'skipped';
+    const next = { ...f };
+    if (f.thanksStatus === 'pending') {
+      next.thanksStatus = targetStatus;
+      if (disposition === 'completed') next.thanksSentAt = ts;
+    }
+    if (f.reviewStatus === 'pending') {
+      next.reviewStatus = targetStatus;
+      if (disposition === 'completed') next.reviewRequestedAt = ts;
+    }
+    if (f.repeatStatus === 'pending' || f.repeatStatus === 'planned') {
+      next.repeatStatus = targetStatus;
+    }
+    next.updatedAt = ts;
+    return this.normalizeFollowUp(next);
+  },
+
   getFollowUpPrimaryActionType(record) {
     const f = this.normalizeFollowUp(record.followUp);
     if (f.thanksStatus === 'pending') return 'thanks';
