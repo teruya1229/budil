@@ -1,6 +1,6 @@
 ﻿# Budil handoff
 
-最終更新: 2026-08-02
+最終更新: 2026-08-05
 
 ## 正本
 
@@ -17,14 +17,15 @@
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` の依存関係（googleapis 等）。依存は `hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（84本）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（86本）
 - **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
 
 ## 現在の最新状態
 
 | 項目 | 値 |
 |------|-----|
-| 最新バージョン | v4.12.25 |
+| 最新バージョン | v4.12.26 |
+| v4.12.26 集客チェック：薄色カード文字色修正 | `css/style.css` に `#view-analytics` 限定のスコープ付きルールを追加し、`.analytics-today-conclusion` / `.analytics-summary-item strong` / `.analytics-top-card` / `.analytics-action-card` / `.analytics-pickup-card`（と内部の`strong`・`p`・`.analytics-meta`）が白・薄紫背景でダークテーマ用の薄い文字色を継承していた不具合を修正、`.analytics-action-card .btn-secondary`にも明示的な文字色・背景・borderを指定。`.analytics-summary-priority`は親の`.card`ダーク背景に直接乗っていたため文字色だけでなく専用の薄色背景も追加。`body`・共通`.card`・共通`.btn-secondary`・集客データの計算/並び順/ボタン処理は変更なし。verify-current 86本 / ローカル（Browser番頭共通Chrome、localhost別origin、実データ未投入のため実際のapp.js出力と同じDOM構造の検証用静的HTMLで表示確認・確認後削除）でPC・390px・横スクロールなし・Consoleエラーなしを確認 / 実機スマホ確認未完了 |
 | v4.12.25 作業予定削除の安全バックアップ容量超過対策 | `js/storage.js` deleteWorkOrder()の削除前安全バックアップを「予定一覧全体の複製」から「削除対象1件＋元位置」の最小情報に変更、`saveSafetyBackups()`に容量超過時の最小限リトライ（最も古いものから1件ずつ整理）を追加。verify-current 85本 / ローカル（容量逼迫を模擬したテストデータ）で削除成功・コンパクトバックアップ・部分更新なしを確認 / 公開実データ削除確認未実施・実機スマホ確認未完了 |
 | v4.12.24 「Budilから予定を削除」例外安全化 | `js/storage.js` deleteWorkOrder()を本体保存優先＋各書込みtry/catch化、`js/app.js` deleteWorkOrderFromForm()をtry/catch化し保存失敗を明示通知。verify-current 84本 / ローカル（テストデータ）で確認→削除→再描画→トーストの完走を確認 / 公開実データ削除確認未実施・実機スマホ確認未完了 |
 | v4.12.23 集客チェック：MI.BCS法人LP独立表示 | 正式合格 Budil `e951443`（実装）+ `67661d4`（CTR/掲載順位0表示hotfix） / Browser番頭変更なし（tracked clean、diag結果のみ利用） / verify-current 83本 / 公開 hard reload でMI.BCS法人LPカード独立表示・家庭向け上位に混在なし・CTR/掲載順位「データなし」表示・GA4「計測開始前」表示を確認 / 実機スマホ未完了 |

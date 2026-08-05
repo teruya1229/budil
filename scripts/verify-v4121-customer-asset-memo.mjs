@@ -45,13 +45,13 @@ const FORBIDDEN_EXTRA_FIELDS = [
 console.log('== v4.12.5 customer-asset-memo ==');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.12.25'), 'index.html should show v4.12.25');
-assert(indexHtml.includes('js/app.js?v=4.12.25'), 'app.js cache buster should be v4.12.25');
-assert(indexHtml.includes('css/style.css?v=4.12.25'), 'style.css cache buster should be v4.12.25');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.12.25'"), 'storage version should be v4.12.25');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.12.25'"), 'data-backup version should be v4.12.25');
+assert(indexHtml.includes('v4.12.26'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('js/app.js?v=4.12.26'), 'app.js cache buster should be v4.12.26');
+assert(indexHtml.includes('css/style.css?v=4.12.26'), 'style.css cache buster should be v4.12.26');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.12.26'"), 'storage version should be v4.12.26');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.12.26'"), 'data-backup version should be v4.12.26');
 assert(!indexHtml.includes('?v=4.12.7'), 'old cache buster v4.12.7 should be gone');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.25'), 'calendar-candidate cache buster should be v4.12.25');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.12.26'), 'calendar-candidate cache buster should be v4.12.26');
 
 console.log('== lead form fields ==');
 assert(indexHtml.includes('id="lead-customer-type-major"'), 'lead major select should exist');

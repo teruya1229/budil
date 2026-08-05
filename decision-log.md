@@ -2,6 +2,37 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.12.26 集客チェック：薄色カード文字色修正（2026-08-05）
+
+**日付**: 2026-08-05
+
+**症状**: 「集客チェック」画面（`#view-analytics`）の白・薄紫背景カード（今日のページ需要サマリー / 次の打ち手 / 需要ピックアップへの反映 / 需要スコア上位）の文字が、ダークテーマ用の薄い文字色（`body { color: var(--text) }` / `--text: #e6edf3`）を継承し、ほぼ読めない。
+
+**調査経過**:
+- `rules.md` / `status.md` / `handoff.md` / `decision-log.md`を確認し、branchはmain、`HEAD`と`origin/main`が一致、tracked未コミット変更・未追跡ファイルなし（正本 `bc636b41de75b5f2329ef83e7828359c0d5c723f` v4.12.25）であることを確認
+- `css/style.css`を確認し、`.analytics-today-conclusion`（背景`#eef2ff`）、`.analytics-summary-item`（背景`#eef2ff`、`strong`は文字色未指定）、`.analytics-top-card` / `.analytics-action-card` / `.analytics-pickup-card`（背景`#fff`、本文・`strong`は文字色未指定）のいずれも明示的な文字色が指定されておらず、`body`のダークテーマ用文字色（`--text: #e6edf3`）を継承していることを確認
+- `js/app.js`で`renderAnalyticsSummary` / `renderAnalyticsTopDemand` / `renderAnalyticsActionsList` / `renderAnalyticsPickupBridge`が生成するHTML構造（`<strong>`ページ名、`<p class="analytics-meta">`補足文、`.analytics-action-card`内`<button class="btn btn-sm btn-secondary">`）を確認し、報告された「見えない箇所」と一致することを確認
+- 既存の`#view-reception .btn-secondary`（v4.8.3で追加済み）が同種の「ダーク背景用スタイルを継承した薄背景ボタン」を明示的な文字色・背景・borderで修正した先例であることを確認し、同じ配色基準（文字`#1e293b`、背景`#fff`、border`#94a3b8`）を`#view-analytics .analytics-action-card .btn-secondary`にも適用する方針を採用
+- ローカル確認のため、`js/app.js`が実際に出力するのと同じDOM構造・CSSクラス（`.analytics-today-conclusion` / `.analytics-summary-item` / `.analytics-top-card` / `.analytics-action-card` / `.analytics-pickup-card`など）を持つ検証用の静的HTMLを作成し、`css/style.css`だけを読み込ませて表示確認した（アプリ本体・localStorage・実データには一切触れない、確認後に削除）。ローカルのBudil本体はlocalhost別origin・データ未投入のため空表示であり、実データやテストデータの追加は行っていない
+- 表示確認の過程で、`.analytics-summary-priority`（下部の優先判断文）が他の項目のような専用の薄色背景を持たず、親の`.card`のダーク背景に直接乗っていることを発見した。指示された`#334155`という色は薄背景を前提とした色のため、文字色だけを指定してもダーク背景上では低コントラストのまま読みにくいと判断し、専用の薄色背景（`#eef2ff`、border`#c7d2fe`）も追加する方針に修正した
+
+**判断内容**:
+- CSSのみで修正可能と判断し、`js/app.js` / `js/analytics-brain.js`のロジックは変更しない
+- 修正は`#view-analytics`配下に限定し、`body`・共通`.card`・共通`.btn-secondary`などの全体スタイルは変更しない
+- `.analytics-meta`は`#view-analytics`全体ではなく、対象カード（`.analytics-top-card` / `.analytics-action-card` / `.analytics-pickup-card`）に限定して上書きし、他画面（`.browser-bantou-preview-page`内や`#analytics-detail`）の既存表示に影響しないようにする
+- opacity変更のみでの対応は行わず、背景色・文字色・border色を明示する
+- `js/storage.js`の`BUDIL_VERSION`は対象ファイル一覧に明記されていなかったが、`js/data-backup.js`の`APP_VERSION`と対で全既存verifyが検証している値のため、整合性維持のために合わせて`v4.12.26`へ更新（最小限の付随更新）
+
+**変更ファイル**:
+- `css/style.css`（`#view-analytics`限定の文字色・ボタン配色ルールを追加）
+- `index.html` / `js/data-backup.js` / `js/storage.js`（バージョン表記・cache buster v4.12.26）
+- `scripts/verify-v41226-analytics-light-card-contrast.mjs`（新規）/ `scripts/verify-current.mjs`（バージョンassert）/ 既存verify（v4.10-v4.12系）のバージョンassert一括更新
+- `status.md` / `handoff.md` / `decision-log.md`（docs）
+
+**次にやること**:
+- 実機スマートフォンでの表示確認（本対応では未実施）
+- 公開URLでの反映確認（cache buster・4ブロックの読みやすさ・Consoleエラー・横スクロール）
+
 ## v4.12.25 作業予定削除の安全バックアップ容量超過対策（2026-08-04）
 
 **日付**: 2026-08-04
@@ -19,6 +50,12 @@
 - ただし「削除前バックアップが予定一覧全体を複製する」実装は実際にコード上確認できた欠陥であり、容量を圧迫し得る構造として指示された修正条件に直接該当するため、最小差分で修正する
 - 修正方針: 削除前安全バックアップのdataを「削除対象1件＋元の配列位置（index）」の最小情報に変更（他の予定情報は含まない）。`saveSafetyBackups()`は保存失敗時に新しいバックアップを保持したまま最も古いものから1件ずつ外して再試行し、SAFETY_BACKUP_LIMIT方針は維持、全件を一度に削除しない。新しいバックアップ1件だけでも保存できない場合は例外を再送出し、既存の`save_failed`処理（v4.12.24で導入）で作業予定を削除せず失敗を明示する
 - 容量確保のために売上・受付・予定・経費・設定等を削除する対応はしない。`localStorage.clear()`・site data削除は行わない
+
+**確認結果**:
+- ローカル（Browser番頭共通Chrome、Chrome DevTools MCP、localhost別origin）で検証用静的HTMLを表示し、PC幅・390px幅の両方で「今日の結論」「登録ページ/需要強い/離脱注意/広告判断の件数」「下部の優先判断文」「次の打ち手のページ名・判断文・詳細ボタン（有効/無効）」「需要スコア上位のページ名・表示数・直帰率」「需要ピックアップへの反映のページ名・判断文」がいずれも明確に読めることを確認
+- 390px幅で横スクロールが発生しないことを確認
+- Consoleエラーなし（favicon.icoの404のみ。検証用HTMLに起因する無害なもので、アプリ本体には存在しない）
+- ローカルのBudil本体（localhost別origin、データ未投入）を実際に開いて読み込み・画面遷移でConsoleエラーが出ないことも別途確認。localStorage・実データへの変更は行っていない
 
 **変更ファイル**:
 - `js/storage.js`（`deleteWorkOrder()`の安全バックアップdataを単一予定化 / `saveSafetyBackups()`に容量超過時の最小限リトライを追加）

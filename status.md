@@ -1,13 +1,27 @@
 ﻿# Budil status
 
-## 正式な現行verify環境（v4.12.25）
+## 正式な現行verify環境（v4.12.26）
 
 - **正式環境**: Budil 単独 clone ではなく、親階層に sibling の calendar-sync-worker がある開発環境
 - **必須**: ../calendar-sync-worker/run-budil-calendar-export.bat
 - **必須**: hub/functions 側の依存関係（googleapis 等）。hub/functions で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（85本。省略・除外・緩和なし）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（86本。省略・除外・緩和なし）
 - **前提不足時の判定**: 本体不具合ではなく「検証環境不足」。runner 開始時に日本語で停止する
+
+## v4.12.26 修正内容（集客チェック：薄色カード文字色修正）
+
+- 症状: 「集客チェック」画面（`#view-analytics`）の白・薄紫背景カード（今日のページ需要サマリー / 次の打ち手 / 需要ピックアップへの反映 / 需要スコア上位）内の文字が、ダークテーマ用の薄い文字色（`body { color: var(--text) }` / `--text: #e6edf3`）を継承し、白・薄紫背景上でほぼ読めなかった
+- 確定した原因: `.analytics-today-conclusion`（背景`#eef2ff`）、`.analytics-summary-item`の`strong`、`.analytics-top-card` / `.analytics-action-card` / `.analytics-pickup-card`（背景`#fff`）のいずれも文字色が明示されておらず、`body`のダークテーマ用文字色を継承していた。`.analytics-action-card`内の`.btn-secondary`もダーク背景用の透明背景・薄い border を継承していた。加えて`.analytics-summary-priority`（下部の優先判断文）は他の項目のような専用の薄色背景を持たず、親の`.card`のダーク背景に直接乗っていたため、既存の`#334155`（薄背景向けの暗色）指定だけでは逆にダーク背景上で低コントラストになり読みにくい状態だった
+- 修正（CSSのみ、`#view-analytics`配下に限定、`body`・共通`.card`・共通`.btn-secondary`は変更なし）:
+  - `css/style.css` に `#view-analytics` 限定のスコープ付きルールを追加し、`.analytics-today-conclusion`（`#111827`）、`.analytics-summary-item strong`（`#111827`）、`.analytics-top-card` / `.analytics-action-card` / `.analytics-pickup-card`とその`strong`（`#111827`）・`p`・`.analytics-meta`（`#334155`）に明示的な文字色を指定
+  - `.analytics-summary-priority`はダーク背景に直接乗っているため、文字色（`#334155`）だけでなく専用の薄色背景（`#eef2ff`、border `#c7d2fe`）も追加し、他の項目と同様の「薄色カード」として読める状態にした
+  - `.analytics-action-card .btn-secondary`に明示的な文字色（`#1e293b`）・背景（`#fff`）・border（`#94a3b8`）を指定し、hover・disabled状態も文字が消えないよう明示（opacityのみでの対応はしていない）
+  - 集客データの計算・保存・並び順・ボタン処理・広告判断ロジックは変更なし（`js/app.js` / `js/analytics-brain.js`のロジック変更なし）
+- 新規 `scripts/verify-v41226-analytics-light-card-contrast.mjs`（修正が`#view-analytics`配下に限定されていること、対象カードに明示的な暗色文字・薄色背景が指定されていること、`body`・共通`.card`・共通`.btn-secondary`が未変更であること、集客データ計算・並び順・ボタン処理が未変更であることを検証）
+- 既存verify（v4.10-v4.12系）のバージョンassertを`v4.12.26`へ更新。現行合格は`node scripts/verify-current.mjs`（86本、省略・除外・緩和なし）
+- ローカル（Browser番頭共通Chrome、Chrome DevTools MCP、localhost別origin）で確認。実アプリのローカル起動画面はデータ未投入のため空表示だったため、`js/app.js`が実際に出力するのと同じDOM構造・CSSクラスを持つ検証用の静的HTML（アプリ本体・localStorage・実データには一切触れていない、確認後に削除）を`css/style.css`に読み込ませて表示確認。今日の結論・件数サマリー・優先判断文・次の打ち手・需要スコア上位・需要ピックアップの全ブロックがPC幅・390px幅ともに読める、横スクロールなし、Consoleエラーなしを確認。データ変更は行っていない
+- 実機スマートフォンでの表示確認は未完了
 
 ## v4.12.25 修正内容（作業予定削除の安全バックアップ容量超過対策）
 
