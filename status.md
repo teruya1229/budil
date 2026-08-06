@@ -27,8 +27,12 @@
   - 既存の個別「お礼LINE文を開く」「口コミ依頼文を開く」「リピート案内文を開く」「今回はスルー」「売上を見る」「フォロー済み / 対応不要」一覧、`saveFollowUpForTarget()` / `markFollowUpDone()`は変更なし。新しいlocalStorageキーは追加していない
 - 新規 `scripts/verify-v41227-follow-up-bulk-resolution.mjs`（一括UIの存在、選択状態の分離・非永続化・現在表示中項目への限定、`resolveBulkFollowUpDisposition`の純粋性と状態変換（pending/planned→skipped or done、done/skipped維持、必要時のみ日時設定）、保存後の再取得確認、部分失敗時の集計・トースト文言、自動送信なし、既存個別操作の維持、390px横スクロールなしを検証）
 - 既存verify（v4.10-v4.12系、82ファイル）のバージョンassertを`v4.12.27`へ一括更新。現行合格は`node scripts/verify-current.mjs`（87本、省略・除外・緩和なし）
-- ローカル（Browser番頭共通Chrome、Chrome DevTools MCP、localhost別origin専用テストfixture）での実機能確認は本エントリ作成時点では未実施。確認完了後にこの節を更新する
-- 実機スマートフォンでの表示確認は未完了
+- verify-current 87/87 合格
+- ローカル（Browser番頭共通Chrome、Chrome DevTools MCP、localhost別origin専用テストfixture）で一括「必要無し」「対応済み」の実動作を確認。未選択レコードは不変、linked work_order / revenue の followUp 一致、リロード後も保持を確認。PC幅・390px幅ともに表示可、横スクロールなし、Console errorなし
+- 公開版 v4.12.27 反映確認済み
+- 公開環境で既存スモークテスト用ダミーレコード（`__budil_edit_smoke_temp__` / `rev_ms371at8jn9vx`）が意図せず一時的に skipped 化されたが、pending へ復元済み。実顧客データは変更していないことを確認
+- 今後、本番環境の状態変更ボタンで自動化ツールによる confirm キャンセル試験は行わない
+- 物理スマートフォン実機確認は未完了
 
 ## v4.12.26 修正内容（集客チェック：薄色カード文字色修正）
 

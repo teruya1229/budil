@@ -32,10 +32,17 @@
 - `scripts/verify-v41227-follow-up-bulk-resolution.mjs`（新規）/ `scripts/verify-current.mjs`（バージョンassert）/ 既存verify（v4.10-v4.12系、82ファイル）のバージョンassert一括更新
 - `status.md` / `handoff.md` / `decision-log.md`（docs）
 
+**確認結果**（2026-08-06、docs記録同期）:
+- verify-current 87/87 合格
+- localhost別originのテスト専用fixtureで一括「必要無し」「対応済み」の実動作を確認
+- 未選択レコードは不変、linked work_order / revenue の followUp 一致、リロード後も保持を確認
+- PC幅・390px幅で表示可、横スクロールなし、Console errorなし
+- 公開版 v4.12.27 反映確認済み
+- 公開環境で既存スモークテスト用ダミーレコード（`__budil_edit_smoke_temp__` / `rev_ms371at8jn9vx`）が意図せず一時的に skipped 化されたが、pending へ復元済み。実顧客データは変更していないことを確認
+- 運用方針: 今後、本番環境の状態変更ボタンで自動化ツールによる confirm キャンセル試験は行わない
+
 **次にやること**:
-- ローカル別originのテスト専用fixtureでの一括「必要無し」「対応済み」の実動作確認（本エントリ作成時点では未実施、確認後に本ログ・status.md・handoff.mdを更新）
-- 実機スマートフォンでの表示確認（未実施）
-- 公開URLでの反映確認（cache buster・一括UI表示・0件時disabled・Consoleエラー・横スクロール、実データは変更しない）
+- 物理スマートフォン実機での表示確認（未完了）
 
 ## v4.12.26 集客チェック：薄色カード文字色修正（2026-08-05）
 

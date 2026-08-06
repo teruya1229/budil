@@ -1,6 +1,6 @@
 ﻿# Budil handoff
 
-最終更新: 2026-08-05
+最終更新: 2026-08-06
 
 ## 正本
 
@@ -25,7 +25,7 @@
 | 項目 | 値 |
 |------|-----|
 | 最新バージョン | v4.12.27 |
-| v4.12.27 フォロー：今日やるフォロー 一括「必要無し」「対応済み」 | 「今日やるフォロー」各行にチェックボックスを追加、一覧上部に一括操作欄（選択件数・全選択・選択解除・選択分を必要無し・選択分を対応済み）を追加。全選択は表示中の`buckets.todayAction`のみ対象、選択状態は`selectedFollowUpBulkIds`（`selectedFollowUpTargetId`とは別管理）でlocalStorageへ保存しない。状態変換は`FollowUpBrain.resolveBulkFollowUpDisposition()`（純粋関数、Storage書き込みなし）: pending/planned→skipped(必要無し)またはdone(対応済み)、done/skippedは維持、対応済みは変更時のみthanksSentAt/reviewRequestedAtを設定。保存は既存`Storage.updateWorkOrder` / `Storage.updateRevenueRecord`のみ・新規localStorageキーなし。保存後に再取得して確認し、成功/失敗を個別集計（失敗idは選択を残す）。LINE・口コミ依頼の自動送信、毎日やること・リピート候補の新規作成は行わない。既存個別ボタン・「今回はスルー」・フォロー済み一覧は維持。verify-current 87本 / ローカル・実機確認は本エントリ時点では未実施（確認後に更新） |
+| v4.12.27 フォロー：今日やるフォロー 一括「必要無し」「対応済み」 | 「今日やるフォロー」各行にチェックボックスを追加、一覧上部に一括操作欄（選択件数・全選択・選択解除・選択分を必要無し・選択分を対応済み）を追加。全選択は表示中の`buckets.todayAction`のみ対象、選択状態は`selectedFollowUpBulkIds`（`selectedFollowUpTargetId`とは別管理）でlocalStorageへ保存しない。状態変換は`FollowUpBrain.resolveBulkFollowUpDisposition()`（純粋関数、Storage書き込みなし）: pending/planned→skipped(必要無し)またはdone(対応済み)、done/skippedは維持、対応済みは変更時のみthanksSentAt/reviewRequestedAtを設定。保存は既存`Storage.updateWorkOrder` / `Storage.updateRevenueRecord`のみ・新規localStorageキーなし。保存後に再取得して確認し、成功/失敗を個別集計（失敗idは選択を残す）。LINE・口コミ依頼の自動送信、毎日やること・リピート候補の新規作成は行わない。既存個別ボタン・「今回はスルー」・フォロー済み一覧は維持。verify-current 87/87合格 / localhost別origin fixtureで「必要無し」「対応済み」実動作確認（未選択不変・linked followUp一致・リロード後保持） / PC・390px・横スクロールなし・Console errorなし / 公開版v4.12.27反映確認済み / 公開環境のスモーク用ダミー（`__budil_edit_smoke_temp__` / `rev_ms371at8jn9vx`）が一時skipped化されたがpending復元済み・実顧客データ未変更 / 今後本番の状態変更ボタンで自動化ツールによるconfirmキャンセル試験は行わない / 物理スマホ実機確認は未完了 |
 | v4.12.26 集客チェック：薄色カード文字色修正 | `css/style.css` に `#view-analytics` 限定のスコープ付きルールを追加し、`.analytics-today-conclusion` / `.analytics-summary-item strong` / `.analytics-top-card` / `.analytics-action-card` / `.analytics-pickup-card`（と内部の`strong`・`p`・`.analytics-meta`）が白・薄紫背景でダークテーマ用の薄い文字色を継承していた不具合を修正、`.analytics-action-card .btn-secondary`にも明示的な文字色・背景・borderを指定。`.analytics-summary-priority`は親の`.card`ダーク背景に直接乗っていたため文字色だけでなく専用の薄色背景も追加。`body`・共通`.card`・共通`.btn-secondary`・集客データの計算/並び順/ボタン処理は変更なし。verify-current 86本 / ローカル（Browser番頭共通Chrome、localhost別origin、実データ未投入のため実際のapp.js出力と同じDOM構造の検証用静的HTMLで表示確認・確認後削除）でPC・390px・横スクロールなし・Consoleエラーなしを確認 / 実機スマホ確認未完了 |
 | v4.12.25 作業予定削除の安全バックアップ容量超過対策 | `js/storage.js` deleteWorkOrder()の削除前安全バックアップを「予定一覧全体の複製」から「削除対象1件＋元位置」の最小情報に変更、`saveSafetyBackups()`に容量超過時の最小限リトライ（最も古いものから1件ずつ整理）を追加。verify-current 85本 / ローカル（容量逼迫を模擬したテストデータ）で削除成功・コンパクトバックアップ・部分更新なしを確認 / 公開実データ削除確認未実施・実機スマホ確認未完了 |
 | v4.12.24 「Budilから予定を削除」例外安全化 | `js/storage.js` deleteWorkOrder()を本体保存優先＋各書込みtry/catch化、`js/app.js` deleteWorkOrderFromForm()をtry/catch化し保存失敗を明示通知。verify-current 84本 / ローカル（テストデータ）で確認→削除→再描画→トーストの完走を確認 / 公開実データ削除確認未実施・実機スマホ確認未完了 |
