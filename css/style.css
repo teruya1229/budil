@@ -2020,6 +2020,42 @@ body {
   margin-bottom: 12px;
 }
 
+/* v4.13.0 クラウドバックアップ基盤 Phase 1 */
+.backup-section-heading {
+  font-size: 1.02rem;
+  margin: 4px 0 10px;
+  color: var(--text-muted);
+}
+
+.card-cloud-backup {
+  margin-bottom: 16px;
+}
+
+.cloud-backup-line {
+  font-size: 0.9rem;
+  margin: 0 0 6px;
+  overflow-wrap: anywhere;
+}
+
+.cloud-backup-login-form {
+  margin: 10px 0;
+}
+
+.cloud-backup-result {
+  font-size: 0.88rem;
+  margin-top: 10px;
+  min-height: 1.2em;
+  overflow-wrap: anywhere;
+}
+
+.cloud-backup-result.cloud-backup-result-error {
+  color: #ef4444;
+}
+
+.cloud-backup-result.cloud-backup-result-ok {
+  color: #16a34a;
+}
+
 .card-danger-zone {
   border-color: rgba(239, 68, 68, 0.35);
 }

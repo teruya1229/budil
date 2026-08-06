@@ -1,5 +1,24 @@
 ﻿# Budil status
 
+## v4.13.0 実装内容（クラウドバックアップ基盤 Phase 1・staging/production分離）
+
+- 背景: Budilは現在localStorageのみに保存しており、機種変更・端末故障・ブラウザデータ消失で全データを失うリスクがある。Phase 1として、既存の`DataBackup.exportPayload()` / `validatePayload()`をそのまま再利用し、Supabase Edge Function経由でimmutable snapshotを保存するだけの薄いクラウドバックアップ（保存のみ）を追加した
+- **環境定義**（今後の全backend変更もこの順で進める：staging → production）:
+  - production alias = 既存 `ai-bantou-dev`（表示名・project ref・既存Auth/tenant/membership/make-proxyは変更していない）
+  - staging = 新規 `bc-platform-staging`（同じPro組織・`ap-northeast-1`・Micro。Budilのmigration/Edge Function/Auth/tenant分離/クラウド保存試験専用。本番データ・本番Auth user・本番tenant/membership/snapshotはコピーしていない）
+  - production と staging は別Supabase project ref（project ref自体は本ドキュメントに記載しない）
+  - local（`localhost`/`127.0.0.1`）は staging へ、GitHub Pages公開版（`teruya1229.github.io`）は production へ、ホスト名から固定接続する。query/hash/localStorage/画面入力による切替は不可。未知originはクラウド機能をfail closedにする
+- **Supabase migration／Edge Functionの正本は `C:\dev\ai-bantou-app`**。BudilリポジトリへSupabase backend一式は複製していない
+  - 追加migration: `public.budil_snapshots`（tenant_id/created_by/app_version/backup_version/exported_at/payload/content_hash/idempotency_key/is_test/created_at。`UNIQUE(tenant_id, idempotency_key)`、RLS有効、`REVOKE ALL`後に`service_role`へ`SELECT, INSERT`のみ`GRANT`。更新・削除用APIなし）
+  - 追加Edge Function `budil-backups`（`POST /functions/v1/budil-backups`、`GET /functions/v1/budil-backups/latest`。`verify_jwt = true`。既存make-proxyと同じ`createSupabaseContext(request, { auth: "user" })` → active tenant_membership厳密1件 → tenant active確認のパターンを再利用。tenant_idはクライアントから受け取らずサーバー側で確定。content_hashはサーバー側で再計算。idempotency_keyが同一かつ同一hashなら既存snapshotを返し、hash不一致は409。CORSは`https://teruya1229.github.io` / `http://localhost:5500` / `http://127.0.0.1:5500`のみ完全一致許可。payload本文・PII・JWT・API keyはログに出さない）
+- **Budil frontend**は「データ管理」画面内の既存バックアップ領域を「ローカルバックアップ」「クラウドバックアップ」に分離。新規`js/budil-cloud.js`が接続先判定（ホスト名固定）・ログイン/ログアウト（既存Supabase Auth、publishable keyのみ・secret/service_role keyは一切保持しない）・`backupNow()`（`DataBackup.exportPayload()`→`validatePayload()`→content hash計算→同一操作内は同一idempotency key→二重押下防止→Edge Functionへ1回POST）・`fetchLatest()`（メタデータのみ表示）を実装。セッショントークンは`sessionStorage`のみに保持し`localStorage`は一切変更しない。自動同期・自動復元・クラウドからの復元・双方向同期は実装していない。既存localStorageキー・ローカルJSONバックアップ/復元・既存業務画面は変更なし
+- staging（`bc-platform-staging`）で実通信テスト11項目（未認証401・非許可origin 403・membershipなし403・正常保存・idempotency二重送信で1件・hash不一致409・tenant分離・latestメタデータのみ・payload/PII非ログ・tenant_idクライアント指定不可・is_test=false本番相当データ不存在）を実施し全合格。テストfixture（Auth user A/B/C・tenant A/B・snapshot）は検証完了後に記録済み完全一致IDのみを対象として完全削除・残存なしを確認済み
+- localhost（staging接続）でBrowser番頭共通Chrome・Chrome DevTools MCPにより、ログイン・接続先表示・クラウド保存成功・snapshot ID表示・latest取得・同一tick二重クリックでの二重POST防止（1回のみ）・ログイン失敗時のパスワード非ログ・ログアウト時のセッション破棄・PC幅/390px幅とも横スクロールなし・Consoleエラーなし・staging URL以外への通信なしを確認済み
+- 新規 `scripts/verify-v4130-cloud-backup-foundation.mjs`（未認証保存不可・JWT検証・membership厳密1件・tenant active・tenant越境不可・RLS/GRANT・frontend直接DB操作なし・service_role/secret keyなし・snapshot更新削除APIなし・idempotency/409・`DataBackup.exportPayload/validatePayload`再利用・localStorageキー不変・自動同期/自動復元なし・二重押下防止・ログ安全性・新規会員登録UIなし・ローカルバックアップ/復元維持・origin固定・既存verify削除緩和なしを検証）
+- 既存verify（v4.10-v4.13系、87ファイル）のバージョンassertを`v4.13.0`へ一括更新。現行合格は`node scripts/verify-current.mjs`（88本、省略・除外・緩和なし）
+- production（`ai-bantou-dev`）反映はstaging合格後のみ実施する方針。反映時も`budil_snapshots` migrationと`budil-backups` Functionのみを対象とし、make-proxy再deploy・config全体push・secrets変更は行わない。productionへテストデータ・実顧客payloadは作成・送信しない
+- 物理スマートフォン実機確認は未完了
+
 ## 正式な現行verify環境（v4.12.27）
 
 - **正式環境**: Budil 単独 clone ではなく、親階層に sibling の calendar-sync-worker がある開発環境

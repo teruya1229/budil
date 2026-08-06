@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Budil - AI経営脳みそ</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="css/style.css?v=4.12.27">
+  <link rel="stylesheet" href="css/style.css?v=4.13.0">
 </head>
 <body>
   <div class="app">
@@ -25,7 +25,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.12.27</small>
+          <small>AI経営脳みそ v4.13.0</small>
         </div>
       </div>
       <nav class="nav">
@@ -163,7 +163,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.12.27</small>
+        <small>Budil v4.13.0</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -185,7 +185,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の最優先 → 今日やること → 今月の数字</p>
             </div>
-            <span class="exec-home-version">v4.12.27</span>
+            <span class="exec-home-version">v4.13.0</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden exec-tower-span-full"></div>
 
@@ -606,7 +606,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.12.27</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.13.0</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -3463,6 +3463,7 @@
           <div id="recommended-ops-data" class="card-recommended-ops-inner"></div>
         </details>
 
+        <h2 class="backup-section-heading">ローカルバックアップ</h2>
         <div class="data-mgmt-grid">
           <div class="card">
             <h2>エクスポート（バックアップ）</h2>
@@ -3488,6 +3489,32 @@
             <button type="button" id="btn-import-cancel" class="btn btn-secondary">キャンセル</button>
             <button type="button" id="btn-import-confirm" class="btn btn-primary">復元する</button>
           </div>
+        </div>
+
+        <h2 class="backup-section-heading">クラウドバックアップ</h2>
+        <div id="cloud-backup-card" class="card card-wide card-cloud-backup">
+          <p class="data-mgmt-desc">ローカルバックアップとは別に、Budilアカウントでログインしてクラウドへも保存できます。保存のみの機能で、クラウドからの復元・自動同期・自動バックアップは行いません。復元はローカルバックアップのみです。</p>
+          <p id="cloud-backup-conn-status" class="cloud-backup-line">接続先: —</p>
+          <p id="cloud-backup-login-status" class="cloud-backup-line">ログイン状態: —</p>
+          <p id="cloud-backup-last" class="cloud-backup-line">最終クラウドバックアップ: —</p>
+
+          <div id="cloud-backup-login-form" class="form-row cloud-backup-login-form hidden">
+            <div class="form-group">
+              <label for="cloud-backup-email">メールアドレス</label>
+              <input type="email" id="cloud-backup-email" autocomplete="username">
+            </div>
+            <div class="form-group">
+              <label for="cloud-backup-password">パスワード</label>
+              <input type="password" id="cloud-backup-password" autocomplete="current-password">
+            </div>
+          </div>
+
+          <div class="data-mgmt-actions">
+            <button type="button" id="btn-cloud-login" class="btn btn-secondary hidden">ログイン</button>
+            <button type="button" id="btn-cloud-logout" class="btn btn-secondary hidden">ログアウト</button>
+            <button type="button" id="btn-cloud-backup" class="btn btn-primary hidden" disabled>クラウドへバックアップ</button>
+          </div>
+          <p id="cloud-backup-result" class="cloud-backup-result" aria-live="polite"></p>
         </div>
 
         <div class="card card-wide card-test-data">
@@ -3942,31 +3969,32 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.12.27"></script>
-  <script src="js/messages.js?v=4.12.27"></script>
-  <script src="js/demand-brain.js?v=4.12.27"></script>
-  <script src="js/demand-radar.js?v=4.12.27"></script>
-  <script src="js/sales-brain.js?v=4.12.27"></script>
-  <script src="js/management-brain.js?v=4.12.27"></script>
-  <script src="js/payment-brain.js?v=4.12.27"></script>
-  <script src="js/revenue-brain.js?v=4.12.27"></script>
-  <script src="js/revenue-summary-brain.js?v=4.12.27"></script>
-  <script src="js/reception-brain.js?v=4.12.27"></script>
-  <script src="js/map-brain.js?v=4.12.27"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.12.27"></script>
-  <script src="js/external-check-brain.js?v=4.12.27"></script>
-  <script src="js/action-brain.js?v=4.12.27"></script>
-  <script src="js/work-order-brain.js?v=4.12.27"></script>
-  <script src="js/follow-up-brain.js?v=4.12.27"></script>
-  <script src="js/work-completion-brain.js?v=4.12.27"></script>
-  <script src="js/profit-brain.js?v=4.12.27"></script>
-  <script src="js/analytics-brain.js?v=4.12.27"></script>
-  <script src="js/ad-bridge.js?v=4.12.27"></script>
-  <script src="js/monthly-results-brain.js?v=4.12.27"></script>
-  <script src="js/documents-brain.js?v=4.12.27"></script>
-  <script src="js/executive-brain.js?v=4.12.27"></script>
-  <script src="js/card-ocr.js?v=4.12.27"></script>
-  <script src="js/data-backup.js?v=4.12.27"></script>
-  <script src="js/app.js?v=4.12.27"></script>
+  <script src="js/storage.js?v=4.13.0"></script>
+  <script src="js/messages.js?v=4.13.0"></script>
+  <script src="js/demand-brain.js?v=4.13.0"></script>
+  <script src="js/demand-radar.js?v=4.13.0"></script>
+  <script src="js/sales-brain.js?v=4.13.0"></script>
+  <script src="js/management-brain.js?v=4.13.0"></script>
+  <script src="js/payment-brain.js?v=4.13.0"></script>
+  <script src="js/revenue-brain.js?v=4.13.0"></script>
+  <script src="js/revenue-summary-brain.js?v=4.13.0"></script>
+  <script src="js/reception-brain.js?v=4.13.0"></script>
+  <script src="js/map-brain.js?v=4.13.0"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.13.0"></script>
+  <script src="js/external-check-brain.js?v=4.13.0"></script>
+  <script src="js/action-brain.js?v=4.13.0"></script>
+  <script src="js/work-order-brain.js?v=4.13.0"></script>
+  <script src="js/follow-up-brain.js?v=4.13.0"></script>
+  <script src="js/work-completion-brain.js?v=4.13.0"></script>
+  <script src="js/profit-brain.js?v=4.13.0"></script>
+  <script src="js/analytics-brain.js?v=4.13.0"></script>
+  <script src="js/ad-bridge.js?v=4.13.0"></script>
+  <script src="js/monthly-results-brain.js?v=4.13.0"></script>
+  <script src="js/documents-brain.js?v=4.13.0"></script>
+  <script src="js/executive-brain.js?v=4.13.0"></script>
+  <script src="js/card-ocr.js?v=4.13.0"></script>
+  <script src="js/data-backup.js?v=4.13.0"></script>
+  <script src="js/budil-cloud.js?v=4.13.0"></script>
+  <script src="js/app.js?v=4.13.0"></script>
 </body>
 </html>

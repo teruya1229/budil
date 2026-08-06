@@ -5291,6 +5291,7 @@
     renderDataConsistencyCheck('data-consistency-check');
     renderBusinessReport('detail');
     renderSalesDemoSections();
+    renderCloudBackupStatus();
   }
 
   const BUSINESS_REPORT_PERIOD_LABELS = {
@@ -6206,7 +6207,150 @@
     const safeNormBtn = document.getElementById('btn-safe-normalize');
     if (safeNormBtn) safeNormBtn.addEventListener('click', runSafeFormatCorrectionUI);
 
+    initCloudBackupUI();
     renderDataManagement();
+  }
+
+  /**
+   * Budil v4.13.0 クラウドバックアップ基盤 Phase 1
+   * localStorageは正本のまま。DataBackup.exportPayload()/validatePayload()を
+   * そのまま再利用し、budil-backups Edge Functionへ保存するだけ（保存のみ、復元・自動同期は無し）。
+   * 接続先（production/staging）はBudilCloud側でホスト名から固定判定される。
+   */
+  function renderCloudBackupStatus() {
+    if (typeof BudilCloud === 'undefined') return;
+
+    const connEl = document.getElementById('cloud-backup-conn-status');
+    const loginEl = document.getElementById('cloud-backup-login-status');
+    const loginFormEl = document.getElementById('cloud-backup-login-form');
+    const loginBtn = document.getElementById('btn-cloud-login');
+    const logoutBtn = document.getElementById('btn-cloud-logout');
+    const backupBtn = document.getElementById('btn-cloud-backup');
+    const lastEl = document.getElementById('cloud-backup-last');
+
+    const available = BudilCloud.isAvailable();
+    const cfg = BudilCloud.getConfig();
+
+    if (connEl) {
+      connEl.textContent = '接続先: ' + (available && cfg ? cfg.label : '利用不可（この環境ではクラウドバックアップは使用できません）');
+    }
+
+    if (!available) {
+      if (loginFormEl) loginFormEl.classList.add('hidden');
+      if (loginBtn) loginBtn.classList.add('hidden');
+      if (logoutBtn) logoutBtn.classList.add('hidden');
+      if (backupBtn) { backupBtn.classList.add('hidden'); backupBtn.disabled = true; }
+      if (loginEl) loginEl.textContent = 'ログイン状態: —';
+      if (lastEl) lastEl.textContent = '最終クラウドバックアップ: —';
+      return;
+    }
+
+    const authState = BudilCloud.getAuthState();
+    const signedIn = !!authState.signedIn;
+
+    if (loginEl) loginEl.textContent = 'ログイン状態: ' + (signedIn ? 'ログイン済み' : '未ログイン');
+    if (loginFormEl) loginFormEl.classList.toggle('hidden', signedIn);
+    if (loginBtn) loginBtn.classList.toggle('hidden', signedIn);
+    if (logoutBtn) logoutBtn.classList.toggle('hidden', !signedIn);
+    if (backupBtn) {
+      backupBtn.classList.toggle('hidden', !signedIn);
+      backupBtn.disabled = !signedIn || BudilCloud.isBackupInFlight();
+    }
+    if (!signedIn && lastEl) lastEl.textContent = '最終クラウドバックアップ: —';
+  }
+
+  function refreshCloudLastBackupDisplay() {
+    const lastEl = document.getElementById('cloud-backup-last');
+    if (!lastEl || typeof BudilCloud === 'undefined' || !BudilCloud.isAvailable()) return;
+    const authState = BudilCloud.getAuthState();
+    if (!authState.signedIn) {
+      lastEl.textContent = '最終クラウドバックアップ: —';
+      return;
+    }
+    BudilCloud.fetchLatest().then(result => {
+      if (result.ok && result.latest) {
+        lastEl.textContent = '最終クラウドバックアップ: ' + DataBackup.formatBackupDate(result.latest.createdAt) +
+          '（snapshot ID: ' + result.latest.snapshotId + '）';
+      } else if (result.ok) {
+        lastEl.textContent = '最終クラウドバックアップ: まだありません';
+      }
+      // 通信失敗時は表示を変更しない（既存表示を維持、業務データには影響しない）
+    });
+  }
+
+  function initCloudBackupUI() {
+    if (typeof BudilCloud === 'undefined') return;
+
+    const loginBtn = document.getElementById('btn-cloud-login');
+    const logoutBtn = document.getElementById('btn-cloud-logout');
+    const backupBtn = document.getElementById('btn-cloud-backup');
+    const resultEl = document.getElementById('cloud-backup-result');
+    const emailEl = document.getElementById('cloud-backup-email');
+    const passwordEl = document.getElementById('cloud-backup-password');
+
+    function showResult(message, isError) {
+      if (!resultEl) return;
+      resultEl.textContent = message || '';
+      resultEl.classList.toggle('cloud-backup-result-error', !!isError);
+      resultEl.classList.toggle('cloud-backup-result-ok', !isError && !!message);
+    }
+
+    renderCloudBackupStatus();
+    refreshCloudLastBackupDisplay();
+
+    if (loginBtn) {
+      loginBtn.addEventListener('click', () => {
+        if (loginBtn.disabled) return;
+        const email = emailEl ? emailEl.value : '';
+        const password = passwordEl ? passwordEl.value : '';
+        loginBtn.disabled = true;
+        showResult('ログイン中…', false);
+        BudilCloud.login(email, password).then(result => {
+          loginBtn.disabled = false;
+          if (passwordEl) passwordEl.value = '';
+          if (!result.ok) {
+            showResult(result.message || 'ログインに失敗しました', true);
+            return;
+          }
+          showResult('ログインしました', false);
+          renderCloudBackupStatus();
+          refreshCloudLastBackupDisplay();
+        });
+      });
+    }
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        if (logoutBtn.disabled) return;
+        logoutBtn.disabled = true;
+        BudilCloud.logout().then(() => {
+          logoutBtn.disabled = false;
+          showResult('ログアウトしました', false);
+          renderCloudBackupStatus();
+        });
+      });
+    }
+
+    if (backupBtn) {
+      backupBtn.addEventListener('click', () => {
+        if (backupBtn.disabled || BudilCloud.isBackupInFlight()) return;
+        backupBtn.disabled = true;
+        showResult('クラウドへ保存中…', false);
+        BudilCloud.backupNow().then(result => {
+          renderCloudBackupStatus();
+          if (!result.ok) {
+            showResult(result.message || '保存に失敗しました', true);
+            return;
+          }
+          const lastEl = document.getElementById('cloud-backup-last');
+          if (lastEl) {
+            lastEl.textContent = '最終クラウドバックアップ: ' + DataBackup.formatBackupDate(result.createdAt) +
+              '（snapshot ID: ' + result.snapshotId + '）';
+          }
+          showResult('クラウドへ保存しました（snapshot ID: ' + result.snapshotId + '）', false);
+        });
+      });
+    }
   }
 
   function getRadarSnapshot() {
