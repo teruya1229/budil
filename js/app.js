@@ -4021,12 +4021,182 @@
     return m;
   }
 
+  function formatExpenseRevenueOptionLabel(record) {
+    const r = record || {};
+    const dateRaw = String(r.workDate || '').trim();
+    let dateLabel = dateRaw || '日付なし';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateRaw)) {
+      dateLabel = dateRaw.slice(0, 4) + '/' + dateRaw.slice(5, 7) + '/' + dateRaw.slice(8, 10);
+    }
+    const status = String(r.status || '').trim() || '状態なし';
+    const customer = String(r.customerName || '').trim() || '顧客名なし';
+    const service = String(r.service || '').trim() || 'サービスなし';
+    const amountLabel = typeof ProfitBrain !== 'undefined'
+      ? ProfitBrain.formatYen(Number(r.amount) || 0)
+      : ((Number(r.amount) || 0).toLocaleString('ja-JP') + '円');
+    return dateLabel + '｜' + status + '｜' + customer + '｜' + service + '｜' + amountLabel;
+  }
+
+  function getExpenseRevenueSelectCandidates(selectedId) {
+    const selected = String(selectedId || '').trim();
+    const records = (Storage.getRevenueRecords() || []).filter(r => r && r.id);
+    const isCancelled = (r) => {
+      const st = String(r.status || '').trim();
+      if (st === 'キャンセル') return true;
+      if (typeof RevenueBrain !== 'undefined' && typeof RevenueBrain.normalizeRevenueStatusForSave === 'function') {
+        return RevenueBrain.normalizeRevenueStatusForSave(st) === 'キャンセル';
+      }
+      return false;
+    };
+    const candidates = records.filter(r => !isCancelled(r));
+    candidates.sort((a, b) => {
+      const dateCmp = String(b.workDate || '').localeCompare(String(a.workDate || ''));
+      if (dateCmp) return dateCmp;
+      const aTs = String(a.updatedAt || a.createdAt || '');
+      const bTs = String(b.updatedAt || b.createdAt || '');
+      return bTs.localeCompare(aTs);
+    });
+    if (selected && !candidates.some(r => String(r.id) === selected)) {
+      const orphan = records.find(r => String(r.id) === selected);
+      if (orphan) candidates.unshift(orphan);
+    }
+    return candidates;
+  }
+
+  function populateExpenseRevenueSelect(selectEl, preferredSelectedId) {
+    if (!selectEl) return;
+    const selected = preferredSelectedId != null
+      ? String(preferredSelectedId)
+      : String(selectEl.value || '');
+    const candidates = getExpenseRevenueSelectCandidates(selected);
+    selectEl.innerHTML = '<option value="">未紐づけ（共通経費）</option>' + candidates.map(r =>
+      `<option value="${esc(r.id)}">${esc(formatExpenseRevenueOptionLabel(r))}</option>`
+    ).join('');
+    selectEl.value = selected;
+    if (selected && selectEl.value !== selected) {
+      // 候補外でも選択を落とさない（編集中の既存紐づけ維持）
+      const orphan = (Storage.getRevenueRecords() || []).find(r => String(r.id) === selected);
+      if (orphan) {
+        const opt = document.createElement('option');
+        opt.value = orphan.id;
+        opt.textContent = formatExpenseRevenueOptionLabel(orphan);
+        selectEl.appendChild(opt);
+        selectEl.value = selected;
+      }
+    }
+  }
+
+  function refreshExpenseRevenueSelects(preserveSelected) {
+    const daily = document.getElementById('daily-expense-revenue');
+    const profit = document.getElementById('profit-expense-revenue');
+    if (daily) {
+      populateExpenseRevenueSelect(daily, preserveSelected === false ? '' : daily.value);
+    }
+    if (profit) {
+      populateExpenseRevenueSelect(profit, preserveSelected === false ? '' : profit.value);
+    }
+  }
+
+  function getDailyExpenseCategories() {
+    return typeof ProfitBrain !== 'undefined' && ProfitBrain.DAILY_EXPENSE_CATEGORIES
+      ? ProfitBrain.DAILY_EXPENSE_CATEGORIES
+      : ['人件費', '薬剤・材料', '交通・燃料', '外注費', '広告費', '消耗品', 'その他'];
+  }
+
+  function populateInlineExpenseCategorySelect(selectId) {
+    const catEl = document.getElementById(selectId);
+    if (!catEl) return;
+    const current = catEl.value;
+    const categories = getDailyExpenseCategories();
+    catEl.innerHTML = categories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    if (current && categories.includes(current)) catEl.value = current;
+  }
+
+  function clearInlineExpenseFields(prefix) {
+    const amountEl = document.getElementById(prefix + '-inline-expense-amount');
+    const contentEl = document.getElementById(prefix + '-inline-expense-content');
+    const memoEl = document.getElementById(prefix + '-inline-expense-memo');
+    if (amountEl) amountEl.value = '';
+    if (contentEl) contentEl.value = '';
+    if (memoEl) memoEl.value = '';
+    populateInlineExpenseCategorySelect(prefix + '-inline-expense-category');
+  }
+
+  function readInlineExpenseInput(prefix) {
+    const amountRaw = String(document.getElementById(prefix + '-inline-expense-amount')?.value || '').trim();
+    const content = String(document.getElementById(prefix + '-inline-expense-content')?.value || '').trim();
+    const memo = String(document.getElementById(prefix + '-inline-expense-memo')?.value || '').trim();
+    const category = String(document.getElementById(prefix + '-inline-expense-category')?.value || '').trim()
+      || getDailyExpenseCategories()[0]
+      || 'その他';
+    const amount = amountRaw === '' ? null : Number(amountRaw);
+    return { amountRaw, amount, content, memo, category };
+  }
+
+  function validateInlineExpenseInput(input) {
+    const hasText = !!(input.content || input.memo);
+    if (input.amountRaw === '') {
+      if (hasText) {
+        return { ok: false, error: '経費の内容またはメモが入っています。経費金額を入力するか、内容・メモを空にしてください。' };
+      }
+      return { ok: true, shouldCreate: false };
+    }
+    if (!Number.isFinite(input.amount) || input.amount <= 0) {
+      return { ok: false, error: '経費金額は1円以上で入力してください。' };
+    }
+    return { ok: true, shouldCreate: true };
+  }
+
+  let inlineExpenseSaveGuard = false;
+
+  function saveInlineExpenseForRevenue(revenueId, workDate, input) {
+    const revId = String(revenueId || '').trim();
+    if (!revId) return { ok: false, error: 'missing_revenue_id' };
+    const created = Storage.addExpenseRecord({
+      date: workDate || TODAY(),
+      category: input.category || 'その他',
+      amount: Number(input.amount) || 0,
+      memo: buildDailyExpenseMemo(input.content, input.memo),
+      relatedRevenueId: revId,
+      relatedWorkOrderId: '',
+      paymentMethod: '',
+      taxIncluded: true,
+      isRecurring: false,
+      source: 'revenue-inline-expense'
+    });
+    return { ok: !!created, expense: created };
+  }
+
+  function updateRevenueLinkedExpenseSummary(revenueId) {
+    const el = document.getElementById('revenue-linked-expense-summary');
+    if (!el) return;
+    const revId = String(revenueId || '').trim();
+    if (!revId) {
+      el.classList.add('hidden');
+      el.textContent = '';
+      return;
+    }
+    const linked = typeof ProfitBrain !== 'undefined'
+      ? ProfitBrain.getExpensesForRevenue(revId, Storage.getExpenseRecords(), Storage.getWorkOrders())
+      : (Storage.getExpenseRecords() || []).filter(e => e && e.relatedRevenueId === revId);
+    const count = linked.length;
+    const total = typeof ProfitBrain !== 'undefined'
+      ? ProfitBrain.sumAmount(linked)
+      : linked.reduce((n, e) => n + (Number(e.amount) || 0), 0);
+    if (!count) {
+      el.classList.add('hidden');
+      el.textContent = '';
+      return;
+    }
+    const yen = typeof ProfitBrain !== 'undefined' ? ProfitBrain.formatYen(total) : (total.toLocaleString('ja-JP') + '円');
+    el.classList.remove('hidden');
+    el.textContent = `既存の紐づけ経費：${count}件 / 合計${yen}。下の入力は「追加する経費」です（空なら既存経費は変更しません）。`;
+  }
+
   function populateDailyExpenseCategorySelect() {
     const catEl = document.getElementById('daily-expense-category');
     if (!catEl || catEl.options.length) return;
-    const categories = typeof ProfitBrain !== 'undefined' && ProfitBrain.DAILY_EXPENSE_CATEGORIES
-      ? ProfitBrain.DAILY_EXPENSE_CATEGORIES
-      : ['人件費', '薬剤・材料', '交通・燃料', '外注費', '広告費', '消耗品', 'その他'];
+    const categories = getDailyExpenseCategories();
     catEl.innerHTML = categories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
   }
 
@@ -4036,6 +4206,7 @@
     const dateEl = document.getElementById('daily-expense-date');
     if (dateEl) dateEl.value = TODAY();
     populateDailyExpenseCategorySelect();
+    populateExpenseRevenueSelect(document.getElementById('daily-expense-revenue'), '');
   }
 
   function handleDailyExpenseQuickSubmit(e) {
@@ -4045,6 +4216,7 @@
     const content = document.getElementById('daily-expense-content').value.trim();
     const amount = Number(document.getElementById('daily-expense-amount').value) || 0;
     const memoExtra = document.getElementById('daily-expense-memo').value.trim();
+    const relatedRevenueId = document.getElementById('daily-expense-revenue')?.value || '';
     if (!amount || amount <= 0) {
       alert('金額を入力してください（0円以下は登録できません）。');
       return;
@@ -4056,12 +4228,14 @@
       amount,
       paymentMethod: '現金',
       memo,
+      relatedRevenueId,
       taxIncluded: true,
       isRecurring: false,
       source: 'daily-action-expense'
     });
     clearDailyExpenseForm();
     showDailyExpenseSavedNotice();
+    refreshExpenseRevenueSelects(true);
     renderExecutiveHome();
     renderProfitView();
   }
@@ -4143,6 +4317,7 @@
     renderDailyPrioritySection();
     renderDailyRevenueConfirmationQueue();
     populateDailyExpenseCategorySelect();
+    populateExpenseRevenueSelect(document.getElementById('daily-expense-revenue'));
     const scheduleEl = document.getElementById('daily-upcoming-schedule');
     if (scheduleEl) {
       scheduleEl.innerHTML = renderDailyUpcomingScheduleHtml({ compact: false, limit: 3 });
@@ -4257,6 +4432,9 @@
       expenseForm.addEventListener('submit', handleDailyExpenseQuickSubmit);
     }
     populateDailyExpenseCategorySelect();
+    populateExpenseRevenueSelect(document.getElementById('daily-expense-revenue'));
+    populateInlineExpenseCategorySelect('revenue-inline-expense-category');
+    populateInlineExpenseCategorySelect('work-completion-inline-expense-category');
     const saveBtn = document.getElementById('btn-daily-task-edit-save');
     if (saveBtn) saveBtn.addEventListener('click', handleDailyTaskEditSave);
     const cancelBtn = document.getElementById('btn-daily-task-edit-cancel');
@@ -10923,6 +11101,7 @@
         .map(m => `<option value="${esc(m.value)}">${esc(m.label)}</option>`).join('');
       methodEl.innerHTML = '<option value="">未選択</option>' + basic + extra;
     }
+    populateInlineExpenseCategorySelect('work-completion-inline-expense-category');
   }
 
   function isWorkOrderRevenueLocked(wo) {
@@ -11012,6 +11191,7 @@
     document.getElementById('work-completion-payment-concern').checked = defaults.paymentConcern;
     document.getElementById('work-completion-actual-memo').value = defaults.additionalMemo;
     document.getElementById('work-completion-follow-memo').value = defaults.followMemo;
+    clearInlineExpenseFields('work-completion');
     const linkedLead = resolveLeadForWorkOrder(wo);
     const leadIdEl = document.getElementById('work-completion-lead-id');
     const noteEl = document.getElementById('work-completion-customer-asset-note');
@@ -11029,6 +11209,7 @@
 
   function closeWorkCompletionModal() {
     document.getElementById('work-completion-modal').classList.add('hidden');
+    clearInlineExpenseFields('work-completion');
   }
 
   function openWorkCancelModal(workOrderId) {
@@ -11054,7 +11235,7 @@
     document.getElementById('work-cancel-modal').classList.add('hidden');
   }
 
-  function submitPastRecoveryFromModal(wo, input) {
+  function submitPastRecoveryFromModal(wo, input, inlineExpense) {
     const estimate = wo.estimateAmount || 0;
     const diffMsg = estimate && estimate !== input.amount
       ? `\n予定金額 ${WorkOrderBrain.formatYen(estimate)} → 実績 ${WorkOrderBrain.formatYen(input.amount)}`
@@ -11099,15 +11280,31 @@
     }
     const newRecord = (result.addedRecords && result.addedRecords[0]) || null;
     if (leadIdForAsset) saveCustomerAssetMemoToLead(leadIdForAsset, assetFields);
+    let expenseOk = true;
+    if (newRecord && inlineExpense && inlineExpense.shouldCreate) {
+      const expResult = saveInlineExpenseForRevenue(newRecord.id, input.workDate || newRecord.workDate, inlineExpense.input);
+      expenseOk = !!(expResult && expResult.ok);
+      if (!expenseOk) {
+        alert('売上は保存済みです。経費のみ未保存です。利益管理の経費入力から同じ売上へ紐づけて登録してください。');
+      }
+    }
+    clearInlineExpenseFields('work-completion');
     closeWorkCompletionModal();
     refreshAfterWorkCompletion();
+    refreshExpenseRevenueSelects(true);
     renderDailyRevenueConfirmationQueue();
-    if (newRecord) showRevenueConfirmedNotice(newRecord);
+    if (newRecord) {
+      if (expenseOk && inlineExpense && inlineExpense.shouldCreate) {
+        showAppToast('売上と経費を保存しました');
+      }
+      showRevenueConfirmedNotice(newRecord);
+    }
     return true;
   }
 
   function submitWorkCompletion(e) {
     e.preventDefault();
+    if (inlineExpenseSaveGuard) return;
     const workOrderId = document.getElementById('work-completion-wo-id').value;
     const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
     if (!wo) return;
@@ -11143,9 +11340,15 @@
       alert('入金日（または入金予定日）を入力してください。');
       return;
     }
+    const inlineInput = readInlineExpenseInput('work-completion');
+    const inlineCheck = validateInlineExpenseInput(inlineInput);
+    if (!inlineCheck.ok) {
+      alert(inlineCheck.error);
+      return;
+    }
     const queueSource = document.getElementById('work-completion-queue-source')?.value || 'work-order';
     if (queueSource === 'past-recovery') {
-      submitPastRecoveryFromModal(wo, input);
+      submitPastRecoveryFromModal(wo, input, { shouldCreate: inlineCheck.shouldCreate, input: inlineInput });
       return;
     }
     const estimate = wo.estimateAmount || 0;
@@ -11156,18 +11359,36 @@
 
     const revenuePayload = WorkCompletionBrain.createRevenuePayloadFromWorkOrder(wo, input);
     if (!confirmRevenueSaveWithDuplicateCheck(revenuePayload, '')) return;
-    const leadIdForAsset = document.getElementById('work-completion-lead-id')?.value || '';
-    const assetFields = readCustomerAssetMemoFromForm('work-completion');
-    const newRecord = Storage.addRevenueRecord(revenuePayload);
-    if (leadIdForAsset) saveCustomerAssetMemoToLead(leadIdForAsset, assetFields);
-    const woPatch = WorkCompletionBrain.markWorkOrderCompleted(wo, newRecord, input);
-    Storage.updateWorkOrder(workOrderId, woPatch);
-    const intakeId = getWorkOrderReceptionId(wo);
-    if (intakeId) linkReceptionToRevenue(intakeId, newRecord.id, workOrderId);
-    closeWorkCompletionModal();
-    refreshAfterWorkCompletion();
-    renderDailyRevenueConfirmationQueue();
-    showRevenueConfirmedNotice(newRecord);
+    inlineExpenseSaveGuard = true;
+    try {
+      const leadIdForAsset = document.getElementById('work-completion-lead-id')?.value || '';
+      const assetFields = readCustomerAssetMemoFromForm('work-completion');
+      const newRecord = Storage.addRevenueRecord(revenuePayload);
+      if (leadIdForAsset) saveCustomerAssetMemoToLead(leadIdForAsset, assetFields);
+      const woPatch = WorkCompletionBrain.markWorkOrderCompleted(wo, newRecord, input);
+      Storage.updateWorkOrder(workOrderId, woPatch);
+      const intakeId = getWorkOrderReceptionId(wo);
+      if (intakeId) linkReceptionToRevenue(intakeId, newRecord.id, workOrderId);
+      let expenseOk = true;
+      if (inlineCheck.shouldCreate) {
+        const expResult = saveInlineExpenseForRevenue(newRecord.id, input.workDate || newRecord.workDate, inlineInput);
+        expenseOk = !!(expResult && expResult.ok);
+        if (!expenseOk) {
+          alert('売上は保存済みです。経費のみ未保存です。利益管理の経費入力から同じ売上へ紐づけて登録してください。');
+        }
+      }
+      clearInlineExpenseFields('work-completion');
+      closeWorkCompletionModal();
+      refreshAfterWorkCompletion();
+      refreshExpenseRevenueSelects(true);
+      renderDailyRevenueConfirmationQueue();
+      if (expenseOk && inlineCheck.shouldCreate) {
+        showAppToast('売上と経費を保存しました');
+      }
+      showRevenueConfirmedNotice(newRecord);
+    } finally {
+      inlineExpenseSaveGuard = false;
+    }
   }
 
   function submitWorkCancel(e) {
@@ -13380,7 +13601,7 @@
       return;
     }
     el.innerHTML = `<table class="profit-table"><thead><tr>
-      <th>売上日</th><th>顧客名</th><th>サービス</th><th>売上</th><th>支出</th><th>粗利</th><th>粗利率</th><th>注意</th>
+      <th>売上日</th><th>顧客名</th><th>サービス</th><th>売上</th><th>支出</th><th>粗利</th><th>粗利率（経費反映後）</th><th>注意</th>
     </tr></thead><tbody>${rows.map(r => `<tr>
       <td>${esc(r.workDate || '—')}</td>
       <td>${esc(r.customerName || '—')}</td>
@@ -13424,7 +13645,7 @@
       return;
     }
     el.innerHTML = `<table class="profit-table"><thead><tr>
-      <th>サービス</th><th>件数</th><th>売上合計</th><th>支出</th><th>粗利</th><th>粗利率</th><th>判断</th>
+      <th>サービス</th><th>件数</th><th>売上合計</th><th>支出</th><th>粗利</th><th>粗利率（経費反映後）</th><th>判断</th>
     </tr></thead><tbody>${rows.map(r => `<tr>
       <td>${esc(r.service)}</td>
       <td>${r.revenueCount || 0}</td>
@@ -13528,12 +13749,7 @@
     }
     const revEl = document.getElementById('profit-expense-revenue');
     if (revEl) {
-      const cur = revEl.value;
-      const records = Storage.getRevenueRecords().slice().sort((a, b) => (b.workDate || '').localeCompare(a.workDate || ''));
-      revEl.innerHTML = '<option value="">未選択</option>' + records.map(r =>
-        `<option value="${esc(r.id)}">${esc((r.workDate || '') + ' ' + (r.customerName || '') + ' ' + ProfitBrain.formatYen(r.amount))}</option>`
-      ).join('');
-      revEl.value = cur;
+      populateExpenseRevenueSelect(revEl, revEl.value);
     }
     const woEl = document.getElementById('profit-expense-work-order');
     if (woEl) {
@@ -20031,6 +20247,8 @@
     fillRevenueLeadSelect('');
     toggleRevenueLeadOptions();
     toggleRevenueOpenLeadButton();
+    clearInlineExpenseFields('revenue');
+    updateRevenueLinkedExpenseSummary('');
     document.getElementById('revenue-form-title').textContent = '売上明細を手入力';
     setRevenueFormIntakeNote('');
     setRevenueFormSubmitLabel('保存');
@@ -20066,6 +20284,8 @@
     fillRevenueLeadSelect(record.leadId || '');
     document.getElementById('revenue-mark-won').checked = false;
     toggleRevenueLeadOptions();
+    clearInlineExpenseFields('revenue');
+    updateRevenueLinkedExpenseSummary(id);
     document.getElementById('revenue-form-title').textContent = '売上編集';
     setRevenueFormIntakeNote('');
     setRevenueFormSubmitLabel('保存');
@@ -20947,9 +21167,16 @@
 
   function handleRevenueSubmit(e) {
     e.preventDefault();
+    if (inlineExpenseSaveGuard) return;
     const data = getRevenueFormData();
     if (!data.customerName) {
       alert('顧客名は必須です');
+      return;
+    }
+    const inlineInput = readInlineExpenseInput('revenue');
+    const inlineCheck = validateInlineExpenseInput(inlineInput);
+    if (!inlineCheck.ok) {
+      alert(inlineCheck.error);
       return;
     }
     const markWon = false;
@@ -20986,45 +21213,66 @@
       data.sourceIntakeId = intakeId;
     }
     const linkedDocId = pendingLinkedDocumentId || data.linkedDocumentId || '';
-    let newRecord = null;
-    if (id) {
-      Storage.updateRevenueRecord(id, data);
-    } else {
-      if (!confirmRevenueSaveWithDuplicateCheck(data, '')) return;
-      newRecord = Storage.addRevenueRecord(data);
+    if (!id && !confirmRevenueSaveWithDuplicateCheck(data, '')) return;
+    inlineExpenseSaveGuard = true;
+    let expenseOk = true;
+    let revId = id;
+    try {
+      let newRecord = null;
+      if (id) {
+        Storage.updateRevenueRecord(id, data);
+      } else {
+        newRecord = Storage.addRevenueRecord(data);
+        revId = newRecord && newRecord.id;
+      }
+      if (linkedDocId && revId) {
+        PaymentBrain.linkRevenueAndDocument(revId, linkedDocId, Storage);
+      }
+      if (revId) {
+        PaymentBrain.syncLinkedPayment({
+          sourceType: 'revenue',
+          sourceId: revId,
+          paymentPatch: data,
+          storage: Storage
+        });
+      }
+      if (workOrderId && revId) {
+        Storage.updateWorkOrder(workOrderId, { actualRevenueId: revId });
+        pendingRevenueWorkOrderId = '';
+      }
+      if (revId && intakeId) linkReceptionToRevenue(intakeId, revId, workOrderId);
+      pendingRevenueIntakeId = '';
+      pendingLinkedDocumentId = '';
+      if (markWon && leadId) {
+        const updated = updateLeadStatusFromRevenue(leadId);
+        if (updated) renderLeadsTable();
+      }
+      if (inlineCheck.shouldCreate && revId) {
+        const expResult = saveInlineExpenseForRevenue(revId, data.workDate, inlineInput);
+        expenseOk = !!(expResult && expResult.ok);
+        if (!expenseOk) {
+          alert('売上は保存済みです。経費のみ未保存です。利益管理の経費入力から同じ売上へ紐づけて登録してください。');
+        }
+      }
+      resetRevenueForm();
+      refreshExpenseRevenueSelects(true);
+      renderRevenueView();
+      renderReceivablesView();
+      renderDocumentsView();
+      renderWorkOrderView();
+      renderReceptionView();
+      renderDashboard();
+      renderProfitView();
+      let saveMsg = id ? '売上を更新しました。売上集計を確認してください。' : '売上を保存しました。売上集計を確認してください。';
+      if (inlineCheck.shouldCreate && expenseOk) {
+        saveMsg = id
+          ? '売上を更新し、追加経費を保存しました。'
+          : '売上と経費を保存しました。';
+      }
+      navigateAfterAction('revenue-save', saveMsg);
+    } finally {
+      inlineExpenseSaveGuard = false;
     }
-    const revId = id || (newRecord && newRecord.id);
-    if (linkedDocId && revId) {
-      PaymentBrain.linkRevenueAndDocument(revId, linkedDocId, Storage);
-    }
-    if (revId) {
-      PaymentBrain.syncLinkedPayment({
-        sourceType: 'revenue',
-        sourceId: revId,
-        paymentPatch: data,
-        storage: Storage
-      });
-    }
-    if (workOrderId && revId) {
-      Storage.updateWorkOrder(workOrderId, { actualRevenueId: revId });
-      pendingRevenueWorkOrderId = '';
-    }
-    if (revId && intakeId) linkReceptionToRevenue(intakeId, revId, workOrderId);
-    pendingRevenueIntakeId = '';
-    pendingLinkedDocumentId = '';
-    if (markWon && leadId) {
-      const updated = updateLeadStatusFromRevenue(leadId);
-      if (updated) renderLeadsTable();
-    }
-    resetRevenueForm();
-    renderRevenueView();
-    renderReceivablesView();
-    renderDocumentsView();
-    renderWorkOrderView();
-    renderReceptionView();
-    renderDashboard();
-    const saveMsg = id ? '売上を更新しました。売上集計を確認してください。' : '売上を保存しました。売上集計を確認してください。';
-    navigateAfterAction('revenue-save', saveMsg);
   }
 
   function initRevenue() {
@@ -21033,6 +21281,7 @@
     fillRevenueLeadSelect('');
     toggleRevenueLeadOptions();
     toggleRevenueOpenLeadButton();
+    populateInlineExpenseCategorySelect('revenue-inline-expense-category');
     document.getElementById('revenue-form').addEventListener('submit', handleRevenueSubmit);
     document.getElementById('btn-revenue-cancel').addEventListener('click', resetRevenueForm);
     document.getElementById('revenue-payment-method')?.addEventListener('change', () => {

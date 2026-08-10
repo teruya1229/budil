@@ -1,5 +1,18 @@
 ﻿# Budil status
 
+## v4.13.3 実装内容（売上と経費の紐づけ・売上確定時の経費同時入力）
+
+- 背景: 毎日の経費入力に売上紐づけがなく未紐づけ経費が増えていた。売上確定時に経費を同時入力し、売上別利益へ正しく反映したい
+- 実装:
+  - 毎日の経費入力に常時表示の「紐づけ売上（任意）」を追加（`#daily-expense-revenue`）
+  - 利益管理の`#profit-expense-revenue`を詳細設定外の常時表示へ移動（作業予定・営業先は詳細設定維持）
+  - 主売上確定モーダル／売上手入力・編集に「この売上の経費（任意）」を追加し、金額入力時のみ1件を同時登録
+  - `ProfitBrain.computeRevenueRowProfit()`の表示粗利率を経費反映後に変更（保存済み`grossMarginRate`＝依頼元取り分率の意味は不変）
+  - 売上削除時は経費を残し`relatedRevenueId`のみ解除（安全バックアップ・operation log付き）
+- 新規 `scripts/verify-v4133-revenue-linked-expense-flow.mjs`。`verify-v4105`の関連売上詳細設定assertのみ新方針へ更新。現行合格は`node scripts/verify-current.mjs`（91本）
+- 既存経費の自動紐づけ・一括変換なし。山城美穂様の予定消失は別件
+- 物理スマートフォン実機確認は未完了
+
 ## v4.13.2 実装内容（お礼LINE文へGoogle口コミURL追加）
 
 - 背景: 作業後フォローの「お礼LINE文」に、既存のGoogle口コミURLを表示・コピーできるようにする

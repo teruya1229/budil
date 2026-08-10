@@ -211,22 +211,26 @@ const ProfitBrain = {
       const marginProfit = RevenueBrain.computeMarginProfit(revenueAmount, rate);
       const deductionAmount = Math.max(0, revenueAmount - marginProfit);
       const grossProfit = marginProfit - exp;
-      const grossRate = revenueAmount > 0 ? (marginProfit / revenueAmount) * 100 : 0;
+      // 表示用粗利率は経費反映後。保存済みgrossMarginRate（依頼元取り分率）の意味は変えない。
+      const expenseAdjustedGrossRate = revenueAmount > 0 ? (grossProfit / revenueAmount) * 100 : 0;
       return {
         marginProfit,
         deductionAmount,
         grossProfit,
-        grossRate,
+        grossRate: expenseAdjustedGrossRate,
+        expenseAdjustedGrossRate,
         marginRate: rate,
         marginUnset: false
       };
     }
     const grossProfit = revenueAmount - exp;
+    const expenseAdjustedGrossRate = revenueAmount > 0 ? (grossProfit / revenueAmount) * 100 : 0;
     return {
       marginProfit: revenueAmount,
       deductionAmount: 0,
       grossProfit,
-      grossRate: revenueAmount > 0 ? (grossProfit / revenueAmount) * 100 : 0,
+      grossRate: expenseAdjustedGrossRate,
+      expenseAdjustedGrossRate,
       marginRate: null,
       marginUnset: revenueAmount > 0 && exp <= 0
     };
@@ -281,6 +285,7 @@ const ProfitBrain = {
         deductionAmount: profit.deductionAmount,
         grossProfit: profit.grossProfit,
         grossRate: profit.grossRate,
+        expenseAdjustedGrossRate: profit.expenseAdjustedGrossRate,
         marginRate: profit.marginRate,
         marginUnset: profit.marginUnset,
         leadId: r.leadId || ''

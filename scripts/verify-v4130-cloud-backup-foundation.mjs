@@ -174,13 +174,13 @@ assert(currentScripts.includes('verify-v4130-cloud-backup-foundation.mjs'), 'thi
 assert(currentRunner.includes('verify-v4(10|11|12|13)'), 'verify-current.mjs must still target the v4.10–v4.13 pattern (no narrowing)');
 
 console.log('== UI: バージョン・cache buster整合 ==');
-assert(html.includes('AI経営脳みそ v4.13.2'), 'index header version must be v4.13.2');
-assert(html.includes('js/budil-cloud.js?v=4.13.2'), 'budil-cloud.js cache buster must be v4.13.2');
-assert(storage.includes("BUDIL_VERSION: 'v4.13.2'"), 'storage.js version must be v4.13.2');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.2'"), 'data-backup.js version must be v4.13.2');
+assert(html.includes('AI経営脳みそ v4.13.3'), 'index header version must be v4.13.3');
+assert(html.includes('js/budil-cloud.js?v=4.13.3'), 'budil-cloud.js cache buster must be v4.13.3');
+assert(storage.includes("BUDIL_VERSION: 'v4.13.3'"), 'storage.js version must be v4.13.3');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.3'"), 'data-backup.js version must be v4.13.3');
 
 console.log('== UI: 390pxで横スクロールを増やさない ==');
 assert(/\.card-cloud-backup/.test(css), 'css/style.css must define styling scoped to .card-cloud-backup');
 assert(!/\.card-cloud-backup[^{]*\{[^}]*overflow-x:\s*scroll/i.test(css), 'cloud backup card must not force horizontal scroll');
 
-console.log(`\nAll v4.13.2 cloud-backup-foundation checks passed.`);
+console.log(`\nAll v4.13.3 cloud-backup-foundation checks passed.`);

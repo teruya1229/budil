@@ -17,14 +17,15 @@
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` の依存関係（googleapis 等）。依存は `hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（90本）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（91本）
 - **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
 
 ## 現在の最新状態
 
 | 項目 | 値 |
 |------|-----|
-| 最新バージョン | v4.13.2 |
+| 最新バージョン | v4.13.3 |
+| v4.13.3 売上と経費の紐づけ・売上確定時の経費同時入力 | 毎日/利益管理の関連売上常時表示、売上確定時の経費1件同時登録、経費反映後利益率表示、売上削除時のrelatedRevenueId解除。grossMarginRate意味不変。自動紐づけなし。verify-current 91本。物理スマホ実機確認は未完了 |
 | v4.13.2 お礼LINE文へGoogle口コミURL追加 | `generateThanksMessage()` のみ最小修正。既存 `getReviewUrl()` 経由で口コミURLを followUpMemo の後・事業者名の前に挿入。同一URLの二重表示なし。`generateReviewRequest()` 不変。自動送信なし。verify-current 90本。物理スマホ実機確認は未完了 |
 | v4.13.1 売上確定待ち予定の直受け追加複製 | 元請け案件の当日追加作業用。受付・予定確認の作業予定フォームに「直受け追加で複製」を追加。複製ボタンは即保存しない（表示フォーム項目だけを引き継いだ未保存の新規draftへ切替）。元案件不変。依頼元を直受け・状態confirmed・関連受付/営業先空。intake/lead/calendar/candidate/revenueリンクはコピーしない。`RevenueBrain.SOURCES`に直受け追加（SOURCES[0]=LP維持）、直受け100%。Googleカレンダー正本維持、複製分の自動カレンダー登録なし、localStorage正本維持、新規localStorageキーなし。verify-current 89本。物理スマホ実機確認は未完了 |
 | v4.13.0 クラウドバックアップ基盤 Phase 1（staging/production分離） | production alias=既存`ai-bantou-dev`（変更なし）、staging=新規`bc-platform-staging`（同組織・`ap-northeast-1`・Micro、Budil専用、本番データ非コピー）。Supabase migration/Edge Functionの正本は`C:\dev\ai-bantou-app`（Budilへ複製なし）。追加migration `public.budil_snapshots`（RLS有効、`service_role`にSELECT/INSERTのみGRANT、UNIQUE(tenant_id, idempotency_key)、更新/削除APIなし）。追加Edge Function `budil-backups`（`verify_jwt=true`、make-proxyと同じJWT/membership/tenant activeパターン再利用、tenant_idはサーバー確定、content_hashサーバー再計算、idempotency一致は既存返却・hash不一致409、CORS完全一致3origin限定）。frontendは`js/budil-cloud.js`新規追加、データ管理画面で「ローカルバックアップ」「クラウドバックアップ」を分離表示。接続先はホスト名で固定（`teruya1229.github.io`→production、`localhost`/`127.0.0.1`→staging、未知originはfail closed）。frontendはpublishable keyのみ保持、secret/service_role keyなし。`DataBackup.exportPayload()/validatePayload()`を再利用し保存のみ（自動同期・自動復元・クラウド復元・双方向同期なし）。localStorageは正本のまま不変、セッションは`sessionStorage`のみ。staging実通信11項目・localhost統合テスト（ログイン・保存・latest・同一tick二重クリック防止1回のみ・ログアウト・390px横スクロールなし・Consoleエラーなし・staging URL以外への通信なし）全合格。テストfixture（Auth user A/B/C・tenant A/B・snapshot）は完全削除・残存なし確認済み。新規`scripts/verify-v4130-cloud-backup-foundation.mjs`。既存verify（v4.10-v4.13系）を`v4.13.0`へバージョンassert更新、verify-current 88/88合格。production反映はstaging合格後のみ、`budil_snapshots` migrationと`budil-backups` Functionのみを対象（make-proxy再deploy・config全体push・secrets変更なし）。物理スマホ実機確認は未完了 |

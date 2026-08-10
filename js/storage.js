@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.13.2',
+  BUDIL_VERSION: 'v4.13.3',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -809,6 +809,28 @@ const Storage = {
       this.saveDocuments(nextDocuments);
     }
     this.saveRevenueRecords(nextRevenues);
+
+    // 売上削除成功後のみ：紐づく経費自体は残し、relatedRevenueId だけ解除する
+    const beforeExpenses = this.getExpenseRecords();
+    const nowIso = new Date().toISOString();
+    let unlinkedExpenseCount = 0;
+    const nextExpenses = beforeExpenses.map(e => {
+      if (!e || String(e.relatedRevenueId || '').trim() !== revId) return e;
+      unlinkedExpenseCount += 1;
+      return { ...e, relatedRevenueId: '', updatedAt: nowIso };
+    });
+    let expenseUnlinkBackup = null;
+    if (unlinkedExpenseCount > 0) {
+      expenseUnlinkBackup = this.createSafetyBackup({
+        reason: 'before_unlink_expense_from_deleted_revenue',
+        targetKey: this.KEYS.EXPENSE_RECORDS,
+        targetId: revId,
+        beforeCount: beforeExpenses.length,
+        data: beforeExpenses
+      });
+      this.saveExpenseRecords(nextExpenses);
+    }
+
     this.recordOperationLog({
       action: 'delete_revenue',
       targetKey: this.KEYS.REVENUE_RECORDS,
@@ -816,9 +838,18 @@ const Storage = {
       beforeCount: beforeRevenues.length,
       afterCount: nextRevenues.length,
       safeBackupId: revenueBackup.id,
-      linkedDocumentBackupId: documentBackup ? documentBackup.id : ''
+      linkedDocumentBackupId: documentBackup ? documentBackup.id : '',
+      unlinkedExpenseCount,
+      expenseUnlinkBackupId: expenseUnlinkBackup ? expenseUnlinkBackup.id : ''
     });
-    return { ok: true, targetId: revId, beforeCount: beforeRevenues.length, afterCount: nextRevenues.length, safeBackupId: revenueBackup.id };
+    return {
+      ok: true,
+      targetId: revId,
+      beforeCount: beforeRevenues.length,
+      afterCount: nextRevenues.length,
+      safeBackupId: revenueBackup.id,
+      unlinkedExpenseCount
+    };
   },
 
   getDailyActionTasks() {

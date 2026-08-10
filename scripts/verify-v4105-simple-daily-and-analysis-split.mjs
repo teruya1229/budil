@@ -24,7 +24,7 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.13.2'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('v4.13.3'), 'index.html should show v4.12.26');
 assert(indexHtml.includes('id="view-revenue-analysis"'), 'revenue analysis view should exist');
 assert(indexHtml.includes('売上分析'), 'nav or header should link to 売上分析');
 
@@ -53,8 +53,21 @@ assert(execHomeChunk.includes('exec-home-revenue-profit'), 'executive home shoul
 assert(!execHomeChunk.includes('exec-home-section-lead'), 'executive home should not show always-visible section leads');
 
 assert(indexHtml.includes('<details class="card card-wide card-management-comment'), 'revenue management comment should be collapsible');
-assert(indexHtml.includes('expense-advanced-settings'), 'expense linking fields should be in advanced settings');
-assert(!indexHtml.includes('label for="profit-expense-revenue"') || indexHtml.includes('expense-advanced-settings'), 'expense revenue link should be in advanced block');
+assert(indexHtml.includes('expense-advanced-settings'), 'expense work-order/lead linking stays in advanced settings');
+assert(indexHtml.includes('label for="profit-expense-revenue"'), 'profit expense revenue link label exists');
+{
+  const formMatch = indexHtml.match(/<form id="profit-expense-form"[\s\S]*?<\/form>/);
+  assert(!!formMatch, 'profit-expense-form exists');
+  const formHtml = formMatch[0];
+  const revIdx = formHtml.indexOf('id="profit-expense-revenue"');
+  const advIdx = formHtml.indexOf('expense-advanced-settings');
+  assert(revIdx >= 0, 'profit-expense-revenue exists in profit expense form');
+  assert(advIdx >= 0, 'expense-advanced-settings remains in profit expense form');
+  assert(revIdx < advIdx, 'related revenue select is always visible before advanced settings');
+  assert(formHtml.includes('関連作業予定') && formHtml.includes('関連営業先'), 'work-order/lead links remain available');
+  assert(!/<details class="expense-advanced-settings">[\s\S]*id="profit-expense-revenue"/.test(formHtml),
+    'profit-expense-revenue is not inside expense-advanced-settings');
+}
 
 assert(appJs.includes('renderMonthlyReconciliationActionCard'), 'app should render reconciliation action card');
 assert(appJs.includes('btn-monthly-reconciliation-add'), 'app should offer add-diff button');

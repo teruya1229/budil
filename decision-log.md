@@ -2,6 +2,32 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.13.3 売上と経費の紐づけ・売上確定時の経費同時入力（2026-08-10）
+
+**日付**: 2026-08-10
+
+**背景**: v4.10.5では経費の売上紐づけ欄を詳細設定へ退避したが、実運用で未紐づけ経費が増えた。ユーザー明示指示により、関連売上だけを常時表示へ戻し、売上確定時に経費1件を同時登録できるようにする。
+
+**判断内容**:
+- 関連売上欄だけ方針変更し、作業予定・営業先紐づけは詳細設定のまま維持する
+- 共通経費（未紐づけ）は個別売上へ自動配賦しない。月合計では当月経費全件を1回だけ控除する
+- 売上確定時の同時登録経費は1件まで。複数経費は利益管理／毎日の経費入力から同一売上へ追加紐づけする
+- `grossMarginRate`（依頼元取り分率）の保存意味は変えず、表示用の経費反映後利益率を別計算する
+- 既存経費・売上の日付/金額からの自動紐づけや一括変換は行わない
+- 売上削除時は経費レコードを残し、`relatedRevenueId`だけ解除する
+
+**変更ファイル**:
+- `index.html` / `css/style.css` / `js/app.js` / `js/profit-brain.js` / `js/storage.js` / `js/data-backup.js`
+- `scripts/verify-v4133-revenue-linked-expense-flow.mjs`（新規）
+- `scripts/verify-v4105-simple-daily-and-analysis-split.mjs`（関連売上常時表示assertのみ更新）
+- `scripts/verify-current.mjs` および既存verifyの現行バージョンassert
+- `status.md` / `handoff.md` / `decision-log.md`
+
+**確認結果**（2026-08-10）:
+- verify-current 91/91合格（既存90本＋新規`verify-v4133-revenue-linked-expense-flow.mjs`。`verify-v4105`の関連売上assertのみ新方針へ更新、他は緩和なし）
+- localhost別origin（`http://127.0.0.1:8765`）架空fixture確認: 売上選択（未紐づけ先頭・キャンセル除外・日付降順・ラベル）、毎日経費のrelatedRevenueId保存、利益管理関連売上常時表示、売上フォーム同時経費1件（10000/80/2000→利益6000・率60・marginRate80）、売上削除時経費残存＋リンク解除、PC/390px横スクロールなし、Console errorなし。fixture残存0
+- 物理スマートフォン実機確認は未完了
+
 ## v4.13.2 お礼LINE文へGoogle口コミURL追加（2026-08-10）
 
 **日付**: 2026-08-10
