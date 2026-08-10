@@ -56,12 +56,12 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.13.0'), 'index.html should show v4.12.26');
-assert(indexHtml.includes('js/app.js?v=4.13.0'), 'app.js cache buster should be v4.12.26');
-assert(indexHtml.includes('js/storage.js?v=4.13.0'), 'storage cache buster should be v4.12.26');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.0'"), 'storage version should be v4.12.26');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.13.0'"), 'data-backup version should be v4.12.26');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.0'"), 'verify-current EXPECTED_VERSION should be v4.12.26');
+assert(indexHtml.includes('v4.13.1'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('js/app.js?v=4.13.1'), 'app.js cache buster should be v4.12.26');
+assert(indexHtml.includes('js/storage.js?v=4.13.1'), 'storage cache buster should be v4.12.26');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.1'"), 'storage version should be v4.12.26');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.13.1'"), 'data-backup version should be v4.12.26');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.1'"), 'verify-current EXPECTED_VERSION should be v4.12.26');
 assert(!indexHtml.includes('?v=4.12.23'), 'old cache buster v4.12.23 should be gone');
 assert(statusMd.includes('v4.12.25'), 'status.md should document v4.12.25');
 assert(handoffMd.includes('v4.12.25'), 'handoff.md should document v4.12.25');

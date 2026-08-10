@@ -8975,6 +8975,59 @@
       deleteBtn.classList.toggle('hidden', !canDelete);
       deleteBtn.disabled = !canDelete;
     }
+    const dupBtn = document.getElementById('btn-work-order-duplicate-direct');
+    if (dupBtn) {
+      const canDuplicate = !!editId;
+      dupBtn.classList.toggle('hidden', !canDuplicate);
+      dupBtn.disabled = !canDuplicate;
+    }
+  }
+
+  function duplicateWorkOrderFormAsDirectReceive() {
+    const editId = String(document.getElementById('work-order-edit-id')?.value || '').trim();
+    if (!editId) return;
+    const existing = Storage.getWorkOrders().find(w => w && w.id === editId);
+    if (!existing) {
+      alert('対象の作業予定が見つかりませんでした。');
+      return;
+    }
+
+    const customerName = document.getElementById('work-order-customer')?.value || '';
+    const phone = document.getElementById('work-order-phone')?.value || '';
+    const address = document.getElementById('work-order-address')?.value || '';
+    const area = document.getElementById('work-order-area')?.value || '';
+    const serviceText = document.getElementById('work-order-service')?.value || '';
+    const scheduledDate = document.getElementById('work-order-date')?.value || '';
+    const startTime = document.getElementById('work-order-start')?.value || '';
+    const endTime = document.getElementById('work-order-end')?.value || '';
+    const estimateAmount = document.getElementById('work-order-amount')?.value || '';
+    const memo = document.getElementById('work-order-memo')?.value || '';
+
+    document.getElementById('work-order-edit-id').value = '';
+    fillWorkOrderSelects();
+    document.getElementById('work-order-customer').value = customerName;
+    document.getElementById('work-order-phone').value = phone;
+    document.getElementById('work-order-address').value = address;
+    fillAreaSelectOptions(document.getElementById('work-order-area'), area || MapBrain.detectAreaFromAddress(address));
+    fillSourceSelectOptions(document.getElementById('work-order-source'), '直受け', { blankLabel: '未選択' });
+    document.getElementById('work-order-service').value = serviceText;
+    document.getElementById('work-order-date').value = scheduledDate;
+    document.getElementById('work-order-start').value = startTime;
+    document.getElementById('work-order-end').value = endTime;
+    document.getElementById('work-order-status').value = 'confirmed';
+    document.getElementById('work-order-amount').value = estimateAmount;
+    document.getElementById('work-order-memo').value = memo;
+    document.getElementById('work-order-intake').value = '';
+    document.getElementById('work-order-lead').value = '';
+
+    const mapEl = document.getElementById('work-order-form-map-actions');
+    if (mapEl) {
+      mapEl.innerHTML = renderMapActionsHtml(address, { area });
+      bindMapActionEvents(mapEl);
+    }
+    updateWorkOrderCalendarHint();
+    syncWorkOrderFormActionState();
+    showAppToast('直受け追加用に複製しました。作業内容と金額を確認して保存してください。元の予定は変更していません。');
   }
 
   function clearWorkOrderForm(options) {
@@ -11612,6 +11665,8 @@
     if (clearBtn) clearBtn.addEventListener('click', () => clearWorkOrderForm());
     const deleteBtn = document.getElementById('btn-work-order-delete');
     if (deleteBtn) deleteBtn.addEventListener('click', deleteWorkOrderFromForm);
+    const dupBtn = document.getElementById('btn-work-order-duplicate-direct');
+    if (dupBtn) dupBtn.addEventListener('click', duplicateWorkOrderFormAsDirectReceive);
     syncWorkOrderFormActionState();
     const gmapBtn = document.getElementById('btn-work-order-gmap');
     if (gmapBtn) {

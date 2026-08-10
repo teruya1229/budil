@@ -2,6 +2,35 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.13.1 売上確定待ち予定の直受け追加複製（2026-08-10）
+
+**日付**: 2026-08-10
+
+**背景**: 元請け案件の作業当日、お客様から直接追加作業を受ける場合がある。元請け分の依頼元別利益率は維持したまま、追加作業分だけを別売上として直受け・利益率100%で確定したい。
+
+**判断内容**:
+- 複製ボタンは即保存しない。現在の編集フォームを「未保存の新規作業予定」へ切り替えるだけとし、保存は既存の保存ボタン／`saveWorkOrderFromForm()` 経由のみ
+- 元案件は不変。複製後も元レコードID・依頼元・利益率・売上予定・連携情報は変更しない
+- 表示フォーム項目だけを引き継ぎ、intake／lead／calendar／candidate／revenue／completion など非表示連携情報はコピーしない
+- `RevenueBrain.SOURCES` に`直受け`を追加するが、先頭`LP`（`SOURCES[0]`）の既存挙動は変えない。直受けの既定粗利率は100%
+- Googleカレンダー正本フローは変更しない。複製分をGoogleカレンダーへ自動登録しない
+- localStorage正本を維持し、新規localStorageキーは追加しない
+
+**変更ファイル**:
+- `index.html`（複製ボタン、売上手入力hint、バージョン／cache buster）
+- `js/app.js`（複製ハンドラ・編集時のみ有効化）
+- `js/revenue-brain.js`（SOURCES／DEFAULT_GROSS_MARGIN_RATES）
+- `js/storage.js` / `js/data-backup.js`（バージョンのみ）
+- `scripts/verify-v4131-work-order-direct-duplicate.mjs`（新規）
+- `scripts/verify-current.mjs` および既存verifyの現行バージョンassert
+- `status.md` / `handoff.md` / `decision-log.md`
+
+**確認結果**（2026-08-10）:
+- verify-current 89/89合格（既存88本＋新規`verify-v4131-work-order-direct-duplicate.mjs`。既存verifyの削除・除外・緩和なし）
+- localhost別origin（`http://127.0.0.1:8765`、Browser番頭共通Chrome・Chrome DevTools MCP）でfixture実動作確認: 複製押下時localStorage完全不変、フォームが新規draftへ切替、依頼元直受け・confirmed・関連受付/営業先空、保存後に新旧ID分離、元案件不変、売上確定モーダルで直受け・粗利率100%、確定後source=直受け・利益額=売上金額、PC/390px横スクロールなし、Console errorなし
+- テストfixtureは記録済み完全一致IDのみ削除し不存在を確認（`localStorage.clear`未使用）
+- 物理スマートフォン実機確認は未完了
+
 ## v4.13.0 クラウドバックアップ基盤 Phase 1（staging/production分離）（2026-08-06）
 
 **日付**: 2026-08-06

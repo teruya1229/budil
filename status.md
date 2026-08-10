@@ -1,5 +1,19 @@
 ﻿# Budil status
 
+## v4.13.1 実装内容（売上確定待ち予定の直受け追加複製）
+
+- 背景: 元請け案件の作業当日、お客様から直接追加作業を受ける場合がある。元請け分は既存の依頼元別利益率を維持し、追加作業分だけを別売上として「直受け・利益率100%」で確定できるようにする
+- 実装（最小差分）:
+  - `index.html` の `#work-order-form` → `.pickup-form-actions` に「直受け追加で複製」ボタン（`#btn-work-order-duplicate-direct`）を追加。新規入力中は `hidden`＋`disabled`、既存作業予定の編集中だけ表示・有効
+  - `js/app.js`: 複製ボタン押下時は `Storage.addWorkOrder()` / `Storage.updateWorkOrder()` を呼ばず、表示フォーム項目だけを引き継いだ未保存の新規作業予定フォームへ切り替える。`work-order-edit-id` を空、依頼元を`直受け`、状態を`confirmed`、関連受付・関連営業先を空にする。元の作業予定は一切変更しない
+  - 引き継ぐ表示項目: お客様名・電話番号・住所・エリア・作業内容・予定日・開始/終了時間・予定売上・メモ
+  - 引き継がない: 元レコードID、createdAt/updatedAt、actualRevenueId、completion、completedAt、candidateMeta、calendarDedupeKey、calendar event ID類、sourceCandidateId、売上ID、請求書リンク、受付リンク、その他の非表示連携情報
+  - `RevenueBrain.SOURCES` に`直受け`を追加（先頭`LP`＝`SOURCES[0]`は維持）。`DEFAULT_GROSS_MARGIN_RATES` の直受けは100%
+  - 売上手入力欄の説明に「直受け100%」を追記
+- 維持: Googleカレンダー正本フロー変更なし、複製分の自動カレンダー登録なし、localStorage正本維持、新規localStorageキーなし、既存重複警告を迂回しない、各作業予定と確定売上は1対1
+- 新規 `scripts/verify-v4131-work-order-direct-duplicate.mjs`。既存verifyのバージョンassertを`v4.13.1`へ整合。現行合格は`node scripts/verify-current.mjs`（89本、省略・除外・緩和なし）
+- 物理スマートフォン実機確認は未完了
+
 ## v4.13.0 実装内容（クラウドバックアップ基盤 Phase 1・staging/production分離）
 
 - 背景: Budilは現在localStorageのみに保存しており、機種変更・端末故障・ブラウザデータ消失で全データを失うリスクがある。Phase 1として、既存の`DataBackup.exportPayload()` / `validatePayload()`をそのまま再利用し、Supabase Edge Function経由でimmutable snapshotを保存するだけの薄いクラウドバックアップ（保存のみ）を追加した
