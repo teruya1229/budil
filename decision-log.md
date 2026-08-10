@@ -2,6 +2,34 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.13.4 月粗利率と経費保存失敗案内（2026-08-10）
+
+**日付**: 2026-08-10
+
+**背景**: v4.13.3では売上別の経費反映後利益率は正しかったが、月全体の`monthGrossRate`だけ経費控除前だった。また売上保存後に経費保存が例外失敗すると、部分保存案内が出ない可能性があった。
+
+**判断内容**:
+- 月表示率を`monthGrossProfit÷monthRevenue`へ修正（売上0は0、赤字は負の率、内部丸めなし）
+- 作業予定フォールバックは従来の経費控除前率を内部利用し、予定利益を変えない
+- 経費保存例外は`saveInlineExpenseForRevenue()`内で失敗結果（`expense_save_failed`）へ変換
+- 売上はロールバック・再登録せず、経費のみ未保存と案内
+- 自動再試行なし
+- `monthGrossProfit` / `monthExpense` / `monthMarginGross` / `marginDeductionTotal` / 保存済み`grossMarginRate`の意味は変えない
+- RevenueBrain / MonthlyResultsBrain / ExecutiveBrain の計算仕様は変更しない
+
+**変更ファイル**:
+- `js/profit-brain.js` / `js/app.js`（実質ロジック）
+- `index.html` / `js/storage.js` / `js/data-backup.js`（バージョン・cache busterのみ）
+- `scripts/verify-v4134-month-rate-and-inline-expense-failure.mjs`（新規）
+- `scripts/verify-current.mjs` および既存verifyの現行バージョンassert
+- `status.md` / `handoff.md` / `decision-log.md`
+
+**確認結果**（2026-08-10）:
+- verify-current 92/92合格（既存91本＋新規`verify-v4134-month-rate-and-inline-expense-failure.mjs`。既存assert緩和なし）
+- localhost隔離context（`http://127.0.0.1:8765/?v=4134fixture`）架空fixture確認: 10000/80/2000→月粗利6000・率60、売上別利益6000・率60・marginRate80、未紐づけ含めて月経費1回控除、予定フォールバック8000維持、経費throw時は売上1件・経費0・部分保存案内・成功トーストなし・固定タグconsole.error1回、stub復元、fixture残存0、PC/390px横スクロールなし、通常時Console errorなし
+- 物理スマートフォン実機確認は未完了
+- 山城美穂様データは変更していない（別工程）
+
 ## v4.13.3 売上と経費の紐づけ・売上確定時の経費同時入力（2026-08-10）
 
 **日付**: 2026-08-10

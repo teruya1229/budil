@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.3 - 売上と経費の紐づけ・売上確定時の経費同時入力 verify
+ * Budil v4.13.4 - 売上と経費の紐づけ・売上確定時の経費同時入力 verify
  */
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -31,16 +31,16 @@ for (const file of ['js/app.js', 'js/profit-brain.js', 'js/storage.js', 'js/data
 }
 
 console.log('== version / cache buster ==');
-assert(html.includes('Budil v4.13.3'), 'index.html shows Budil v4.13.3');
-assert(html.includes('js/app.js?v=4.13.3'), 'app.js cache buster is v4.13.3');
-assert(html.includes('js/profit-brain.js?v=4.13.3'), 'profit-brain cache buster is v4.13.3');
-assert(html.includes('css/style.css?v=4.13.3'), 'style.css cache buster is v4.13.3');
-assert(storageSrc.includes("BUDIL_VERSION: 'v4.13.3'"), 'storage version is v4.13.3');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.3'"), 'data-backup version is v4.13.3');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.3'"), 'verify-current pins v4.13.3');
-assert(statusMd.includes('v4.13.3'), 'status.md documents v4.13.3');
-assert(handoffMd.includes('v4.13.3'), 'handoff.md documents v4.13.3');
-assert(decisionLog.includes('v4.13.3'), 'decision-log.md records v4.13.3');
+assert(html.includes('Budil v4.13.4'), 'index.html shows Budil v4.13.4');
+assert(html.includes('js/app.js?v=4.13.4'), 'app.js cache buster is v4.13.4');
+assert(html.includes('js/profit-brain.js?v=4.13.4'), 'profit-brain cache buster is v4.13.4');
+assert(html.includes('css/style.css?v=4.13.4'), 'style.css cache buster is v4.13.4');
+assert(storageSrc.includes("BUDIL_VERSION: 'v4.13.4'"), 'storage version is v4.13.4');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.4'"), 'data-backup version is v4.13.4');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.4'"), 'verify-current pins v4.13.4');
+assert(statusMd.includes('v4.13.4'), 'status.md documents v4.13.4');
+assert(handoffMd.includes('v4.13.4'), 'handoff.md documents v4.13.4');
+assert(decisionLog.includes('v4.13.4'), 'decision-log.md records v4.13.4');
 
 console.log('== UI: daily / profit / inline expense ==');
 assert(html.includes('id="daily-expense-revenue"'), 'daily expense has revenue select');
@@ -209,4 +209,4 @@ assert(!app.includes('localStorage.clear('), 'no localStorage.clear');
 assert(dataBackup.includes('budil_expense_records') || dataBackup.includes('EXPENSE'), 'backup still covers expense records');
 assert(!app.includes('自動紐づけ') && !storageSrc.includes('autoLinkExpense'), 'no auto-link migration');
 
-console.log('\nAll v4.13.3 revenue-linked expense flow checks passed.');
+console.log('\nAll v4.13.4 revenue-linked expense flow checks passed.');

@@ -17,14 +17,15 @@
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` の依存関係（googleapis 等）。依存は `hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（91本）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（92本）
 - **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
 
 ## 現在の最新状態
 
 | 項目 | 値 |
 |------|-----|
-| 最新バージョン | v4.13.3 |
+| 最新バージョン | v4.13.4 |
+| v4.13.4 月粗利率と経費保存失敗案内 | 表示用`monthGrossRate`を経費控除後利益÷売上へ修正。作業予定フォールバックは経費控除前率を内部維持。経費保存例外は部分保存案内へ変換（売上ロールバック/再登録/自動再試行なし）。CSS変更なし。verify-current 92本。物理スマホ実機確認は未完了 |
 | v4.13.3 売上と経費の紐づけ・売上確定時の経費同時入力 | 毎日/利益管理の関連売上常時表示、売上確定時の経費1件同時登録、経費反映後利益率表示、売上削除時のrelatedRevenueId解除。grossMarginRate意味不変。自動紐づけなし。verify-current 91本。物理スマホ実機確認は未完了 |
 | v4.13.2 お礼LINE文へGoogle口コミURL追加 | `generateThanksMessage()` のみ最小修正。既存 `getReviewUrl()` 経由で口コミURLを followUpMemo の後・事業者名の前に挿入。同一URLの二重表示なし。`generateReviewRequest()` 不変。自動送信なし。verify-current 90本。物理スマホ実機確認は未完了 |
 | v4.13.1 売上確定待ち予定の直受け追加複製 | 元請け案件の当日追加作業用。受付・予定確認の作業予定フォームに「直受け追加で複製」を追加。複製ボタンは即保存しない（表示フォーム項目だけを引き継いだ未保存の新規draftへ切替）。元案件不変。依頼元を直受け・状態confirmed・関連受付/営業先空。intake/lead/calendar/candidate/revenueリンクはコピーしない。`RevenueBrain.SOURCES`に直受け追加（SOURCES[0]=LP維持）、直受け100%。Googleカレンダー正本維持、複製分の自動カレンダー登録なし、localStorage正本維持、新規localStorageキーなし。verify-current 89本。物理スマホ実機確認は未完了 |

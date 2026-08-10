@@ -4152,19 +4152,25 @@
   function saveInlineExpenseForRevenue(revenueId, workDate, input) {
     const revId = String(revenueId || '').trim();
     if (!revId) return { ok: false, error: 'missing_revenue_id' };
-    const created = Storage.addExpenseRecord({
-      date: workDate || TODAY(),
-      category: input.category || 'その他',
-      amount: Number(input.amount) || 0,
-      memo: buildDailyExpenseMemo(input.content, input.memo),
-      relatedRevenueId: revId,
-      relatedWorkOrderId: '',
-      paymentMethod: '',
-      taxIncluded: true,
-      isRecurring: false,
-      source: 'revenue-inline-expense'
-    });
-    return { ok: !!created, expense: created };
+    try {
+      const created = Storage.addExpenseRecord({
+        date: workDate || TODAY(),
+        category: input.category || 'その他',
+        amount: Number(input.amount) || 0,
+        memo: buildDailyExpenseMemo(input.content, input.memo),
+        relatedRevenueId: revId,
+        relatedWorkOrderId: '',
+        paymentMethod: '',
+        taxIncluded: true,
+        isRecurring: false,
+        source: 'revenue-inline-expense'
+      });
+      if (!created) return { ok: false, error: 'expense_save_failed' };
+      return { ok: true, expense: created };
+    } catch (err) {
+      console.error('[Budil][inline-expense-save-failed]', err && err.name ? err.name : 'Error');
+      return { ok: false, error: 'expense_save_failed' };
+    }
   }
 
   function updateRevenueLinkedExpenseSummary(revenueId) {

@@ -1,5 +1,15 @@
 ﻿# Budil status
 
+## v4.13.4 実装内容（月粗利率と経費保存失敗案内）
+
+- 背景: v4.13.3では売上別の経費反映後利益率は正しかったが、月全体の`monthGrossRate`だけ経費控除前だった。また経費同時保存で`Storage.addExpenseRecord()`が例外throwした場合、部分保存案内が出ない可能性があった
+- 実装（最小差分）:
+  - `ProfitBrain.getPeriodProfitSummary()`の表示用`monthGrossRate`を`monthGrossProfit ÷ monthRevenue × 100`へ修正（売上0は0、赤字は負の率、内部丸めなし）
+  - 作業予定フォールバックは経費控除前率（`monthMarginGrossRate`）を内部利用し、予定利益を変えない
+  - `saveInlineExpenseForRevenue()`で`addExpenseRecord`例外を捕捉し`{ ok:false, error:'expense_save_failed' }`へ変換。固定タグ`[Budil][inline-expense-save-failed]`で`console.error`。売上ロールバック・再登録・自動再試行なし
+- 新規 `scripts/verify-v4134-month-rate-and-inline-expense-failure.mjs`。現行合格は`node scripts/verify-current.mjs`（92本）
+- CSS変更なし・UI構造変更なし・山城美穂様データ未変更。物理スマートフォン実機確認は未完了
+
 ## v4.13.3 実装内容（売上と経費の紐づけ・売上確定時の経費同時入力）
 
 - 背景: 毎日の経費入力に売上紐づけがなく未紐づけ経費が増えていた。売上確定時に経費を同時入力し、売上別利益へ正しく反映したい

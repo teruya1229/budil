@@ -416,7 +416,9 @@ const ProfitBrain = {
     const monthMarginGross = monthProfitDetails.reduce((n, d) => n + d.marginProfit, 0);
     const marginDeductionTotal = monthProfitDetails.reduce((n, d) => n + d.deductionAmount, 0);
     const monthGrossProfit = monthMarginGross - monthExpense;
-    const monthGrossRate = monthRevenue > 0 ? (monthMarginGross / monthRevenue) * 100 : 0;
+    // 作業予定フォールバック用: 取り分率反映後・経費控除前の月率（従来の monthGrossRate）
+    // 戻り値の表示用 monthGrossRate は下で経費控除後へ差し替える
+    let monthGrossRate = monthRevenue > 0 ? (monthMarginGross / monthRevenue) * 100 : 0;
 
     const adExpense = this.sumAmount(monthExpenses.filter(e => e.category === '広告費'));
     const feeExpense = this.sumAmount(monthExpenses.filter(e => e.category === '手数料'));
@@ -429,7 +431,7 @@ const ProfitBrain = {
       (n, w) => n + this.getWorkOrderEstimateAmount(w), 0
     );
     // 見込み利益 = 作業予定の見込み利益合計
-    // 個別粗利率が未設定の場合は当月の確定売上から算出した粗利率をフォールバックとして適用
+    // 個別粗利率が未設定の場合は当月の確定売上から算出した粗利率（経費控除前）をフォールバックとして適用
     const plannedForecastProfit = monthPlannedWorkOrders.reduce((n, w) => {
       const exp = this.sumAmount(this.getExpensesForWorkOrder(w.id, expenses));
       const woResult = this.computeWorkOrderForecastProfit(w, exp);
@@ -439,6 +441,9 @@ const ProfitBrain = {
       }
       return n + woResult.forecastProfit;
     }, 0);
+
+    // 表示用: 経費控除後利益 ÷ 売上（売上0は0、赤字は負の率、内部丸めなし）
+    monthGrossRate = monthRevenue > 0 ? (monthGrossProfit / monthRevenue) * 100 : 0;
 
     // 確定売上 = 確定ステータス（'確定','完了'）のレコードのみ
     const confirmedMonthRevenues = monthRevenues.filter(r =>
