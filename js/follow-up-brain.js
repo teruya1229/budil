@@ -295,6 +295,10 @@ const FollowUpBrain = {
     const biz = businessProfile && businessProfile.businessName
       ? businessProfile.businessName
       : '';
+    const followUpMemo = businessProfile && businessProfile.followUpMemo
+      ? String(businessProfile.followUpMemo)
+      : '';
+    const reviewUrl = this.getReviewUrl(businessProfile);
     const lines = [
       `本日は${service}のご依頼ありがとうございました。`,
       '',
@@ -302,8 +306,11 @@ const FollowUpBrain = {
       '',
       'また次回も何かあればお気軽にご相談ください。'
     ];
-    if (businessProfile && businessProfile.followUpMemo) {
-      lines.push('', businessProfile.followUpMemo);
+    if (followUpMemo) {
+      lines.push('', followUpMemo);
+    }
+    if (reviewUrl && !followUpMemo.includes(reviewUrl)) {
+      lines.push('', reviewUrl);
     }
     if (biz) lines.push('', biz);
     return lines.join('\n').trim();

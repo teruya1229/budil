@@ -2,6 +2,32 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.13.2 お礼LINE文へGoogle口コミURL追加（2026-08-10）
+
+**日付**: 2026-08-10
+
+**背景**: 作業後フォローの「お礼LINE文」にGoogle口コミURLがなく、口コミ依頼文へ切り替えないとURLを渡せなかった。お礼文だけで口コミ導線を完結させたい。
+
+**判断内容**:
+- `generateThanksMessage()` のみ最小修正し、URLは直書きせず既存 `getReviewUrl(businessProfile)` を使う
+- 文面順は「既存お礼本文 → followUpMemo → Google口コミURL → 事業者名」
+- `followUpMemo` に同一URLが既にある場合は二重表示しない
+- `businessProfile.googleReviewUrl` 設定時は設定値優先（既存 `getReviewUrl` 仕様を維持）
+- `generateReviewRequest()` の文面・URL処理、フォロー状態更新条件、自動送信は変更しない
+- 山城美穂様の予定消失は別件として扱い、本件では実データ復旧・再取込・予定手入力を行わない
+
+**変更ファイル**:
+- `js/follow-up-brain.js`（`generateThanksMessage` のみ）
+- `index.html` / `js/storage.js` / `js/data-backup.js`（バージョン・cache buster）
+- `scripts/verify-v4132-thanks-message-review-url.mjs`（新規）
+- `scripts/verify-current.mjs` および既存verifyの現行バージョンassert
+- `status.md` / `handoff.md` / `decision-log.md`
+
+**確認結果**（2026-08-10）:
+- verify-current 90/90合格（既存89本＋新規`verify-v4132-thanks-message-review-url.mjs`。既存verifyの削除・除外・緩和なし）
+- localhost別origin（`http://127.0.0.1:8765`、Browser番頭共通Chrome・Chrome DevTools MCP）でfixture確認: お礼文プレビューにDEFAULT_REVIEW_URLが1回、followUpMemoの後・事業者名の前、コピー経路も同文面、口コミ依頼文は既存維持、390px横スクロールなし、Console errorなし。fixtureは記録済みIDのみ削除し残存0を確認
+- 物理スマートフォン実機確認は未完了
+
 ## v4.13.1 売上確定待ち予定の直受け追加複製（2026-08-10）
 
 **日付**: 2026-08-10

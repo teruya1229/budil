@@ -1,5 +1,19 @@
 ﻿# Budil status
 
+## v4.13.2 実装内容（お礼LINE文へGoogle口コミURL追加）
+
+- 背景: 作業後フォローの「お礼LINE文」に、既存のGoogle口コミURLを表示・コピーできるようにする
+- 実装（最小差分）:
+  - `js/follow-up-brain.js` の `generateThanksMessage()` のみ修正
+  - 口コミURLは直書きせず既存 `getReviewUrl(businessProfile)` を使用（`googleReviewUrl` 設定時は設定値優先、未設定時は `DEFAULT_REVIEW_URL`）
+  - 文面順: 既存お礼本文 → `followUpMemo` → Google口コミURL → 事業者名
+  - `followUpMemo` 内に同一URLがある場合は二重表示しない
+  - `generateReviewRequest()` の文面・URL処理は変更なし。自動送信は追加なし
+- お礼文の表示・コピー経路（`getFollowUpMessageText` / `copyExecutiveFollowMessage` 等）は既存どおり `generateThanksMessage()` を使用するため、全経路へ反映
+- 新規 `scripts/verify-v4132-thanks-message-review-url.mjs`。既存verifyのバージョンassertを`v4.13.2`へ整合。現行合格は`node scripts/verify-current.mjs`（90本、省略・除外・緩和なし）
+- 山城美穂様の予定消失は別件。本件では実データ復旧・再取込・予定手入力は行わない
+- 物理スマートフォン実機確認は未完了
+
 ## v4.13.1 実装内容（売上確定待ち予定の直受け追加複製）
 
 - 背景: 元請け案件の作業当日、お客様から直接追加作業を受ける場合がある。元請け分は既存の依頼元別利益率を維持し、追加作業分だけを別売上として「直受け・利益率100%」で確定できるようにする
