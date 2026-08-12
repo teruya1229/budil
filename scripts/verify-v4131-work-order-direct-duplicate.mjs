@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.4 - 売上確定待ち予定の直受け追加複製 verify
+ * Budil v4.13.5 - 売上確定待ち予定の直受け追加複製 verify
  *
  * Background: 元請け案件の作業当日にお客様から直接追加作業を受ける場合がある。
  * 元請け分の依頼元別利益率は維持し、追加作業分だけを別売上として
@@ -42,16 +42,16 @@ for (const file of ['js/app.js', 'js/revenue-brain.js', 'js/storage.js', 'js/dat
 }
 
 console.log('== version / cache buster ==');
-assert(html.includes('Budil v4.13.4'), 'index.html shows Budil v4.13.4');
-assert(html.includes('js/app.js?v=4.13.4'), 'app.js cache buster is v4.13.4');
-assert(html.includes('js/revenue-brain.js?v=4.13.4'), 'revenue-brain.js cache buster is v4.13.4');
-assert(html.includes('css/style.css?v=4.13.4'), 'style.css cache buster is v4.13.4');
-assert(storage.includes("BUDIL_VERSION: 'v4.13.4'"), 'storage version is v4.13.4');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.4'"), 'data-backup version is v4.13.4');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.4'"), 'verify-current pins v4.13.4');
-assert(statusMd.includes('v4.13.4'), 'status.md documents v4.13.4');
-assert(handoffMd.includes('v4.13.4'), 'handoff.md documents v4.13.4');
-assert(decisionLog.includes('v4.13.4'), 'decision-log.md records v4.13.4');
+assert(html.includes('Budil v4.13.5'), 'index.html shows Budil v4.13.5');
+assert(html.includes('js/app.js?v=4.13.5'), 'app.js cache buster is v4.13.5');
+assert(html.includes('js/revenue-brain.js?v=4.13.5'), 'revenue-brain.js cache buster is v4.13.5');
+assert(html.includes('css/style.css?v=4.13.5'), 'style.css cache buster is v4.13.5');
+assert(storage.includes("BUDIL_VERSION: 'v4.13.5'"), 'storage version is v4.13.5');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.5'"), 'data-backup version is v4.13.5');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.5'"), 'verify-current pins v4.13.5');
+assert(statusMd.includes('v4.13.5'), 'status.md documents v4.13.5');
+assert(handoffMd.includes('v4.13.5'), 'handoff.md documents v4.13.5');
+assert(decisionLog.includes('v4.13.5'), 'decision-log.md records v4.13.5');
 
 console.log('== 1. button only inside existing work-order-form ==');
 const formMatch = html.match(/<form id="work-order-form">([\s\S]*?)<\/form>/);
@@ -82,26 +82,34 @@ console.log('== 4-11. duplicate does not save; copies display fields only ==');
   const start = app.indexOf('function duplicateWorkOrderFormAsDirectReceive(');
   const next = app.indexOf('\n  function ', start + 10);
   const body = app.slice(start, next > start ? next : start + 4500);
-  assert(!/Storage\.(addWorkOrder|updateWorkOrder)\s*\(/.test(body), 'duplicate handler does not call Storage.add/updateWorkOrder');
-  assert(body.includes("document.getElementById('work-order-edit-id').value = ''"), 'clears edit id');
-  assert(body.includes("'直受け'") || body.includes('"直受け"'), 'sets source to 直受け');
-  assert(body.includes("value = 'confirmed'") || body.includes('value = "confirmed"'), 'sets status to confirmed');
-  assert(body.includes("work-order-intake').value = ''"), 'clears related intake');
-  assert(body.includes("work-order-lead').value = ''"), 'clears related lead');
+  const helperStart = app.indexOf('function applyDirectReceiveDuplicateDraftToForm(');
+  const helperNext = helperStart >= 0 ? app.indexOf('\n  function ', helperStart + 10) : -1;
+  const helperBody = helperStart >= 0
+    ? app.slice(helperStart, helperNext > helperStart ? helperNext : helperStart + 3500)
+    : '';
+  const combined = body + '\n' + helperBody;
+  assert(app.includes('function applyDirectReceiveDuplicateDraftToForm('), 'shared draft helper exists for form apply');
+  assert(body.includes('applyDirectReceiveDuplicateDraftToForm('), 'form duplicate calls shared draft helper');
+  assert(!/Storage\.(addWorkOrder|updateWorkOrder)\s*\(/.test(combined), 'duplicate handler does not call Storage.add/updateWorkOrder');
+  assert(combined.includes("document.getElementById('work-order-edit-id').value = ''"), 'clears edit id');
+  assert(combined.includes("'直受け'") || combined.includes('"直受け"'), 'sets source to 直受け');
+  assert(combined.includes("value = 'confirmed'") || combined.includes('value = "confirmed"'), 'sets status to confirmed');
+  assert(combined.includes("work-order-intake').value = ''"), 'clears related intake');
+  assert(combined.includes("work-order-lead').value = ''"), 'clears related lead');
   assert(body.includes('対象の作業予定が見つかりませんでした'), 'shows not-found message when edit id missing in Storage');
   assert(body.includes('直受け追加用に複製しました。作業内容と金額を確認して保存してください。元の予定は変更していません。'),
     'shows required toast message');
-  assert(body.includes("work-order-customer"), 'copies customer');
-  assert(body.includes("work-order-phone"), 'copies phone');
-  assert(body.includes("work-order-address"), 'copies address');
-  assert(body.includes("work-order-area"), 'copies area');
-  assert(body.includes("work-order-service"), 'copies service');
-  assert(body.includes("work-order-date"), 'copies date');
-  assert(body.includes("work-order-start"), 'copies start');
-  assert(body.includes("work-order-end"), 'copies end');
-  assert(body.includes("work-order-amount"), 'copies amount');
-  assert(body.includes("work-order-memo"), 'copies memo');
-  assert(!/actualRevenueId|candidateMeta|calendarDedupeKey|completedAt|sourceCandidateId|completion\s*:/.test(body),
+  assert(combined.includes("work-order-customer"), 'copies customer');
+  assert(combined.includes("work-order-phone"), 'copies phone');
+  assert(combined.includes("work-order-address"), 'copies address');
+  assert(combined.includes("work-order-area"), 'copies area');
+  assert(combined.includes("work-order-service"), 'copies service');
+  assert(combined.includes("work-order-date"), 'copies date');
+  assert(combined.includes("work-order-start"), 'copies start');
+  assert(combined.includes("work-order-end"), 'copies end');
+  assert(combined.includes("work-order-amount"), 'copies amount');
+  assert(combined.includes("work-order-memo"), 'copies memo');
+  assert(!/actualRevenueId|candidateMeta|calendarDedupeKey|completedAt|sourceCandidateId|completion\s*:/.test(combined),
     'does not copy calendar/candidate/revenue/completion linkage fields');
 }
 
@@ -159,7 +167,7 @@ assert(!html.includes('>作業完了<') && !html.includes('作業完了</'), 'in
 
 console.log('== docs ==');
 assert(statusMd.includes('直受け追加で複製') || statusMd.includes('直受け追加複製'), 'status.md mentions direct duplicate');
-assert(handoffMd.includes('直受け') && handoffMd.includes('v4.13.4'), 'handoff.md mentions v4.13.4 直受け');
+assert(handoffMd.includes('直受け') && handoffMd.includes('v4.13.5'), 'handoff.md mentions v4.13.5 直受け');
 assert(decisionLog.includes('直受け') && decisionLog.includes('即保存しない'), 'decision-log records no immediate save');
 
-console.log('\nAll v4.13.4 work-order-direct-duplicate checks passed.');
+console.log('\nAll v4.13.5 work-order-direct-duplicate checks passed.');

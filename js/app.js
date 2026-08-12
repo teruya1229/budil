@@ -9167,25 +9167,20 @@
     }
   }
 
-  function duplicateWorkOrderFormAsDirectReceive() {
-    const editId = String(document.getElementById('work-order-edit-id')?.value || '').trim();
-    if (!editId) return;
-    const existing = Storage.getWorkOrders().find(w => w && w.id === editId);
-    if (!existing) {
-      alert('対象の作業予定が見つかりませんでした。');
-      return;
-    }
-
-    const customerName = document.getElementById('work-order-customer')?.value || '';
-    const phone = document.getElementById('work-order-phone')?.value || '';
-    const address = document.getElementById('work-order-address')?.value || '';
-    const area = document.getElementById('work-order-area')?.value || '';
-    const serviceText = document.getElementById('work-order-service')?.value || '';
-    const scheduledDate = document.getElementById('work-order-date')?.value || '';
-    const startTime = document.getElementById('work-order-start')?.value || '';
-    const endTime = document.getElementById('work-order-end')?.value || '';
-    const estimateAmount = document.getElementById('work-order-amount')?.value || '';
-    const memo = document.getElementById('work-order-memo')?.value || '';
+  function applyDirectReceiveDuplicateDraftToForm(fields) {
+    const f = fields || {};
+    const customerName = f.customerName || '';
+    const phone = f.phone || '';
+    const address = f.address || '';
+    const area = f.area || '';
+    const serviceText = f.serviceText || '';
+    const scheduledDate = f.scheduledDate || '';
+    const startTime = f.startTime || '';
+    const endTime = f.endTime || '';
+    const estimateAmount = f.estimateAmount != null && f.estimateAmount !== undefined
+      ? f.estimateAmount
+      : '';
+    const memo = f.memo || '';
 
     document.getElementById('work-order-edit-id').value = '';
     fillWorkOrderSelects();
@@ -9211,7 +9206,83 @@
     }
     updateWorkOrderCalendarHint();
     syncWorkOrderFormActionState();
+  }
+
+  function duplicateWorkOrderFormAsDirectReceive() {
+    const editId = String(document.getElementById('work-order-edit-id')?.value || '').trim();
+    if (!editId) return;
+    const existing = Storage.getWorkOrders().find(w => w && w.id === editId);
+    if (!existing) {
+      alert('対象の作業予定が見つかりませんでした。');
+      return;
+    }
+
+    applyDirectReceiveDuplicateDraftToForm({
+      customerName: document.getElementById('work-order-customer')?.value || '',
+      phone: document.getElementById('work-order-phone')?.value || '',
+      address: document.getElementById('work-order-address')?.value || '',
+      area: document.getElementById('work-order-area')?.value || '',
+      serviceText: document.getElementById('work-order-service')?.value || '',
+      scheduledDate: document.getElementById('work-order-date')?.value || '',
+      startTime: document.getElementById('work-order-start')?.value || '',
+      endTime: document.getElementById('work-order-end')?.value || '',
+      estimateAmount: document.getElementById('work-order-amount')?.value || '',
+      memo: document.getElementById('work-order-memo')?.value || ''
+    });
     showAppToast('直受け追加用に複製しました。作業内容と金額を確認して保存してください。元の予定は変更していません。');
+  }
+
+  function syncWorkCompletionDuplicateDirectButton() {
+    const btn = document.getElementById('btn-work-completion-duplicate-direct');
+    if (!btn) return;
+    const modal = document.getElementById('work-completion-modal');
+    const modalOpen = !!(modal && !modal.classList.contains('hidden'));
+    const source = document.getElementById('work-completion-queue-source')?.value || 'work-order';
+    const woId = String(document.getElementById('work-completion-wo-id')?.value || '').trim();
+    const exists = !!(woId && Storage.getWorkOrders().some(w => w && w.id === woId));
+    const canShow = modalOpen && source === 'work-order' && exists;
+    btn.classList.toggle('hidden', !canShow);
+    btn.disabled = !canShow;
+  }
+
+  function duplicateWorkOrderFromCompletionAsDirectReceive() {
+    const source = document.getElementById('work-completion-queue-source')?.value || 'work-order';
+    if (source !== 'work-order') return;
+    const woId = String(document.getElementById('work-completion-wo-id')?.value || '').trim();
+    if (!woId) return;
+    const existing = Storage.getWorkOrders().find(w => w && w.id === woId);
+    if (!existing) {
+      alert('対象の作業予定が見つかりませんでした。');
+      return;
+    }
+    const ok = confirm(
+      '売上確定画面の入力内容は保存されません。元の予定を残したまま、直受け追加用の未保存予定を作成します。続けますか？'
+    );
+    if (!ok) return;
+
+    // Capture from Storage before navigate so async form state cannot race.
+    const fields = {
+      customerName: existing.customerName || '',
+      phone: existing.phone || '',
+      address: existing.address || '',
+      area: existing.area || '',
+      serviceText: existing.serviceText || '',
+      scheduledDate: existing.scheduledDate || '',
+      startTime: existing.startTime || '',
+      endTime: existing.endTime || '',
+      estimateAmount: existing.estimateAmount != null && existing.estimateAmount !== undefined
+        ? existing.estimateAmount
+        : '',
+      memo: existing.memo || ''
+    };
+
+    closeWorkCompletionModal();
+    navigateToView('calendar-registration');
+    setTimeout(() => {
+      openWorkOrderFormPanel();
+      applyDirectReceiveDuplicateDraftToForm(fields);
+      showAppToast('直受け追加用に複製しました。作業内容と金額を確認して保存してください。元の予定は変更していません。');
+    }, 120);
   }
 
   function clearWorkOrderForm(options) {
@@ -11118,6 +11189,7 @@
     openWorkCompletionModal(workOrderId);
     const sourceEl = document.getElementById('work-completion-queue-source');
     if (sourceEl) sourceEl.value = source === 'past-recovery' ? 'past-recovery' : 'work-order';
+    syncWorkCompletionDuplicateDirectButton();
   }
 
   function syncWorkCompletionPaymentDateUi(options) {
@@ -11211,11 +11283,13 @@
         : '';
     }
     document.getElementById('work-completion-modal').classList.remove('hidden');
+    syncWorkCompletionDuplicateDirectButton();
   }
 
   function closeWorkCompletionModal() {
     document.getElementById('work-completion-modal').classList.add('hidden');
     clearInlineExpenseFields('work-completion');
+    syncWorkCompletionDuplicateDirectButton();
   }
 
   function openWorkCancelModal(workOrderId) {
@@ -11935,6 +12009,11 @@
     if (closeBtn) closeBtn.addEventListener('click', closeWorkCompletionModal);
     const cancelCloseBtn = document.getElementById('btn-work-cancel-close');
     if (cancelCloseBtn) cancelCloseBtn.addEventListener('click', closeWorkCancelModal);
+    const dupCompletionBtn = document.getElementById('btn-work-completion-duplicate-direct');
+    if (dupCompletionBtn && !dupCompletionBtn.dataset.bound) {
+      dupCompletionBtn.dataset.bound = '1';
+      dupCompletionBtn.addEventListener('click', duplicateWorkOrderFromCompletionAsDirectReceive);
+    }
     const addTaskBtn = document.getElementById('btn-work-completion-add-task');
     if (addTaskBtn) {
       addTaskBtn.addEventListener('click', () => {

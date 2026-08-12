@@ -2,6 +2,32 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.13.5 売上確定画面に直受け追加複製（2026-08-12）
+
+**日付**: 2026-08-12
+
+**背景**: 直受け追加複製は作業予定編集フォームにあったが、実務では売上確定（実績入力）モーダル操作中に同じ導線が必要。既存ボタンは残し、売上確定画面へ同等機能を追加する。
+
+**判断内容**:
+- `#work-completion-modal` の操作欄へ「直受け追加で複製」を追加（初期 hidden+disabled）
+- 表示は `work-order` queue source かつ対象作業予定が存在しモーダルが開いているときのみ。`past-recovery`・対象なし・閉鎖後は非表示
+- 続行時は確認後にモーダル閉鎖→受付・予定確認の未保存draft表示。即保存しない（保存は既存保存ボタンのみ）
+- 引き継ぎはStorage上の元予定の表示10項目のみ。モーダル上の実績・経費・支払い・顧客資産メモはコピーしない
+- フォーム反映処理は `applyDirectReceiveDuplicateDraftToForm()` へ最小分離。既存編集画面の複製はフォーム値引き継ぎのまま維持
+- 確定売上・経費の自動作成なし、元予定不変、新localStorageキーなし、CSS変更なし
+
+**変更ファイル**:
+- `index.html` / `js/app.js`（実質ロジック）
+- `js/storage.js` / `js/data-backup.js`（バージョン・cache busterのみ）
+- `scripts/verify-v4135-work-completion-direct-duplicate.mjs`（新規）
+- `scripts/verify-current.mjs` および既存verifyの現行バージョンassert
+- `status.md` / `handoff.md` / `decision-log.md`
+
+**確認結果**（2026-08-12）:
+- verify-current 93/93合格（既存92本＋新規）。既存assert緩和なし（v4131は共通ヘルパー参照へ対象範囲調整のみ）
+- localhost隔離origin（`http://127.0.0.1:8765/?v=4135fixture`）Browser番頭共通Chrome／Chrome DevTools MCP確認: 通常作業予定でボタン表示・有効、`past-recovery`非表示、確認キャンセルでモーダル/raw/件数不変、続行で未保存draft（直受け/confirmed/関連空）、複製直後localStorage不変、保存ボタン経由のみ+1件、禁止フィールド非引き継ぎ、既存編集画面複製維持、粗利率100%、PC/390px横スクロールなし、Console errorなし、JS/CSS 404なし。fixture（記録ID+`v4135fix` prefix）削除後残存0
+- 物理スマートフォン実機確認は未完了
+
 ## v4.13.4 月粗利率と経費保存失敗案内（2026-08-10）
 
 **日付**: 2026-08-10

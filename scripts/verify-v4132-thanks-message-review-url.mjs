@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.4 - お礼LINE文へGoogle口コミURL追加 verify
+ * Budil v4.13.5 - お礼LINE文へGoogle口コミURL追加 verify
  *
  * Background: 作業後フォローの「お礼LINE文」に、既存のGoogle口コミURLを
  * 表示・コピーできるようにする。口コミ依頼文の処理は変えない。
@@ -36,16 +36,16 @@ for (const file of ['js/follow-up-brain.js', 'js/app.js', 'js/storage.js', 'js/d
 }
 
 console.log('== version / cache buster ==');
-assert(html.includes('Budil v4.13.4'), 'index.html shows Budil v4.13.4');
-assert(html.includes('js/app.js?v=4.13.4'), 'app.js cache buster is v4.13.4');
-assert(html.includes('js/follow-up-brain.js?v=4.13.4'), 'follow-up-brain.js cache buster is v4.13.4');
-assert(html.includes('css/style.css?v=4.13.4'), 'style.css cache buster is v4.13.4');
-assert(storage.includes("BUDIL_VERSION: 'v4.13.4'"), 'storage version is v4.13.4');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.4'"), 'data-backup version is v4.13.4');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.4'"), 'verify-current pins v4.13.4');
-assert(statusMd.includes('v4.13.4'), 'status.md documents v4.13.4');
-assert(handoffMd.includes('v4.13.4'), 'handoff.md documents v4.13.4');
-assert(decisionLog.includes('v4.13.4'), 'decision-log.md records v4.13.4');
+assert(html.includes('Budil v4.13.5'), 'index.html shows Budil v4.13.5');
+assert(html.includes('js/app.js?v=4.13.5'), 'app.js cache buster is v4.13.5');
+assert(html.includes('js/follow-up-brain.js?v=4.13.5'), 'follow-up-brain.js cache buster is v4.13.5');
+assert(html.includes('css/style.css?v=4.13.5'), 'style.css cache buster is v4.13.5');
+assert(storage.includes("BUDIL_VERSION: 'v4.13.5'"), 'storage version is v4.13.5');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.5'"), 'data-backup version is v4.13.5');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.5'"), 'verify-current pins v4.13.5');
+assert(statusMd.includes('v4.13.5'), 'status.md documents v4.13.5');
+assert(handoffMd.includes('v4.13.5'), 'handoff.md documents v4.13.5');
+assert(decisionLog.includes('v4.13.5'), 'decision-log.md records v4.13.5');
 
 console.log('== load FollowUpBrain ==');
 const sandbox = { console };
@@ -174,4 +174,4 @@ assert(
   'getReviewUrl prefers trimmed googleReviewUrl'
 );
 
-console.log('\nAll v4.13.4 thanks-message review URL checks passed.');
+console.log('\nAll v4.13.5 thanks-message review URL checks passed.');

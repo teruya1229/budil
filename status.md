@@ -1,5 +1,17 @@
 ﻿# Budil status
 
+## v4.13.5 実装内容（売上確定画面に直受け追加複製）
+
+- 背景: v4.13.1/4では「直受け追加で複製」が受付・予定確認の作業予定編集フォームにしかなく、実務で必要な売上確定モーダルからは使えなかった
+- 実装（最小差分）:
+  - `index.html` の `#work-completion-form` → `.work-completion-modal-actions` に「直受け追加で複製」ボタン（`#btn-work-completion-duplicate-direct`）を追加。初期は `hidden`＋`disabled`
+  - 表示条件: `work-completion-queue-source === "work-order"` かつ対象作業予定がStorageに存在しモーダルが開いているときのみ。`past-recovery`・対象なし・モーダル閉鎖後は非表示・無効
+  - 押下時は確認ダイアログ後、売上確定モーダルを閉じ `navigateToView('calendar-registration')` → `openWorkOrderFormPanel()` で作業予定入力へ移動。Storage上の元予定から表示10項目だけを引き継いだ未保存draftを表示（即保存しない）
+  - 共通ヘルパー `applyDirectReceiveDuplicateDraftToForm()` を分離。既存の作業予定編集フォーム複製はフォーム値引き継ぎのまま維持
+  - 引き継がない: 元ID、createdAt/updatedAt、actualRevenueId、completion、candidateMeta、calendar類、売上/経費/受付/営業先リンク、モーダル上の実績入力
+- 新規 `scripts/verify-v4135-work-completion-direct-duplicate.mjs`。現行合格は`node scripts/verify-current.mjs`（93本）
+- CSS変更なし・新localStorageキーなし・`localStorage.clear()`未使用。物理スマートフォン実機確認は未完了
+
 ## v4.13.4 実装内容（月粗利率と経費保存失敗案内）
 
 - 背景: v4.13.3では売上別の経費反映後利益率は正しかったが、月全体の`monthGrossRate`だけ経費控除前だった。また経費同時保存で`Storage.addExpenseRecord()`が例外throwした場合、部分保存案内が出ない可能性があった

@@ -1,6 +1,6 @@
 ﻿# Budil handoff
 
-最終更新: 2026-08-10
+最終更新: 2026-08-12
 
 ## 正本
 
@@ -17,14 +17,15 @@
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` の依存関係（googleapis 等）。依存は `hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（92本）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（93本）
 - **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
 
 ## 現在の最新状態
 
 | 項目 | 値 |
 |------|-----|
-| 最新バージョン | v4.13.4 |
+| 最新バージョン | v4.13.5 |
+| v4.13.5 売上確定画面に直受け追加複製 | 売上確定モーダル（`#work-completion-modal`）へ「直受け追加で複製」を追加。通常作業予定のみ表示・有効、`past-recovery`は非表示。確認後に未保存draftへ遷移（Storage即保存なし）。既存の作業予定編集画面の複製ボタンは維持。共通ヘルパー分離。CSS変更なし。verify-current 93本。物理スマホ実機確認は未完了 |
 | v4.13.4 月粗利率と経費保存失敗案内 | 表示用`monthGrossRate`を経費控除後利益÷売上へ修正。作業予定フォールバックは経費控除前率を内部維持。経費保存例外は部分保存案内へ変換（売上ロールバック/再登録/自動再試行なし）。CSS変更なし。verify-current 92本。物理スマホ実機確認は未完了 |
 | v4.13.3 売上と経費の紐づけ・売上確定時の経費同時入力 | 毎日/利益管理の関連売上常時表示、売上確定時の経費1件同時登録、経費反映後利益率表示、売上削除時のrelatedRevenueId解除。grossMarginRate意味不変。自動紐づけなし。verify-current 91本。物理スマホ実機確認は未完了 |
 | v4.13.2 お礼LINE文へGoogle口コミURL追加 | `generateThanksMessage()` のみ最小修正。既存 `getReviewUrl()` 経由で口コミURLを followUpMemo の後・事業者名の前に挿入。同一URLの二重表示なし。`generateReviewRequest()` 不変。自動送信なし。verify-current 90本。物理スマホ実機確認は未完了 |
