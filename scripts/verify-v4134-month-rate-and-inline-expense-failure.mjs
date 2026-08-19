@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.5 - 月粗利率（経費控除後）と経費保存例外時の部分保存案内 verify
+ * Budil v4.13.6 - 月粗利率（経費控除後）と経費保存例外時の部分保存案内 verify
  */
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -30,19 +30,19 @@ for (const file of ['js/app.js', 'js/profit-brain.js', 'js/storage.js', 'js/data
 }
 
 console.log('== version / cache buster ==');
-assert(html.includes('Budil v4.13.5'), 'index.html shows Budil v4.13.5');
-assert(html.includes('js/app.js?v=4.13.5'), 'app.js cache buster is v4.13.5');
-assert(html.includes('js/profit-brain.js?v=4.13.5'), 'profit-brain cache buster is v4.13.5');
-assert(html.includes('css/style.css?v=4.13.5'), 'style.css cache buster is v4.13.5');
-assert(storageSrc.includes("BUDIL_VERSION: 'v4.13.5'"), 'storage version is v4.13.5');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.5'"), 'data-backup version is v4.13.5');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.5'"), 'verify-current pins v4.13.5');
+assert(html.includes('Budil v4.13.6'), 'index.html shows Budil v4.13.6');
+assert(html.includes('js/app.js?v=4.13.6'), 'app.js cache buster is v4.13.6');
+assert(html.includes('js/profit-brain.js?v=4.13.6'), 'profit-brain cache buster is v4.13.6');
+assert(html.includes('css/style.css?v=4.13.6'), 'style.css cache buster is v4.13.6');
+assert(storageSrc.includes("BUDIL_VERSION: 'v4.13.6'"), 'storage version is v4.13.6');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.6'"), 'data-backup version is v4.13.6');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.6'"), 'verify-current pins v4.13.6');
 assert(currentRunner.includes('verify-v4134-month-rate-and-inline-expense-failure.mjs') ||
   /^verify-v4(10|11|12|13)\d.*\.mjs$/.test('verify-v4134-month-rate-and-inline-expense-failure.mjs'),
   'new verify is discoverable by current pattern');
-assert(statusMd.includes('v4.13.5'), 'status.md documents v4.13.5');
-assert(handoffMd.includes('v4.13.5'), 'handoff.md documents v4.13.5');
-assert(decisionLog.includes('v4.13.5'), 'decision-log.md records v4.13.5');
+assert(statusMd.includes('v4.13.6'), 'status.md documents v4.13.6');
+assert(handoffMd.includes('v4.13.6'), 'handoff.md documents v4.13.6');
+assert(decisionLog.includes('v4.13.6'), 'decision-log.md records v4.13.6');
 assert(decisionLog.includes('monthGrossProfit÷monthRevenue') || decisionLog.includes('monthGrossProfit / monthRevenue') ||
   decisionLog.includes('monthGrossProfit÷monthRevenueへ修正') || decisionLog.includes('経費控除後'),
   'decision-log records month rate fix');
@@ -339,4 +339,4 @@ console.log('== case6: three save paths keep partial-save guidance ==');
   assert(!app.includes('localStorage.clear('), 'no localStorage.clear');
 }
 
-console.log('\nAll v4.13.5 month-rate and inline-expense-failure checks passed.');
+console.log('\nAll v4.13.6 month-rate and inline-expense-failure checks passed.');

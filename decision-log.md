@@ -2,6 +2,25 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.13.6 予定日編集＋Googleカレンダー日程変更同期（2026-08-19）
+
+**日付**: 2026-08-19
+
+**背景**: 保存済みカレンダー候補カードに編集導線がなく、Googleカレンダーで前倒しした同一 event ID が `calendarDedupeKey` 重複として破棄され、Budil側日付が古いまま残っていた。
+
+**判断内容**:
+- 安定キー `google_calendar|{calendarId}|{eventId}` 一致かつ日時変更 → 既存作業予定を `schedule-update` として更新（新規追加しない）
+- 売上確定済み・cancelled/archived・売上明細参照ありは `update-blocked`
+- 手動編集は既存フォーム再利用。非表示連携情報は維持
+- calendar-sync-worker は linkedDedupeKeys の event のみ period 外再取得（全過去30日返却は禁止）
+- 新localStorageキーなし、自動売上確定なし、CSS変更なし
+
+**変更ファイル**:
+- `js/calendar-candidate-brain.js` / `js/storage.js` / `js/app.js` / `index.html` / `js/data-backup.js`
+- `scripts/verify-v4136-calendar-reschedule-sync.mjs`（新規）/ `scripts/verify-current.mjs` / 既存verifyのバージョンassert
+- `status.md` / `handoff.md` / `decision-log.md`
+- calendar-sync-worker（別repo）: `src/utils/exportBudilCalendarCore.js` / `src/localApi/server.js` / `src/localApi/main.js`
+
 ## v4.13.5 売上確定画面に直受け追加複製（2026-08-12）
 
 **日付**: 2026-08-12

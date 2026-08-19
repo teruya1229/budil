@@ -866,6 +866,121 @@ const CalendarCandidateBrain = {
     };
   },
 
+  STABLE_GOOGLE_CALENDAR_DEDUPE_PREFIX: 'google_calendar|',
+
+  isStableGoogleCalendarDedupeKey(key) {
+    return String(key || '').trim().startsWith(this.STABLE_GOOGLE_CALENDAR_DEDUPE_PREFIX);
+  },
+
+  findWorkOrderByCalendarDedupeKey(workOrders, key) {
+    const normalizedKey = String(key || '').trim();
+    if (!normalizedKey) return null;
+    const matches = (workOrders || []).filter(
+      (w) => String(w && w.calendarDedupeKey || '').trim() === normalizedKey
+    );
+    if (!matches.length) return null;
+    if (matches.length > 1) {
+      return { ambiguous: true, matches };
+    }
+    return typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.normalizeWorkOrder(matches[0])
+      : matches[0];
+  },
+
+  normalizeScheduleTriple(record) {
+    const c = this.normalizeCandidate(record);
+    return {
+      scheduledDate: c.scheduledDate || '',
+      startTime: c.startTime || '',
+      endTime: c.endTime || ''
+    };
+  },
+
+  hasScheduleChange(existing, candidate) {
+    const prev = this.normalizeScheduleTriple(existing);
+    const next = this.normalizeScheduleTriple(candidate);
+    return prev.scheduledDate !== next.scheduledDate
+      || prev.startTime !== next.startTime
+      || prev.endTime !== next.endTime;
+  },
+
+  isScheduleSyncBlocked(workOrder, revenues) {
+    const wo = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.normalizeWorkOrder(workOrder)
+      : workOrder;
+    if (!wo || !wo.id) {
+      return { blocked: true, reason: '作業予定が見つかりません' };
+    }
+    if (String(wo.actualRevenueId || '').trim()) {
+      return { blocked: true, reason: '売上確定済みのため日程を自動更新できません' };
+    }
+    const meta = wo.candidateMeta && typeof wo.candidateMeta === 'object' ? wo.candidateMeta : {};
+    if (meta.confirmedRevenue === true) {
+      return { blocked: true, reason: '売上確定済みのため日程を自動更新できません' };
+    }
+    if (wo.status === 'cancelled' || wo.status === 'archived') {
+      return { blocked: true, reason: 'キャンセル・保管中の予定は自動更新できません' };
+    }
+    const woId = String(wo.id).trim();
+    const list = revenues || [];
+    if (list.some((r) => {
+      if (!r) return false;
+      return String(r.sourceWorkOrderId || '').trim() === woId
+        || String(r.workOrderId || '').trim() === woId;
+    })) {
+      return { blocked: true, reason: '売上明細に紐づいているため日程を自動更新できません' };
+    }
+    return { blocked: false };
+  },
+
+  classifyStableCalendarImportItem(candidate, workOrders, revenues) {
+    const c = this.normalizeCandidate(candidate);
+    const key = String(c.calendarDedupeKey || '').trim();
+    if (!this.isStableGoogleCalendarDedupeKey(key)) return null;
+    const found = this.findWorkOrderByCalendarDedupeKey(workOrders, key);
+    if (found && found.ambiguous) {
+      return {
+        kind: 'update-blocked',
+        reason: '同じGoogleカレンダーIDの作業予定が複数あります',
+        target: null
+      };
+    }
+    if (!found) return null;
+    const blocked = this.isScheduleSyncBlocked(found, revenues);
+    const previousSchedule = this.normalizeScheduleTriple(found);
+    const nextSchedule = this.normalizeScheduleTriple(c);
+    if (blocked.blocked) {
+      return {
+        kind: 'update-blocked',
+        reason: blocked.reason,
+        target: found,
+        previousSchedule,
+        nextSchedule,
+        scheduleChange: this.hasScheduleChange(found, c)
+      };
+    }
+    if (!this.hasScheduleChange(found, c)) {
+      return { kind: 'unchanged', target: found, previousSchedule, nextSchedule };
+    }
+    return {
+      kind: 'schedule-update',
+      target: found,
+      previousSchedule,
+      nextSchedule
+    };
+  },
+
+  formatScheduleUpdatePreviewText(previousSchedule, nextSchedule) {
+    const fmt = (schedule) => {
+      const date = (schedule && schedule.scheduledDate) || '日付不明';
+      const start = schedule && schedule.startTime;
+      const end = schedule && schedule.endTime;
+      const time = start && end ? `${start}〜${end}` : (start || '時間未設定');
+      return `${date} ${time}`;
+    };
+    return `登録済み作業予定の日程を ${fmt(previousSchedule)} → ${fmt(nextSchedule)} に更新します`;
+  },
+
   detectDuplicates(candidate, workOrders, savedCandidates) {
     const c = this.normalizeCandidate(candidate);
     const key = this.buildDedupeKey(c);
@@ -923,14 +1038,57 @@ const CalendarCandidateBrain = {
     return matches;
   },
 
-  buildImportPreview(parsed, workOrders) {
+  buildImportPreview(parsed, workOrders, options) {
     const report = parsed || {};
+    const opts = options || {};
+    const revenues = opts.revenues || [];
     const calendarOrders = (workOrders || []).filter(w => this.isCalendarCandidateWorkOrder(w));
     const items = (report.candidates || []).map((c, index) => {
+      const stable = this.classifyStableCalendarImportItem(c, workOrders, revenues);
+      if (stable) {
+        if (stable.kind === 'schedule-update') {
+          return {
+            index,
+            candidate: c,
+            importKind: 'schedule-update',
+            scheduleUpdate: stable,
+            duplicates: [],
+            isDuplicate: false,
+            warnings: []
+          };
+        }
+        if (stable.kind === 'unchanged') {
+          return {
+            index,
+            candidate: c,
+            importKind: 'unchanged',
+            scheduleUpdate: stable,
+            duplicates: [{
+              type: 'unchanged',
+              workOrder: stable.target,
+              reason: '日程に変更はありません'
+            }],
+            isDuplicate: true,
+            warnings: []
+          };
+        }
+        if (stable.kind === 'update-blocked') {
+          return {
+            index,
+            candidate: c,
+            importKind: 'update-blocked',
+            scheduleUpdate: stable,
+            duplicates: [],
+            isDuplicate: false,
+            warnings: [stable.reason || '更新保留']
+          };
+        }
+      }
       const duplicates = this.detectDuplicates(c, workOrders, calendarOrders);
       return {
         index,
         candidate: c,
+        importKind: duplicates.length ? 'duplicate' : 'new',
         duplicates,
         isDuplicate: duplicates.length > 0,
         warnings: []
@@ -1006,6 +1164,9 @@ const CalendarCandidateBrain = {
 
   isFutureImportSavable(item, force) {
     if (!item) return false;
+    if (item.importKind === 'schedule-update' || item.importKind === 'unchanged' || item.importKind === 'update-blocked') {
+      return false;
+    }
     if (item.isPastDate && !force) {
       // v4.10.27: 過去日付でも金額があれば保存可能（翌日インポート対応）
       const amt = item.candidate ? Number(item.candidate.estimateAmount || 0) : 0;
@@ -1021,7 +1182,23 @@ const CalendarCandidateBrain = {
     let duplicateCount = 0;
     let excludedCount = 0;
     let savableCount = 0;
+    let scheduleUpdateCount = 0;
+    let unchangedCount = 0;
+    let updateBlockedCount = 0;
+    let updateFailedCount = 0;
     items.forEach(item => {
+      if (item.importKind === 'schedule-update') {
+        scheduleUpdateCount += 1;
+        return;
+      }
+      if (item.importKind === 'unchanged') {
+        unchangedCount += 1;
+        return;
+      }
+      if (item.importKind === 'update-blocked') {
+        updateBlockedCount += 1;
+        return;
+      }
       if (item.isDuplicate) {
         duplicateCount += 1;
         return;
@@ -1039,16 +1216,33 @@ const CalendarCandidateBrain = {
       excludedCount,
       savableCount,
       eligibleCount: savableCount,
+      scheduleUpdateCount,
+      unchangedCount,
+      updateBlockedCount,
+      updateFailedCount,
       revenueRegistered: false
     };
   },
 
   // v4.11.1: 予定取り込み結果画面用の内訳バケット（表示のみ）
   bucketFutureImportPreviewItems(preview) {
-    const buckets = { savable: [], duplicate: [], excluded: [] };
+    const buckets = {
+      scheduleUpdate: [],
+      unchanged: [],
+      updateBlocked: [],
+      savable: [],
+      duplicate: [],
+      excluded: []
+    };
     ((preview && preview.items) || []).forEach((item, index) => {
       const entry = { item, index };
-      if (item.futureImport && item.futureImport.status === 'excluded') {
+      if (item.importKind === 'schedule-update') {
+        buckets.scheduleUpdate.push(entry);
+      } else if (item.importKind === 'unchanged') {
+        buckets.unchanged.push(entry);
+      } else if (item.importKind === 'update-blocked') {
+        buckets.updateBlocked.push(entry);
+      } else if (item.futureImport && item.futureImport.status === 'excluded') {
         buckets.excluded.push(entry);
       } else if (item.isDuplicate) {
         buckets.duplicate.push(entry);

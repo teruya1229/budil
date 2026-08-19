@@ -46,11 +46,11 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.13.5'), 'index.html should show v4.12.26');
-assert(indexHtml.includes('js/app.js?v=4.13.5'), 'app.js cache buster should be v4.12.26');
-assert(indexHtml.includes('css/style.css?v=4.13.5'), 'style.css cache buster should be v4.12.26');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.5'"), 'storage.js version should be v4.12.26');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.13.5'"), 'data-backup version should be v4.12.26');
+assert(indexHtml.includes('v4.13.6'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('js/app.js?v=4.13.6'), 'app.js cache buster should be v4.13.6');
+assert(indexHtml.includes('css/style.css?v=4.13.6'), 'style.css cache buster should be v4.13.6');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.6'"), 'storage.js version should be v4.13.6');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.13.6'"), 'data-backup version should be v4.13.6');
 
 console.log('== monthly close page structure ==');
 const viewMonthly = indexHtml.slice(

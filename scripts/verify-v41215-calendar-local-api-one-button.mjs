@@ -30,13 +30,13 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.13.5'), 'index.html should show v4.12.26');
-assert(indexHtml.includes('js/app.js?v=4.13.5'), 'app.js cache buster should be v4.12.26');
-assert(indexHtml.includes('css/style.css?v=4.13.5'), 'style.css cache buster should be v4.12.26');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.13.5'), 'calendar-candidate cache buster should be v4.12.26');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.5'"), 'storage version should be v4.12.26');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.13.5'"), 'data-backup version should be v4.12.26');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.5'"), 'verify-current EXPECTED_VERSION should be v4.12.26');
+assert(indexHtml.includes('v4.13.6'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('js/app.js?v=4.13.6'), 'app.js cache buster should be v4.13.6');
+assert(indexHtml.includes('css/style.css?v=4.13.6'), 'style.css cache buster should be v4.13.6');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.13.6'), 'calendar-candidate cache buster should be v4.13.6');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.6'"), 'storage version should be v4.13.6');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.13.6'"), 'data-backup version should be v4.13.6');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.6'"), 'verify-current EXPECTED_VERSION should be v4.13.6');
 assert(!indexHtml.includes('?v=4.12.14'), 'old cache buster v4.12.14 should be gone');
 assert(statusMd.includes('v4.12.25'), 'status.md should document v4.12.25');
 assert(handoffMd.includes('v4.12.25'), 'handoff.md should document v4.12.25');
@@ -244,6 +244,8 @@ function createBrainSandbox() {
       id: 'wo-dup',
       calendarDedupeKey: 'google_calendar|test@example.com|evt-dup-1',
       scheduledDate: '2026-08-02',
+      startTime: '10:00',
+      endTime: '11:00',
       title: 'テスト重複'
     }
   ];
@@ -262,7 +264,7 @@ function createBrainSandbox() {
   );
 
   assert(summary.readCount === 3, 'readCount should be 3');
-  assert(summary.duplicateCount >= 1, 'duplicate should be detected');
+  assert(summary.unchangedCount >= 1, 'stable google key with same schedule should be unchanged');
   assert(summary.excludedCount >= 1, 'excluded should be detected');
   assert(summary.savableCount >= 1, 'at least one savable');
 

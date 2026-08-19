@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const scriptsDir = join(root, 'scripts');
-const EXPECTED_VERSION = 'v4.13.5';
+const EXPECTED_VERSION = 'v4.13.6';
 
 const CURRENT_PATTERN = /^verify-v4(10|11|12|13)\d.*\.mjs$/;
 

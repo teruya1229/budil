@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.5 - 売上確定待ち予定の直受け追加複製 verify
+ * Budil v4.13.6 - 売上確定待ち予定の直受け追加複製 verify
  *
  * Background: 元請け案件の作業当日にお客様から直接追加作業を受ける場合がある。
  * 元請け分の依頼元別利益率は維持し、追加作業分だけを別売上として
@@ -42,16 +42,16 @@ for (const file of ['js/app.js', 'js/revenue-brain.js', 'js/storage.js', 'js/dat
 }
 
 console.log('== version / cache buster ==');
-assert(html.includes('Budil v4.13.5'), 'index.html shows Budil v4.13.5');
-assert(html.includes('js/app.js?v=4.13.5'), 'app.js cache buster is v4.13.5');
-assert(html.includes('js/revenue-brain.js?v=4.13.5'), 'revenue-brain.js cache buster is v4.13.5');
-assert(html.includes('css/style.css?v=4.13.5'), 'style.css cache buster is v4.13.5');
-assert(storage.includes("BUDIL_VERSION: 'v4.13.5'"), 'storage version is v4.13.5');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.5'"), 'data-backup version is v4.13.5');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.5'"), 'verify-current pins v4.13.5');
-assert(statusMd.includes('v4.13.5'), 'status.md documents v4.13.5');
-assert(handoffMd.includes('v4.13.5'), 'handoff.md documents v4.13.5');
-assert(decisionLog.includes('v4.13.5'), 'decision-log.md records v4.13.5');
+assert(html.includes('Budil v4.13.6'), 'index.html shows Budil v4.13.6');
+assert(html.includes('js/app.js?v=4.13.6'), 'app.js cache buster is v4.13.6');
+assert(html.includes('js/revenue-brain.js?v=4.13.6'), 'revenue-brain.js cache buster is v4.13.6');
+assert(html.includes('css/style.css?v=4.13.6'), 'style.css cache buster is v4.13.6');
+assert(storage.includes("BUDIL_VERSION: 'v4.13.6'"), 'storage version is v4.13.6');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.6'"), 'data-backup version is v4.13.6');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.6'"), 'verify-current pins v4.13.6');
+assert(statusMd.includes('v4.13.6'), 'status.md documents v4.13.6');
+assert(handoffMd.includes('v4.13.6'), 'handoff.md documents v4.13.6');
+assert(decisionLog.includes('v4.13.6'), 'decision-log.md records v4.13.6');
 
 console.log('== 1. button only inside existing work-order-form ==');
 const formMatch = html.match(/<form id="work-order-form">([\s\S]*?)<\/form>/);
@@ -167,7 +167,7 @@ assert(!html.includes('>作業完了<') && !html.includes('作業完了</'), 'in
 
 console.log('== docs ==');
 assert(statusMd.includes('直受け追加で複製') || statusMd.includes('直受け追加複製'), 'status.md mentions direct duplicate');
-assert(handoffMd.includes('直受け') && handoffMd.includes('v4.13.5'), 'handoff.md mentions v4.13.5 直受け');
+assert(handoffMd.includes('直受け') && handoffMd.includes('v4.13.6'), 'handoff.md mentions v4.13.6 直受け');
 assert(decisionLog.includes('直受け') && decisionLog.includes('即保存しない'), 'decision-log records no immediate save');
 
-console.log('\nAll v4.13.5 work-order-direct-duplicate checks passed.');
+console.log('\nAll v4.13.6 work-order-direct-duplicate checks passed.');

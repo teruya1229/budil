@@ -52,11 +52,11 @@ const tamazawaItem = {
 };
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.13.5'), 'index.html should show v4.12.26');
-assert(indexHtml.includes('js/app.js?v=4.13.5'), 'app.js cache buster should be v4.12.26');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.13.5'), 'calendar brain cache buster should be v4.12.26');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.5'"), 'storage.js version should be v4.12.26');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.13.5'"), 'data-backup version should be v4.12.26');
+assert(indexHtml.includes('v4.13.6'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('js/app.js?v=4.13.6'), 'app.js cache buster should be v4.13.6');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.13.6'), 'calendar brain cache buster should be v4.13.6');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.6'"), 'storage.js version should be v4.13.6');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.13.6'"), 'data-backup version should be v4.13.6');
 
 console.log('== import result UI wiring ==');
 assert(appJs.includes('renderCalendarImportResultBreakdownHtml'), 'import result breakdown renderer should exist');
@@ -135,11 +135,12 @@ console.log('== duplicate does not allow second save ==');
     return CalendarCandidateBrain.attachFutureImportPreview(preview, '${TODAY}');
   })()`, ctx);
   const item = preview.items[0];
-  assert(item.isDuplicate === true, 'existing work order should mark duplicate');
+  assert(item.importKind === 'unchanged', 'stable google key with same schedule should be unchanged');
+  assert(item.isDuplicate === true, 'existing work order should not be savable again');
   const savable = runInContext(`CalendarCandidateBrain.isFutureImportSavable(${JSON.stringify(item)})`, ctx);
-  assert(savable === false, 'duplicate must not be savable without force');
+  assert(savable === false, 'unchanged must not be savable without force');
   const buckets = runInContext(`CalendarCandidateBrain.bucketFutureImportPreviewItems(${JSON.stringify(preview)})`, ctx);
-  assert(buckets.duplicate.length === 1, 'tamazawa should move to duplicate bucket');
+  assert(buckets.unchanged.length === 1, 'tamazawa should move to unchanged bucket');
 }
 
 console.log('== excluded controls remain ==');

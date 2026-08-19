@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.13.5',
+  BUDIL_VERSION: 'v4.13.6',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -1358,6 +1358,159 @@ const Storage = {
     list[idx] = { ...merged, updatedAt: new Date().toISOString() };
     this.saveWorkOrders(list);
     return list[idx];
+  },
+
+  syncWorkOrderScheduleFromCalendar(workOrderId, calendarDedupeKey, scheduleFields) {
+    const id = String(workOrderId || '').trim();
+    const expectedKey = String(calendarDedupeKey || '').trim();
+    const fields = scheduleFields || {};
+    const nextDate = String(fields.scheduledDate || '').trim();
+    const nextStart = String(fields.startTime || '').trim();
+    const nextEnd = String(fields.endTime || '').trim();
+
+    if (!id || !expectedKey) {
+      this.recordOperationLog({
+        action: 'sync_work_order_schedule_blocked',
+        targetKey: this.KEYS.WORK_ORDERS,
+        targetId: id,
+        reason: 'missing_id_or_key'
+      });
+      return { ok: false, error: 'missing_id_or_key', blocked: false };
+    }
+
+    const list = this.getWorkOrders();
+    const idx = list.findIndex(w => String(w && w.id || '').trim() === id);
+    if (idx === -1) {
+      this.recordOperationLog({
+        action: 'sync_work_order_schedule_blocked',
+        targetKey: this.KEYS.WORK_ORDERS,
+        targetId: id,
+        reason: 'target_not_found'
+      });
+      return { ok: false, error: 'target_not_found', blocked: false };
+    }
+
+    const prev = list[idx];
+    const prevKey = String(prev.calendarDedupeKey || '').trim();
+    if (prevKey !== expectedKey) {
+      this.recordOperationLog({
+        action: 'sync_work_order_schedule_blocked',
+        targetKey: this.KEYS.WORK_ORDERS,
+        targetId: id,
+        reason: 'dedupe_key_mismatch'
+      });
+      return { ok: false, error: 'dedupe_key_mismatch', blocked: false };
+    }
+
+    const revenues = this.getRevenueRecords();
+    const woId = String(prev.id || '').trim();
+    if (String(prev.actualRevenueId || '').trim()) {
+      this.recordOperationLog({
+        action: 'sync_work_order_schedule_blocked',
+        targetKey: this.KEYS.WORK_ORDERS,
+        targetId: id,
+        reason: 'actual_revenue_id'
+      });
+      return { ok: false, error: 'update_blocked', blocked: true, reason: 'actual_revenue_id' };
+    }
+    const meta = prev.candidateMeta && typeof prev.candidateMeta === 'object' ? prev.candidateMeta : {};
+    if (meta.confirmedRevenue === true) {
+      this.recordOperationLog({
+        action: 'sync_work_order_schedule_blocked',
+        targetKey: this.KEYS.WORK_ORDERS,
+        targetId: id,
+        reason: 'confirmed_revenue'
+      });
+      return { ok: false, error: 'update_blocked', blocked: true, reason: 'confirmed_revenue' };
+    }
+    if (prev.status === 'cancelled' || prev.status === 'archived') {
+      this.recordOperationLog({
+        action: 'sync_work_order_schedule_blocked',
+        targetKey: this.KEYS.WORK_ORDERS,
+        targetId: id,
+        reason: 'status_' + prev.status
+      });
+      return { ok: false, error: 'update_blocked', blocked: true, reason: prev.status };
+    }
+    if (revenues.some((r) => {
+      if (!r) return false;
+      return String(r.sourceWorkOrderId || '').trim() === woId
+        || String(r.workOrderId || '').trim() === woId;
+    })) {
+      this.recordOperationLog({
+        action: 'sync_work_order_schedule_blocked',
+        targetKey: this.KEYS.WORK_ORDERS,
+        targetId: id,
+        reason: 'revenue_reference'
+      });
+      return { ok: false, error: 'update_blocked', blocked: true, reason: 'revenue_reference' };
+    }
+
+    const prevDate = String(prev.scheduledDate || '').trim();
+    const prevStart = String(prev.startTime || '').trim();
+    const prevEnd = String(prev.endTime || '').trim();
+    if (prevDate === nextDate && prevStart === nextStart && prevEnd === nextEnd) {
+      return { ok: true, unchanged: true, workOrder: prev };
+    }
+
+    try {
+      this.createSafetyBackup({
+        reason: 'before_sync_work_order_schedule',
+        targetKey: this.KEYS.WORK_ORDERS,
+        targetId: id,
+        data: [this.cloneForSafety(prev)],
+        beforeCount: list.length
+      });
+    } catch (err) {
+      this.recordOperationLog({
+        action: 'sync_work_order_schedule_blocked',
+        targetKey: this.KEYS.WORK_ORDERS,
+        targetId: id,
+        reason: 'backup_failed'
+      });
+      return { ok: false, error: 'backup_failed', blocked: false };
+    }
+
+    const updated = typeof WorkOrderBrain !== 'undefined'
+      ? WorkOrderBrain.normalizeWorkOrder({
+        ...prev,
+        scheduledDate: nextDate,
+        startTime: nextStart,
+        endTime: nextEnd,
+        id: prev.id
+      })
+      : {
+        ...prev,
+        scheduledDate: nextDate,
+        startTime: nextStart,
+        endTime: nextEnd
+      };
+    updated.updatedAt = new Date().toISOString();
+
+    const nextList = list.slice();
+    nextList[idx] = updated;
+    try {
+      this.saveWorkOrders(nextList);
+    } catch (err) {
+      this.recordOperationLog({
+        action: 'sync_work_order_schedule_failed',
+        targetKey: this.KEYS.WORK_ORDERS,
+        targetId: id,
+        reason: 'save_failed'
+      });
+      return { ok: false, error: 'save_failed', blocked: false };
+    }
+
+    this.recordOperationLog({
+      action: 'sync_work_order_schedule',
+      targetKey: this.KEYS.WORK_ORDERS,
+      targetId: id,
+      calendarDedupeKey: expectedKey,
+      previousSchedule: { scheduledDate: prevDate, startTime: prevStart, endTime: prevEnd },
+      nextSchedule: { scheduledDate: nextDate, startTime: nextStart, endTime: nextEnd }
+    });
+
+    return { ok: true, unchanged: false, workOrder: updated };
   },
 
   deleteDemoWorkOrders() {

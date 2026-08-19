@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.5 - 売上確定画面の直受け追加複製 verify
+ * Budil v4.13.6 - 売上確定画面の直受け追加複製 verify
  *
  * Background: v4.13.1/4 では「直受け追加で複製」が受付・予定確認の作業予定
  * 編集フォームにしかない。実務では売上確定モーダルから同じ操作が必要。
@@ -41,20 +41,20 @@ for (const file of ['js/app.js', 'js/revenue-brain.js', 'js/storage.js', 'js/dat
 }
 
 console.log('== version / cache buster ==');
-assert(html.includes('Budil v4.13.5'), 'index.html shows Budil v4.13.5');
-assert(html.includes('js/app.js?v=4.13.5'), 'app.js cache buster is v4.13.5');
-assert(html.includes('js/revenue-brain.js?v=4.13.5'), 'revenue-brain.js cache buster is v4.13.5');
-assert(html.includes('css/style.css?v=4.13.5'), 'style.css cache buster is v4.13.5');
-assert(storage.includes("BUDIL_VERSION: 'v4.13.5'"), 'storage version is v4.13.5');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.5'"), 'data-backup version is v4.13.5');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.5'"), 'verify-current pins v4.13.5');
+assert(html.includes('Budil v4.13.6'), 'index.html shows Budil v4.13.6');
+assert(html.includes('js/app.js?v=4.13.6'), 'app.js cache buster is v4.13.6');
+assert(html.includes('js/revenue-brain.js?v=4.13.6'), 'revenue-brain.js cache buster is v4.13.6');
+assert(html.includes('css/style.css?v=4.13.6'), 'style.css cache buster is v4.13.6');
+assert(storage.includes("BUDIL_VERSION: 'v4.13.6'"), 'storage version is v4.13.6');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.6'"), 'data-backup version is v4.13.6');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.6'"), 'verify-current pins v4.13.6');
 assert(
   /^verify-v4(10|11|12|13)\d.*\.mjs$/.test('verify-v4135-work-completion-direct-duplicate.mjs'),
   'new verify is discoverable by current pattern'
 );
-assert(statusMd.includes('v4.13.5'), 'status.md documents v4.13.5');
-assert(handoffMd.includes('v4.13.5'), 'handoff.md documents v4.13.5');
-assert(decisionLog.includes('v4.13.5'), 'decision-log.md records v4.13.5');
+assert(statusMd.includes('v4.13.6'), 'status.md documents v4.13.6');
+assert(handoffMd.includes('v4.13.6'), 'handoff.md documents v4.13.6');
+assert(decisionLog.includes('v4.13.6'), 'decision-log.md records v4.13.6');
 
 console.log('== 1-2. button only inside work-completion-form actions ==');
 const completionFormMatch = html.match(/<form id="work-completion-form">([\s\S]*?)<\/form>/);
@@ -249,9 +249,9 @@ for (const word of ngWords) {
 console.log('== docs ==');
 assert(statusMd.includes('売上確定') && (statusMd.includes('直受け追加で複製') || statusMd.includes('直受け追加複製')),
   'status.md mentions completion direct duplicate');
-assert(handoffMd.includes('v4.13.5') && handoffMd.includes('直受け'),
-  'handoff.md mentions v4.13.5 直受け');
-assert(decisionLog.includes('v4.13.5') && (decisionLog.includes('売上確定') || decisionLog.includes('work-completion')),
-  'decision-log records v4.13.5 completion duplicate');
+assert(handoffMd.includes('v4.13.6') && handoffMd.includes('直受け'),
+  'handoff.md mentions v4.13.6 直受け');
+assert(decisionLog.includes('v4.13.6') && (decisionLog.includes('売上確定') || decisionLog.includes('work-completion')),
+  'decision-log records v4.13.6 completion duplicate');
 
-console.log('\nAll v4.13.5 work-completion-direct-duplicate checks passed.');
+console.log('\nAll v4.13.6 work-completion-direct-duplicate checks passed.');

@@ -9165,6 +9165,43 @@
       dupBtn.classList.toggle('hidden', !canDuplicate);
       dupBtn.disabled = !canDuplicate;
     }
+    syncWorkOrderManualEntrySummary(!!editId);
+  }
+
+  function syncWorkOrderManualEntrySummary(isEditing) {
+    const summary = document.getElementById('work-order-manual-entry-summary');
+    if (!summary) return;
+    summary.textContent = isEditing
+      ? '作業予定を編集'
+      : '緊急手入力：カレンダーにない予定を追加する';
+  }
+
+  function openCalendarSavedWorkOrderScheduleEditor(workOrderId) {
+    const id = String(workOrderId || '').trim();
+    if (!id) return;
+    const wo = Storage.getWorkOrders().find(w => w && w.id === id);
+    if (!wo) {
+      alert('対象の作業予定が見つかりませんでした。');
+      return;
+    }
+    navigateToView('calendar-registration');
+    setTimeout(() => {
+      openWorkOrderFormPanel(wo);
+      const dateEl = document.getElementById('work-order-date');
+      if (dateEl) {
+        dateEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        try { dateEl.focus({ preventScroll: true }); } catch (_) { dateEl.focus(); }
+      }
+    }, 120);
+  }
+
+  function refreshAfterWorkOrderSave() {
+    renderWorkOrderView();
+    refreshCalendarCandidateViews();
+    renderRevenueView();
+    renderDashboard();
+    renderExecutiveHome();
+    renderMorningExecutiveSections();
   }
 
   function applyDirectReceiveDuplicateDraftToForm(fields) {
@@ -9349,7 +9386,25 @@
       return null;
     }
     if (id) {
-      Storage.updateWorkOrder(id, data);
+      const existing = Storage.getWorkOrders().find(w => w && w.id === id);
+      if (!existing) {
+        alert('対象の作業予定が見つかりませんでした。');
+        return null;
+      }
+      const preserved = {
+        calendarDedupeKey: existing.calendarDedupeKey,
+        candidateMeta: existing.candidateMeta,
+        intakeId: existing.intakeId,
+        leadId: existing.leadId,
+        status: existing.status,
+        actualRevenueId: existing.actualRevenueId,
+        completion: existing.completion,
+        createdAt: existing.createdAt,
+        followUp: existing.followUp,
+        calendarAdded: existing.calendarAdded,
+        completedAt: existing.completedAt
+      };
+      Storage.updateWorkOrder(id, { ...data, ...preserved });
       const saved = Storage.getWorkOrders().find(w => w.id === id);
       if (saved && saved.intakeId) linkReceptionToWorkOrder(saved.intakeId, saved.id);
       return saved;
@@ -9468,7 +9523,11 @@
   function applyCalendarCandidateParsed(parsed) {
     if (typeof CalendarCandidateBrain === 'undefined') return;
     lastCalendarCandidateImportResult = null;
-    lastCalendarCandidatePreview = CalendarCandidateBrain.buildImportPreview(parsed, Storage.getWorkOrders());
+    lastCalendarCandidatePreview = CalendarCandidateBrain.buildImportPreview(
+      parsed,
+      Storage.getWorkOrders(),
+      { revenues: Storage.getRevenueRecords() }
+    );
     const past = getCalendarPastRecoveryOptions();
     if (past.enabled) {
       lastCalendarCandidatePreview = CalendarCandidateBrain.attachPastRecoveryPreview(
@@ -9664,9 +9723,15 @@
       : '';
     const fetchedCount = Number(meta && meta.itemCount != null ? meta.itemCount : (summary && summary.readCount) || 0);
     const savedCount = Number((summary && summary.savedCount) || 0);
+    const scheduleUpdateCount = Number((summary && summary.scheduleUpdateCount) || 0);
+    const unchangedCount = Number((summary && summary.unchangedCount) || 0);
     const duplicateCount = Number((summary && summary.duplicateCount) || 0);
     const excludedCount = Number((summary && summary.excludedCount) || 0);
-    const base = `カレンダーを更新しました。取得${fetchedCount}件／新規${savedCount}件／重複${duplicateCount}件／対象外${excludedCount}件`;
+    const updateBlockedCount = Number((summary && summary.updateBlockedCount) || 0);
+    const updateFailedCount = Number((summary && summary.updateFailedCount) || 0);
+    let base = `カレンダーを更新しました。取得${fetchedCount}件／新規${savedCount}件／日程更新${scheduleUpdateCount}件／変更なし${unchangedCount}件／重複${duplicateCount}件／対象外${excludedCount}件`;
+    if (updateBlockedCount) base += `／更新保留${updateBlockedCount}件`;
+    if (updateFailedCount) base += `／更新失敗${updateFailedCount}件`;
     return fetchedAtLabel ? `${base}（最終取得：${fetchedAtLabel}）` : base;
   }
 
@@ -9681,7 +9746,8 @@
         method: opts.method || 'GET',
         signal: controller.signal,
         cache: 'no-store',
-        headers: opts.headers || {}
+        headers: opts.headers || {},
+        body: opts.body
       });
       if (requestGeneration != null && requestGeneration !== opts.activeGenerationRef.value) {
         const stale = new Error('stale_response');
@@ -9712,6 +9778,40 @@
     }
   }
 
+  function commitCalendarScheduleUpdates(preview) {
+    const result = {
+      scheduleUpdated: 0,
+      unchangedFromScheduleUpdate: 0,
+      updateFailedCount: 0
+    };
+    if (!preview || !(preview.items || []).length) return result;
+    const processedIds = new Set();
+    preview.items.forEach((item) => {
+      if (item.importKind !== 'schedule-update' || !item.scheduleUpdate || !item.scheduleUpdate.target) return;
+      const target = item.scheduleUpdate.target;
+      const targetId = String(target.id || '').trim();
+      if (!targetId || processedIds.has(targetId)) return;
+      processedIds.add(targetId);
+      const nextSchedule = item.scheduleUpdate.nextSchedule
+        || CalendarCandidateBrain.normalizeScheduleTriple(item.candidate);
+      const syncResult = Storage.syncWorkOrderScheduleFromCalendar(
+        targetId,
+        target.calendarDedupeKey,
+        nextSchedule
+      );
+      if (syncResult && syncResult.ok && syncResult.unchanged) {
+        result.unchangedFromScheduleUpdate += 1;
+      } else if (syncResult && syncResult.ok) {
+        result.scheduleUpdated += 1;
+      } else if (syncResult && syncResult.blocked) {
+        // update-blocked is counted at preview time
+      } else {
+        result.updateFailedCount += 1;
+      }
+    });
+    return result;
+  }
+
   /**
    * Save-rule canonical path shared by manual "すべて保存" and local API auto-save.
    * Does not navigate/refresh/clear UI; caller owns side effects.
@@ -9719,14 +9819,33 @@
   function commitSavableCalendarCandidates(preview, force) {
     if (!preview || !(preview.items || []).length || typeof CalendarCandidateBrain === 'undefined') {
       return {
-        summary: { readCount: 0, savedCount: 0, duplicateCount: 0, excludedCount: 0, savableCount: 0, revenueRegistered: false },
+        summary: {
+          readCount: 0,
+          savedCount: 0,
+          duplicateCount: 0,
+          excludedCount: 0,
+          savableCount: 0,
+          scheduleUpdateCount: 0,
+          unchangedCount: 0,
+          updateBlockedCount: 0,
+          updateFailedCount: 0,
+          revenueRegistered: false
+        },
         saved: 0
       };
     }
     const past = getCalendarPastRecoveryOptions();
+    const scheduleSummary = !past.enabled ? commitCalendarScheduleUpdates(preview) : {
+      scheduleUpdated: 0,
+      unchangedFromScheduleUpdate: 0,
+      updateFailedCount: 0
+    };
     const summary = past.enabled
       ? { readCount: preview.items.length, savedCount: 0, duplicateCount: 0, excludedCount: 0, savableCount: preview.items.length, revenueRegistered: false }
       : getCalendarFutureImportSummary(preview);
+    summary.scheduleUpdateCount = scheduleSummary.scheduleUpdated;
+    summary.unchangedCount = Number(summary.unchangedCount || 0) + scheduleSummary.unchangedFromScheduleUpdate;
+    summary.updateFailedCount = Number(summary.updateFailedCount || 0) + scheduleSummary.updateFailedCount;
     const savableItems = past.enabled
       ? preview.items
       : preview.items.filter(item => CalendarCandidateBrain.isFutureImportSavable(item, force));
@@ -9734,6 +9853,7 @@
     savableItems.forEach(item => {
       if (!past.enabled && !CalendarCandidateBrain.isFutureImportSavable(item, force)) return;
       if (item.isDuplicate && !force) return;
+      if (item.importKind === 'schedule-update' || item.importKind === 'unchanged' || item.importKind === 'update-blocked') return;
       const payload = CalendarCandidateBrain.createWorkOrderPayload(
         item.candidate,
         resolveCalendarCandidateSaveExtras(item, preview)
@@ -9757,15 +9877,22 @@
     renderCalendarCandidateImportResult(summary, { phase: 'result' });
     refreshCalendarCandidateViews();
     if (opts.skipNavigate) {
+      const hadChanges = saved > 0
+        || Number(summary.scheduleUpdateCount || 0) > 0;
       if (saved > 0) {
         showAppToast(`作業予定に${saved}件保存しました。売上予定を確認してください。`);
-      } else if (opts.showEmptyToast) {
+      } else if (hadChanges && Number(summary.scheduleUpdateCount || 0) > 0) {
+        showAppToast(`登録済み作業予定の日程を${summary.scheduleUpdateCount}件更新しました。`);
+      } else if (opts.showEmptyToast && !hadChanges) {
         showAppToast('保存対象がありませんでした');
       }
       return;
     }
     if (saved > 0) {
       navigateAfterAction('calendar-import-save', `作業予定に${saved}件保存しました。売上予定を確認してください。`);
+    } else if (Number(summary.scheduleUpdateCount || 0) > 0) {
+      showAppToast(`登録済み作業予定の日程を${summary.scheduleUpdateCount}件更新しました。`);
+      scrollToTopOrTarget(null);
     } else {
       showAppToast('保存対象がありませんでした');
       scrollToTopOrTarget(null);
@@ -9819,14 +9946,25 @@
 
       renderCalendarExportStatus('Googleカレンダーから最新予定を取得しています…');
 
+      const linkedDedupeKeys = [...new Set(
+        Storage.getWorkOrders()
+          .map(w => String(w && w.calendarDedupeKey || '').trim())
+          .filter(k => k.startsWith('google_calendar|'))
+      )];
+      const syncRequestOptions = {
+        method: 'POST',
+        timeoutMs: CALENDAR_LOCAL_API_TIMEOUT_MS,
+        generation,
+        activeGenerationRef
+      };
+      if (linkedDedupeKeys.length) {
+        syncRequestOptions.headers = { 'Content-Type': 'application/json' };
+        syncRequestOptions.body = JSON.stringify({ linkedDedupeKeys });
+      }
+
       let sync;
       try {
-        sync = await fetchCalendarLocalApi(CALENDAR_LOCAL_API_SYNC_URL, {
-          method: 'POST',
-          timeoutMs: CALENDAR_LOCAL_API_TIMEOUT_MS,
-          generation,
-          activeGenerationRef
-        });
+        sync = await fetchCalendarLocalApi(CALENDAR_LOCAL_API_SYNC_URL, syncRequestOptions);
       } catch (error) {
         if (error && error.code === 'timeout') {
           renderCalendarExportStatus(mapCalendarLocalApiError('timeout'));
@@ -9959,7 +10097,19 @@
     const signalText = (item.futureImport && item.futureImport.signals || []).join('・');
     let notice = '';
     let reasonBlock = '';
-    if (item.isDuplicate) {
+    if (item.importKind === 'schedule-update' && item.scheduleUpdate) {
+      notice = CalendarCandidateBrain.formatScheduleUpdatePreviewText(
+        item.scheduleUpdate.previousSchedule,
+        item.scheduleUpdate.nextSchedule
+      );
+    } else if (item.importKind === 'update-blocked') {
+      notice = '更新保留';
+      reasonBlock = (item.warnings || []).length
+        ? `<p class="calendar-candidate-exclude-reason">理由：${esc(item.warnings.join(' / '))}</p>`
+        : '';
+    } else if (item.importKind === 'unchanged') {
+      notice = '日程に変更はありません';
+    } else if (item.isDuplicate) {
       notice = '同じ予定が作業予定に追加済みです（二重追加しません）';
     } else if (isExcluded) {
       notice = '自動保存対象外';
@@ -9991,7 +10141,11 @@
       : '';
     let actionHtml = '';
     if (opts.showSaveButton !== false) {
-      if (item.isDuplicate) {
+      if (item.importKind === 'schedule-update') {
+        actionHtml = `<p class="calendar-candidate-manual-done">登録済み作業予定の日程を更新します</p>`;
+      } else if (item.importKind === 'update-blocked' || item.importKind === 'unchanged') {
+        actionHtml = `<p class="calendar-candidate-manual-done">${item.importKind === 'update-blocked' ? '更新保留' : '変更なし'}</p>`;
+      } else if (item.isDuplicate) {
         actionHtml = `<p class="calendar-candidate-manual-done">作業予定に追加済み</p>`;
       } else if (isExcluded) {
         actionHtml = `<button type="button" class="btn btn-sm btn-secondary" data-cal-manual-include="${originalIndex}">この予定を作業予定に追加</button>`;
@@ -10058,6 +10212,9 @@
     return `
       <div class="calendar-import-result-breakdown">
         <p class="calendar-import-result-breakdown-lead">読み取った予定の内訳です。保存予定候補から作業予定に追加できます。対象外でも「この予定を作業予定に追加」で個別保存できます。</p>
+        ${renderBucket('日程更新', buckets.scheduleUpdate, '日程更新')}
+        ${renderBucket('変更なし', buckets.unchanged, '変更なし')}
+        ${renderBucket('更新保留', buckets.updateBlocked, '更新保留')}
         ${renderBucket('保存予定', buckets.savable, '保存予定')}
         ${renderBucket('重複', buckets.duplicate, '重複')}
         ${renderBucket('対象外', buckets.excluded, '対象外')}
@@ -10128,6 +10285,41 @@
     const item = preview && preview.items ? preview.items[index] : null;
     if (!item) return;
     const past = getCalendarPastRecoveryOptions();
+    if (item.importKind === 'schedule-update' && item.scheduleUpdate && item.scheduleUpdate.target) {
+      const target = item.scheduleUpdate.target;
+      const nextSchedule = item.scheduleUpdate.nextSchedule
+        || CalendarCandidateBrain.normalizeScheduleTriple(item.candidate);
+      const syncResult = Storage.syncWorkOrderScheduleFromCalendar(
+        target.id,
+        target.calendarDedupeKey,
+        nextSchedule
+      );
+      const summary = getCalendarFutureImportSummary(preview);
+      if (syncResult && syncResult.ok && !syncResult.unchanged) {
+        summary.scheduleUpdateCount = 1;
+      } else if (syncResult && syncResult.ok && syncResult.unchanged) {
+        summary.unchangedCount = Number(summary.unchangedCount || 0) + 1;
+      } else if (syncResult && syncResult.blocked) {
+        summary.updateBlockedCount = Number(summary.updateBlockedCount || 0) + 1;
+      } else {
+        summary.updateFailedCount = Number(summary.updateFailedCount || 0) + 1;
+      }
+      summary.savedCount = 0;
+      lastCalendarCandidateImportResult = summary;
+      lastCalendarCandidatePreview = null;
+      renderCalendarCandidateImportResult(summary, { phase: 'result' });
+      refreshCalendarCandidateViews();
+      if (syncResult && syncResult.ok && !syncResult.unchanged) {
+        showAppToast('登録済み作業予定の日程を更新しました。');
+      } else if (syncResult && syncResult.blocked) {
+        showAppToast('売上確定済み等の理由で日程を更新できませんでした。');
+      } else if (syncResult && syncResult.ok && syncResult.unchanged) {
+        showAppToast('日程に変更はありませんでした。');
+      } else {
+        showAppToast('日程の更新に失敗しました。');
+      }
+      return;
+    }
     const isExcluded = !past.enabled && item.futureImport && item.futureImport.status === 'excluded';
     if (isExcluded && !opts.manualInclude) {
       alert(`自動保存対象外です。個別に追加する場合は「この予定を作業予定に追加」を使ってください（${(item.futureImport.reasons || []).join(' / ')}）`);
@@ -10212,6 +10404,7 @@
           : (canPromote
             ? `<button type="button" class="btn btn-sm btn-primary" data-cal-promote="${esc(wo.id)}">作業予定に追加</button>`
             : '');
+        const editScheduleBtn = `<button type="button" class="btn btn-sm btn-secondary" data-cal-edit-schedule="${esc(wo.id)}">日付・時間を編集</button>`;
         const moreActions = `
             <button type="button" class="btn btn-sm btn-secondary" data-cal-task="${esc(wo.id)}">毎日やることに追加</button>
             ${st !== 'スキップ' && !isPromoted ? `<button type="button" class="btn btn-sm btn-secondary" data-cal-review="${esc(wo.id)}">要確認にする</button>` : ''}
@@ -10226,6 +10419,7 @@
           ${wo.candidateMeta && wo.candidateMeta.cautionNote ? `<p class="calendar-candidate-saved-warn">注意：${esc(wo.candidateMeta.cautionNote)}</p>` : ''}
           <div class="calendar-candidate-saved-actions">
             ${primaryAction}
+            ${editScheduleBtn}
             <details class="calendar-candidate-saved-more">
               <summary>詳細操作</summary>
               <div class="calendar-candidate-saved-more-actions">${moreActions}</div>
@@ -10233,6 +10427,9 @@
           </div>
         </div>`;
       }).join('')}`;
+    el.querySelectorAll('[data-cal-edit-schedule]').forEach(btn => {
+      btn.addEventListener('click', () => openCalendarSavedWorkOrderScheduleEditor(btn.dataset.calEditSchedule));
+    });
     el.querySelectorAll('[data-cal-promote]').forEach(btn => {
       btn.addEventListener('click', () => promoteCalendarCandidate(btn.dataset.calPromote));
     });
@@ -11955,12 +12152,16 @@
     }
     form.addEventListener('submit', e => {
       e.preventDefault();
+      const editId = String(document.getElementById('work-order-edit-id')?.value || '').trim();
       const saved = saveWorkOrderFromForm();
       if (!saved) return;
-      renderWorkOrderView();
-      renderDashboard();
-      renderAreaView();
-      alert('作業予定を保存しました。');
+      refreshAfterWorkOrderSave();
+      if (editId) {
+        clearWorkOrderForm({ silent: true });
+        showAppToast('作業予定を更新しました');
+      } else {
+        alert('作業予定を保存しました。');
+      }
     });
     const clearBtn = document.getElementById('btn-work-order-clear');
     if (clearBtn) clearBtn.addEventListener('click', () => clearWorkOrderForm());
@@ -14731,11 +14932,19 @@
            <button type="button" class="btn btn-sm btn-secondary calendar-import-go-daily">毎日やることを見る</button>
          </div>`
       : `<p class="calendar-import-result-hint">※予定取り込みだけでは売上明細には登録されません。作業後に「売上確定待ち」から確定してください。</p>`;
-    const zeroSavableHint = summary.savableCount === 0 && !preview
+    const hasScheduleChanges = Number(summary.scheduleUpdateCount || 0) > 0
+      || Number(summary.unchangedCount || 0) > 0
+      || Number(summary.updateBlockedCount || 0) > 0;
+    const zeroSavableHint = summary.savableCount === 0 && !preview && !hasScheduleChanges
       ? `<p class="calendar-import-result-warn">${phase === 'result' ? '作業予定に保存できる候補がありませんでした。' : '保存できる候補がありません。'}重複・対象外・金額なし・過去日付を確認してください。</p>
          <p class="calendar-import-result-checks-title">確認してください：</p>
          ${zeroGuidance}`
       : '';
+    const scheduleStats = `
+          <li><span class="calendar-import-stat-label">日程更新：</span><strong>${Number(summary.scheduleUpdateCount || 0)}件</strong></li>
+          <li><span class="calendar-import-stat-label">変更なし：</span><strong>${Number(summary.unchangedCount || 0)}件</strong></li>
+          ${Number(summary.updateBlockedCount || 0) ? `<li><span class="calendar-import-stat-label">更新保留：</span><strong>${summary.updateBlockedCount}件</strong></li>` : ''}
+          ${Number(summary.updateFailedCount || 0) ? `<li><span class="calendar-import-stat-label">更新失敗：</span><strong>${summary.updateFailedCount}件</strong></li>` : ''}`;
     const breakdownHtml = renderCalendarImportResultBreakdownHtml(preview, { phase });
     const saveAllBlock = phase === 'preview' && summary.savableCount > 0
       ? `<div class="calendar-import-result-actions">
@@ -14748,6 +14957,7 @@
         <ul class="calendar-import-result-stats">
           <li><span class="calendar-import-stat-label">読み取り：</span><strong>${summary.readCount}件</strong></li>
           ${saveLabel}
+          ${scheduleStats}
           <li><span class="calendar-import-stat-label">重複：</span><strong>${summary.duplicateCount}件</strong></li>
           <li><span class="calendar-import-stat-label">対象外：</span><strong>${summary.excludedCount}件</strong></li>
         </ul>

@@ -1,5 +1,22 @@
 ﻿# Budil status
 
+## v4.13.6 実装内容（予定日編集＋Googleカレンダー日程変更同期）
+
+- 背景: 保存済みカレンダー候補カードに編集導線がなく、同一 `google_calendar|{calendarId}|{eventId}` の日程変更が重複扱いで破棄されていた
+- 実装A（手動編集）:
+  - `renderCalendarCandidateSavedList()` の各カードへ常時「日付・時間を編集」ボタンを追加
+  - 押下で受付・予定確認へ移動し、既存 `openWorkOrderFormPanel()` / `setWorkOrderFormData()` を再利用。編集時は summary を「作業予定を編集」に変更
+  - 保存時は同一ID更新。`calendarDedupeKey` / `candidateMeta` / intake / lead / status / actualRevenueId / completion / createdAt 等を維持
+  - 保存後に作業予定・カレンダー取込済み一覧・売上確定待ち・売上管理・経営ホーム・朝レポートを再描画。「作業予定を更新しました」
+- 実装B（同一Google event ID同期）:
+  - 安定キー一致かつ日時変更あり → `schedule-update`（重複スキップより優先、過去日付でも既存ID更新）
+  - 変更なし → `unchanged`、売上確定済み等 → `update-blocked`
+  - `Storage.syncWorkOrderScheduleFromCalendar()` で scheduledDate/startTime/endTime のみ更新。対象1件の安全バックアップ・operation log 付き
+  - 取込結果UIに取得/新規/日程更新/変更なし/重複/対象外/更新保留/更新失敗を表示
+- calendar-sync-worker: `/sync` は任意 body `{ linkedDedupeKeys }` のみ受理。既存作業予定の安定キーに紐づく event を period 外でも個別再取得して payload にマージ（新規過去予定の大量追加なし）
+- 新規 `scripts/verify-v4136-calendar-reschedule-sync.mjs`。現行合格は `node scripts/verify-current.mjs`（94本）
+- CSS変更なし・新localStorageキーなし・localStorage.clear()未使用。物理スマートフォン実機確認は未完了
+
 ## v4.13.5 実装内容（売上確定画面に直受け追加複製）
 
 - 背景: v4.13.1/4では「直受け追加で複製」が受付・予定確認の作業予定編集フォームにしかなく、実務で必要な売上確定モーダルからは使えなかった
