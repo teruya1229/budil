@@ -43,8 +43,10 @@ const WorkOrderBrain = {
       source: String(item.source || '').trim(),
       serviceText: String(item.serviceText || '').trim(),
       scheduledDate: String(item.scheduledDate || '').trim(),
-      startTime: String(item.startTime || '').trim(),
-      endTime: String(item.endTime || '').trim(),
+      scheduledEndDate: String(item.scheduledEndDate || '').trim(),
+      isAllDay: item.isAllDay === true,
+      startTime: item.isAllDay === true ? '' : String(item.startTime || '').trim(),
+      endTime: item.isAllDay === true ? '' : String(item.endTime || '').trim(),
       status,
       estimateAmount,
       actualRevenueId: String(item.actualRevenueId || '').trim(),
@@ -103,6 +105,20 @@ const WorkOrderBrain = {
   isValidTime(str) {
     if (!str || typeof str !== 'string') return false;
     return /^\d{2}:\d{2}$/.test(str);
+  },
+
+  formatScheduleLabel(workOrder) {
+    const wo = this.normalizeWorkOrder(workOrder);
+    const startDate = wo.scheduledDate || '日付不明';
+    if (wo.isAllDay) {
+      const endDate = wo.scheduledEndDate || startDate;
+      if (endDate && endDate !== startDate) return `${startDate}〜${endDate} 終日`;
+      return `${startDate} 終日`;
+    }
+    const timeLabel = wo.startTime && wo.endTime
+      ? `${wo.startTime}〜${wo.endTime}`
+      : (wo.startTime || '時間未設定');
+    return `${startDate} ${timeLabel}`;
   },
 
   addDays(dateStr, offset) {
@@ -200,11 +216,22 @@ const WorkOrderBrain = {
 
   buildGoogleCalendarUrl(workOrder) {
     const wo = this.normalizeWorkOrder(workOrder);
-    if (!wo.scheduledDate || !this.isValidTime(wo.startTime) || !this.isValidTime(wo.endTime)) {
-      return { url: '', ready: false, reason: '予定日または開始・終了時間を入力してください' };
+    if (!wo.scheduledDate) {
+      return { url: '', ready: false, reason: '予定日を入力してください' };
     }
-    const start = wo.scheduledDate.replace(/-/g, '') + 'T' + wo.startTime.replace(':', '') + '00';
-    const end = wo.scheduledDate.replace(/-/g, '') + 'T' + wo.endTime.replace(':', '') + '00';
+    let dates;
+    if (wo.isAllDay) {
+      const endInclusive = wo.scheduledEndDate || wo.scheduledDate;
+      const exclusiveEnd = this.addDays(endInclusive, 1).replace(/-/g, '');
+      dates = `${wo.scheduledDate.replace(/-/g, '')}/${exclusiveEnd}`;
+    } else {
+      if (!this.isValidTime(wo.startTime) || !this.isValidTime(wo.endTime)) {
+        return { url: '', ready: false, reason: '予定日または開始・終了時間を入力してください' };
+      }
+      const start = wo.scheduledDate.replace(/-/g, '') + 'T' + wo.startTime.replace(':', '') + '00';
+      const end = wo.scheduledDate.replace(/-/g, '') + 'T' + wo.endTime.replace(':', '') + '00';
+      dates = `${start}/${end}`;
+    }
     const title = this.buildCalendarTitle(wo);
     const details = [
       wo.phone ? '電話：' + wo.phone : '',
@@ -216,7 +243,7 @@ const WorkOrderBrain = {
     const params = new URLSearchParams({
       action: 'TEMPLATE',
       text: title,
-      dates: `${start}/${end}`,
+      dates,
       details,
       location: wo.address || ''
     });

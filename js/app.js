@@ -737,6 +737,9 @@
     const address = (document.getElementById('work-order-address')?.value || '').trim();
     const area = (document.getElementById('work-order-area')?.value || '').trim()
       || MapBrain.detectAreaFromAddress(address);
+    const isAllDay = !!document.getElementById('work-order-all-day')?.checked;
+    const scheduledDate = document.getElementById('work-order-date')?.value || '';
+    const scheduledEndDate = document.getElementById('work-order-end-date')?.value || '';
     return WorkOrderBrain.normalizeWorkOrder({
       customerName: document.getElementById('work-order-customer')?.value || '',
       phone: document.getElementById('work-order-phone')?.value || '',
@@ -744,15 +747,34 @@
       area,
       source: document.getElementById('work-order-source')?.value || '',
       serviceText: document.getElementById('work-order-service')?.value || '',
-      scheduledDate: document.getElementById('work-order-date')?.value || '',
-      startTime: startRaw ? startRaw.slice(0, 5) : '',
-      endTime: endRaw ? endRaw.slice(0, 5) : '',
+      scheduledDate,
+      scheduledEndDate: isAllDay ? (scheduledEndDate || scheduledDate) : scheduledEndDate,
+      isAllDay,
+      startTime: isAllDay ? '' : (startRaw ? startRaw.slice(0, 5) : ''),
+      endTime: isAllDay ? '' : (endRaw ? endRaw.slice(0, 5) : ''),
       status: document.getElementById('work-order-status')?.value || 'tentative',
       estimateAmount: document.getElementById('work-order-amount')?.value || '',
       memo: document.getElementById('work-order-memo')?.value || '',
       intakeId: document.getElementById('work-order-intake')?.value || '',
       leadId: document.getElementById('work-order-lead')?.value || ''
     });
+  }
+
+  function syncWorkOrderAllDayFormUi() {
+    const allDay = !!document.getElementById('work-order-all-day')?.checked;
+    const timeRow = document.getElementById('work-order-time-row');
+    const startEl = document.getElementById('work-order-start');
+    const endEl = document.getElementById('work-order-end');
+    if (timeRow) timeRow.classList.toggle('hidden', allDay);
+    if (startEl) startEl.disabled = allDay;
+    if (endEl) endEl.disabled = allDay;
+    if (allDay) {
+      if (startEl) startEl.value = '';
+      if (endEl) endEl.value = '';
+      const startDate = document.getElementById('work-order-date')?.value || '';
+      const endDateEl = document.getElementById('work-order-end-date');
+      if (endDateEl && !endDateEl.value && startDate) endDateEl.value = startDate;
+    }
   }
 
   function updateWorkOrderCalendarHint() {
@@ -3660,7 +3682,7 @@
           && CalendarCandidateBrain.isCalendarCandidateWorkOrder(wo)
           && CalendarCandidateBrain.isPendingCandidate(wo)
           && !wo.actualRevenueId
-          && wo.scheduledDate && wo.scheduledDate <= today
+          && (wo.scheduledEndDate || wo.scheduledDate) && (wo.scheduledEndDate || wo.scheduledDate) <= today
           && Number(wo.estimateAmount || 0) > 0
           && wo.status !== 'cancelled' && wo.status !== 'archived'
           && (!scheduleMode || wo.status !== 'completed')) {
@@ -9133,8 +9155,13 @@
     fillSourceSelectOptions(document.getElementById('work-order-source'), wo.source || '', { blankLabel: '未選択' });
     document.getElementById('work-order-service').value = wo.serviceText || '';
     document.getElementById('work-order-date').value = wo.scheduledDate || '';
-    document.getElementById('work-order-start').value = wo.startTime || '';
-    document.getElementById('work-order-end').value = wo.endTime || '';
+    const endDateEl = document.getElementById('work-order-end-date');
+    if (endDateEl) endDateEl.value = wo.scheduledEndDate || (wo.isAllDay ? (wo.scheduledDate || '') : '');
+    const allDayEl = document.getElementById('work-order-all-day');
+    if (allDayEl) allDayEl.checked = wo.isAllDay === true;
+    document.getElementById('work-order-start').value = wo.isAllDay ? '' : (wo.startTime || '');
+    document.getElementById('work-order-end').value = wo.isAllDay ? '' : (wo.endTime || '');
+    syncWorkOrderAllDayFormUi();
     document.getElementById('work-order-status').value = wo.status || 'tentative';
     document.getElementById('work-order-amount').value = wo.estimateAmount || '';
     document.getElementById('work-order-memo').value = wo.memo || '';
@@ -10396,7 +10423,7 @@
     el.innerHTML = `<p class="calendar-candidate-not-sale-list">作業予定として保存済みです。確定売上集計には含まれません。作業日後は売上確定待ちから売上化できます。</p>
       ${list.map(wo => {
         const st = CalendarCandidateBrain.getCandidateStatus(wo);
-        const timeLabel = wo.startTime && wo.endTime ? `${wo.startTime}〜${wo.endTime}` : (wo.startTime || '時間未設定');
+        const timeLabel = WorkOrderBrain.formatScheduleLabel(wo);
         const isPromoted = CalendarCandidateBrain.isPromotedCandidate(wo);
         const canPromote = st === '候補' || st === '要確認';
         const primaryAction = isPromoted
@@ -10414,7 +10441,7 @@
             <strong>${esc(wo.customerName || '（名前なし）')}</strong>
             <span class="calendar-candidate-status-badge status-${esc(st)}">${esc(st)}</span>
           </div>
-          <p class="calendar-candidate-saved-meta">${esc(wo.scheduledDate || '日付不明')} ${esc(timeLabel)} / ${esc(wo.serviceText || '—')} / ${esc(wo.address || '—')}</p>
+          <p class="calendar-candidate-saved-meta">${esc(timeLabel)} / ${esc(wo.serviceText || '—')} / ${esc(wo.address || '—')}</p>
           <p class="calendar-candidate-saved-meta">依頼元：${esc(wo.source || '—')} / 予定売上：${esc(WorkOrderBrain.formatYen(wo.estimateAmount))} / 確認Status：${esc((wo.candidateMeta && wo.candidateMeta.confidence) || '—')}</p>
           ${wo.candidateMeta && wo.candidateMeta.cautionNote ? `<p class="calendar-candidate-saved-warn">注意：${esc(wo.candidateMeta.cautionNote)}</p>` : ''}
           <div class="calendar-candidate-saved-actions">
@@ -11748,9 +11775,13 @@
   function renderScheduleWorkOrderRow(workOrder, options) {
     const opts = options || {};
     const wo = WorkOrderBrain.normalizeWorkOrder(workOrder);
-    const timeLabel = wo.startTime && wo.endTime
-      ? `${wo.startTime}〜${wo.endTime}`
-      : (wo.startTime || '時間未設定');
+    const timeLabel = wo.isAllDay
+      ? (wo.scheduledEndDate && wo.scheduledEndDate !== wo.scheduledDate
+        ? `終日（〜${wo.scheduledEndDate}）`
+        : '終日')
+      : (wo.startTime && wo.endTime
+        ? `${wo.startTime}〜${wo.endTime}`
+        : (wo.startTime || '時間未設定'));
     const cal = WorkOrderBrain.buildGoogleCalendarUrl(wo);
     const dateLabel = opts.showDate
       ? formatUpcomingDayLabel(wo.scheduledDate, TODAY())
@@ -11913,7 +11944,7 @@
     const assetBrief = hasCustomerAssetMemo(linkedLead)
       ? `<p class="work-order-customer-asset-brief">顧客タイプ ${esc(formatCustomerTypePair(linkedLead.customerTypeMajor, linkedLead.customerTypeMinor))}${linkedLead.customerMemo ? ' / 顧客メモあり' : ''}</p>`
       : '';
-    const timeLabel = wo.startTime && wo.endTime ? `${wo.startTime}〜${wo.endTime}` : (wo.startTime || '時間未設定');
+    const timeLabel = WorkOrderBrain.formatScheduleLabel(wo);
     const todayClass = opts.isToday ? ' is-today' : '';
     return `
       <div class="work-order-item${todayClass}" data-work-order-id="${esc(wo.id)}">
@@ -12139,10 +12170,19 @@
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', debounce(syncWorkOrderAreaFromAddress, 300));
     });
-    ['work-order-date', 'work-order-start', 'work-order-end'].forEach(id => {
+    ['work-order-date', 'work-order-end-date', 'work-order-start', 'work-order-end'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('change', updateWorkOrderCalendarHint);
     });
+    const allDayEl = document.getElementById('work-order-all-day');
+    if (allDayEl && !allDayEl.dataset.bound) {
+      allDayEl.dataset.bound = '1';
+      allDayEl.addEventListener('change', () => {
+        syncWorkOrderAllDayFormUi();
+        updateWorkOrderCalendarHint();
+      });
+    }
+    syncWorkOrderAllDayFormUi();
     const areaEl = document.getElementById('work-order-area');
     if (areaEl) {
       areaEl.addEventListener('change', () => {

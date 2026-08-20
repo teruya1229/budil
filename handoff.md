@@ -24,7 +24,9 @@
 
 | 項目 | 値 |
 |------|-----|
-| 最新バージョン | v4.13.6 |
+| 最新バージョン | v4.13.7 |
+| v4.13.7 終日・複数日・裸金額取込 | Google終日複数日を1件で取り込み。exclusive end→inclusive。裸金額対応。v4.13.6前倒し同期維持 |
+| v4.13.7 終日・複数日・裸金額取込 | Google終日複数日を1件で取り込み。exclusive end→inclusive。裸金額対応。v4.13.6前倒し同期維持 |
 | v4.13.6 予定日編集＋カレンダー日程変更同期 | 保存済みカードへ「日付・時間を編集」。安定 `google_calendar|` キーの schedule-update / unchanged / update-blocked 分類。`Storage.syncWorkOrderScheduleFromCalendar()`。calendar-sync-worker は linkedDedupeKeys のみ再取得。verify-current 94本。物理スマホ実機確認は未完了 |
 | v4.13.5 売上確定画面に直受け追加複製 | 売上確定モーダル（`#work-completion-modal`）へ「直受け追加で複製」を追加。通常作業予定のみ表示・有効、`past-recovery`は非表示。確認後に未保存draftへ遷移（Storage即保存なし）。既存の作業予定編集画面の複製ボタンは維持。共通ヘルパー分離。CSS変更なし。verify-current 93本。物理スマホ実機確認は未完了 |
 | v4.13.4 月粗利率と経費保存失敗案内 | 表示用`monthGrossRate`を経費控除後利益÷売上へ修正。作業予定フォールバックは経費控除前率を内部維持。経費保存例外は部分保存案内へ変換（売上ロールバック/再登録/自動再試行なし）。CSS変更なし。verify-current 92本。物理スマホ実機確認は未完了 |

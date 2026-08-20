@@ -28,10 +28,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.13.6'), 'index.html should show v4.12.26');
-assert(indexHtml.includes('js/app.js?v=4.13.6'), 'app.js cache buster should be v4.13.6');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.6'"), 'storage.js version should be v4.13.6');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.13.6'"), 'data-backup version should be v4.13.6');
+assert(indexHtml.includes('v4.13.7'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('js/app.js?v=4.13.7'), 'app.js cache buster should be v4.13.7');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.7'"), 'storage.js version should be v4.13.7');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.13.7'"), 'data-backup version should be v4.13.7');
 
 const revenueViewStart = indexHtml.indexOf('id="view-revenue"');
 const revenueViewEnd = indexHtml.indexOf('id="view-revenue-analysis"');

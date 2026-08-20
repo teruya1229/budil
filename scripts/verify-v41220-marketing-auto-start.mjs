@@ -24,11 +24,11 @@ const decisionLog = load('decision-log.md');
 
 execFileSync(process.execPath, ['--check', join(root, 'js/app.js')], { stdio: 'inherit' });
 
-assert(html.includes('v4.13.6'), 'index.html shows v4.12.26');
-assert(html.includes('js/app.js?v=4.13.6'), 'app.js cache buster is v4.13.6');
-assert(storage.includes("BUDIL_VERSION: 'v4.13.6'"), 'storage version is v4.13.6');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.6'"), 'data-backup version is v4.13.6');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.6'"), 'verify-current pins v4.12.26');
+assert(html.includes('v4.13.7'), 'index.html shows v4.12.26');
+assert(html.includes('js/app.js?v=4.13.7'), 'app.js cache buster is v4.13.7');
+assert(storage.includes("BUDIL_VERSION: 'v4.13.7'"), 'storage version is v4.13.7');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.7'"), 'data-backup version is v4.13.7');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.7'"), 'verify-current pins v4.12.26');
 
 assert(app.includes('waitForMarketingHealth'), 'health retry helper exists');
 assert(app.includes('MARKETING_HEALTH_RETRY_MS = 45000'), 'health retry window is 45s');

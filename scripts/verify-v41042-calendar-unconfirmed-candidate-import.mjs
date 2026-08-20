@@ -65,18 +65,19 @@ const tamazawaItem = {
 };
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.13.6'), 'index.html should show v4.12.26');
-assert(indexHtml.includes('js/app.js?v=4.13.6'), 'app.js cache buster should be v4.13.6');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.13.6'), 'calendar brain cache buster should be v4.13.6');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.6'"), 'storage.js version should be v4.13.6');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.13.6'"), 'data-backup version should be v4.13.6');
+assert(indexHtml.includes('v4.13.7'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('js/app.js?v=4.13.7'), 'app.js cache buster should be v4.13.7');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.13.7'), 'calendar brain cache buster should be v4.13.7');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.7'"), 'storage.js version should be v4.13.7');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.13.7'"), 'data-backup version should be v4.13.7');
 
 console.log('== v4.12.4 brain markers ==');
 assert(calBrainJs.includes('v4.11.1'), 'calendar-candidate-brain.js should include v4.11.1 marker');
 assert(calBrainJs.includes('NON_EXCLUSION_CONFIRMATION_STATUSES'), 'non-exclusion confirmation statuses should exist');
 assert(calBrainJs.includes('resolveConfirmationStatus'), 'resolveConfirmationStatus should exist');
 assert(!calBrainJs.includes('仮押さえ|未確定/'), 'PAST_RECOVERY pattern must not treat bare 未確定 as exclusion');
-assert(calBrainJs.includes("if (!c.startTime) missingFieldReasons.push('時間なし')"), 'future import should require start time');
+assert(calBrainJs.includes("if (!c.isAllDay && !c.startTime) missingFieldReasons.push('時間なし')"), 'future import should require start time unless all-day');
+assert(calBrainJs.includes("if (!c.isAllDay && !c.startTime)"), 'all-day exception for missing start time exists');
 assert(calBrainJs.includes("if (!String(c.serviceText || '').trim()) missingFieldReasons.push('作業内容なし')"), 'future import should require service text');
 
 console.log('== CSS unchanged ==');

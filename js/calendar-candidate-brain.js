@@ -202,10 +202,21 @@ const CalendarCandidateBrain = {
       ? c.estimateAmount
       : (meta.estimatedAmount != null && meta.estimatedAmount !== '' ? meta.estimatedAmount : c.amount);
     const amount = this.parseAmount(amountRaw);
+    const scheduledDate = this.normalizeDate(c.scheduledDate || c.date);
+    const isAllDay = c.isAllDay === true
+      || String(c.startTime || '').trim() === '終日'
+      || String(c.endTime || '').trim() === '終日';
+    let scheduledEndDate = this.normalizeDate(c.scheduledEndDate || c.endDateInclusive || '');
+    if (isAllDay && !scheduledEndDate) scheduledEndDate = scheduledDate;
+    if (scheduledEndDate && scheduledDate && scheduledEndDate < scheduledDate) {
+      scheduledEndDate = scheduledDate;
+    }
     return {
-      scheduledDate: this.normalizeDate(c.scheduledDate || c.date),
-      startTime: this.normalizeTime(c.startTime),
-      endTime: this.normalizeTime(c.endTime),
+      scheduledDate,
+      scheduledEndDate: scheduledEndDate || '',
+      isAllDay,
+      startTime: isAllDay ? '' : this.normalizeTime(c.startTime),
+      endTime: isAllDay ? '' : this.normalizeTime(c.endTime),
       title: String(c.title || '').trim(),
       customerName: String(c.customerName || '').trim(),
       serviceText: String(c.serviceText || c.service || '').trim(),
@@ -222,6 +233,46 @@ const CalendarCandidateBrain = {
       sourceType: this.SOURCE_TYPE,
       originalText: String(originalText || c.originalText || meta.originalText || '').trim()
     };
+  },
+
+  /** Google all-day end.date is exclusive → inclusive end for Budil. */
+  inclusiveEndDateFromExclusive(startDate, endDateExclusive) {
+    const start = this.normalizeDate(startDate);
+    const exclusive = this.normalizeDate(endDateExclusive);
+    if (!start) return '';
+    if (!exclusive) return start;
+    if (typeof WorkOrderBrain !== 'undefined' && WorkOrderBrain.addDays) {
+      const inclusive = WorkOrderBrain.addDays(exclusive, -1);
+      return inclusive >= start ? inclusive : start;
+    }
+    const d = new Date(`${exclusive}T12:00:00`);
+    if (Number.isNaN(d.getTime())) return start;
+    d.setDate(d.getDate() - 1);
+    const inclusive = d.toISOString().slice(0, 10);
+    return inclusive >= start ? inclusive : start;
+  },
+
+  extractBareAmountFromText(text) {
+    const lines = String(text || '')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .split(/\r?\n/)
+      .map((line) => line.replace(/<[^>]+>/g, '').trim())
+      .filter(Boolean);
+    for (const line of lines) {
+      if (/(?:電話|TEL|Tel|〒|住所)/.test(line)) continue;
+      if (/\d{2,4}-\d{2,4}-\d{3,4}/.test(line)) continue;
+      const yenMark = line.match(/[¥￥]\s*([0-9０-９][0-9０-９,]*)/);
+      if (yenMark) {
+        const amount = this.parseAmount(yenMark[1]);
+        if (amount >= 1000) return amount;
+      }
+      const yenSuffix = line.match(/([0-9０-９][0-9０-９,]*)\s*円/);
+      if (yenSuffix) {
+        const amount = this.parseAmount(yenSuffix[1]);
+        if (amount >= 1000) return amount;
+      }
+    }
+    return 0;
   },
 
   inferCustomerNameFromTitle(title) {
@@ -245,20 +296,31 @@ const CalendarCandidateBrain = {
     const serviceText = String(extracted.workType || extracted.workDetails || '').trim()
       || String(row.title || '').trim();
     const address = String(extracted.address || row.location || '').trim();
-    const amount = this.parseAmount(
+    let amount = this.parseAmount(
       extracted.amount != null && extracted.amount !== ''
         ? extracted.amount
         : extracted.amountText
     );
+    if (!amount) {
+      amount = this.extractBareAmountFromText(row.description || '');
+    }
     const confirmationStatus = this.resolveConfirmationStatus(row);
     const memoParts = [String(row.description || '').trim()];
     if (extracted.phone) memoParts.push('電話：' + String(extracted.phone).trim());
+    const isAllDay = row.isAllDay === true || start.isAllDay === true || end.isAllDay === true;
+    const scheduledDate = this.normalizeDate(row.date || start.date);
+    let scheduledEndDate = this.normalizeDate(row.endDateInclusive || row.scheduledEndDate || '');
+    if (isAllDay && !scheduledEndDate) {
+      scheduledEndDate = this.inclusiveEndDateFromExclusive(scheduledDate, end.date);
+    }
     return this.normalizeCandidate({
       title: row.title,
-      scheduledDate: row.date,
-      date: row.date,
-      startTime: start.isAllDay ? '' : (start.time || ''),
-      endTime: end.isAllDay ? '' : (end.time || ''),
+      scheduledDate,
+      date: scheduledDate,
+      scheduledEndDate,
+      isAllDay,
+      startTime: isAllDay ? '' : (start.time || ''),
+      endTime: isAllDay ? '' : (end.time || ''),
       customerName,
       serviceText,
       address,
@@ -891,8 +953,10 @@ const CalendarCandidateBrain = {
     const c = this.normalizeCandidate(record);
     return {
       scheduledDate: c.scheduledDate || '',
-      startTime: c.startTime || '',
-      endTime: c.endTime || ''
+      scheduledEndDate: c.scheduledEndDate || '',
+      isAllDay: c.isAllDay === true,
+      startTime: c.isAllDay ? '' : (c.startTime || ''),
+      endTime: c.isAllDay ? '' : (c.endTime || '')
     };
   },
 
@@ -900,6 +964,8 @@ const CalendarCandidateBrain = {
     const prev = this.normalizeScheduleTriple(existing);
     const next = this.normalizeScheduleTriple(candidate);
     return prev.scheduledDate !== next.scheduledDate
+      || prev.scheduledEndDate !== next.scheduledEndDate
+      || !!prev.isAllDay !== !!next.isAllDay
       || prev.startTime !== next.startTime
       || prev.endTime !== next.endTime;
   },
@@ -972,9 +1038,15 @@ const CalendarCandidateBrain = {
 
   formatScheduleUpdatePreviewText(previousSchedule, nextSchedule) {
     const fmt = (schedule) => {
-      const date = (schedule && schedule.scheduledDate) || '日付不明';
-      const start = schedule && schedule.startTime;
-      const end = schedule && schedule.endTime;
+      if (!schedule) return '日付不明';
+      if (schedule.isAllDay) {
+        const start = schedule.scheduledDate || '日付不明';
+        const end = schedule.scheduledEndDate || start;
+        return end && end !== start ? `${start}〜${end} 終日` : `${start} 終日`;
+      }
+      const date = schedule.scheduledDate || '日付不明';
+      const start = schedule.startTime;
+      const end = schedule.endTime;
       const time = start && end ? `${start}〜${end}` : (start || '時間未設定');
       return `${date} ${time}`;
     };
@@ -1122,10 +1194,9 @@ const CalendarCandidateBrain = {
     const softWordReasons = [];
     const missingFieldReasons = [];
     if (!c.scheduledDate) hardReasons.push('日付なし');
-    // v4.10.42: 日時・作業内容・金額が揃えば候補。未確定は状態ラベルのみで除外しない。
-    if (!c.startTime) missingFieldReasons.push('時間なし');
+    // v4.13.7: 終日は「時間なし」で除外しない
+    if (!c.isAllDay && !c.startTime) missingFieldReasons.push('時間なし');
     if (!String(c.serviceText || '').trim()) missingFieldReasons.push('作業内容なし');
-    // v4.10.27: 過去日付は単独では hard-exclude しない（金額あり翌日インポート対応）
     if (!Number(c.estimateAmount || 0)) missingFieldReasons.push('金額なし');
     if (this.hasHardFutureImportExcludedWord(c)) {
       hardReasons.push('対象外ワードあり（キャンセル等）');
@@ -1134,14 +1205,23 @@ const CalendarCandidateBrain = {
     }
     const signals = this.getWorkScheduleSignals(c);
     const textBlob = [c.title, c.customerName, c.serviceText, c.source, c.memo, c.cautionNote].join(' ');
-    // v4.12.8: soft ワード除外のみ、金額・確定・業務依頼元があれば上書き（欠落フィールドは上書きしない）
     const strongBusiness = Number(c.estimateAmount || 0) > 0
       || this.isConfirmedScheduleStatus(c.confirmationStatus)
       || this.isConfirmedScheduleStatus(c.confidence)
       || !!(c.source && this.BUSINESS_SOURCE_PATTERN.test(c.source))
       || this.BUSINESS_SOURCE_PATTERN.test(textBlob);
     const effectiveSoftWords = strongBusiness ? [] : softWordReasons;
-    const reasons = [...hardReasons, ...effectiveSoftWords, ...missingFieldReasons];
+    // v4.13.7: 終日は金額あり、または明確な業務シグナルがある場合のみ自動保存
+    let effectiveMissing = missingFieldReasons;
+    if (c.isAllDay) {
+      const allDayOk = Number(c.estimateAmount || 0) > 0
+        || strongBusiness
+        || (signals && signals.length > 0);
+      if (allDayOk) {
+        effectiveMissing = missingFieldReasons.filter((r) => r !== '金額なし');
+      }
+    }
+    const reasons = [...hardReasons, ...effectiveSoftWords, ...effectiveMissing];
     if (reasons.length) {
       return {
         status: 'excluded',
@@ -1349,8 +1429,10 @@ const CalendarCandidateBrain = {
       source: c.source,
       serviceText: c.serviceText,
       scheduledDate: c.scheduledDate,
-      startTime: c.startTime || '09:00',
-      endTime: c.endTime || '11:00',
+      scheduledEndDate: c.isAllDay ? (c.scheduledEndDate || c.scheduledDate) : (c.scheduledEndDate || ''),
+      isAllDay: c.isAllDay === true,
+      startTime: c.isAllDay ? '' : (c.startTime || '09:00'),
+      endTime: c.isAllDay ? '' : (c.endTime || '11:00'),
       estimateAmount: c.estimateAmount,
       memo: [c.memo, c.cautionNote ? '注意：' + c.cautionNote : ''].filter(Boolean).join('\n'),
       status: 'tentative',

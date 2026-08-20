@@ -2457,3 +2457,16 @@ Cursor Browser Automation を使い、公開ページ上で GA4 / Search Console
 | v1.7 | 1ce1259 | 営業ステータス・次アクション・優先度管理 |
 | v1.6 | 8eb2c9f | 営業プリセット |
 | v1.5 | d1a8890 | 営業自動準備 |
+
+
+## v4.13.7 実装内容（終日・複数日カレンダー取込＋裸金額）
+
+- 背景: Google終日複数日（end.date翌日排他）が startTime 空で「時間なし」除外され、説明の `320,000円` もラベル無しで金額0扱いになり取り込まれなかった
+- 実装:
+  - 終日は `isAllDay` / `scheduledEndDate`（inclusive）を保持。架空の 09:00〜11:00 を入れない
+  - Google exclusive end.date を inclusive に変換（例: 8/25〜8/29 → 8/25〜8/28）
+  - 説明の裸金額 `320,000円` / `￥320,000` / `¥320000` を取得（電話・住所の誤認回避）。ラベル付き金額は維持
+  - 終日は「時間なし」除外せず、金額ありまたは明確な業務シグナル時のみ自動保存
+  - schedule-update は scheduledDate/scheduledEndDate/isAllDay/startTime/endTime を同期。売上紐付け済み等は update-blocked
+- Hub / calendar-sync-worker も同仕様に揃え
+- 新規 `scripts/verify-v4137-allday-multiday-amount.mjs`。CSS変更なし

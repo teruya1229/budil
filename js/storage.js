@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.13.6',
+  BUDIL_VERSION: 'v4.13.7',
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -1365,8 +1365,10 @@ const Storage = {
     const expectedKey = String(calendarDedupeKey || '').trim();
     const fields = scheduleFields || {};
     const nextDate = String(fields.scheduledDate || '').trim();
-    const nextStart = String(fields.startTime || '').trim();
-    const nextEnd = String(fields.endTime || '').trim();
+    const nextEndDate = String(fields.scheduledEndDate || '').trim();
+    const nextIsAllDay = fields.isAllDay === true;
+    const nextStart = nextIsAllDay ? '' : String(fields.startTime || '').trim();
+    const nextEnd = nextIsAllDay ? '' : String(fields.endTime || '').trim();
 
     if (!id || !expectedKey) {
       this.recordOperationLog({
@@ -1447,9 +1449,17 @@ const Storage = {
     }
 
     const prevDate = String(prev.scheduledDate || '').trim();
-    const prevStart = String(prev.startTime || '').trim();
-    const prevEnd = String(prev.endTime || '').trim();
-    if (prevDate === nextDate && prevStart === nextStart && prevEnd === nextEnd) {
+    const prevEndDate = String(prev.scheduledEndDate || '').trim();
+    const prevIsAllDay = prev.isAllDay === true;
+    const prevStart = prevIsAllDay ? '' : String(prev.startTime || '').trim();
+    const prevEnd = prevIsAllDay ? '' : String(prev.endTime || '').trim();
+    if (
+      prevDate === nextDate
+      && prevEndDate === nextEndDate
+      && prevIsAllDay === nextIsAllDay
+      && prevStart === nextStart
+      && prevEnd === nextEnd
+    ) {
       return { ok: true, unchanged: true, workOrder: prev };
     }
 
@@ -1475,6 +1485,8 @@ const Storage = {
       ? WorkOrderBrain.normalizeWorkOrder({
         ...prev,
         scheduledDate: nextDate,
+        scheduledEndDate: nextIsAllDay ? (nextEndDate || nextDate) : nextEndDate,
+        isAllDay: nextIsAllDay,
         startTime: nextStart,
         endTime: nextEnd,
         id: prev.id
@@ -1482,6 +1494,8 @@ const Storage = {
       : {
         ...prev,
         scheduledDate: nextDate,
+        scheduledEndDate: nextIsAllDay ? (nextEndDate || nextDate) : nextEndDate,
+        isAllDay: nextIsAllDay,
         startTime: nextStart,
         endTime: nextEnd
       };
@@ -1506,8 +1520,20 @@ const Storage = {
       targetKey: this.KEYS.WORK_ORDERS,
       targetId: id,
       calendarDedupeKey: expectedKey,
-      previousSchedule: { scheduledDate: prevDate, startTime: prevStart, endTime: prevEnd },
-      nextSchedule: { scheduledDate: nextDate, startTime: nextStart, endTime: nextEnd }
+      previousSchedule: {
+        scheduledDate: prevDate,
+        scheduledEndDate: prevEndDate,
+        isAllDay: prevIsAllDay,
+        startTime: prevStart,
+        endTime: prevEnd
+      },
+      nextSchedule: {
+        scheduledDate: nextDate,
+        scheduledEndDate: nextEndDate,
+        isAllDay: nextIsAllDay,
+        startTime: nextStart,
+        endTime: nextEnd
+      }
     });
 
     return { ok: true, unchanged: false, workOrder: updated };

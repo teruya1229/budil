@@ -59,6 +59,35 @@ function extractPhoneNumber(description) {
   return toAsciiDigits(m[1]).replace(/\s+/g, " ").trim();
 }
 
+function looksLikePhoneOrAddressNoise(raw) {
+  const text = String(raw || "");
+  if (/(?:電話|TEL|Tel|〒|住所)/.test(text)) return true;
+  if (/\d{2,4}-\d{2,4}-\d{3,4}/.test(text)) return true;
+  if (/\d{3}-\d{4}/.test(text) && !/[¥￥円]/.test(text)) return true;
+  return false;
+}
+
+function extractBareCurrencyAmount(description) {
+  for (const line of descriptionToPlainLines(description)) {
+    if (looksLikePhoneOrAddressNoise(line)) continue;
+    const yenMark = line.match(/[¥￥]\s*([0-9０-９][0-9０-９,]*)/);
+    if (yenMark) {
+      const amount = parseAmountFromText(yenMark[1]);
+      if (amount != null && amount >= 1000) {
+        return { amountText: yenMark[0].trim(), amount };
+      }
+    }
+    const yenSuffix = line.match(/([0-9０-９][0-9０-９,]*)\s*円/);
+    if (yenSuffix) {
+      const amount = parseAmountFromText(yenSuffix[1]);
+      if (amount != null && amount >= 1000) {
+        return { amountText: yenSuffix[0].trim(), amount };
+      }
+    }
+  }
+  return { amountText: null, amount: null };
+}
+
 function extractAmountFields(description) {
   const labeled = parseLabeledMap(description);
   const amountText = pickLabeled(labeled, ["金額", "料金"]);
@@ -77,11 +106,14 @@ function extractAmountFields(description) {
       amount: parseAmountFromText(m[1])
     };
   }
-  const amount = parseAmountFromText(normalized.match(/(?:金額|料金)[：:]*([0-9０-９,]+)円?/)?.[1]);
-  return {
-    amountText: amount == null ? null : String(amount),
-    amount: amount ?? null
-  };
+  const labeledLoose = parseAmountFromText(normalized.match(/(?:金額|料金)[：:]*([0-9０-９,]+)円?/)?.[1]);
+  if (labeledLoose != null) {
+    return {
+      amountText: String(labeledLoose),
+      amount: labeledLoose
+    };
+  }
+  return extractBareCurrencyAmount(description);
 }
 
 function extractAddress(description, location) {

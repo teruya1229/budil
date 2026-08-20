@@ -37,6 +37,19 @@ function mapDateTimeBoundary(raw, timezone) {
   };
 }
 
+/** Google all-day end.date is exclusive; convert to inclusive end date for Budil. */
+export function inclusiveEndDateFromExclusive(startDate, endDateExclusive) {
+  const start = String(startDate || "").trim();
+  const exclusive = String(endDateExclusive || "").trim();
+  if (!start) return "";
+  if (!exclusive) return start;
+  const d = new Date(`${exclusive}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return start;
+  d.setDate(d.getDate() - 1);
+  const inclusive = d.toISOString().slice(0, 10);
+  return inclusive >= start ? inclusive : start;
+}
+
 export function buildDedupeKey(calendarId, calendarEventId) {
   const cal = String(calendarId || "").trim();
   const ev = String(calendarEventId || "").trim();
@@ -51,15 +64,21 @@ export function mapGoogleEventToApiItem(event, { calendarId, timezone }) {
   const extracted = extractReceptionFields(description, { title, location });
   const start = mapDateTimeBoundary(event.start, timezone);
   const end = mapDateTimeBoundary(event.end, timezone);
+  const isAllDay = !!(start.isAllDay || end.isAllDay);
   const date = start.date || end.date || "";
+  const endDateInclusive = isAllDay
+    ? inclusiveEndDateFromExclusive(date, end.date)
+    : (end.date && end.date !== date ? end.date : "");
   const calendarEventId = event.id || "";
   const dedupeKey = buildDedupeKey(calendarId, calendarEventId);
 
   return {
     title,
     date,
-    start: { time: start.time, isAllDay: start.isAllDay },
-    end: { time: end.time, isAllDay: end.isAllDay },
+    isAllDay,
+    endDateInclusive: endDateInclusive || null,
+    start: { time: start.time, isAllDay: start.isAllDay, date: start.date },
+    end: { time: end.time, isAllDay: end.isAllDay, date: end.date },
     location,
     description,
     extracted: {

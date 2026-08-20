@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.6 - calendar schedule reschedule sync + manual date edit verify
+ * Budil v4.13.7 - calendar schedule reschedule sync + manual date edit verify
  */
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -29,11 +29,11 @@ for (const file of ['js/app.js', 'js/storage.js', 'js/calendar-candidate-brain.j
 }
 
 console.log('== version / cache buster ==');
-assert(html.includes('Budil v4.13.6'), 'index.html shows Budil v4.13.6');
-assert(html.includes('js/app.js?v=4.13.6'), 'app.js cache buster is v4.13.6');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.6'"), 'storage version is v4.13.6');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.6'"), 'data-backup version is v4.13.6');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.6'"), 'verify-current pins v4.13.6');
+assert(html.includes('Budil v4.13.7'), 'index.html shows Budil v4.13.7');
+assert(html.includes('js/app.js?v=4.13.7'), 'app.js cache buster is v4.13.7');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.7'"), 'storage version is v4.13.7');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.7'"), 'data-backup version is v4.13.7');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.7'"), 'verify-current pins v4.13.7');
 assert(
   /^verify-v4(10|11|12|13)\d.*\.mjs$/.test('verify-v4136-calendar-reschedule-sync.mjs'),
   'new verify is discoverable by current pattern'
@@ -364,4 +364,4 @@ console.log('== 11. preview text ==');
   assert(text.includes('2026-08-19 09:00〜12:00'), 'preview includes next schedule');
 }
 
-console.log('All v4.13.6 calendar-reschedule-sync checks passed.');
+console.log('All v4.13.7 calendar-reschedule-sync checks passed.');
