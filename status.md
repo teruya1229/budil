@@ -1,5 +1,17 @@
 ﻿# Budil status
 
+## 構造化請求書正規入口（CLI・UIバージョン据え置き v4.13.7）
+
+- 目的: 構造化入力 → 検証 → プレビュー → 本人承認後の請求書/PDF生成を、AI金額計算なしで決定的に行う正規入口
+- 追加: `js/invoice-structured-entrypoint.js`（prepare/apply）、`scripts/invoice-structured-cli.mjs`（一時 data-dir / pdf-dir）
+- 再利用: `DocumentsBrain` の税込経路（`buildInvoiceFromRevenue` と同型）、`suggestNumber`、`normalizeDocument`、`renderDocumentSheet`
+- prepare: 副作用なし（documents/PDF未書込）。checksum + expiresAt 付きプレビュー
+- apply: checksum + `permit:true` 必須。idempotencyKey で二重作成防止。Gmail送信なし
+- 顧客は `customerId` 原則。氏名のみで複数/不明は `NEEDS_CONFIRMATION` / `CUSTOMER_NOT_FOUND`
+- 公開UI・localStorageキー・表示バージョンは変更なし。Gmail / Browser番頭 / Tunnel / スマホ経路は未接続
+- 新規 `scripts/verify-v4138-invoice-structured-entrypoint.mjs`。現行合格は `node scripts/verify-current.mjs`
+- Windows一時DB/PDF smoke・HTMLレンダ目視（顧客名・エアコン工事・88,000円・期限・帳票レイアウト）済み。本番データ未変更。物理スマホ実機確認は対象外
+
 ## v4.13.6 実装内容（予定日編集＋Googleカレンダー日程変更同期）
 
 - 背景: 保存済みカレンダー候補カードに編集導線がなく、同一 `google_calendar|{calendarId}|{eventId}` の日程変更が重複扱いで破棄されていた

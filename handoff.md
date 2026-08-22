@@ -1,6 +1,6 @@
 ﻿# Budil handoff
 
-最終更新: 2026-08-19
+最終更新: 2026-08-22
 
 ## 正本
 
@@ -17,15 +17,22 @@
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` の依存関係（googleapis 等）。依存は `hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（94本）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（96本）
 - **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
+
+## 構造化請求書 CLI（次の接続待ち）
+
+- 入口: `node scripts/invoice-structured-cli.mjs prepare|apply --data-dir <tmp> --input <json>`
+- ロジック正本: `js/invoice-structured-entrypoint.js` + 既存 `DocumentsBrain`
+- 未接続: Gmail / Browser番頭 / Tunnel / スマホ経路
+- 注意: apply は `--permit` と prepare の checksum / expiresAt / number が必要。本番 localStorage には書かない
 
 ## 現在の最新状態
 
 | 項目 | 値 |
 |------|-----|
-| 最新バージョン | v4.13.7 |
-| v4.13.7 終日・複数日・裸金額取込 | Google終日複数日を1件で取り込み。exclusive end→inclusive。裸金額対応。v4.13.6前倒し同期維持 |
+| 最新バージョン | v4.13.7（表示バージョン据え置き。構造化請求書CLI追加） |
+| 構造化請求書正規入口 | prepare/apply CLI。DocumentsBrain再利用。verify-v4138。一時DB/PDF smoke済み。公開UI未変更 |
 | v4.13.7 終日・複数日・裸金額取込 | Google終日複数日を1件で取り込み。exclusive end→inclusive。裸金額対応。v4.13.6前倒し同期維持 |
 | v4.13.6 予定日編集＋カレンダー日程変更同期 | 保存済みカードへ「日付・時間を編集」。安定 `google_calendar|` キーの schedule-update / unchanged / update-blocked 分類。`Storage.syncWorkOrderScheduleFromCalendar()`。calendar-sync-worker は linkedDedupeKeys のみ再取得。verify-current 94本。物理スマホ実機確認は未完了 |
 | v4.13.5 売上確定画面に直受け追加複製 | 売上確定モーダル（`#work-completion-modal`）へ「直受け追加で複製」を追加。通常作業予定のみ表示・有効、`past-recovery`は非表示。確認後に未保存draftへ遷移（Storage即保存なし）。既存の作業予定編集画面の複製ボタンは維持。共通ヘルパー分離。CSS変更なし。verify-current 93本。物理スマホ実機確認は未完了 |
