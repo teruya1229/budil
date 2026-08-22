@@ -285,11 +285,18 @@ function writePdfWithBrowser(htmlPath, pdfPath) {
 }
 
 function loadInput(args) {
-  if (args.input) {
-    return JSON.parse(readFileSync(resolve(String(args.input)), 'utf8'));
-  }
   if (args['input-json']) {
-    return JSON.parse(String(args['input-json']));
+    // コマンドラインへの JSON 展開を拒否（PII・注入対策）
+    throw new Error('input_json_rejected');
+  }
+  if (args.input) {
+    const inputPath = String(args.input);
+    if (inputPath === '-' ) {
+      const stdin = readFileSync(0, 'utf8');
+      if (!stdin.trim()) throw new Error('input_required');
+      return JSON.parse(stdin);
+    }
+    return JSON.parse(readFileSync(resolve(inputPath), 'utf8'));
   }
   const stdin = readFileSync(0, 'utf8');
   if (!stdin.trim()) {
@@ -349,9 +356,10 @@ function main() {
   let input;
   try {
     input = loadInput(args);
-  } catch {
-    printResult({ ok: false, code: 'INVALID_INPUT', message: 'input JSON を読めません' });
-    process.exit(1);
+  } catch (err) {
+    const code = err && err.message === 'input_json_rejected' ? 'INPUT_JSON_REJECTED' : 'INVALID_INPUT';
+    printResult({ ok: false, code, message: 'input JSON を読めません' });
+    process.exit(code === 'INPUT_JSON_REJECTED' ? 2 : 1);
   }
 
   if (args['seed-fixture']) seedFixtureIfRequested(store, args);

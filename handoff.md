@@ -20,11 +20,12 @@
 - **現行合格コマンド**: `node scripts/verify-current.mjs`（96本）
 - **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
 
-## 構造化請求書 CLI（次の接続待ち）
+## 構造化請求書 CLI（Browser番頭接続済み・Gmail未接続）
 
-- 入口: `node scripts/invoice-structured-cli.mjs prepare|apply --data-dir <tmp> --input <json>`
+- 入口: `node scripts/invoice-structured-cli.mjs prepare|apply --data-dir <tmp>`（stdin JSON 可。`--input-json` は拒否）
+- Browser番頭: `invoice-prepare` / `approve-once` / `invoice-apply`
 - ロジック正本: `js/invoice-structured-entrypoint.js` + 既存 `DocumentsBrain`
-- 未接続: Gmail / Browser番頭 / Tunnel / スマホ経路
+- 未接続: Gmail / Tunnel / スマホ経路
 - 注意: apply は `--permit` と prepare の checksum / expiresAt / number が必要。本番 localStorage には書かない
 
 ## 現在の最新状態

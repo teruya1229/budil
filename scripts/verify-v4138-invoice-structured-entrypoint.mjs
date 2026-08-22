@@ -47,6 +47,7 @@ assert(entryJs.includes('EXPECTED_TOTAL_MISMATCH'), 'expectedTotal mismatch code
 assert(entryJs.includes('taxIncluded'), 'must reuse taxIncluded path like buildInvoiceFromRevenue');
 assert(cliJs.includes('invoice-structured-cli'), 'CLI file present');
 assert(cliJs.includes('print-to-pdf') || cliJs.includes('writePdfWithBrowser'), 'CLI PDF path required');
+assert(cliJs.includes('input_json_rejected') || cliJs.includes('INPUT_JSON_REJECTED'), 'CLI must reject --input-json cmdline expansion');
 assert(!cliJs.includes('bc-memory'), 'must not copy Canonical Data to common Memory');
 assert(!/console\.log\([^)]*customerName/.test(cliJs), 'CLI must not log customerName');
 
