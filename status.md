@@ -1,12 +1,14 @@
 ﻿# Budil status
 
-## 構造化請求書正規入口 + Browser番頭橋渡し（表示バージョン据え置き v4.13.7）
+## 構造化請求書正規入口 + 顧客解決 + Browser番頭橋渡し（表示バージョン据え置き v4.13.7）
 
 - Budil: `js/invoice-structured-entrypoint.js` / `scripts/invoice-structured-cli.mjs`（stdin JSON、`--input-json` 拒否）
-- Browser番頭: `budil_invoice_bridge.py` + `invoice-prepare` / `invoice-apply`（既存 approve-once permit 再利用）
+- 顧客解決: `js/customer-resolve-entrypoint.js` / `scripts/customer-resolve-cli.mjs`（leads Canonical Data・read-only）
+- Browser番頭: `budil_invoice_bridge.py` + `invoice-customer-resolve` / `invoice-prepare` / `invoice-apply`
+- Canonical Data は Budil `leads`。顧客情報を Memory / Handoff へ複製しない。customerId 以外は本人確認必須
+- 検索と請求書生成は別工程。resolve から apply 自動実行なし。Gmail・スマホ・Tunnel・共通Chrome未接続
 - prepare 副作用なし / apply は checksum+permit+idempotency / 税・採番・PDFは DocumentsBrain 再利用
-- Gmail・スマホ・Tunnel・共通Chrome未接続。本番 localStorage / leads / documents 非接触
-- 現行合格: Budil `verify-current.mjs`、Browser番頭 targeted `tests/test_budil_invoice_bridge.py`
+- 現行合格: Budil `verify-current.mjs`（含 verify-v4139）、Browser番頭 targeted customer-resolve / invoice bridge
 
 ## v4.13.6 実装内容（予定日編集＋Googleカレンダー日程変更同期）
 

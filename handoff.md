@@ -23,8 +23,12 @@
 ## 構造化請求書 CLI（Browser番頭接続済み・Gmail未接続）
 
 - 入口: `node scripts/invoice-structured-cli.mjs prepare|apply --data-dir <tmp>`（stdin JSON 可。`--input-json` は拒否）
-- Browser番頭: `invoice-prepare` / `approve-once` / `invoice-apply`
-- ロジック正本: `js/invoice-structured-entrypoint.js` + 既存 `DocumentsBrain`
+- 顧客解決: `node scripts/customer-resolve-cli.mjs resolve --leads-file <path>`（stdin JSON。leads が Canonical Data）
+- Browser番頭: `invoice-customer-resolve` → 本人確認 → `invoice-prepare` / `approve-once` / `invoice-apply`
+- ロジック正本: `js/customer-resolve-entrypoint.js` + `js/invoice-structured-entrypoint.js` + 既存 `DocumentsBrain` / `MapBrain`
+- Canonical Data: Budil `leads`（`budil_leads`）。Browser番頭・共通 Memory・Handoff へ顧客PIIを複製しない
+- 検索規則: `customerId` 完全一致のみ `matched`。氏名・電話・メールは1件でも `needs_confirmation`、複数は `ambiguous`（自動確定禁止）
+- 検索と請求書生成は別工程。resolve から apply を自動実行しない
 - 未接続: Gmail / Tunnel / スマホ経路
 - 注意: apply は `--permit` と prepare の checksum / expiresAt / number が必要。本番 localStorage には書かない
 
