@@ -9529,11 +9529,17 @@
     const dedupeKey = (item.pastRecovery && item.pastRecovery.calendarDedupeKey)
       || (item.candidate && item.candidate.calendarDedupeKey)
       || '';
-    const importSource = preview && preview.sourceFormat === 'budil-calendar-json'
+    const isJsonImport = preview && preview.sourceFormat === 'budil-calendar-json';
+    const importSource = isJsonImport
       ? CalendarCandidateBrain.JSON_IMPORT_SOURCE
       : CalendarCandidateBrain.IMPORT_SOURCE;
+    // JSON/API取込の preview.rawText は全件payload（rawEvent含む）のため、
+    // 各作業予定の candidateMeta.originalText へ複製すると localStorage 容量超過で保存失敗する。
+    // 説明文は workOrder.memo に既に入る。貼り付け取込のみ従来どおり rawText を保持する。
     const extras = {
-      originalText: preview ? preview.rawText : '',
+      originalText: isJsonImport
+        ? ''
+        : (preview ? preview.rawText : ''),
       candidateStatus: getCalendarImportCandidateStatus(item),
       calendarDedupeKey: dedupeKey,
       importSource

@@ -2,6 +2,32 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.13.7 hotfix：カレンダーJSON/API保存 originalText 容量超過（2026-08-27）
+
+**日付**: 2026-08-27
+
+**背景**: Googleカレンダー予定は取得・表示できるが、個別保存・一括保存・「Googleカレンダーを更新」後の作業予定保存が反映されない。worker は sync success なのに Budil は汎用失敗文言を出す。
+
+**判断内容**:
+- 根本原因は worker ではなく Budil 側。`resolveCalendarCandidateSaveExtras()` が `preview.rawText`（全件 JSON＋rawEvent）を各作業予定の `candidateMeta.originalText` へ複製し、`QuotaExceededError` で保存失敗していた
+- JSON/API取込（`sourceFormat === 'budil-calendar-json'`）では `originalText` を空にする。説明文は `memo` に既にある
+- 貼り付け取込の rawText 保持は維持
+- 既存の巨大 originalText レコードは削除・自動圧縮しない
+- 表示バージョンは v4.13.7 据え置き。`index.html` の `js/app.js` cache buster のみ `4.13.7.1` に更新（他 JS/CSS は据え置き。GitHub Pages は固定 query 付き資産を残しうるため）
+- バリデーション無効化・成功誤表示・売上自動作成はしない
+
+**変更ファイル**:
+- `js/app.js`（`resolveCalendarCandidateSaveExtras` のみ）
+- `index.html`（`js/app.js` cache buster のみ）
+- `scripts/verify-v4137-calendar-json-save-originaltext.mjs`（新規）
+- `status.md` / `handoff.md` / `decision-log.md`
+
+**確認結果**（2026-08-27）:
+- 隔離fixtureで buggy path が QuotaExceeded を再現、fixed path で個別1件・一括残4件・対象外非保存・終日320,000円・重複防止・売上0件を確認
+- `node scripts/verify-v4137-allday-multiday-amount.mjs` 合格
+- `node scripts/verify-current.mjs` **98/98** 合格
+- 物理スマホ実機確認は未実施。本hotfixで commit/push・公開反映確認を実施
+
 ## v4.13.6 予定日編集＋Googleカレンダー日程変更同期（2026-08-19）
 
 **日付**: 2026-08-19

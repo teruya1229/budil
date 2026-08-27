@@ -1,6 +1,6 @@
 ﻿# Budil handoff
 
-最終更新: 2026-08-22
+最終更新: 2026-08-27
 
 ## 正本
 
@@ -17,7 +17,7 @@
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` の依存関係（googleapis 等）。依存は `hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（96本）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（**98本**・2026-08-27 実測 98/98）
 - **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
 
 ## 構造化請求書 CLI（Browser番頭接続済み・Gmail未接続）
@@ -37,6 +37,7 @@
 | 項目 | 値 |
 |------|-----|
 | 最新バージョン | v4.13.7（表示バージョン据え置き。構造化請求書CLI追加） |
+| v4.13.7 hotfix カレンダーJSON保存容量 | JSON/API取込で rawText 全件を各WOの originalText へ入れず空文字に。QuotaExceeded による保存失敗を修正。`app.js` cache buster のみ `4.13.7.1`。verify-v4137-calendar-json-save-originaltext。verify-current **98/98**。表示バージョン据え置き |
 | 構造化請求書正規入口 | prepare/apply CLI。DocumentsBrain再利用。verify-v4138。一時DB/PDF smoke済み。公開UI未変更 |
 | v4.13.7 終日・複数日・裸金額取込 | Google終日複数日を1件で取り込み。exclusive end→inclusive。裸金額対応。v4.13.6前倒し同期維持 |
 | v4.13.6 予定日編集＋カレンダー日程変更同期 | 保存済みカードへ「日付・時間を編集」。安定 `google_calendar|` キーの schedule-update / unchanged / update-blocked 分類。`Storage.syncWorkOrderScheduleFromCalendar()`。calendar-sync-worker は linkedDedupeKeys のみ再取得。verify-current 94本。物理スマホ実機確認は未完了 |

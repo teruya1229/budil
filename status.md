@@ -1,5 +1,15 @@
 ﻿# Budil status
 
+## v4.13.7 hotfix：カレンダーJSON/API保存の originalText 容量超過（表示バージョン据え置き）
+
+- 症状: Googleカレンダー予定は表示されるが、「作業予定として保存」「すべて保存」「Googleカレンダーを更新」後の保存が反映されない。更新ボタンは worker sync success でも「カレンダーを更新できませんでした。既存データは変更していません。」
+- 原因: `resolveCalendarCandidateSaveExtras()` が `preview.rawText`（`/sync` 全件JSON。各 item の `rawEvent` 含む）を、保存する**各**作業予定の `candidateMeta.originalText` へ複製していた。件数が増えると localStorage `QuotaExceededError` で `Storage.addWorkOrder` が失敗。更新経路は catch して上記文言、個別/一括は未捕捉で無反応に見える
+- 修正（最小）: `js/app.js`（`sourceFormat === 'budil-calendar-json'` のとき `originalText` を空文字。説明は既存どおり `memo`。貼り付け取込は従来どおり `rawText` 保持）+ `index.html` の `app.js` cache buster のみ
+- 新規 `scripts/verify-v4137-calendar-json-save-originaltext.mjs`。現行合格は `node scripts/verify-current.mjs`（**98/98** 実測）
+- 表示バージョンは v4.13.7 据え置き。公開後の旧 `app.js` 残存防止のため `index.html` の `js/app.js` cache buster のみ `4.13.7` → `4.13.7.1`（他 JS/CSS は変更なし）
+- 既存の巨大 originalText を持つ過去レコードの自動削除・圧縮はしない（データ削除禁止）。新規保存から再発防止
+- 物理スマートフォン実機確認は未完了。本hotfixで commit/push・公開反映確認を実施
+
 ## 構造化請求書正規入口 + 顧客解決 + Browser番頭橋渡し（表示バージョン据え置き v4.13.7）
 
 - Budil: `js/invoice-structured-entrypoint.js` / `scripts/invoice-structured-cli.mjs`（stdin JSON、`--input-json` 拒否）
