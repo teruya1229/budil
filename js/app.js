@@ -11597,12 +11597,12 @@
     fillWorkCompletionSelects();
     const defaults = WorkCompletionBrain.buildCompletionFormDefaults(wo, { today: TODAY() });
     document.getElementById('work-completion-wo-id').value = wo.id;
-    document.getElementById('work-completion-date').value = '';
+    document.getElementById('work-completion-date').value = defaults.workDate;
     document.getElementById('work-completion-customer').value = defaults.customerName;
-    document.getElementById('work-completion-actual-service').value = '';
+    document.getElementById('work-completion-actual-service').value = defaults.actualService;
     document.getElementById('work-completion-service').value = defaults.service || RevenueBrain.SERVICES[0];
     fillSourceSelectOptions(document.getElementById('work-completion-source'), defaults.source || RevenueBrain.SOURCES[0]);
-    document.getElementById('work-completion-amount').value = '';
+    document.getElementById('work-completion-amount').value = defaults.amount;
     document.getElementById('work-completion-gross-rate').value = defaults.grossMarginRate;
     document.getElementById('work-completion-gross-rate').dataset.manualGrossMarginRate = defaults.grossMarginRate ? '1' : '';
     document.getElementById('work-completion-gross-rate').dataset.autoGrossMarginRate = '';
@@ -11610,16 +11610,16 @@
     document.getElementById('work-completion-payment-status').value = defaults.paymentStatus;
     const paymentDateEl = document.getElementById('work-completion-payment-date');
     if (paymentDateEl) {
-      paymentDateEl.value = '';
-      paymentDateEl.dataset.autoPaymentDate = '';
+      paymentDateEl.value = defaults.paymentDate;
+      paymentDateEl.dataset.autoPaymentDate = defaults.paymentDate || '';
       paymentDateEl.dataset.manualPaymentDate = '';
     }
     syncWorkCompletionPaymentDateUi();
     document.getElementById('work-completion-payment-method').value = defaults.paymentMethod;
     updateWorkCompletionPaymentCycleHint(defaults.paymentMethod);
     document.getElementById('work-completion-payment-concern').checked = defaults.paymentConcern;
-    document.getElementById('work-completion-actual-memo').value = '';
-    document.getElementById('work-completion-follow-memo').value = '';
+    document.getElementById('work-completion-actual-memo').value = defaults.additionalMemo;
+    document.getElementById('work-completion-follow-memo').value = defaults.followMemo;
     clearInlineExpenseFields('work-completion');
     const linkedLead = resolveLeadForWorkOrder(wo);
     const leadIdEl = document.getElementById('work-completion-lead-id');
@@ -11629,8 +11629,9 @@
     if (noteEl) noteEl.classList.toggle('hidden', !!linkedLead);
     const hint = document.getElementById('work-completion-estimate-hint');
     if (hint) {
-      const scheduled = [wo.scheduledDate, wo.serviceText].filter(Boolean).join(' / ');
-      hint.textContent = `予定参照：${scheduled || '予定情報なし'}${wo.estimateAmount ? ` / ${WorkOrderBrain.formatYen(wo.estimateAmount)}` : ''}。実績は上の欄へ本人が入力してください。`;
+      hint.textContent = wo.estimateAmount
+        ? `予定金額：${WorkOrderBrain.formatYen(wo.estimateAmount)}。実績と違う場合は修正してください`
+        : '';
     }
     beginWorkCompletionFormSession(wo);
     document.getElementById('work-completion-modal').classList.remove('hidden');
@@ -11679,7 +11680,7 @@
     workCompletionSubmitInFlight = true;
     try {
       const workOrderId = String(document.getElementById('work-completion-wo-id')?.value || '').trim();
-      const sessionCheck = validateCurrentWorkCompletionSession(workOrderId, { requireUserInput: true });
+      const sessionCheck = validateCurrentWorkCompletionSession(workOrderId);
       if (!sessionCheck.ok) {
         showWorkCompletionSessionError(sessionCheck);
         return;
@@ -11762,7 +11763,7 @@
 
       const storageRecovery = recoverStorageForRevenueConfirmationIfNeeded();
       if (!storageRecovery.ok) return;
-      const finalSessionCheck = validateCurrentWorkCompletionSession(workOrderId, { requireUserInput: true });
+      const finalSessionCheck = validateCurrentWorkCompletionSession(workOrderId);
       if (!finalSessionCheck.ok
         || finalSessionCheck.revision !== expectedRevision
         || confirmationSnapshot.signature !== JSON.stringify({

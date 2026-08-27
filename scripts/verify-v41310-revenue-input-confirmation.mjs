@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.10 - confirmed revenue must come from current user input and an exact confirmation snapshot.
+ * Budil v4.13.11 - confirmed revenue must come from current user input and an exact confirmation snapshot.
  * Isolated in-memory fixtures only. No browser profile, production localStorage, or customer data.
  */
 import { readFileSync } from 'node:fs';
@@ -98,9 +98,12 @@ function completionInput() {
 console.log('== input-only UI and stale target guards ==');
 assert(index.includes('入力内容を確認して確定'), 'targetless submit label is removed');
 assert(index.includes('実際の作業内容（内訳）'), 'the user-visible breakdown field is explicit');
-assert(app.includes("document.getElementById('work-completion-date').value = ''"), 'work date is not silently inherited into the confirmation form');
-assert(app.includes("document.getElementById('work-completion-actual-service').value = ''"), 'actual breakdown is not silently inherited');
-assert(app.includes("document.getElementById('work-completion-amount').value = ''"), 'actual amount is not silently inherited');
+assert(app.includes("document.getElementById('work-completion-date').value = defaults.workDate"), 'work-order confirmation form pre-fills scheduled date');
+assert(app.includes("document.getElementById('work-completion-actual-service').value = defaults.actualService"), 'work-order confirmation form pre-fills scheduled breakdown');
+assert(app.includes("document.getElementById('work-completion-amount').value = defaults.amount"), 'work-order confirmation form pre-fills scheduled amount');
+assert(!app.includes("document.getElementById('work-completion-date').value = ''"), 'work-order date is not cleared to empty');
+assert(!app.includes("document.getElementById('work-completion-actual-service').value = ''"), 'work-order breakdown is not cleared to empty');
+assert(!app.includes("document.getElementById('work-completion-amount').value = ''"), 'work-order amount is not cleared to empty');
 assert(app.includes('WORK_COMPLETION_REQUIRED_USER_INPUT_IDS'), 'required user input fields are tracked');
 assert(app.includes('validateCurrentWorkCompletionSession'), 'current modal and work-order identity are validated');
 assert(app.includes('getWorkCompletionSourceSignature'), 'stale source data is detected');
@@ -192,4 +195,4 @@ assert(app.includes('Storage.addRevenueRecord(confirmationSnapshot.payload)'), '
 assert(storageSource.includes("error: 'revenue_payload_mismatch'"), 'storage rejects mismatched or incomplete work-order payloads');
 assert(completionSource.includes('formatRevenueConfirmationMessage'), 'confirmation formatter is centralized with payload creation');
 
-console.log('\nAll v4.13.10 revenue input confirmation checks passed.');
+console.log('\nAll v4.13.11 revenue input confirmation checks passed.');

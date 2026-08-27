@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.10 - recover legacy calendar originalText before revenue confirmation.
+ * Budil v4.13.11 - recover legacy calendar originalText before revenue confirmation.
  * Uses isolated in-memory fixtures only. No real browser profile or customer data.
  */
 import { readFileSync } from 'node:fs';
@@ -222,12 +222,12 @@ const fullJson = buildFullCalendarJson();
 assert(fullJson.length >= 100 * 1024, 'fixture is sufficiently large');
 
 console.log('== source and version contract ==');
-assert(indexHtml.includes('Budil v4.13.10'), 'screen version is v4.13.10');
-assert(indexHtml.includes('js/app.js?v=4.13.10'), 'app cache buster is v4.13.10');
-assert(indexHtml.includes('css/style.css?v=4.13.10'), 'css cache buster is v4.13.10');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.10'"), 'Storage version is v4.13.10');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.13.10'"), 'backup version is v4.13.10');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.10'"), 'current runner pins v4.13.10');
+assert(indexHtml.includes('Budil v4.13.11'), 'screen version is v4.13.11');
+assert(indexHtml.includes('js/app.js?v=4.13.11'), 'app cache buster is v4.13.11');
+assert(indexHtml.includes('css/style.css?v=4.13.11'), 'css cache buster is v4.13.11');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.11'"), 'Storage version is v4.13.11');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.13.11'"), 'backup version is v4.13.11');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.11'"), 'current runner pins v4.13.11');
 assert(appJs.includes('recoverStorageForRevenueConfirmationIfNeeded'), 'revenue submit has explicit recovery gate');
 assert(appJs.includes('commitSavableCalendarCandidates'), 'calendar bulk save path remains');
 assert(appJs.includes("preview.sourceFormat === 'budil-calendar-json'"), 'calendar JSON individual/bulk compaction guard remains');
@@ -374,4 +374,4 @@ assert((appJs.match(/recoverStorageForRevenueConfirmationIfNeeded\(\)/g) || []).
   assert(allDay.estimateAmount === 320000, '320,000 yen regression remains');
 }
 
-console.log('\nAll v4.13.10 revenue storage recovery checks passed.');
+console.log('\nAll v4.13.11 revenue storage recovery checks passed.');

@@ -174,10 +174,10 @@ assert(currentScripts.includes('verify-v4130-cloud-backup-foundation.mjs'), 'thi
 assert(currentRunner.includes('verify-v4(10|11|12|13)'), 'verify-current.mjs must still target the v4.10–v4.13 pattern (no narrowing)');
 
 console.log('== UI: バージョン・cache buster整合 ==');
-assert(html.includes('AI経営脳みそ v4.13.10'), 'index header version must be v4.13.10');
-assert(html.includes('js/budil-cloud.js?v=4.13.10'), 'budil-cloud.js cache buster must be v4.13.10');
-assert(storage.includes("BUDIL_VERSION: 'v4.13.10'"), 'storage.js version must be v4.13.10');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.10'"), 'data-backup.js version must be v4.13.10');
+assert(html.includes('AI経営脳みそ v4.13.11'), 'index header version must be v4.13.11');
+assert(html.includes('js/budil-cloud.js?v=4.13.11'), 'budil-cloud.js cache buster must be v4.13.11');
+assert(storage.includes("BUDIL_VERSION: 'v4.13.11'"), 'storage.js version must be v4.13.11');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.11'"), 'data-backup.js version must be v4.13.11');
 
 console.log('== UI: 390pxで横スクロールを増やさない ==');
 assert(/\.card-cloud-backup/.test(css), 'css/style.css must define styling scoped to .card-cloud-backup');
