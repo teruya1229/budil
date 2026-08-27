@@ -36,16 +36,16 @@ for (const file of ['js/follow-up-brain.js', 'js/app.js', 'js/storage.js', 'js/d
 }
 
 console.log('== version / cache buster ==');
-assert(html.includes('Budil v4.13.7'), 'index.html shows Budil v4.13.7');
-assert(html.includes('js/app.js?v=4.13.7'), 'app.js cache buster is v4.13.7');
-assert(html.includes('js/follow-up-brain.js?v=4.13.7'), 'follow-up-brain.js cache buster is v4.13.7');
-assert(html.includes('css/style.css?v=4.13.7'), 'style.css cache buster is v4.13.7');
-assert(storage.includes("BUDIL_VERSION: 'v4.13.7'"), 'storage version is v4.13.7');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.7'"), 'data-backup version is v4.13.7');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.7'"), 'verify-current pins v4.13.7');
-assert(statusMd.includes('v4.13.7'), 'status.md documents v4.13.7');
-assert(handoffMd.includes('v4.13.7'), 'handoff.md documents v4.13.7');
-assert(decisionLog.includes('v4.13.7'), 'decision-log.md records v4.13.7');
+assert(html.includes('Budil v4.13.10'), 'index.html shows Budil v4.13.10');
+assert(html.includes('js/app.js?v=4.13.10'), 'app.js cache buster is v4.13.10');
+assert(html.includes('js/follow-up-brain.js?v=4.13.10'), 'follow-up-brain.js cache buster is v4.13.10');
+assert(html.includes('css/style.css?v=4.13.10'), 'style.css cache buster is v4.13.10');
+assert(storage.includes("BUDIL_VERSION: 'v4.13.10'"), 'storage version is v4.13.10');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.10'"), 'data-backup version is v4.13.10');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.10'"), 'verify-current pins v4.13.10');
+assert(statusMd.includes('v4.13.10'), 'status.md documents v4.13.10');
+assert(handoffMd.includes('v4.13.10'), 'handoff.md documents v4.13.10');
+assert(decisionLog.includes('v4.13.10'), 'decision-log.md records v4.13.10');
 
 console.log('== load FollowUpBrain ==');
 const sandbox = { console };

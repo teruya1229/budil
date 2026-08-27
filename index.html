@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Budil - AI経営脳みそ</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="css/style.css?v=4.13.7">
+  <link rel="stylesheet" href="css/style.css?v=4.13.10">
 </head>
 <body>
   <div class="app">
@@ -25,7 +25,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.13.7</small>
+          <small>AI経営脳みそ v4.13.10</small>
         </div>
       </div>
       <nav class="nav">
@@ -163,7 +163,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.13.7</small>
+        <small>Budil v4.13.10</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -185,7 +185,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の最優先 → 今日やること → 今月の数字</p>
             </div>
-            <span class="exec-home-version">v4.13.7</span>
+            <span class="exec-home-version">v4.13.10</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden exec-tower-span-full"></div>
 
@@ -613,7 +613,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.13.7</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.13.10</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -3854,7 +3854,7 @@
   <div id="work-completion-modal" class="modal hidden">
     <div class="modal-content modal-lg">
       <h2>売上確定 — 実績入力</h2>
-      <p class="work-completion-modal-notice">予定売上ではなく、実際の金額・作業内容を確認してから確定売上に登録してください。</p>
+      <p class="work-completion-modal-notice">対象日・実際の作業内訳・売上金額は本人が入力してください。入力後、売上集計へ反映する全内容を確認してから1件だけ登録します。</p>
       <form id="work-completion-form">
         <input type="hidden" id="work-completion-wo-id">
         <input type="hidden" id="work-completion-queue-source" value="work-order">
@@ -3869,8 +3869,8 @@
           </div>
         </div>
         <div class="form-group">
-          <label for="work-completion-actual-service">実際の作業内容 *</label>
-          <textarea id="work-completion-actual-service" rows="2" required></textarea>
+            <label for="work-completion-actual-service">実際の作業内容（内訳） *</label>
+            <textarea id="work-completion-actual-service" rows="2" required placeholder="今日実施した作業内訳を本人が入力"></textarea>
         </div>
         <div class="form-row form-row-2">
           <div class="form-group">
@@ -3991,7 +3991,7 @@
           </div>
         </fieldset>
         <div class="modal-actions work-completion-modal-actions">
-          <button type="submit" class="btn btn-primary">確定売上として登録</button>
+          <button type="submit" class="btn btn-primary">入力内容を確認して確定</button>
           <button type="button" id="btn-work-completion-duplicate-direct" class="btn btn-secondary hidden" disabled>直受け追加で複製</button>
           <button type="button" id="btn-work-completion-add-task" class="btn btn-secondary">今日やることに追加</button>
           <button type="button" id="btn-work-completion-cancel-modal" class="btn btn-secondary">閉じる</button>
@@ -4036,32 +4036,32 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.13.7"></script>
-  <script src="js/messages.js?v=4.13.7"></script>
-  <script src="js/demand-brain.js?v=4.13.7"></script>
-  <script src="js/demand-radar.js?v=4.13.7"></script>
-  <script src="js/sales-brain.js?v=4.13.7"></script>
-  <script src="js/management-brain.js?v=4.13.7"></script>
-  <script src="js/payment-brain.js?v=4.13.7"></script>
-  <script src="js/revenue-brain.js?v=4.13.7"></script>
-  <script src="js/revenue-summary-brain.js?v=4.13.7"></script>
-  <script src="js/reception-brain.js?v=4.13.7"></script>
-  <script src="js/map-brain.js?v=4.13.7"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.13.7"></script>
-  <script src="js/external-check-brain.js?v=4.13.7"></script>
-  <script src="js/action-brain.js?v=4.13.7"></script>
-  <script src="js/work-order-brain.js?v=4.13.7"></script>
-  <script src="js/follow-up-brain.js?v=4.13.7"></script>
-  <script src="js/work-completion-brain.js?v=4.13.7"></script>
-  <script src="js/profit-brain.js?v=4.13.7"></script>
-  <script src="js/analytics-brain.js?v=4.13.7"></script>
-  <script src="js/ad-bridge.js?v=4.13.7"></script>
-  <script src="js/monthly-results-brain.js?v=4.13.7"></script>
-  <script src="js/documents-brain.js?v=4.13.7"></script>
-  <script src="js/executive-brain.js?v=4.13.7"></script>
-  <script src="js/card-ocr.js?v=4.13.7"></script>
-  <script src="js/data-backup.js?v=4.13.7"></script>
-  <script src="js/budil-cloud.js?v=4.13.7"></script>
-  <script src="js/app.js?v=4.13.7.1"></script>
+  <script src="js/storage.js?v=4.13.10"></script>
+  <script src="js/messages.js?v=4.13.10"></script>
+  <script src="js/demand-brain.js?v=4.13.10"></script>
+  <script src="js/demand-radar.js?v=4.13.10"></script>
+  <script src="js/sales-brain.js?v=4.13.10"></script>
+  <script src="js/management-brain.js?v=4.13.10"></script>
+  <script src="js/payment-brain.js?v=4.13.10"></script>
+  <script src="js/revenue-brain.js?v=4.13.10"></script>
+  <script src="js/revenue-summary-brain.js?v=4.13.10"></script>
+  <script src="js/reception-brain.js?v=4.13.10"></script>
+  <script src="js/map-brain.js?v=4.13.10"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.13.10"></script>
+  <script src="js/external-check-brain.js?v=4.13.10"></script>
+  <script src="js/action-brain.js?v=4.13.10"></script>
+  <script src="js/work-order-brain.js?v=4.13.10"></script>
+  <script src="js/follow-up-brain.js?v=4.13.10"></script>
+  <script src="js/work-completion-brain.js?v=4.13.10"></script>
+  <script src="js/profit-brain.js?v=4.13.10"></script>
+  <script src="js/analytics-brain.js?v=4.13.10"></script>
+  <script src="js/ad-bridge.js?v=4.13.10"></script>
+  <script src="js/monthly-results-brain.js?v=4.13.10"></script>
+  <script src="js/documents-brain.js?v=4.13.10"></script>
+  <script src="js/executive-brain.js?v=4.13.10"></script>
+  <script src="js/card-ocr.js?v=4.13.10"></script>
+  <script src="js/data-backup.js?v=4.13.10"></script>
+  <script src="js/budil-cloud.js?v=4.13.10"></script>
+  <script src="js/app.js?v=4.13.10"></script>
 </body>
 </html>

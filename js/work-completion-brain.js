@@ -207,6 +207,7 @@ const WorkCompletionBrain = {
     const payload = {
       workDate: input.workDate || wo.scheduledDate || now.slice(0, 10),
       customerName: String(input.customerName || wo.customerName || '').trim(),
+      actualService: String(input.actualService || '').trim(),
       service: input.service || input.actualService || wo.serviceText || '',
       source: input.source || wo.source || '',
       amount: Number(input.amount) || 0,
@@ -251,6 +252,89 @@ const WorkCompletionBrain = {
       });
     }
     return payload;
+  },
+
+  createRevenueConfirmationSnapshot(workOrder, input, inlineExpense) {
+    const payload = this.createRevenuePayloadFromWorkOrder(workOrder, input || {});
+    const expenseState = inlineExpense && inlineExpense.shouldCreate
+      ? {
+          shouldCreate: true,
+          category: String(inlineExpense.input && inlineExpense.input.category || 'その他').trim(),
+          amount: Number(inlineExpense.input && inlineExpense.input.amount) || 0,
+          content: String(inlineExpense.input && inlineExpense.input.content || '').trim(),
+          memo: String(inlineExpense.input && inlineExpense.input.memo || '').trim()
+        }
+      : { shouldCreate: false };
+    const snapshot = {
+      workOrderId: String(workOrder && workOrder.id || '').trim(),
+      completionInput: JSON.parse(JSON.stringify(input || {})),
+      payload: JSON.parse(JSON.stringify(payload)),
+      expense: expenseState
+    };
+    snapshot.signature = JSON.stringify({
+      workOrderId: snapshot.workOrderId,
+      completionInput: snapshot.completionInput,
+      payload: snapshot.payload,
+      expense: snapshot.expense
+    });
+    return snapshot;
+  },
+
+  validateRevenueConfirmationSnapshot(snapshot) {
+    const data = snapshot && snapshot.payload && typeof snapshot.payload === 'object'
+      ? snapshot.payload
+      : {};
+    const validDate = /^\d{4}-\d{2}-\d{2}$/.test(String(data.workDate || ''));
+    const amount = Number(data.amount);
+    if (!String(snapshot && snapshot.workOrderId || '').trim()) return { ok: false, error: 'missing_work_order' };
+    if (!validDate) return { ok: false, error: 'missing_work_date' };
+    if (!String(data.customerName || '').trim()) return { ok: false, error: 'missing_customer' };
+    if (!String(data.actualService || '').trim()) return { ok: false, error: 'missing_actual_service' };
+    if (!String(data.service || '').trim()) return { ok: false, error: 'missing_service' };
+    if (!String(data.source || '').trim()) return { ok: false, error: 'missing_source' };
+    if (!Number.isFinite(amount) || amount <= 0) return { ok: false, error: 'invalid_amount' };
+    if (String(data.status || '') !== '確定') return { ok: false, error: 'invalid_status' };
+    if (String(data.sourceWorkOrderId || '') !== String(snapshot.workOrderId || '')) {
+      return { ok: false, error: 'work_order_mismatch' };
+    }
+    return { ok: true };
+  },
+
+  formatRevenueConfirmationMessage(snapshot, options) {
+    const data = snapshot && snapshot.payload ? snapshot.payload : {};
+    const expense = snapshot && snapshot.expense ? snapshot.expense : { shouldCreate: false };
+    const opts = options || {};
+    const yen = value => `${(Number(value) || 0).toLocaleString('ja-JP')}円`;
+    const lines = [
+      opts.repairOnly
+        ? '【保存済み売上の予定リンク修復】'
+        : (opts.updateOnly ? '【既存売上を更新する内容】' : '【売上集計へ反映する内容】'),
+      `対象日：${data.workDate || '未入力'}`,
+      `対象顧客：${data.customerName || '未入力'}`,
+      `売上金額：${yen(data.amount)}`,
+      `入力された内訳：${data.actualService || data.service || '未入力'}`,
+      `サービス分類：${data.service || '未入力'}`,
+      `依頼元：${data.source || '未入力'}`,
+      `粗利率：${data.grossMarginRate === '' || data.grossMarginRate == null ? '未設定' : `${Number(data.grossMarginRate)}%`}`,
+      `支払い状態：${data.paymentStatus || '未入力'}`,
+      `入金日／予定日：${data.paymentDate || data.expectedPaymentDate || data.paidDate || '未入力'}`,
+      `支払い方法：${data.paymentMethod || '未選択'}`,
+      `入金注意：${data.paymentConcern === true ? 'あり' : 'なし'}`
+    ];
+    if (String(data.memo || '').trim()) lines.push(`売上メモ：${String(data.memo).trim()}`);
+    if (expense.shouldCreate) {
+      lines.push(`同時登録する経費：${yen(expense.amount)}（${expense.category || 'その他'}）`);
+      if (expense.content) lines.push(`経費内訳：${expense.content}`);
+      if (expense.memo) lines.push(`経費メモ：${expense.memo}`);
+    } else {
+      lines.push('同時登録する経費：なし');
+    }
+    lines.push('', opts.repairOnly
+      ? '新しい売上は作らず、この保存済み売上へのリンクだけを修復します。よろしいですか？'
+      : (opts.updateOnly
+          ? 'この表示内容で既存売上1件を更新します。よろしいですか？'
+          : 'この表示内容を売上集計へ1件だけ反映します。よろしいですか？'));
+    return lines.join('\n');
   },
 
   markWorkOrderCompleted(workOrder, revenueRecord, input) {

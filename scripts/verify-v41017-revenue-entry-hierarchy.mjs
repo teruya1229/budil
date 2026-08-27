@@ -28,10 +28,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.13.7'), 'index.html should show v4.12.26');
-assert(indexHtml.includes('js/app.js?v=4.13.7'), 'app.js cache buster should be v4.13.7');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.7'"), 'storage.js version should be v4.13.7');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.13.7'"), 'data-backup version should be v4.13.7');
+assert(indexHtml.includes('v4.13.10'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('js/app.js?v=4.13.10'), 'app.js cache buster should be v4.13.10');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.10'"), 'storage.js version should be v4.13.10');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.13.10'"), 'data-backup version should be v4.13.10');
 
 const revenueViewStart = indexHtml.indexOf('id="view-revenue"');
 const revenueViewEnd = indexHtml.indexOf('id="view-revenue-analysis"');
@@ -58,7 +58,7 @@ const dailyChunk = indexHtml.slice(dailyStart, dailyEnd);
 assert(dailyChunk.includes('daily-section-revenue-exception'), 'daily quick input should be exception section');
 assert(dailyChunk.includes('予定にない売上を手入力（例外）'), 'daily quick input summary should mark exception');
 
-assert(appJs.includes('confirmRevenueSaveWithDuplicateCheck(revenuePayload'), 'work completion should use duplicate guard');
+assert(appJs.includes('confirmRevenueSaveWithDuplicateCheck(confirmationSnapshot.payload'), 'work completion should use duplicate guard on the displayed snapshot');
 assert(appJs.includes('isWorkOrderRevenueLocked'), 'actualRevenueId lock should remain');
 assert(appJs.includes('findMonthlyAdjustmentDuplicates'), 'monthly adjustment duplicate helper should exist');
 assert(appJs.includes('月次調整明細として'), 'monthly adjustment confirm should explain adjustment');

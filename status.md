@@ -1,5 +1,23 @@
 ﻿# Budil status
 
+## v4.13.10 緊急修正：確定売上前のlocalStorage容量回復
+
+- 追加判明した根本原因: 作業予定から日付・内訳・金額を自動入力したまま、確認文が「確定売上として登録します」という固定文で、本人入力の有無・対象日・金額・内訳を確認していなかった。隔離fixtureでも入力なしで汎用確認まで進める状態だった
+- 売上確定モーダルの対象日・実際の作業内容（内訳）・実績金額は空欄で開き、3項目すべてに本人の入力イベントがあった現在セッションだけを受理する。モーダル対象IDと作業予定の重要項目signatureも保存直前に再照合し、古い選択・別対象へのすり替えを拒否する
+- `WorkCompletionBrain.createRevenueConfirmationSnapshot()`で保存payload・完了入力・同時経費を1回だけ固定し、同じsnapshotから対象日、顧客、売上金額、入力内訳、サービス分類、依頼元、粗利率、支払い状態、入金日/予定日、支払い方法、入金注意、売上メモ、同時経費を確認表示する。OK時は表示した`confirmationSnapshot.payload`だけを1回保存する
+- 未入力は確認画面を出さず保存しない。キャンセル時は売上件数・集計・作業予定・容量整理を変更しない。二重送信guardと作業予定IDに紐づく既存売上再利用を併用し、再送しても1件のまま。保存境界でもpayloadの作業予定ID・日付・顧客・内訳・金額を検証する
+- 対象内容を表示せず変換する過去売上復元モーダル経路は無効化。今日の簡易手入力と売上明細手入力/編集も、同じ詳細確認formatterから作ったsnapshotだけを保存する
+- 根本原因: v4.13.7以前のGoogleカレンダーJSON/API取込で、全件JSON（`rawEvent`含む）が複数の作業予定の`candidateMeta.originalText`へ複製済みであり、売上配列または作業予定リンクの`localStorage.setItem()`が`QuotaExceededError`になる状態が残っていた
+- 容量回復はページ読込時に行わず、本人が売上確定を押した操作内だけで実行する。対象がある場合は既存`DataBackup.exportPayload()`によるローカルバックアップのダウンロードを先に開始し、専用確認後だけ縮小する。キャンセル時はlocalStorage不変
+- 縮小対象は100KiB以上の文字列で、`importSource === 'calendar-json-file'`、安定`google_calendar|`キー、JSON解析成功、`source: google_calendar`、schemaVersion 1、取得日時・対象期間・GoogleイベントID・安定dedupe keyを持つ全件形式（または`/sync` wrapper）をすべて満たす`candidateMeta.originalText`のみ。手入力・通常貼付け・小さいJSON・一般JSONは維持
+- 作業予定配列をcloneし、件数・全ID・全レコードが`candidateMeta.originalText`以外完全一致することを検証してから、縮小済み配列を1回だけ保存する。顧客、住所、電話、日時、金額、status、stable key、作業予定/売上/受付/経費リンク、candidateMetaの他項目は変更しない
+- 売上保存と予定リンク更新を段階判定する。売上保存前失敗は「保存容量を回復できなかったため、売上は登録していません」、売上保存後の予定リンク失敗は「売上は保存済みです。再登録せず、予定リンクの修復が必要です」と表示する
+- 同一作業予定を参照する既存売上があれば新規売上を作らず、`completed`・`actualRevenueId`リンクだけ修復する。再実行でも売上は1件のまま
+- 新規`scripts/verify-v41310-revenue-storage-recovery.mjs`でQuotaExceeded再現、対象限定、cancel不変、バックアップ順序、1回保存、売上1件、completed/link、再実行重複なし、部分保存修復、失敗文言、終日・複数日・320,000円を隔離fixtureで検証
+- 公開表示、`BUDIL_VERSION`、バックアップ版、全JS/CSS cache buster、現行verify期待値をv4.13.10へ統一。実顧客localStorageは未操作
+- 新規`scripts/verify-v41310-revenue-input-confirmation.mjs`で未入力拒否、詳細表示、cancel不変、表示payload完全一致、今日集計、二重送信、対象すり替え、他の手入力経路を隔離fixture検証
+- `node scripts/verify-current.mjs` は **100/100** 合格（省略・除外なし）。localhost別origin隔離ブラウザでも未入力確認0/保存0、cancel保存0、OK売上1・completed/link・原文縮小、部分保存再送1件維持、Console error 0を確認。実顧客データ未接触
+
 ## v4.13.7 hotfix：カレンダーJSON/API保存の originalText 容量超過（表示バージョン据え置き）
 
 - 症状: Googleカレンダー予定は表示されるが、「作業予定として保存」「すべて保存」「Googleカレンダーを更新」後の保存が反映されない。更新ボタンは worker sync success でも「カレンダーを更新できませんでした。既存データは変更していません。」

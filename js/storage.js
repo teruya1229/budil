@@ -3,7 +3,8 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.13.7',
+  BUDIL_VERSION: 'v4.13.10',
+  LEGACY_CALENDAR_ORIGINAL_TEXT_MIN_CHARS: 100 * 1024,
 
   KEYS: {
     LEADS: 'budil_leads',
@@ -1325,6 +1326,130 @@ const Storage = {
     return Array.isArray(raw) ? raw : [];
   },
 
+  isRecoverableLegacyCalendarOriginalText(workOrder) {
+    const wo = workOrder && typeof workOrder === 'object' ? workOrder : {};
+    if (!String(wo.id || '').trim()) return false;
+    const meta = wo.candidateMeta && typeof wo.candidateMeta === 'object'
+      ? wo.candidateMeta
+      : {};
+    const originalText = meta.originalText;
+    if (typeof originalText !== 'string'
+      || originalText.length < this.LEGACY_CALENDAR_ORIGINAL_TEXT_MIN_CHARS) {
+      return false;
+    }
+    const jsonImportSource = typeof CalendarCandidateBrain !== 'undefined'
+      ? CalendarCandidateBrain.JSON_IMPORT_SOURCE
+      : 'calendar-json-file';
+    if (String(meta.importSource || '') !== jsonImportSource) return false;
+    const stableKey = String(wo.calendarDedupeKey || meta.calendarDedupeKey || '').trim();
+    if (!stableKey.startsWith('google_calendar|')) return false;
+
+    let parsed;
+    try {
+      parsed = JSON.parse(originalText);
+    } catch {
+      return false;
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return false;
+    const payload = parsed.payload && typeof parsed.payload === 'object' && !Array.isArray(parsed.payload)
+      ? parsed.payload
+      : parsed;
+    if (String(payload.source || '') !== 'google_calendar') return false;
+    if (Number(payload.schemaVersion) !== 1) return false;
+    if (!String(payload.fetchedAt || '').trim()) return false;
+    const period = payload.targetPeriod;
+    if (!period || typeof period !== 'object'
+      || !String(period.from || '').trim()
+      || !String(period.to || '').trim()) {
+      return false;
+    }
+    if (!Array.isArray(payload.items) || payload.items.length === 0) return false;
+    return payload.items.every(item => {
+      if (!item || typeof item !== 'object') return false;
+      const itemSource = String(item.source || '').trim();
+      const eventId = String(item.calendarEventId || '').trim();
+      const dedupeKey = String(item.budilImport && item.budilImport.dedupeKey || '').trim();
+      return itemSource === 'google_calendar'
+        && !!eventId
+        && dedupeKey.startsWith('google_calendar|');
+    });
+  },
+
+  validateWorkOrderOriginalTextRecovery(before, after, targetIds) {
+    const prev = Array.isArray(before) ? before : [];
+    const next = Array.isArray(after) ? after : [];
+    const ids = targetIds instanceof Set ? targetIds : new Set(targetIds || []);
+    if (prev.length !== next.length) return { ok: false, error: 'count_changed' };
+    if (JSON.stringify(prev.map(item => item && item.id)) !== JSON.stringify(next.map(item => item && item.id))) {
+      return { ok: false, error: 'ids_changed' };
+    }
+
+    for (let i = 0; i < prev.length; i += 1) {
+      const beforeItem = prev[i];
+      const afterItem = next[i];
+      const id = String(beforeItem && beforeItem.id || '');
+      const expected = this.cloneForSafety(beforeItem);
+      if (ids.has(id)) {
+        if (!expected || !expected.candidateMeta || typeof expected.candidateMeta.originalText !== 'string') {
+          return { ok: false, error: 'target_shape_changed' };
+        }
+        expected.candidateMeta.originalText = '';
+      }
+      if (JSON.stringify(expected) !== JSON.stringify(afterItem)) {
+        return { ok: false, error: ids.has(id) ? 'non_target_field_changed' : 'untargeted_record_changed' };
+      }
+    }
+    return { ok: true };
+  },
+
+  prepareWorkOrderOriginalTextRecovery(workOrders) {
+    const before = this.cloneForSafety(Array.isArray(workOrders) ? workOrders : this.getWorkOrders());
+    const next = this.cloneForSafety(before);
+    const targetIds = new Set();
+    let recoveredChars = 0;
+    next.forEach((item, index) => {
+      const source = before[index];
+      if (!this.isRecoverableLegacyCalendarOriginalText(source)) return;
+      targetIds.add(String(source.id || ''));
+      recoveredChars += source.candidateMeta.originalText.length;
+      item.candidateMeta.originalText = '';
+    });
+    const validation = this.validateWorkOrderOriginalTextRecovery(before, next, targetIds);
+    return {
+      needed: targetIds.size > 0,
+      targetCount: targetIds.size,
+      targetIds: Array.from(targetIds),
+      recoveredChars,
+      before,
+      workOrders: next,
+      validation
+    };
+  },
+
+  recoverWorkOrderOriginalTextForRevenue() {
+    const plan = this.prepareWorkOrderOriginalTextRecovery();
+    if (!plan.needed) return { ok: true, changed: false, targetCount: 0, recoveredChars: 0 };
+    if (!plan.validation || !plan.validation.ok) {
+      return { ok: false, changed: false, error: plan.validation && plan.validation.error || 'validation_failed' };
+    }
+    this.saveWorkOrders(plan.workOrders);
+    const saved = this.getWorkOrders();
+    const savedValidation = this.validateWorkOrderOriginalTextRecovery(
+      plan.before,
+      saved,
+      new Set(plan.targetIds)
+    );
+    if (!savedValidation.ok) {
+      return { ok: false, changed: true, error: 'saved_validation_failed' };
+    }
+    return {
+      ok: true,
+      changed: true,
+      targetCount: plan.targetCount,
+      recoveredChars: plan.recoveredChars
+    };
+  },
+
   saveWorkOrders(list) {
     this.set(this.KEYS.WORK_ORDERS, list);
   },
@@ -1358,6 +1483,75 @@ const Storage = {
     list[idx] = { ...merged, updatedAt: new Date().toISOString() };
     this.saveWorkOrders(list);
     return list[idx];
+  },
+
+  findRevenuesForWorkOrder(workOrderId) {
+    const id = String(workOrderId || '').trim();
+    if (!id) return [];
+    return this.getRevenueRecords().filter(record => {
+      if (!record || typeof record !== 'object') return false;
+      return String(record.sourceWorkOrderId || '').trim() === id
+        || String(record.workOrderId || '').trim() === id
+        || String(record.sourceCandidateId || '').trim() === id;
+    });
+  },
+
+  confirmRevenueForWorkOrder(workOrderId, revenuePayload, completionInput) {
+    const id = String(workOrderId || '').trim();
+    const workOrder = this.getWorkOrders().find(item => String(item && item.id || '').trim() === id);
+    if (!workOrder) return { ok: false, error: 'work_order_not_found', revenueSaved: false };
+
+    const payload = revenuePayload && typeof revenuePayload === 'object' ? revenuePayload : {};
+    const payloadWorkOrderId = String(payload.sourceWorkOrderId || payload.workOrderId || '').trim();
+    const validWorkDate = /^\d{4}-\d{2}-\d{2}$/.test(String(payload.workDate || ''));
+    if (payloadWorkOrderId !== id
+      || !validWorkDate
+      || !String(payload.customerName || '').trim()
+      || !String(payload.actualService || '').trim()
+      || !Number.isFinite(Number(payload.amount))
+      || Number(payload.amount) <= 0) {
+      return { ok: false, error: 'revenue_payload_mismatch', revenueSaved: false };
+    }
+
+    const existing = this.findRevenuesForWorkOrder(id);
+    let revenue = existing[0] || null;
+    let revenueCreated = false;
+    if (!revenue) {
+      try {
+        revenue = this.addRevenueRecord(payload);
+        revenueCreated = true;
+      } catch (error) {
+        return { ok: false, error: 'revenue_save_failed', revenueSaved: false, cause: error };
+      }
+    }
+
+    try {
+      const patch = typeof WorkCompletionBrain !== 'undefined'
+        ? WorkCompletionBrain.markWorkOrderCompleted(workOrder, revenue, completionInput || {})
+        : { status: 'completed', actualRevenueId: revenue.id };
+      const updatedWorkOrder = this.updateWorkOrder(id, patch);
+      if (!updatedWorkOrder || String(updatedWorkOrder.actualRevenueId || '') !== String(revenue.id || '')) {
+        throw new Error('work_order_link_not_saved');
+      }
+      return {
+        ok: true,
+        revenueSaved: true,
+        revenueCreated,
+        linkedExistingRevenue: !revenueCreated,
+        revenue,
+        workOrder: updatedWorkOrder
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: 'work_order_link_failed',
+        revenueSaved: true,
+        revenueCreated,
+        linkedExistingRevenue: !revenueCreated,
+        revenue,
+        cause: error
+      };
+    }
   },
 
   syncWorkOrderScheduleFromCalendar(workOrderId, calendarDedupeKey, scheduleFields) {

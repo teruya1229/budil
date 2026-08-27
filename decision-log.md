@@ -2,6 +2,42 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.13.10 確定売上前のlocalStorage容量回復（2026-08-27）
+
+**日付**: 2026-08-27
+
+**背景**: v4.13.7で新規GoogleカレンダーJSON/API取込への巨大`originalText`複製は止めたが、既に複製済みの作業予定がlocalStorage容量を占有し、今日の確定売上で売上配列または作業予定リンクを保存できない可能性が残った。
+
+**判断内容**:
+- 対象不明の固定確認文は廃止する。対象日・実際の作業内訳・売上金額を空欄で開き、本人が現在のモーダルで3項目を入力した場合だけ確認へ進める
+- 確認表示と保存データを別々に再生成しない。`createRevenueConfirmationSnapshot()`が返す同一payloadから、日付・顧客・金額・内訳・サービス分類・依頼元・粗利率・支払い/入金情報・メモ・同時経費を表示し、OK時はそのpayloadだけを保存する
+- モーダルを開いた作業予定のID/状態/売上リンク/顧客/予定日/予定額/安定キーsignatureを保存直前に再照合する。保存層でもpayloadの作業予定ID・日付・顧客・入力内訳・金額を検証し、別レコードへのすり替えを拒否する
+- 二重送信中は再実行せず、同じ作業予定の保存済み売上があれば新規作成せずリンク修復だけを行う
+- 内容を表示しない過去売上復元モーダルからの直接確定は無効化する。簡易手入力・売上明細手入力/編集も共通formatterによる詳細確認snapshotを保存する
+- 自動migration・ページ読込時整理は行わない。本人の「確定売上」操作内で、対象が存在するときだけ容量回復を提示する
+- 整理前に既存`DataBackup.exportPayload()`を使ったローカルバックアップのダウンロードを開始する。ダウンロード処理は`lastBackupAt`を書かない純粋処理へ分離し、整理確認キャンセル時のlocalStorageを不変にする
+- 対象は100KiB以上、`calendar-json-file`、安定Googleキー、JSON解析成功、schemaVersion/取得日時/対象期間/items/Google event ID/dedupe keyが揃う全件JSONまたは`/sync` wrapperに限定する。手入力、通常貼付け、一般JSON、小さいJSONは対象外
+- clone上で`candidateMeta.originalText`だけ空文字にし、件数・全ID・全レコードがその1項目以外完全一致することを検証する。作業予定配列への保存は1回だけ
+- 売上追加と作業予定リンク更新を分離判定する。前者失敗は未登録、後者失敗は売上保存済みとして別文言を表示する
+- `sourceWorkOrderId`/`workOrderId`/`sourceCandidateId`で同じ作業予定を参照する既存売上があれば新規作成せず、`completed`と`actualRevenueId`だけを修復する
+- 公開版をv4.13.10へ統一し、新規verifyを現行runnerへ自動発見させる
+
+**変更対象**:
+- `js/storage.js` / `js/app.js` / `js/data-backup.js` / `index.html`
+- `scripts/verify-v41310-revenue-storage-recovery.mjs` / `scripts/verify-current.mjs` / 現行verifyのバージョン期待値
+- `status.md` / `handoff.md` / `decision-log.md`
+
+**安全境界**:
+- 実顧客localStorage、`output/`、Googleカレンダー、Gmail、LINEは操作しない
+- originalText以外の業務項目、ID、リンク、candidateMeta属性は変更しない
+- 既存3コミットの書換え、reset/restore/checkout/stash/cleanは行わない
+
+**検証結果**:
+- 新規`verify-v41310-revenue-input-confirmation.mjs`合格。未入力、詳細表示、cancel不変、payload全項目一致、今日集計、二重操作、対象すり替えを隔離fixtureで確認
+- 新規`verify-v41310-revenue-storage-recovery.mjs`合格
+- `node scripts/verify-current.mjs` 100/100合格（省略・除外なし）
+- localhost別origin隔離ブラウザ: 未入力は確認0/保存0、cancelは保存0・原文未変更、OKは売上1件・作業予定completed・actualRevenueId一致・対象原文0文字、売上だけ保存済み再送も1件のままリンク修復、Console error 0。人工fixtureのみ
+
 ## v4.13.7 hotfix：カレンダーJSON/API保存 originalText 容量超過（2026-08-27）
 
 **日付**: 2026-08-27

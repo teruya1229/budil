@@ -82,11 +82,11 @@ const STORAGE_KEY_SNIPPETS = [
 console.log('== v4.12.5 operational-workflow-rehearsal ==');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.13.7'), 'index.html should show v4.12.26');
-assert(indexHtml.includes('js/app.js?v=4.13.7'), 'app.js cache buster should be v4.13.7');
-assert(indexHtml.includes('css/style.css?v=4.13.7'), 'style.css cache buster should be v4.13.7');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.7'"), 'storage version should be v4.13.7');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.13.7'"), 'data-backup version should be v4.13.7');
+assert(indexHtml.includes('v4.13.10'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('js/app.js?v=4.13.10'), 'app.js cache buster should be v4.13.10');
+assert(indexHtml.includes('css/style.css?v=4.13.10'), 'style.css cache buster should be v4.13.10');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.10'"), 'storage version should be v4.13.10');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.13.10'"), 'data-backup version should be v4.13.10');
 assert(!indexHtml.includes('?v=4.12.7'), 'old cache buster v4.12.7 should be gone');
 
 console.log('== empty src / layout safety ==');

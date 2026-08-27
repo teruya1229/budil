@@ -11,6 +11,8 @@
   let pendingRevenueIntakeId = '';
   let pendingLinkedDocumentId = '';
   let pendingLinkedRevenueId = '';
+  let workCompletionFormSession = null;
+  let workCompletionSubmitInFlight = false;
   let selectedFollowUpTargetId = null;
   let followUpPriorityFocusId = null;
   let followUpCardExpandedKey = null;
@@ -4288,6 +4290,7 @@
 
   function handleDailyRevenueQuickSubmit(e) {
     e.preventDefault();
+    if (inlineExpenseSaveGuard) return;
     const workDate = document.getElementById('daily-revenue-date').value;
     const customerName = document.getElementById('daily-revenue-customer').value.trim();
     const serviceText = document.getElementById('daily-revenue-service').value.trim();
@@ -4311,13 +4314,20 @@
       paymentConcern: false,
       memo
     };
-    if (!confirmRevenueSaveWithDuplicateCheck(payload, '')) return;
-    Storage.addRevenueRecord(payload);
-    document.getElementById('daily-revenue-quick-form').reset();
-    document.getElementById('daily-revenue-date').value = TODAY();
-    showDailyRevenueSavedNotice();
-    renderExecutiveHome();
-    renderRevenueView();
+    const snapshot = createManualRevenueConfirmationSnapshot(payload, { shouldCreate: false });
+    if (!confirmManualRevenueSnapshot(snapshot)) return;
+    if (!confirmRevenueSaveWithDuplicateCheck(snapshot.payload, '')) return;
+    inlineExpenseSaveGuard = true;
+    try {
+      Storage.addRevenueRecord(snapshot.payload);
+      document.getElementById('daily-revenue-quick-form').reset();
+      document.getElementById('daily-revenue-date').value = TODAY();
+      showDailyRevenueSavedNotice();
+      renderExecutiveHome();
+      renderRevenueView();
+    } finally {
+      inlineExpenseSaveGuard = false;
+    }
   }
 
   function initDailyFlowStrip() {
@@ -6247,18 +6257,59 @@
     if (preview) preview.classList.remove('hidden');
   }
 
-  function exportBudilData() {
+  function downloadBudilBackupSnapshot() {
     const payload = DataBackup.exportPayload();
-    DataBackup.inspectBackupData(payload.data, 'export');
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = DataBackup.filename();
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+      a.href = url;
+      a.download = DataBackup.filename();
+      document.body.appendChild(a);
+      a.click();
+    } finally {
+      if (a.parentNode) a.parentNode.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+    return payload;
+  }
+
+  function recoverStorageForRevenueConfirmationIfNeeded() {
+    const plan = Storage.prepareWorkOrderOriginalTextRecovery();
+    if (!plan.needed) return { ok: true, changed: false };
+    if (!plan.validation || !plan.validation.ok) {
+      alert('保存容量を回復できなかったため、売上は登録していません');
+      return { ok: false, error: 'recovery_validation_failed' };
+    }
+    try {
+      downloadBudilBackupSnapshot();
+    } catch (error) {
+      console.error('[Budil][storage-recovery-backup-failed]', error);
+      alert('保存容量を回復できなかったため、売上は登録していません');
+      return { ok: false, error: 'backup_download_failed' };
+    }
+    const confirmed = confirm(
+      `保存容量を回復するため、旧Googleカレンダー取込データ ${plan.targetCount}件の巨大な取込原文だけを整理します。\n\n` +
+      'バックアップのダウンロードを開始しました。顧客名・住所・電話・日時・金額・状態・ID・その他の候補情報は変更しません。続行しますか？'
+    );
+    if (!confirmed) return { ok: false, cancelled: true };
+    try {
+      const result = Storage.recoverWorkOrderOriginalTextForRevenue();
+      if (!result || !result.ok) {
+        alert('保存容量を回復できなかったため、売上は登録していません');
+        return { ok: false, error: result && result.error || 'recovery_failed' };
+      }
+      return result;
+    } catch (error) {
+      console.error('[Budil][storage-recovery-save-failed]', error);
+      alert('保存容量を回復できなかったため、売上は登録していません');
+      return { ok: false, error: 'recovery_save_failed' };
+    }
+  }
+
+  function exportBudilData() {
+    const payload = downloadBudilBackupSnapshot();
+    DataBackup.inspectBackupData(payload.data, 'export');
     DataBackup.recordBackupTime();
     renderBackupStatus();
     renderDataManagement();
@@ -11415,6 +11466,76 @@
     return !!(wo && wo.actualRevenueId);
   }
 
+  const WORK_COMPLETION_REQUIRED_USER_INPUT_IDS = [
+    'work-completion-date',
+    'work-completion-actual-service',
+    'work-completion-amount'
+  ];
+
+  function getWorkCompletionSourceSignature(wo) {
+    const item = wo || {};
+    return JSON.stringify({
+      id: String(item.id || ''),
+      status: String(item.status || ''),
+      actualRevenueId: String(item.actualRevenueId || ''),
+      customerName: String(item.customerName || ''),
+      scheduledDate: String(item.scheduledDate || ''),
+      scheduledEndDate: String(item.scheduledEndDate || ''),
+      estimateAmount: Number(item.estimateAmount || 0),
+      calendarDedupeKey: String(item.calendarDedupeKey || '')
+    });
+  }
+
+  function beginWorkCompletionFormSession(wo) {
+    workCompletionFormSession = {
+      workOrderId: String(wo && wo.id || ''),
+      sourceSignature: getWorkCompletionSourceSignature(wo),
+      revision: 0,
+      touched: new Set()
+    };
+  }
+
+  function trackWorkCompletionUserInput(event) {
+    if (!workCompletionFormSession || !event || !event.target) return;
+    const id = String(event.target.id || '');
+    if (!id || !id.startsWith('work-completion-')) return;
+    workCompletionFormSession.revision += 1;
+    workCompletionFormSession.touched.add(id);
+  }
+
+  function validateCurrentWorkCompletionSession(workOrderId, options) {
+    const opts = options || {};
+    const id = String(workOrderId || '').trim();
+    const hiddenId = String(document.getElementById('work-completion-wo-id')?.value || '').trim();
+    const modal = document.getElementById('work-completion-modal');
+    if (!workCompletionFormSession
+      || workCompletionFormSession.workOrderId !== id
+      || hiddenId !== id
+      || !modal
+      || modal.classList.contains('hidden')) {
+      return { ok: false, error: 'stale_form' };
+    }
+    if (opts.requireUserInput) {
+      const missing = WORK_COMPLETION_REQUIRED_USER_INPUT_IDS.filter(fieldId =>
+        !workCompletionFormSession.touched.has(fieldId)
+      );
+      if (missing.length) return { ok: false, error: 'missing_user_input', missing };
+    }
+    const latest = Storage.getWorkOrders().find(item => String(item && item.id || '') === id);
+    if (!latest || getWorkCompletionSourceSignature(latest) !== workCompletionFormSession.sourceSignature) {
+      return { ok: false, error: 'source_changed' };
+    }
+    return { ok: true, workOrder: latest, revision: workCompletionFormSession.revision };
+  }
+
+  function showWorkCompletionSessionError(result) {
+    if (result && result.error === 'missing_user_input') {
+      alert('対象日・実際の作業内容（内訳）・売上金額を本人が入力してから確認してください。売上は登録していません。');
+      return;
+    }
+    alert('売上入力を開いた後に対象データが変わりました。画面を閉じて対象を選び直してください。売上は登録していません。');
+  }
+
   function openWorkCompletionModalFromQueue(workOrderId, source) {
     openWorkCompletionModal(workOrderId);
     const sourceEl = document.getElementById('work-completion-queue-source');
@@ -11476,12 +11597,12 @@
     fillWorkCompletionSelects();
     const defaults = WorkCompletionBrain.buildCompletionFormDefaults(wo, { today: TODAY() });
     document.getElementById('work-completion-wo-id').value = wo.id;
-    document.getElementById('work-completion-date').value = defaults.workDate;
+    document.getElementById('work-completion-date').value = '';
     document.getElementById('work-completion-customer').value = defaults.customerName;
-    document.getElementById('work-completion-actual-service').value = defaults.actualService;
+    document.getElementById('work-completion-actual-service').value = '';
     document.getElementById('work-completion-service').value = defaults.service || RevenueBrain.SERVICES[0];
     fillSourceSelectOptions(document.getElementById('work-completion-source'), defaults.source || RevenueBrain.SOURCES[0]);
-    document.getElementById('work-completion-amount').value = defaults.amount;
+    document.getElementById('work-completion-amount').value = '';
     document.getElementById('work-completion-gross-rate').value = defaults.grossMarginRate;
     document.getElementById('work-completion-gross-rate').dataset.manualGrossMarginRate = defaults.grossMarginRate ? '1' : '';
     document.getElementById('work-completion-gross-rate').dataset.autoGrossMarginRate = '';
@@ -11489,16 +11610,16 @@
     document.getElementById('work-completion-payment-status').value = defaults.paymentStatus;
     const paymentDateEl = document.getElementById('work-completion-payment-date');
     if (paymentDateEl) {
-      paymentDateEl.value = defaults.paymentDate;
-      paymentDateEl.dataset.autoPaymentDate = defaults.paymentDate || '';
+      paymentDateEl.value = '';
+      paymentDateEl.dataset.autoPaymentDate = '';
       paymentDateEl.dataset.manualPaymentDate = '';
     }
     syncWorkCompletionPaymentDateUi();
     document.getElementById('work-completion-payment-method').value = defaults.paymentMethod;
     updateWorkCompletionPaymentCycleHint(defaults.paymentMethod);
     document.getElementById('work-completion-payment-concern').checked = defaults.paymentConcern;
-    document.getElementById('work-completion-actual-memo').value = defaults.additionalMemo;
-    document.getElementById('work-completion-follow-memo').value = defaults.followMemo;
+    document.getElementById('work-completion-actual-memo').value = '';
+    document.getElementById('work-completion-follow-memo').value = '';
     clearInlineExpenseFields('work-completion');
     const linkedLead = resolveLeadForWorkOrder(wo);
     const leadIdEl = document.getElementById('work-completion-lead-id');
@@ -11508,16 +11629,18 @@
     if (noteEl) noteEl.classList.toggle('hidden', !!linkedLead);
     const hint = document.getElementById('work-completion-estimate-hint');
     if (hint) {
-      hint.textContent = wo.estimateAmount
-        ? `予定売上：${WorkOrderBrain.formatYen(wo.estimateAmount)} — 実績と違う場合は修正してください`
-        : '';
+      const scheduled = [wo.scheduledDate, wo.serviceText].filter(Boolean).join(' / ');
+      hint.textContent = `予定参照：${scheduled || '予定情報なし'}${wo.estimateAmount ? ` / ${WorkOrderBrain.formatYen(wo.estimateAmount)}` : ''}。実績は上の欄へ本人が入力してください。`;
     }
+    beginWorkCompletionFormSession(wo);
     document.getElementById('work-completion-modal').classList.remove('hidden');
     syncWorkCompletionDuplicateDirectButton();
   }
 
   function closeWorkCompletionModal() {
     document.getElementById('work-completion-modal').classList.add('hidden');
+    workCompletionFormSession = null;
+    workCompletionSubmitInFlight = false;
     clearInlineExpenseFields('work-completion');
     syncWorkCompletionDuplicateDirectButton();
   }
@@ -11545,143 +11668,150 @@
     document.getElementById('work-cancel-modal').classList.add('hidden');
   }
 
-  function submitPastRecoveryFromModal(wo, input, inlineExpense) {
-    const estimate = wo.estimateAmount || 0;
-    const diffMsg = estimate && estimate !== input.amount
-      ? `\n予定金額 ${WorkOrderBrain.formatYen(estimate)} → 実績 ${WorkOrderBrain.formatYen(input.amount)}`
-      : '';
-    if (!confirm(`過去売上復元から確定売上として登録します。${diffMsg}\n\n既存売上は上書きしません。よろしいですか？`)) return false;
-
-    const leadIdForAsset = document.getElementById('work-completion-lead-id')?.value || '';
-    const assetFields = readCustomerAssetMemoFromForm('work-completion');
-    const paymentFields = WorkCompletionBrain.buildCompletionPaymentFields(
-      input.paymentStatus,
-      input.paymentDate,
-      input.amount
-    );
-    const result = Storage.convertCalendarPastCandidateToRevenue(wo.id, {
-      today: TODAY(),
-      override: {
-        workDate: input.workDate,
-        customerName: input.customerName,
-        service: input.service || input.actualService,
-        actualService: input.actualService,
-        source: input.source,
-        amount: input.amount,
-        memo: input.actualMemo,
-        paymentStatus: paymentFields.paymentStatus,
-        paymentDate: paymentFields.paymentDate,
-        expectedPaymentDate: paymentFields.expectedPaymentDate,
-        paidDate: paymentFields.paidDate,
-        paidAmount: paymentFields.paidAmount,
-        unpaidAmount: paymentFields.unpaidAmount,
-        paymentMethod: input.paymentMethod,
-        paymentConcern: input.paymentConcern,
-        grossMarginRate: input.grossMarginRate,
-        followMemo: input.followMemo,
-        singleConvert: true
-      }
-    });
-    if (!result || !result.ok || !result.added) {
-      alert(result && result.skipped
-        ? '登録できませんでした。重複疑い・対象外・金額なしの可能性があります。'
-        : '売上確定に失敗しました。売上データは更新していません。');
-      return false;
-    }
-    const newRecord = (result.addedRecords && result.addedRecords[0]) || null;
-    if (leadIdForAsset) saveCustomerAssetMemoToLead(leadIdForAsset, assetFields);
-    let expenseOk = true;
-    if (newRecord && inlineExpense && inlineExpense.shouldCreate) {
-      const expResult = saveInlineExpenseForRevenue(newRecord.id, input.workDate || newRecord.workDate, inlineExpense.input);
-      expenseOk = !!(expResult && expResult.ok);
-      if (!expenseOk) {
-        alert('売上は保存済みです。経費のみ未保存です。利益管理の経費入力から同じ売上へ紐づけて登録してください。');
-      }
-    }
-    clearInlineExpenseFields('work-completion');
-    closeWorkCompletionModal();
-    refreshAfterWorkCompletion();
-    refreshExpenseRevenueSelects(true);
-    renderDailyRevenueConfirmationQueue();
-    if (newRecord) {
-      if (expenseOk && inlineExpense && inlineExpense.shouldCreate) {
-        showAppToast('売上と経費を保存しました');
-      }
-      showRevenueConfirmedNotice(newRecord);
-    }
-    return true;
+  function submitPastRecoveryFromModal() {
+    alert('対象内容を入力確認しない過去売上復元からの直接確定は無効です。予定にない売上は、売上明細の手入力フォームから入力してください。');
+    return false;
   }
 
   function submitWorkCompletion(e) {
     e.preventDefault();
-    if (inlineExpenseSaveGuard) return;
-    const workOrderId = document.getElementById('work-completion-wo-id').value;
-    const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
-    if (!wo) return;
-    if (isWorkOrderRevenueLocked(wo)) {
-      alert('この作業予定はすでに売上確定済みです。二重登録はできません。');
-      return;
-    }
-    if (wo.status === 'cancelled') {
-      alert('キャンセル済みの作業予定です。');
-      return;
-    }
-    const input = {
-      workDate: document.getElementById('work-completion-date').value,
-      customerName: document.getElementById('work-completion-customer').value.trim(),
-      actualService: document.getElementById('work-completion-actual-service').value.trim(),
-      service: document.getElementById('work-completion-service').value,
-      source: document.getElementById('work-completion-source').value,
-      amount: Number(document.getElementById('work-completion-amount').value) || 0,
-      grossMarginRate: document.getElementById('work-completion-gross-rate').value,
-      paymentStatus: document.getElementById('work-completion-payment-status').value,
-      paymentDate: document.getElementById('work-completion-payment-date').value,
-      paymentMethod: document.getElementById('work-completion-payment-method').value,
-      paymentConcern: document.getElementById('work-completion-payment-concern').checked,
-      actualMemo: document.getElementById('work-completion-actual-memo').value.trim(),
-      additionalMemo: '',
-      followMemo: document.getElementById('work-completion-follow-memo').value.trim()
-    };
-    if (!input.customerName || !input.amount) {
-      alert('お客様名と実際の売上金額は必須です。');
-      return;
-    }
-    if (!String(input.paymentDate || '').trim()) {
-      alert('入金日（または入金予定日）を入力してください。');
-      return;
-    }
-    const inlineInput = readInlineExpenseInput('work-completion');
-    const inlineCheck = validateInlineExpenseInput(inlineInput);
-    if (!inlineCheck.ok) {
-      alert(inlineCheck.error);
-      return;
-    }
-    const queueSource = document.getElementById('work-completion-queue-source')?.value || 'work-order';
-    if (queueSource === 'past-recovery') {
-      submitPastRecoveryFromModal(wo, input, { shouldCreate: inlineCheck.shouldCreate, input: inlineInput });
-      return;
-    }
-    const estimate = wo.estimateAmount || 0;
-    const diffMsg = estimate && estimate !== input.amount
-      ? `\n予定金額 ${WorkOrderBrain.formatYen(estimate)} → 実績 ${WorkOrderBrain.formatYen(input.amount)}`
-      : '';
-    if (!confirm(`確定売上として登録します。${diffMsg}\n\nこの操作は売上集計に反映されます。よろしいですか？`)) return;
-
-    const revenuePayload = WorkCompletionBrain.createRevenuePayloadFromWorkOrder(wo, input);
-    if (!confirmRevenueSaveWithDuplicateCheck(revenuePayload, '')) return;
-    inlineExpenseSaveGuard = true;
+    if (inlineExpenseSaveGuard || workCompletionSubmitInFlight) return;
+    workCompletionSubmitInFlight = true;
     try {
+      const workOrderId = String(document.getElementById('work-completion-wo-id')?.value || '').trim();
+      const sessionCheck = validateCurrentWorkCompletionSession(workOrderId, { requireUserInput: true });
+      if (!sessionCheck.ok) {
+        showWorkCompletionSessionError(sessionCheck);
+        return;
+      }
+      const wo = sessionCheck.workOrder;
+      if (isWorkOrderRevenueLocked(wo)) {
+        alert('この作業予定はすでに売上確定済みです。二重登録はできません。');
+        return;
+      }
+      if (wo.status === 'cancelled') {
+        alert('キャンセル済みの作業予定です。');
+        return;
+      }
+      const input = {
+        workDate: document.getElementById('work-completion-date').value,
+        customerName: document.getElementById('work-completion-customer').value.trim(),
+        actualService: document.getElementById('work-completion-actual-service').value.trim(),
+        service: document.getElementById('work-completion-service').value,
+        source: document.getElementById('work-completion-source').value,
+        amount: Number(document.getElementById('work-completion-amount').value) || 0,
+        grossMarginRate: document.getElementById('work-completion-gross-rate').value,
+        paymentStatus: document.getElementById('work-completion-payment-status').value,
+        paymentDate: document.getElementById('work-completion-payment-date').value,
+        paymentMethod: document.getElementById('work-completion-payment-method').value,
+        paymentConcern: document.getElementById('work-completion-payment-concern').checked,
+        actualMemo: document.getElementById('work-completion-actual-memo').value.trim(),
+        additionalMemo: '',
+        followMemo: document.getElementById('work-completion-follow-memo').value.trim()
+      };
+      if (!input.workDate || !input.customerName || !input.actualService || !input.service || !input.source || !input.amount) {
+        alert('対象日・お客様名・実際の作業内容（内訳）・サービス分類・依頼元・売上金額は必須です。売上は登録していません。');
+        return;
+      }
+      if (!String(input.paymentDate || '').trim()) {
+        alert('入金日（または入金予定日）を入力してください。売上は登録していません。');
+        return;
+      }
+      const inlineInput = readInlineExpenseInput('work-completion');
+      const inlineCheck = validateInlineExpenseInput(inlineInput);
+      if (!inlineCheck.ok) {
+        alert(inlineCheck.error);
+        return;
+      }
+      const queueSource = document.getElementById('work-completion-queue-source')?.value || 'work-order';
+      if (queueSource === 'past-recovery') {
+        submitPastRecoveryFromModal();
+        return;
+      }
+
+      const confirmationSnapshot = WorkCompletionBrain.createRevenueConfirmationSnapshot(
+        wo,
+        input,
+        { shouldCreate: inlineCheck.shouldCreate, input: inlineInput }
+      );
+      const snapshotCheck = WorkCompletionBrain.validateRevenueConfirmationSnapshot(confirmationSnapshot);
+      if (!snapshotCheck.ok) {
+        alert('確認できる売上入力が揃っていません。売上は登録していません。');
+        return;
+      }
+      const expectedRevision = sessionCheck.revision;
+      const existingWorkOrderRevenue = Storage.findRevenuesForWorkOrder(workOrderId)[0] || null;
+      const displayedSnapshot = existingWorkOrderRevenue
+        ? {
+            workOrderId,
+            payload: {
+              ...existingWorkOrderRevenue,
+              actualService: existingWorkOrderRevenue.actualService || existingWorkOrderRevenue.service || ''
+            },
+            expense: { shouldCreate: false }
+          }
+        : confirmationSnapshot;
+      const confirmationMessage = WorkCompletionBrain.formatRevenueConfirmationMessage(displayedSnapshot, {
+        repairOnly: !!existingWorkOrderRevenue
+      });
+      if (!confirm(confirmationMessage)) return;
+      if (!existingWorkOrderRevenue
+        && !confirmRevenueSaveWithDuplicateCheck(confirmationSnapshot.payload, '')) {
+        return;
+      }
+
+      const storageRecovery = recoverStorageForRevenueConfirmationIfNeeded();
+      if (!storageRecovery.ok) return;
+      const finalSessionCheck = validateCurrentWorkCompletionSession(workOrderId, { requireUserInput: true });
+      if (!finalSessionCheck.ok
+        || finalSessionCheck.revision !== expectedRevision
+        || confirmationSnapshot.signature !== JSON.stringify({
+          workOrderId: confirmationSnapshot.workOrderId,
+          completionInput: confirmationSnapshot.completionInput,
+          payload: confirmationSnapshot.payload,
+          expense: confirmationSnapshot.expense
+        })) {
+        showWorkCompletionSessionError(finalSessionCheck.ok ? { error: 'source_changed' } : finalSessionCheck);
+        return;
+      }
+      const currentExisting = Storage.findRevenuesForWorkOrder(workOrderId)[0] || null;
+      if ((!existingWorkOrderRevenue && currentExisting)
+        || (existingWorkOrderRevenue && (!currentExisting || currentExisting.id !== existingWorkOrderRevenue.id))) {
+        alert('確認後に対象の売上状態が変わりました。画面を閉じて選び直してください。売上は登録していません。');
+        return;
+      }
+
+      inlineExpenseSaveGuard = true;
       const leadIdForAsset = document.getElementById('work-completion-lead-id')?.value || '';
       const assetFields = readCustomerAssetMemoFromForm('work-completion');
-      const newRecord = Storage.addRevenueRecord(revenuePayload);
+      const saveResult = Storage.confirmRevenueForWorkOrder(
+        workOrderId,
+        confirmationSnapshot.payload,
+        confirmationSnapshot.completionInput
+      );
+      if (!saveResult || !saveResult.ok) {
+        const failureTag = saveResult && saveResult.revenueSaved
+          ? '[Budil][work-completion-link-save-failed]'
+          : '[Budil][work-completion-revenue-save-failed]';
+        console.error(failureTag, saveResult && saveResult.cause || saveResult && saveResult.error || 'unknown');
+        if (saveResult && saveResult.revenueSaved) {
+          alert('売上は保存済みです。再登録せず、予定リンクの修復が必要です');
+        } else {
+          alert('保存容量を回復できなかったため、売上は登録していません');
+        }
+        return;
+      }
+      const newRecord = saveResult.revenue;
       if (leadIdForAsset) saveCustomerAssetMemoToLead(leadIdForAsset, assetFields);
-      const woPatch = WorkCompletionBrain.markWorkOrderCompleted(wo, newRecord, input);
-      Storage.updateWorkOrder(workOrderId, woPatch);
       const intakeId = getWorkOrderReceptionId(wo);
       if (intakeId) linkReceptionToRevenue(intakeId, newRecord.id, workOrderId);
       let expenseOk = true;
-      if (inlineCheck.shouldCreate) {
-        const expResult = saveInlineExpenseForRevenue(newRecord.id, input.workDate || newRecord.workDate, inlineInput);
+      if (confirmationSnapshot.expense.shouldCreate) {
+        const expResult = saveInlineExpenseForRevenue(
+          newRecord.id,
+          confirmationSnapshot.payload.workDate || newRecord.workDate,
+          confirmationSnapshot.expense
+        );
         expenseOk = !!(expResult && expResult.ok);
         if (!expenseOk) {
           alert('売上は保存済みです。経費のみ未保存です。利益管理の経費入力から同じ売上へ紐づけて登録してください。');
@@ -11692,12 +11822,15 @@
       refreshAfterWorkCompletion();
       refreshExpenseRevenueSelects(true);
       renderDailyRevenueConfirmationQueue();
-      if (expenseOk && inlineCheck.shouldCreate) {
+      if (expenseOk && confirmationSnapshot.expense.shouldCreate) {
         showAppToast('売上と経費を保存しました');
+      } else if (saveResult.linkedExistingRevenue) {
+        showAppToast('保存済みの売上を作業予定へリンクしました');
       }
       showRevenueConfirmedNotice(newRecord);
     } finally {
       inlineExpenseSaveGuard = false;
+      workCompletionSubmitInFlight = false;
     }
   }
 
@@ -12246,6 +12379,8 @@
     if (completionForm && !completionForm.dataset.bound) {
       completionForm.dataset.bound = '1';
       completionForm.addEventListener('submit', submitWorkCompletion);
+      completionForm.addEventListener('input', trackWorkCompletionUserInput);
+      completionForm.addEventListener('change', trackWorkCompletionUserInput);
     }
     const cancelForm = document.getElementById('work-cancel-form');
     if (cancelForm && !cancelForm.dataset.bound) {
@@ -12292,7 +12427,9 @@
     });
     document.querySelectorAll('#work-completion-modal, #work-cancel-modal').forEach(modal => {
       modal.addEventListener('click', e => {
-        if (e.target === modal) modal.classList.add('hidden');
+        if (e.target !== modal) return;
+        if (modal.id === 'work-completion-modal') closeWorkCompletionModal();
+        else modal.classList.add('hidden');
       });
     });
   }
@@ -20031,6 +20168,39 @@
     );
   }
 
+  function createManualRevenueConfirmationSnapshot(data, inlineExpense) {
+    const payload = JSON.parse(JSON.stringify({
+      ...(data || {}),
+      actualService: String(data && (data.actualService || data.service) || '').trim()
+    }));
+    const expense = inlineExpense && inlineExpense.shouldCreate
+      ? {
+          shouldCreate: true,
+          category: String(inlineExpense.input && inlineExpense.input.category || 'その他').trim(),
+          amount: Number(inlineExpense.input && inlineExpense.input.amount) || 0,
+          content: String(inlineExpense.input && inlineExpense.input.content || '').trim(),
+          memo: String(inlineExpense.input && inlineExpense.input.memo || '').trim()
+        }
+      : { shouldCreate: false };
+    return { payload, expense };
+  }
+
+  function validateManualRevenueConfirmationSnapshot(snapshot) {
+    const data = snapshot && snapshot.payload ? snapshot.payload : {};
+    return /^\d{4}-\d{2}-\d{2}$/.test(String(data.workDate || ''))
+      && !!String(data.customerName || '').trim()
+      && !!String(data.actualService || '').trim()
+      && !!String(data.source || '').trim()
+      && Number.isFinite(Number(data.amount))
+      && Number(data.amount) > 0
+      && !!String(data.status || '').trim();
+  }
+
+  function confirmManualRevenueSnapshot(snapshot, options) {
+    if (!validateManualRevenueConfirmationSnapshot(snapshot)) return false;
+    return confirm(WorkCompletionBrain.formatRevenueConfirmationMessage(snapshot, options || {}));
+  }
+
   function tryLinkDocumentToExistingRevenue(docId, doc, prefill) {
     if (typeof CalendarCandidateBrain === 'undefined') return false;
     const allCandidates = CalendarCandidateBrain.findRevenueLinkCandidatesForDocument(
@@ -21554,16 +21724,25 @@
       data.sourceIntakeId = intakeId;
     }
     const linkedDocId = pendingLinkedDocumentId || data.linkedDocumentId || '';
-    if (!id && !confirmRevenueSaveWithDuplicateCheck(data, '')) return;
+    const confirmationSnapshot = createManualRevenueConfirmationSnapshot(
+      data,
+      { shouldCreate: inlineCheck.shouldCreate, input: inlineInput }
+    );
+    if (!validateManualRevenueConfirmationSnapshot(confirmationSnapshot)) {
+      alert('対象日・顧客名・サービス・依頼元・金額・売上ステータスを入力してください。売上は保存していません。');
+      return;
+    }
+    if (!confirmManualRevenueSnapshot(confirmationSnapshot, { updateOnly: !!id })) return;
+    if (!id && !confirmRevenueSaveWithDuplicateCheck(confirmationSnapshot.payload, '')) return;
     inlineExpenseSaveGuard = true;
     let expenseOk = true;
     let revId = id;
     try {
       let newRecord = null;
       if (id) {
-        Storage.updateRevenueRecord(id, data);
+        Storage.updateRevenueRecord(id, confirmationSnapshot.payload);
       } else {
-        newRecord = Storage.addRevenueRecord(data);
+        newRecord = Storage.addRevenueRecord(confirmationSnapshot.payload);
         revId = newRecord && newRecord.id;
       }
       if (linkedDocId && revId) {
@@ -21573,7 +21752,7 @@
         PaymentBrain.syncLinkedPayment({
           sourceType: 'revenue',
           sourceId: revId,
-          paymentPatch: data,
+          paymentPatch: confirmationSnapshot.payload,
           storage: Storage
         });
       }
@@ -21589,7 +21768,11 @@
         if (updated) renderLeadsTable();
       }
       if (inlineCheck.shouldCreate && revId) {
-        const expResult = saveInlineExpenseForRevenue(revId, data.workDate, inlineInput);
+        const expResult = saveInlineExpenseForRevenue(
+          revId,
+          confirmationSnapshot.payload.workDate,
+          confirmationSnapshot.expense
+        );
         expenseOk = !!(expResult && expResult.ok);
         if (!expenseOk) {
           alert('売上は保存済みです。経費のみ未保存です。利益管理の経費入力から同じ売上へ紐づけて登録してください。');

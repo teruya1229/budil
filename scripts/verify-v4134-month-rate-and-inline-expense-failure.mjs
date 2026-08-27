@@ -30,19 +30,19 @@ for (const file of ['js/app.js', 'js/profit-brain.js', 'js/storage.js', 'js/data
 }
 
 console.log('== version / cache buster ==');
-assert(html.includes('Budil v4.13.7'), 'index.html shows Budil v4.13.7');
-assert(html.includes('js/app.js?v=4.13.7'), 'app.js cache buster is v4.13.7');
-assert(html.includes('js/profit-brain.js?v=4.13.7'), 'profit-brain cache buster is v4.13.7');
-assert(html.includes('css/style.css?v=4.13.7'), 'style.css cache buster is v4.13.7');
-assert(storageSrc.includes("BUDIL_VERSION: 'v4.13.7'"), 'storage version is v4.13.7');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.7'"), 'data-backup version is v4.13.7');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.7'"), 'verify-current pins v4.13.7');
+assert(html.includes('Budil v4.13.10'), 'index.html shows Budil v4.13.10');
+assert(html.includes('js/app.js?v=4.13.10'), 'app.js cache buster is v4.13.10');
+assert(html.includes('js/profit-brain.js?v=4.13.10'), 'profit-brain cache buster is v4.13.10');
+assert(html.includes('css/style.css?v=4.13.10'), 'style.css cache buster is v4.13.10');
+assert(storageSrc.includes("BUDIL_VERSION: 'v4.13.10'"), 'storage version is v4.13.10');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.10'"), 'data-backup version is v4.13.10');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.10'"), 'verify-current pins v4.13.10');
 assert(currentRunner.includes('verify-v4134-month-rate-and-inline-expense-failure.mjs') ||
   /^verify-v4(10|11|12|13)\d.*\.mjs$/.test('verify-v4134-month-rate-and-inline-expense-failure.mjs'),
   'new verify is discoverable by current pattern');
-assert(statusMd.includes('v4.13.7'), 'status.md documents v4.13.7');
-assert(handoffMd.includes('v4.13.7'), 'handoff.md documents v4.13.7');
-assert(decisionLog.includes('v4.13.7'), 'decision-log.md records v4.13.7');
+assert(statusMd.includes('v4.13.10'), 'status.md documents v4.13.10');
+assert(handoffMd.includes('v4.13.10'), 'handoff.md documents v4.13.10');
+assert(decisionLog.includes('v4.13.10'), 'decision-log.md records v4.13.10');
 assert(decisionLog.includes('monthGrossProfit÷monthRevenue') || decisionLog.includes('monthGrossProfit / monthRevenue') ||
   decisionLog.includes('monthGrossProfit÷monthRevenueへ修正') || decisionLog.includes('経費控除後'),
   'decision-log records month rate fix');
@@ -308,7 +308,6 @@ console.log('== case6: three save paths keep partial-save guidance ==');
 
   for (const [label, src] of [
     ['submitWorkCompletion', workSrc],
-    ['submitPastRecoveryFromModal', pastSrc],
     ['handleRevenueSubmit', revSrc]
   ]) {
     assert(src.includes('saveInlineExpenseForRevenue('), `${label} calls saveInlineExpenseForRevenue`);
@@ -319,14 +318,15 @@ console.log('== case6: three save paths keep partial-save guidance ==');
     assert(src.includes('expenseOk'), `${label} tracks expenseOk`);
   }
 
+  assert(pastSrc.includes('対象内容を入力確認しない過去売上復元からの直接確定は無効です'),
+    'submitPastRecoveryFromModal is explicitly disabled');
+  assert(!pastSrc.includes('saveInlineExpenseForRevenue('),
+    'disabled past recovery path cannot save revenue or expense');
+
   // 失敗時に成功トースト文言を出さない条件（expenseOk && shouldCreate）
   assert(
-    /if\s*\(\s*expenseOk\s*&&\s*inlineCheck\.shouldCreate\s*\)\s*\{[\s\S]*?売上と経費を保存しました/.test(workSrc),
+    /if\s*\(\s*expenseOk\s*&&\s*confirmationSnapshot\.expense\.shouldCreate\s*\)\s*\{[\s\S]*?売上と経費を保存しました/.test(workSrc),
     'submitWorkCompletion shows combined toast only when expenseOk'
-  );
-  assert(
-    /if\s*\(\s*expenseOk\s*&&\s*inlineExpense\s*&&\s*inlineExpense\.shouldCreate\s*\)\s*\{[\s\S]*?売上と経費を保存しました/.test(pastSrc),
-    'submitPastRecoveryFromModal shows combined toast only when expenseOk'
   );
   assert(
     /if\s*\(\s*inlineCheck\.shouldCreate\s*&&\s*expenseOk\s*\)\s*\{[\s\S]*?売上と経費を保存しました/.test(revSrc),

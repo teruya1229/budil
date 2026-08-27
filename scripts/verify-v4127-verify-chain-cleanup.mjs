@@ -14,8 +14,8 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(`FAIL: ${message}`);
 };
 
-const EXPECTED_VERSION = 'v4.13.7';
-const EXPECTED_CACHE = '4.13.7';
+const EXPECTED_VERSION = 'v4.13.10';
+const EXPECTED_CACHE = '4.13.10';
 
 console.log(`== ${EXPECTED_VERSION} verify-chain-cleanup ==`);
 
@@ -39,7 +39,7 @@ for (const doc of ['status.md', 'handoff.md', 'decision-log.md']) {
   const text = load(doc);
   assert(text.includes('current verify'), `${doc} must document current verify chain`);
   assert(text.includes('legacy'), `${doc} must document legacy verify handling`);
-  assert(text.includes('v4.13.7'), `${doc} must document v4.12.26`);
+  assert(text.includes('v4.13.10'), `${doc} must document v4.12.26`);
 }
 
 console.log('== version pins ==');
@@ -51,7 +51,7 @@ assert(indexHtml.includes(`Budil ${EXPECTED_VERSION}`), 'index sidebar version m
 assert(indexHtml.includes(`js/app.js?v=${EXPECTED_CACHE}`), 'app.js cache buster must be v4.12.26');
 assert(storageJs.includes(`BUDIL_VERSION: '${EXPECTED_VERSION}'`), 'storage version must be v4.12.26');
 assert(dataBackupJs.includes(`APP_VERSION: '${EXPECTED_VERSION}'`), 'data-backup version must be v4.12.26');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.13.7'), 'calendar-candidate cache buster must be v4.12.26');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.13.10'), 'calendar-candidate cache buster must be v4.12.26');
 assert(!indexHtml.includes('?v=4.12.7'), 'old cache buster v4.12.7 must be gone from index');
 
 console.log('== key feature verifies still present ==');
