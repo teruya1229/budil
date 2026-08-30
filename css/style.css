@@ -13877,6 +13877,40 @@ body.sales-page {
   margin-bottom: 0.75rem;
 }
 
+.inline-expense-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.inline-expense-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.inline-expense-row .inline-expense-remove {
+  align-self: flex-end;
+}
+
+.inline-expense-actions {
+  margin: 0.5rem 0 0.35rem;
+}
+
+.inline-expense-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin: 0.35rem 0 0;
+  font-size: 0.95rem;
+}
+
+.inline-expense-totals strong {
+  font-weight: 600;
+}
+
 @media (max-width: 390px) {
   .revenue-inline-expense-block .form-row-2 {
     grid-template-columns: 1fr;
@@ -13884,5 +13918,9 @@ body.sales-page {
 
   .expense-revenue-select {
     font-size: 0.92rem;
+  }
+
+  .inline-expense-row .inline-expense-remove {
+    align-self: stretch;
   }
 }

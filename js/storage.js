@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.13.11',
+  BUDIL_VERSION: 'v4.13.12',
   LEGACY_CALENDAR_ORIGINAL_TEXT_MIN_CHARS: 100 * 1024,
 
   KEYS: {

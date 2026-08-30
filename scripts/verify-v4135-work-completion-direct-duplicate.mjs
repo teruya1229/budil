@@ -41,20 +41,20 @@ for (const file of ['js/app.js', 'js/revenue-brain.js', 'js/storage.js', 'js/dat
 }
 
 console.log('== version / cache buster ==');
-assert(html.includes('Budil v4.13.11'), 'index.html shows Budil v4.13.11');
-assert(html.includes('js/app.js?v=4.13.11'), 'app.js cache buster is v4.13.11');
-assert(html.includes('js/revenue-brain.js?v=4.13.11'), 'revenue-brain.js cache buster is v4.13.11');
-assert(html.includes('css/style.css?v=4.13.11'), 'style.css cache buster is v4.13.11');
-assert(storage.includes("BUDIL_VERSION: 'v4.13.11'"), 'storage version is v4.13.11');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.11'"), 'data-backup version is v4.13.11');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.11'"), 'verify-current pins v4.13.11');
+assert(html.includes('Budil v4.13.12'), 'index.html shows Budil v4.13.12');
+assert(html.includes('js/app.js?v=4.13.12'), 'app.js cache buster is v4.13.12');
+assert(html.includes('js/revenue-brain.js?v=4.13.12'), 'revenue-brain.js cache buster is v4.13.12');
+assert(html.includes('css/style.css?v=4.13.12'), 'style.css cache buster is v4.13.12');
+assert(storage.includes("BUDIL_VERSION: 'v4.13.12'"), 'storage version is v4.13.12');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.12'"), 'data-backup version is v4.13.12');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.12'"), 'verify-current pins v4.13.12');
 assert(
   /^verify-v4(10|11|12|13)\d.*\.mjs$/.test('verify-v4135-work-completion-direct-duplicate.mjs'),
   'new verify is discoverable by current pattern'
 );
-assert(statusMd.includes('v4.13.11'), 'status.md documents v4.13.11');
-assert(handoffMd.includes('v4.13.11'), 'handoff.md documents v4.13.11');
-assert(decisionLog.includes('v4.13.11'), 'decision-log.md records v4.13.11');
+assert(statusMd.includes('v4.13.12'), 'status.md documents v4.13.12');
+assert(handoffMd.includes('v4.13.12'), 'handoff.md documents v4.13.12');
+assert(decisionLog.includes('v4.13.12'), 'decision-log.md records v4.13.12');
 
 console.log('== 1-2. button only inside work-completion-form actions ==');
 const completionFormMatch = html.match(/<form id="work-completion-form">([\s\S]*?)<\/form>/);
@@ -249,9 +249,9 @@ for (const word of ngWords) {
 console.log('== docs ==');
 assert(statusMd.includes('売上確定') && (statusMd.includes('直受け追加で複製') || statusMd.includes('直受け追加複製')),
   'status.md mentions completion direct duplicate');
-assert(handoffMd.includes('v4.13.11') && handoffMd.includes('直受け'),
-  'handoff.md mentions v4.13.11 直受け');
-assert(decisionLog.includes('v4.13.11') && (decisionLog.includes('売上確定') || decisionLog.includes('work-completion')),
-  'decision-log records v4.13.11 completion duplicate');
+assert(handoffMd.includes('v4.13.12') && handoffMd.includes('直受け'),
+  'handoff.md mentions v4.13.12 直受け');
+assert(decisionLog.includes('v4.13.12') && (decisionLog.includes('売上確定') || decisionLog.includes('work-completion')),
+  'decision-log records v4.13.12 completion duplicate');
 
 console.log('\nAll v4.13.7 work-completion-direct-duplicate checks passed.');

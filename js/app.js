@@ -4136,7 +4136,113 @@
     if (current && categories.includes(current)) catEl.value = current;
   }
 
-  function clearInlineExpenseFields(prefix) {
+  function getInlineExpenseMaxLines() {
+    return typeof WorkCompletionBrain !== 'undefined' && WorkCompletionBrain.MAX_INLINE_EXPENSE_LINES
+      ? WorkCompletionBrain.MAX_INLINE_EXPENSE_LINES
+      : 3;
+  }
+
+  function formatInlineExpenseYen(amount) {
+    if (typeof ProfitBrain !== 'undefined' && typeof ProfitBrain.formatYen === 'function') {
+      return ProfitBrain.formatYen(amount);
+    }
+    return (Number(amount) || 0).toLocaleString('ja-JP') + '円';
+  }
+
+  function getInlineExpenseRevenueAmount(prefix) {
+    const id = prefix === 'work-completion' ? 'work-completion-amount' : 'revenue-amount';
+    const raw = String(document.getElementById(id)?.value || '').trim();
+    if (raw === '') return 0;
+    return Number(raw) || 0;
+  }
+
+  function syncInlineExpenseAddButton(prefix) {
+    const listEl = document.getElementById(prefix + '-inline-expense-list');
+    const addBtn = document.getElementById(prefix + '-inline-expense-add');
+    if (!addBtn) return;
+    const count = listEl ? listEl.querySelectorAll('.inline-expense-row').length : 0;
+    const max = getInlineExpenseMaxLines();
+    addBtn.disabled = count >= max;
+  }
+
+  function updateInlineExpenseTotals(prefix) {
+    const lines = readInlineExpenseRows(prefix);
+    const checked = typeof WorkCompletionBrain !== 'undefined'
+      ? WorkCompletionBrain.validateInlineExpenseLines(lines)
+      : { ok: true, amount: lines.reduce((n, line) => n + (Number(line.amount) || 0), 0) };
+    const total = checked.ok ? (Number(checked.amount) || 0) : lines.reduce((n, line) => {
+      return n + (Number.isFinite(line.amount) && line.amount > 0 ? line.amount : 0);
+    }, 0);
+    const revenueAmount = getInlineExpenseRevenueAmount(prefix);
+    const profit = revenueAmount - total;
+    const totalEl = document.getElementById(prefix + '-inline-expense-total');
+    const profitEl = document.getElementById(prefix + '-inline-expense-profit');
+    if (totalEl) totalEl.textContent = formatInlineExpenseYen(total);
+    if (profitEl) profitEl.textContent = formatInlineExpenseYen(profit);
+    syncInlineExpenseAddButton(prefix);
+  }
+
+  function createInlineExpenseRowEl(prefix, index) {
+    const row = document.createElement('div');
+    row.className = 'inline-expense-row';
+    row.dataset.inlineExpenseIndex = String(index);
+    const nameId = prefix + '-inline-expense-content-' + index;
+    const amountId = prefix + '-inline-expense-amount-' + index;
+    row.innerHTML = `
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label for="${esc(nameId)}">経費名</label>
+          <input type="text" id="${esc(nameId)}" class="inline-expense-name" placeholder="例：エアコン本体代">
+        </div>
+        <div class="form-group">
+          <label for="${esc(amountId)}">金額</label>
+          <input type="number" id="${esc(amountId)}" class="inline-expense-amount" min="1" step="1" placeholder="空なら経費なし">
+        </div>
+      </div>
+      <button type="button" class="btn btn-sm btn-secondary inline-expense-remove" data-inline-expense-remove>削除</button>`;
+    return row;
+  }
+
+  function addInlineExpenseRow(prefix) {
+    const listEl = document.getElementById(prefix + '-inline-expense-list');
+    if (!listEl) return false;
+    const max = getInlineExpenseMaxLines();
+    if (listEl.querySelectorAll('.inline-expense-row').length >= max) return false;
+    listEl.appendChild(createInlineExpenseRowEl(prefix, listEl.querySelectorAll('.inline-expense-row').length));
+    updateInlineExpenseTotals(prefix);
+    return true;
+  }
+
+  function removeInlineExpenseRow(prefix, rowEl) {
+    const listEl = document.getElementById(prefix + '-inline-expense-list');
+    if (!listEl || !rowEl || !rowEl.classList.contains('inline-expense-row')) return;
+    const rows = listEl.querySelectorAll('.inline-expense-row');
+    if (rows.length <= 1) {
+      const nameEl = rowEl.querySelector('.inline-expense-name');
+      const amountEl = rowEl.querySelector('.inline-expense-amount');
+      if (nameEl) nameEl.value = '';
+      if (amountEl) amountEl.value = '';
+    } else {
+      rowEl.remove();
+    }
+    updateInlineExpenseTotals(prefix);
+  }
+
+  function resetInlineExpenseRows(prefix) {
+    const listEl = document.getElementById(prefix + '-inline-expense-list');
+    if (listEl) {
+      const rows = [...listEl.querySelectorAll('.inline-expense-row')];
+      rows.forEach((row, idx) => {
+        if (idx === 0) {
+          const nameEl = row.querySelector('.inline-expense-name');
+          const amountEl = row.querySelector('.inline-expense-amount');
+          if (nameEl) nameEl.value = '';
+          if (amountEl) amountEl.value = '';
+        } else {
+          row.remove();
+        }
+      });
+    }
     const amountEl = document.getElementById(prefix + '-inline-expense-amount');
     const contentEl = document.getElementById(prefix + '-inline-expense-content');
     const memoEl = document.getElementById(prefix + '-inline-expense-memo');
@@ -4144,28 +4250,108 @@
     if (contentEl) contentEl.value = '';
     if (memoEl) memoEl.value = '';
     populateInlineExpenseCategorySelect(prefix + '-inline-expense-category');
+    updateInlineExpenseTotals(prefix);
   }
 
-  function readInlineExpenseInput(prefix) {
+  function bindInlineExpenseEditor(prefix) {
+    const block = document.getElementById(prefix + '-inline-expense-block');
+    if (!block || block.dataset.expenseEditorBound) return;
+    block.dataset.expenseEditorBound = '1';
+    block.addEventListener('click', e => {
+      if (e.target.closest('[data-inline-expense-add]')) {
+        e.preventDefault();
+        addInlineExpenseRow(prefix);
+      }
+      const removeBtn = e.target.closest('[data-inline-expense-remove]');
+      if (removeBtn) {
+        e.preventDefault();
+        removeInlineExpenseRow(prefix, removeBtn.closest('.inline-expense-row'));
+      }
+    });
+    block.addEventListener('input', () => updateInlineExpenseTotals(prefix));
+    const amountId = prefix === 'work-completion' ? 'work-completion-amount' : 'revenue-amount';
+    document.getElementById(amountId)?.addEventListener('input', () => updateInlineExpenseTotals(prefix));
+    updateInlineExpenseTotals(prefix);
+  }
+
+  function clearInlineExpenseFields(prefix) {
+    resetInlineExpenseRows(prefix);
+  }
+
+  function readInlineExpenseRows(prefix) {
+    const listEl = document.getElementById(prefix + '-inline-expense-list');
+    if (listEl) {
+      return [...listEl.querySelectorAll('.inline-expense-row')].map(row => {
+        const nameEl = row.querySelector('.inline-expense-name');
+        const amountEl = row.querySelector('.inline-expense-amount');
+        const name = String(nameEl && nameEl.value || '').trim();
+        const amountRaw = String(amountEl && amountEl.value || '').trim();
+        return {
+          name,
+          content: name,
+          amountRaw,
+          amount: amountRaw === '' ? null : Number(amountRaw)
+        };
+      });
+    }
     const amountRaw = String(document.getElementById(prefix + '-inline-expense-amount')?.value || '').trim();
     const content = String(document.getElementById(prefix + '-inline-expense-content')?.value || '').trim();
     const memo = String(document.getElementById(prefix + '-inline-expense-memo')?.value || '').trim();
     const category = String(document.getElementById(prefix + '-inline-expense-category')?.value || '').trim()
       || getDailyExpenseCategories()[0]
       || 'その他';
-    const amount = amountRaw === '' ? null : Number(amountRaw);
-    return { amountRaw, amount, content, memo, category };
+    return [{
+      name: content,
+      content,
+      amountRaw,
+      amount: amountRaw === '' ? null : Number(amountRaw),
+      memo,
+      category
+    }];
+  }
+
+  function readInlineExpenseInput(prefix) {
+    const lines = readInlineExpenseRows(prefix);
+    const first = lines[0] || { name: '', content: '', amountRaw: '', amount: null, memo: '', category: '' };
+    const memo = String(document.getElementById(prefix + '-inline-expense-memo')?.value || '').trim();
+    const category = String(document.getElementById(prefix + '-inline-expense-category')?.value || '').trim()
+      || first.category
+      || getDailyExpenseCategories()[0]
+      || 'その他';
+    return {
+      amountRaw: first.amountRaw,
+      amount: first.amount,
+      content: first.content,
+      memo,
+      category,
+      lines,
+      items: lines
+    };
   }
 
   function validateInlineExpenseInput(input) {
-    const hasText = !!(input.content || input.memo);
-    if (input.amountRaw === '') {
+    const src = input || {};
+    const lines = Array.isArray(src.lines)
+      ? src.lines
+      : (Array.isArray(src.items) ? src.items : [{
+        name: src.content || src.name || '',
+        content: src.content || src.name || '',
+        amountRaw: src.amountRaw,
+        amount: src.amount,
+        category: src.category,
+        memo: src.memo
+      }]);
+    if (typeof WorkCompletionBrain !== 'undefined') {
+      return WorkCompletionBrain.validateInlineExpenseLines(lines);
+    }
+    const hasText = !!(src.content || src.memo);
+    if (src.amountRaw === '') {
       if (hasText) {
         return { ok: false, error: '経費の内容またはメモが入っています。経費金額を入力するか、内容・メモを空にしてください。' };
       }
       return { ok: true, shouldCreate: false };
     }
-    if (!Number.isFinite(input.amount) || input.amount <= 0) {
+    if (!Number.isFinite(src.amount) || src.amount <= 0) {
       return { ok: false, error: '経費金額は1円以上で入力してください。' };
     }
     return { ok: true, shouldCreate: true };
@@ -4181,7 +4367,7 @@
         date: workDate || TODAY(),
         category: input.category || 'その他',
         amount: Number(input.amount) || 0,
-        memo: buildDailyExpenseMemo(input.content, input.memo),
+        memo: buildDailyExpenseMemo(input.content || input.name, input.memo),
         relatedRevenueId: revId,
         relatedWorkOrderId: '',
         paymentMethod: '',
@@ -4195,6 +4381,12 @@
       console.error('[Budil][inline-expense-save-failed]', err && err.name ? err.name : 'Error');
       return { ok: false, error: 'expense_save_failed' };
     }
+  }
+
+  function collectInlineExpenseSaveItems(expenseState) {
+    if (!expenseState || !expenseState.shouldCreate) return [];
+    if (Array.isArray(expenseState.items) && expenseState.items.length) return expenseState.items;
+    return [expenseState];
   }
 
   function updateRevenueLinkedExpenseSummary(revenueId) {
@@ -11733,7 +11925,7 @@
       const confirmationSnapshot = WorkCompletionBrain.createRevenueConfirmationSnapshot(
         wo,
         input,
-        { shouldCreate: inlineCheck.shouldCreate, input: inlineInput }
+        { shouldCreate: inlineCheck.shouldCreate, input: inlineInput, items: inlineCheck.items }
       );
       const snapshotCheck = WorkCompletionBrain.validateRevenueConfirmationSnapshot(confirmationSnapshot);
       if (!snapshotCheck.ok) {
@@ -11808,12 +12000,18 @@
       if (intakeId) linkReceptionToRevenue(intakeId, newRecord.id, workOrderId);
       let expenseOk = true;
       if (confirmationSnapshot.expense.shouldCreate) {
-        const expResult = saveInlineExpenseForRevenue(
-          newRecord.id,
-          confirmationSnapshot.payload.workDate || newRecord.workDate,
-          confirmationSnapshot.expense
-        );
-        expenseOk = !!(expResult && expResult.ok);
+        const expenseItems = collectInlineExpenseSaveItems(confirmationSnapshot.expense);
+        for (const expenseItem of expenseItems) {
+          const expResult = saveInlineExpenseForRevenue(
+            newRecord.id,
+            confirmationSnapshot.payload.workDate || newRecord.workDate,
+            expenseItem
+          );
+          if (!expResult || !expResult.ok) {
+            expenseOk = false;
+            break;
+          }
+        }
         if (!expenseOk) {
           alert('売上は保存済みです。経費のみ未保存です。利益管理の経費入力から同じ売上へ紐づけて登録してください。');
         }
@@ -12433,6 +12631,7 @@
         else modal.classList.add('hidden');
       });
     });
+    bindInlineExpenseEditor('work-completion');
   }
 
   // ── 作業後フォロー番頭 ──
@@ -20174,15 +20373,20 @@
       ...(data || {}),
       actualService: String(data && (data.actualService || data.service) || '').trim()
     }));
-    const expense = inlineExpense && inlineExpense.shouldCreate
-      ? {
-          shouldCreate: true,
-          category: String(inlineExpense.input && inlineExpense.input.category || 'その他').trim(),
-          amount: Number(inlineExpense.input && inlineExpense.input.amount) || 0,
-          content: String(inlineExpense.input && inlineExpense.input.content || '').trim(),
-          memo: String(inlineExpense.input && inlineExpense.input.memo || '').trim()
-        }
-      : { shouldCreate: false };
+    const expense = typeof WorkCompletionBrain !== 'undefined'
+      ? WorkCompletionBrain.buildInlineExpenseSnapshotState(inlineExpense)
+      : (inlineExpense && inlineExpense.shouldCreate
+        ? {
+            shouldCreate: true,
+            category: String(inlineExpense.input && inlineExpense.input.category || 'その他').trim(),
+            amount: Number(inlineExpense.input && inlineExpense.input.amount) || 0,
+            content: String(inlineExpense.input && inlineExpense.input.content || '').trim(),
+            memo: String(inlineExpense.input && inlineExpense.input.memo || '').trim()
+          }
+        : { shouldCreate: false });
+    if (typeof WorkCompletionBrain !== 'undefined') {
+      WorkCompletionBrain.attachExpenseTotalsToPayload(payload, expense);
+    }
     return { payload, expense };
   }
 
@@ -21727,7 +21931,7 @@
     const linkedDocId = pendingLinkedDocumentId || data.linkedDocumentId || '';
     const confirmationSnapshot = createManualRevenueConfirmationSnapshot(
       data,
-      { shouldCreate: inlineCheck.shouldCreate, input: inlineInput }
+      { shouldCreate: inlineCheck.shouldCreate, input: inlineInput, items: inlineCheck.items }
     );
     if (!validateManualRevenueConfirmationSnapshot(confirmationSnapshot)) {
       alert('対象日・顧客名・サービス・依頼元・金額・売上ステータスを入力してください。売上は保存していません。');
@@ -21769,12 +21973,18 @@
         if (updated) renderLeadsTable();
       }
       if (inlineCheck.shouldCreate && revId) {
-        const expResult = saveInlineExpenseForRevenue(
-          revId,
-          confirmationSnapshot.payload.workDate,
-          confirmationSnapshot.expense
-        );
-        expenseOk = !!(expResult && expResult.ok);
+        const expenseItems = collectInlineExpenseSaveItems(confirmationSnapshot.expense);
+        for (const expenseItem of expenseItems) {
+          const expResult = saveInlineExpenseForRevenue(
+            revId,
+            confirmationSnapshot.payload.workDate,
+            expenseItem
+          );
+          if (!expResult || !expResult.ok) {
+            expenseOk = false;
+            break;
+          }
+        }
         if (!expenseOk) {
           alert('売上は保存済みです。経費のみ未保存です。利益管理の経費入力から同じ売上へ紐づけて登録してください。');
         }
@@ -21807,6 +22017,7 @@
     toggleRevenueLeadOptions();
     toggleRevenueOpenLeadButton();
     populateInlineExpenseCategorySelect('revenue-inline-expense-category');
+    bindInlineExpenseEditor('revenue');
     document.getElementById('revenue-form').addEventListener('submit', handleRevenueSubmit);
     document.getElementById('btn-revenue-cancel').addEventListener('click', resetRevenueForm);
     document.getElementById('revenue-payment-method')?.addEventListener('change', () => {

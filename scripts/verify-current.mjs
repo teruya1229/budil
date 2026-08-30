@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.11 current verify chain runner.
+ * Budil v4.13.12 current verify chain runner.
  * Runs v4.10.0–v4.10.42, v4.11.x, v4.12.0–v4.12.27, and v4.13.x feature verifies only.
  * Legacy v4.8/v4.9 verifies are excluded; see scripts/verify-legacy-reference.mjs.
  */
@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const scriptsDir = join(root, 'scripts');
-const EXPECTED_VERSION = 'v4.13.11';
+const EXPECTED_VERSION = 'v4.13.12';
 
 const CURRENT_PATTERN = /^verify-v4(10|11|12|13)\d.*\.mjs$/;
 

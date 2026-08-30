@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Budil - AI経営脳みそ</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="css/style.css?v=4.13.11">
+  <link rel="stylesheet" href="css/style.css?v=4.13.12">
 </head>
 <body>
   <div class="app">
@@ -25,7 +25,7 @@
         <span class="logo-icon">B</span>
         <div class="logo-text">
           <strong>Budil</strong>
-          <small>AI経営脳みそ v4.13.11</small>
+          <small>AI経営脳みそ v4.13.12</small>
         </div>
       </div>
       <nav class="nav">
@@ -163,7 +163,7 @@
         </details>
       </nav>
       <div class="sidebar-footer">
-        <small>Budil v4.13.11</small>
+        <small>Budil v4.13.12</small>
         <a href="sales.html" class="sidebar-sales-link">Budilについて · 無料体験</a>
       </div>
     </aside>
@@ -185,7 +185,7 @@
               <h2>経営ホーム</h2>
               <p class="exec-home-subtitle">今日の最優先 → 今日やること → 今月の数字</p>
             </div>
-            <span class="exec-home-version">v4.13.11</span>
+            <span class="exec-home-version">v4.13.12</span>
           </div>
           <div id="exec-home-empty-guide" class="exec-home-empty hidden exec-tower-span-full"></div>
 
@@ -613,7 +613,7 @@
         </div>
 
         <div id="morning-report" class="card card-morning card-wide card-morning-v4">
-          <h2>🌅 朝レポート <span class="morning-version-badge">v4.13.11</span></h2>
+          <h2>🌅 朝レポート <span class="morning-version-badge">v4.13.12</span></h2>
           <p id="dash-backup-status" class="backup-status-line"></p>
           <div class="morning-grid morning-grid-v4">
             <div class="morning-section morning-section-exec-summary">
@@ -2300,28 +2300,32 @@
               </div>
               <div class="revenue-inline-expense-block" id="revenue-inline-expense-block">
                 <h3 class="revenue-inline-expense-title">この売上の経費（任意）</h3>
-                <p class="field-hint revenue-inline-expense-hint">経費金額を入力した場合、売上保存と同時にこの売上へ紐づけて登録します。</p>
+                <p class="field-hint revenue-inline-expense-hint">最大3件まで追加できます。空欄の明細は保存しません。金額を入力した場合、売上保存と同時にこの売上へ紐づけて登録します。</p>
                 <p class="field-hint revenue-linked-expense-summary hidden" id="revenue-linked-expense-summary" aria-live="polite"></p>
-                <div class="form-row form-row-2">
-                  <div class="form-group">
-                    <label for="revenue-inline-expense-category">経費カテゴリ</label>
-                    <select id="revenue-inline-expense-category"></select>
-                  </div>
-                  <div class="form-group">
-                    <label for="revenue-inline-expense-amount">経費金額</label>
-                    <input type="number" id="revenue-inline-expense-amount" min="1" step="1" placeholder="空なら経費なし">
-                  </div>
-                </div>
-                <div class="form-row form-row-2">
-                  <div class="form-group">
-                    <label for="revenue-inline-expense-content">内容</label>
-                    <input type="text" id="revenue-inline-expense-content" placeholder="例：駐車場代">
-                  </div>
-                  <div class="form-group">
-                    <label for="revenue-inline-expense-memo">メモ</label>
-                    <input type="text" id="revenue-inline-expense-memo" placeholder="任意">
+                <div id="revenue-inline-expense-list" class="inline-expense-list">
+                  <div class="inline-expense-row" data-inline-expense-index="0">
+                    <div class="form-row form-row-2">
+                      <div class="form-group">
+                        <label for="revenue-inline-expense-content">経費名</label>
+                        <input type="text" id="revenue-inline-expense-content" class="inline-expense-name" placeholder="例：人件費">
+                      </div>
+                      <div class="form-group">
+                        <label for="revenue-inline-expense-amount">金額</label>
+                        <input type="number" id="revenue-inline-expense-amount" class="inline-expense-amount" min="1" step="1" placeholder="空なら経費なし">
+                      </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-secondary inline-expense-remove" data-inline-expense-remove>削除</button>
                   </div>
                 </div>
+                <div class="inline-expense-actions">
+                  <button type="button" class="btn btn-sm btn-secondary" id="revenue-inline-expense-add" data-inline-expense-add="revenue">経費を追加</button>
+                </div>
+                <p class="inline-expense-totals" aria-live="polite">
+                  <span>経費合計：<strong id="revenue-inline-expense-total">0円</strong></span>
+                  <span>利益：<strong id="revenue-inline-expense-profit">—</strong></span>
+                </p>
+                <select id="revenue-inline-expense-category" class="hidden" tabindex="-1" aria-hidden="true"></select>
+                <input type="hidden" id="revenue-inline-expense-memo" value="">
               </div>
               <div class="form-row form-row-2 hidden" id="revenue-lead-row">
                 <div class="form-group">
@@ -3933,27 +3937,31 @@
         </div>
         <div class="revenue-inline-expense-block" id="work-completion-inline-expense-block">
           <h3 class="revenue-inline-expense-title">この売上の経費（任意）</h3>
-          <p class="field-hint revenue-inline-expense-hint">経費金額を入力した場合、売上保存と同時にこの売上へ紐づけて登録します。</p>
-          <div class="form-row form-row-2">
-            <div class="form-group">
-              <label for="work-completion-inline-expense-category">経費カテゴリ</label>
-              <select id="work-completion-inline-expense-category"></select>
-            </div>
-            <div class="form-group">
-              <label for="work-completion-inline-expense-amount">経費金額</label>
-              <input type="number" id="work-completion-inline-expense-amount" min="1" step="1" placeholder="空なら経費なし">
-            </div>
-          </div>
-          <div class="form-row form-row-2">
-            <div class="form-group">
-              <label for="work-completion-inline-expense-content">内容</label>
-              <input type="text" id="work-completion-inline-expense-content" placeholder="例：駐車場代">
-            </div>
-            <div class="form-group">
-              <label for="work-completion-inline-expense-memo">メモ</label>
-              <input type="text" id="work-completion-inline-expense-memo" placeholder="任意">
+          <p class="field-hint revenue-inline-expense-hint">最大3件まで追加できます。空欄の明細は保存しません。金額を入力した場合、売上保存と同時にこの売上へ紐づけて登録します。</p>
+          <div id="work-completion-inline-expense-list" class="inline-expense-list">
+            <div class="inline-expense-row" data-inline-expense-index="0">
+              <div class="form-row form-row-2">
+                <div class="form-group">
+                  <label for="work-completion-inline-expense-content">経費名</label>
+                  <input type="text" id="work-completion-inline-expense-content" class="inline-expense-name" placeholder="例：人件費">
+                </div>
+                <div class="form-group">
+                  <label for="work-completion-inline-expense-amount">金額</label>
+                  <input type="number" id="work-completion-inline-expense-amount" class="inline-expense-amount" min="1" step="1" placeholder="空なら経費なし">
+                </div>
+              </div>
+              <button type="button" class="btn btn-sm btn-secondary inline-expense-remove" data-inline-expense-remove>削除</button>
             </div>
           </div>
+          <div class="inline-expense-actions">
+            <button type="button" class="btn btn-sm btn-secondary" id="work-completion-inline-expense-add" data-inline-expense-add="work-completion">経費を追加</button>
+          </div>
+          <p class="inline-expense-totals" aria-live="polite">
+            <span>経費合計：<strong id="work-completion-inline-expense-total">0円</strong></span>
+            <span>利益：<strong id="work-completion-inline-expense-profit">—</strong></span>
+          </p>
+          <select id="work-completion-inline-expense-category" class="hidden" tabindex="-1" aria-hidden="true"></select>
+          <input type="hidden" id="work-completion-inline-expense-memo" value="">
         </div>
         <fieldset class="form-section customer-asset-memo-section customer-asset-memo-completion">
           <legend>顧客資産メモ（今のうちに記録）</legend>
@@ -4036,32 +4044,32 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
-  <script src="js/storage.js?v=4.13.11"></script>
-  <script src="js/messages.js?v=4.13.11"></script>
-  <script src="js/demand-brain.js?v=4.13.11"></script>
-  <script src="js/demand-radar.js?v=4.13.11"></script>
-  <script src="js/sales-brain.js?v=4.13.11"></script>
-  <script src="js/management-brain.js?v=4.13.11"></script>
-  <script src="js/payment-brain.js?v=4.13.11"></script>
-  <script src="js/revenue-brain.js?v=4.13.11"></script>
-  <script src="js/revenue-summary-brain.js?v=4.13.11"></script>
-  <script src="js/reception-brain.js?v=4.13.11"></script>
-  <script src="js/map-brain.js?v=4.13.11"></script>
-  <script src="js/calendar-candidate-brain.js?v=4.13.11"></script>
-  <script src="js/external-check-brain.js?v=4.13.11"></script>
-  <script src="js/action-brain.js?v=4.13.11"></script>
-  <script src="js/work-order-brain.js?v=4.13.11"></script>
-  <script src="js/follow-up-brain.js?v=4.13.11"></script>
-  <script src="js/work-completion-brain.js?v=4.13.11"></script>
-  <script src="js/profit-brain.js?v=4.13.11"></script>
-  <script src="js/analytics-brain.js?v=4.13.11"></script>
-  <script src="js/ad-bridge.js?v=4.13.11"></script>
-  <script src="js/monthly-results-brain.js?v=4.13.11"></script>
-  <script src="js/documents-brain.js?v=4.13.11"></script>
-  <script src="js/executive-brain.js?v=4.13.11"></script>
-  <script src="js/card-ocr.js?v=4.13.11"></script>
-  <script src="js/data-backup.js?v=4.13.11"></script>
-  <script src="js/budil-cloud.js?v=4.13.11"></script>
-  <script src="js/app.js?v=4.13.11"></script>
+  <script src="js/storage.js?v=4.13.12"></script>
+  <script src="js/messages.js?v=4.13.12"></script>
+  <script src="js/demand-brain.js?v=4.13.12"></script>
+  <script src="js/demand-radar.js?v=4.13.12"></script>
+  <script src="js/sales-brain.js?v=4.13.12"></script>
+  <script src="js/management-brain.js?v=4.13.12"></script>
+  <script src="js/payment-brain.js?v=4.13.12"></script>
+  <script src="js/revenue-brain.js?v=4.13.12"></script>
+  <script src="js/revenue-summary-brain.js?v=4.13.12"></script>
+  <script src="js/reception-brain.js?v=4.13.12"></script>
+  <script src="js/map-brain.js?v=4.13.12"></script>
+  <script src="js/calendar-candidate-brain.js?v=4.13.12"></script>
+  <script src="js/external-check-brain.js?v=4.13.12"></script>
+  <script src="js/action-brain.js?v=4.13.12"></script>
+  <script src="js/work-order-brain.js?v=4.13.12"></script>
+  <script src="js/follow-up-brain.js?v=4.13.12"></script>
+  <script src="js/work-completion-brain.js?v=4.13.12"></script>
+  <script src="js/profit-brain.js?v=4.13.12"></script>
+  <script src="js/analytics-brain.js?v=4.13.12"></script>
+  <script src="js/ad-bridge.js?v=4.13.12"></script>
+  <script src="js/monthly-results-brain.js?v=4.13.12"></script>
+  <script src="js/documents-brain.js?v=4.13.12"></script>
+  <script src="js/executive-brain.js?v=4.13.12"></script>
+  <script src="js/card-ocr.js?v=4.13.12"></script>
+  <script src="js/data-backup.js?v=4.13.12"></script>
+  <script src="js/budil-cloud.js?v=4.13.12"></script>
+  <script src="js/app.js?v=4.13.12"></script>
 </body>
 </html>

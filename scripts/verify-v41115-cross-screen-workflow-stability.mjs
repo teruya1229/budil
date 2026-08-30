@@ -67,15 +67,15 @@ const VIEW_IDS = [
 console.log('== v4.12.4 cross-screen-workflow-stability ==');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.13.11'), 'index.html should show v4.12.26');
-assert(indexHtml.includes('js/app.js?v=4.13.11'), 'app.js cache buster should be v4.13.11');
-assert(indexHtml.includes('css/style.css?v=4.13.11'), 'style.css cache buster should be v4.13.11');
-assert(indexHtml.includes('js/revenue-brain.js?v=4.13.11'), 'revenue-brain cache buster should be v4.13.11');
-assert(indexHtml.includes('js/profit-brain.js?v=4.13.11'), 'profit-brain cache buster should be v4.13.11');
-assert(indexHtml.includes('js/executive-brain.js?v=4.13.11'), 'executive-brain cache buster should be v4.13.11');
-assert(indexHtml.includes('js/work-order-brain.js?v=4.13.11'), 'work-order-brain cache buster should be v4.13.11');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.11'"), 'storage version should be v4.13.11');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.13.11'"), 'data-backup version should be v4.13.11');
+assert(indexHtml.includes('v4.13.12'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('js/app.js?v=4.13.12'), 'app.js cache buster should be v4.13.12');
+assert(indexHtml.includes('css/style.css?v=4.13.12'), 'style.css cache buster should be v4.13.12');
+assert(indexHtml.includes('js/revenue-brain.js?v=4.13.12'), 'revenue-brain cache buster should be v4.13.12');
+assert(indexHtml.includes('js/profit-brain.js?v=4.13.12'), 'profit-brain cache buster should be v4.13.12');
+assert(indexHtml.includes('js/executive-brain.js?v=4.13.12'), 'executive-brain cache buster should be v4.13.12');
+assert(indexHtml.includes('js/work-order-brain.js?v=4.13.12'), 'work-order-brain cache buster should be v4.13.12');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.12'"), 'storage version should be v4.13.12');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.13.12'"), 'data-backup version should be v4.13.12');
 assert(!indexHtml.includes('?v=4.11.14'), 'old cache buster v4.11.14 should be gone');
 assert(!indexHtml.includes('?v=4.12.35'), 'broken cache buster v4.12.35 should not exist');
 

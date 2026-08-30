@@ -193,6 +193,144 @@ const WorkCompletionBrain = {
     };
   },
 
+  MAX_INLINE_EXPENSE_LINES: 3,
+
+  resolveExpenseCategoryFromName(name, fallback) {
+    const n = String(name || '').trim();
+    const fb = String(fallback || '').trim();
+    const daily = typeof ProfitBrain !== 'undefined' && Array.isArray(ProfitBrain.DAILY_EXPENSE_CATEGORIES)
+      ? ProfitBrain.DAILY_EXPENSE_CATEGORIES
+      : ['人件費', '薬剤・材料', '交通・燃料', '外注費', '広告費', '消耗品', 'その他'];
+    const all = typeof ProfitBrain !== 'undefined' && Array.isArray(ProfitBrain.CATEGORIES)
+      ? ProfitBrain.CATEGORIES
+      : daily;
+    if (n && daily.includes(n)) return n;
+    if (n && all.includes(n)) return n;
+    if (fb && (daily.includes(fb) || all.includes(fb))) return fb;
+    return fb || 'その他';
+  },
+
+  normalizeInlineExpenseLine(raw) {
+    const src = raw && typeof raw === 'object' ? raw : {};
+    const name = String(src.name || src.content || '').trim();
+    const amountRaw = src.amountRaw != null
+      ? String(src.amountRaw).trim()
+      : (src.amount === '' || src.amount == null ? '' : String(src.amount).trim());
+    const amount = amountRaw === '' ? null : Number(amountRaw);
+    return {
+      name,
+      content: name,
+      amountRaw,
+      amount,
+      category: this.resolveExpenseCategoryFromName(name, src.category),
+      memo: String(src.memo || '').trim()
+    };
+  },
+
+  normalizeInlineExpenseLines(rawLines) {
+    const list = Array.isArray(rawLines) ? rawLines : [];
+    const out = [];
+    for (const raw of list) {
+      if (out.length >= this.MAX_INLINE_EXPENSE_LINES) break;
+      out.push(this.normalizeInlineExpenseLine(raw));
+    }
+    return out;
+  },
+
+  sumInlineExpenseAmount(lines) {
+    return (lines || []).reduce((n, line) => n + (Number(line && line.amount) || 0), 0);
+  },
+
+  validateInlineExpenseLines(rawLines) {
+    const lines = this.normalizeInlineExpenseLines(rawLines);
+    if (Array.isArray(rawLines) && rawLines.length > this.MAX_INLINE_EXPENSE_LINES) {
+      return { ok: false, error: '経費は3件までです。' };
+    }
+    const items = [];
+    for (const line of lines) {
+      const empty = !line.name && line.amountRaw === '';
+      if (empty) continue;
+      if (line.amountRaw === '') {
+        return { ok: false, error: '経費の金額を入力するか、空欄の明細を削除してください。' };
+      }
+      if (!Number.isFinite(line.amount) || line.amount <= 0 || !Number.isInteger(line.amount)) {
+        return { ok: false, error: '経費金額は1円以上の整数で入力してください。' };
+      }
+      items.push({
+        name: line.name,
+        content: line.content,
+        amount: line.amount,
+        category: line.category,
+        memo: line.memo
+      });
+      if (items.length > this.MAX_INLINE_EXPENSE_LINES) {
+        return { ok: false, error: '経費は3件までです。' };
+      }
+    }
+    const amount = this.sumInlineExpenseAmount(items);
+    return { ok: true, shouldCreate: items.length > 0, items, amount };
+  },
+
+  buildInlineExpenseSnapshotState(inlineExpense) {
+    const src = inlineExpense && typeof inlineExpense === 'object' ? inlineExpense : {};
+    if (src.shouldCreate === false && !Array.isArray(src.items) && !(src.input && Array.isArray(src.input.items))) {
+      return { shouldCreate: false };
+    }
+    const rawItems = Array.isArray(src.items)
+      ? src.items
+      : (src.input && Array.isArray(src.input.items) ? src.input.items : null);
+    if (rawItems) {
+      const checked = this.validateInlineExpenseLines(rawItems);
+      if (!checked.ok) return { shouldCreate: false, error: checked.error };
+      if (!checked.shouldCreate) return { shouldCreate: false };
+      const first = checked.items[0];
+      return {
+        shouldCreate: true,
+        items: checked.items,
+        amount: checked.amount,
+        category: first.category,
+        content: first.content,
+        memo: first.memo || ''
+      };
+    }
+    if (!src.shouldCreate && !src.input) return { shouldCreate: false };
+    const input = src.input || src;
+    const checked = this.validateInlineExpenseLines([{
+      name: input.content || input.name || '',
+      content: input.content || input.name || '',
+      amount: input.amount,
+      amountRaw: input.amountRaw != null ? input.amountRaw : (input.amount == null || input.amount === '' ? '' : String(input.amount)),
+      category: input.category,
+      memo: input.memo || ''
+    }]);
+    if (!checked.ok) return { shouldCreate: false, error: checked.error };
+    if (!checked.shouldCreate) return { shouldCreate: false };
+    const first = checked.items[0];
+    return {
+      shouldCreate: true,
+      items: checked.items,
+      amount: checked.amount,
+      category: first.category || String(input.category || 'その他').trim(),
+      content: first.content,
+      memo: first.memo || String(input.memo || '').trim()
+    };
+  },
+
+  attachExpenseTotalsToPayload(payload, expenseState) {
+    const next = payload && typeof payload === 'object' ? payload : {};
+    if (!expenseState || !expenseState.shouldCreate || !Array.isArray(expenseState.items) || !expenseState.items.length) {
+      return next;
+    }
+    next.expenseLines = expenseState.items.map(item => ({
+      name: String(item.name || item.content || '').trim(),
+      content: String(item.content || item.name || '').trim(),
+      amount: Number(item.amount) || 0,
+      category: String(item.category || 'その他').trim()
+    }));
+    next.expenseTotal = Number(expenseState.amount) || this.sumInlineExpenseAmount(next.expenseLines);
+    return next;
+  },
+
   createRevenuePayloadFromWorkOrder(workOrder, input) {
     const wo = typeof WorkOrderBrain !== 'undefined'
       ? WorkOrderBrain.normalizeWorkOrder(workOrder)
@@ -251,20 +389,22 @@ const WorkCompletionBrain = {
         updatedAt: now
       });
     }
+    if (Array.isArray(input.expenseLines) && input.expenseLines.length) {
+      this.attachExpenseTotalsToPayload(payload, {
+        shouldCreate: true,
+        items: input.expenseLines,
+        amount: input.expenseTotal
+      });
+    } else if (input.expenseTotal != null && input.expenseTotal !== '') {
+      payload.expenseTotal = Number(input.expenseTotal) || 0;
+    }
     return payload;
   },
 
   createRevenueConfirmationSnapshot(workOrder, input, inlineExpense) {
+    const expenseState = this.buildInlineExpenseSnapshotState(inlineExpense);
     const payload = this.createRevenuePayloadFromWorkOrder(workOrder, input || {});
-    const expenseState = inlineExpense && inlineExpense.shouldCreate
-      ? {
-          shouldCreate: true,
-          category: String(inlineExpense.input && inlineExpense.input.category || 'その他').trim(),
-          amount: Number(inlineExpense.input && inlineExpense.input.amount) || 0,
-          content: String(inlineExpense.input && inlineExpense.input.content || '').trim(),
-          memo: String(inlineExpense.input && inlineExpense.input.memo || '').trim()
-        }
-      : { shouldCreate: false };
+    this.attachExpenseTotalsToPayload(payload, expenseState);
     const snapshot = {
       workOrderId: String(workOrder && workOrder.id || '').trim(),
       completionInput: JSON.parse(JSON.stringify(input || {})),
@@ -323,9 +463,18 @@ const WorkCompletionBrain = {
     ];
     if (String(data.memo || '').trim()) lines.push(`売上メモ：${String(data.memo).trim()}`);
     if (expense.shouldCreate) {
-      lines.push(`同時登録する経費：${yen(expense.amount)}（${expense.category || 'その他'}）`);
-      if (expense.content) lines.push(`経費内訳：${expense.content}`);
-      if (expense.memo) lines.push(`経費メモ：${expense.memo}`);
+      const items = Array.isArray(expense.items) && expense.items.length ? expense.items : [expense];
+      if (items.length <= 1) {
+        lines.push(`同時登録する経費：${yen(expense.amount)}（${expense.category || 'その他'}）`);
+        if (expense.content) lines.push(`経費内訳：${expense.content}`);
+        if (expense.memo) lines.push(`経費メモ：${expense.memo}`);
+      } else {
+        lines.push(`同時登録する経費：${yen(expense.amount)}（${items.length}件）`);
+        items.forEach((item, idx) => {
+          const label = item.content || item.name || item.category || 'その他';
+          lines.push(`経費${idx + 1}：${yen(item.amount)}（${label}）`);
+        });
+      }
     } else {
       lines.push('同時登録する経費：なし');
     }

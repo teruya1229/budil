@@ -65,11 +65,11 @@ const tamazawaItem = {
 };
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.13.11'), 'index.html should show v4.12.26');
-assert(indexHtml.includes('js/app.js?v=4.13.11'), 'app.js cache buster should be v4.13.11');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.13.11'), 'calendar brain cache buster should be v4.13.11');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.11'"), 'storage.js version should be v4.13.11');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.13.11'"), 'data-backup version should be v4.13.11');
+assert(indexHtml.includes('v4.13.12'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('js/app.js?v=4.13.12'), 'app.js cache buster should be v4.13.12');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.13.12'), 'calendar brain cache buster should be v4.13.12');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.12'"), 'storage.js version should be v4.13.12');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.13.12'"), 'data-backup version should be v4.13.12');
 
 console.log('== v4.12.4 brain markers ==');
 assert(calBrainJs.includes('v4.11.1'), 'calendar-candidate-brain.js should include v4.11.1 marker');

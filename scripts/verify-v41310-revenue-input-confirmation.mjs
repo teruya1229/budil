@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.11 - confirmed revenue must come from current user input and an exact confirmation snapshot.
+ * Budil v4.13.12 - confirmed revenue must come from current user input and an exact confirmation snapshot.
  * Isolated in-memory fixtures only. No browser profile, production localStorage, or customer data.
  */
 import { readFileSync } from 'node:fs';
@@ -195,4 +195,4 @@ assert(app.includes('Storage.addRevenueRecord(confirmationSnapshot.payload)'), '
 assert(storageSource.includes("error: 'revenue_payload_mismatch'"), 'storage rejects mismatched or incomplete work-order payloads');
 assert(completionSource.includes('formatRevenueConfirmationMessage'), 'confirmation formatter is centralized with payload creation');
 
-console.log('\nAll v4.13.11 revenue input confirmation checks passed.');
+console.log('\nAll v4.13.12 revenue input confirmation checks passed.');

@@ -1,6 +1,6 @@
 ﻿# Budil handoff
 
-最終更新: 2026-08-27
+最終更新: 2026-08-30
 
 ## 正本
 
@@ -17,7 +17,7 @@
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` の依存関係（googleapis 等）。依存は `hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（v4.13.11）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（v4.13.12）
 - **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
 
 ## 構造化請求書 CLI（Browser番頭接続済み・Gmail未接続）
@@ -36,7 +36,8 @@
 
 | 項目 | 値 |
 |------|-----|
-| 最新バージョン | v4.13.11（作業予定の売上確定へは予定内容を自動入力） |
+| 最新バージョン | v4.13.12（売上確定時の経費明細を最大3件） |
+| v4.13.12 売上確定の複数経費 | 経費名+金額を0〜3件。合計と利益を自動表示。経費レコードへ分割保存し、売上には `expenseLines` と `expenseTotal` を併記。過去単一経費は変換しない |
 | v4.13.11 作業予定売上確定の自動入力復帰 | 「売上確定へ」は作業日・顧客・内訳・予定金額等を入力済みで開く。空欄再入力は緊急手入力のみ。確認画面と容量回復・二重登録防止は維持 |
 | v4.13.10 確定売上前の容量回復＋入力内容確認 | 売上確定操作内だけで、100KiB以上かつ既存Googleカレンダー全件JSON形式と厳密確認できる`candidateMeta.originalText`を対象化。既存ローカルバックアップのダウンロード開始→本人確認→clone上で対象原文だけ空文字→件数/全ID/その他全項目不変検証→作業予定配列1回保存。対象日・内訳・実績金額は本人入力必須。保存payloadと確認表示は同一snapshot。古い選択/別対象/二重送信拒否。過去復元の対象不明直接確定は無効。キャンセル不変。売上保存前失敗と売上保存後リンク失敗を別文言で通知。同一作業予定の保存済み売上は再作成せずリンクだけ修復。新規verify-v41310 2本、verify-current 100/100合格、localhost別origin fixture実動作・Console error 0、実顧客データ未操作 |
 | v4.13.7 hotfix カレンダーJSON保存容量 | JSON/API取込で rawText 全件を各WOの originalText へ入れず空文字に。QuotaExceeded による保存失敗を修正。`app.js` cache buster のみ `4.13.7.1`。verify-v4137-calendar-json-save-originaltext。verify-current **98/98**。表示バージョン据え置き |

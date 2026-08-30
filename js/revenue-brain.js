@@ -184,6 +184,13 @@ const RevenueBrain = {
       });
       Object.assign(normalized, payment);
     }
+    if (Array.isArray(record.expenseLines)) {
+      normalized.expenseLines = record.expenseLines;
+    }
+    if (record.expenseTotal != null && record.expenseTotal !== '') {
+      const expenseTotal = Number(record.expenseTotal);
+      if (Number.isFinite(expenseTotal)) normalized.expenseTotal = expenseTotal;
+    }
     return normalized;
   },
 
