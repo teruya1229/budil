@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.13.12',
+  BUDIL_VERSION: 'v4.13.13',
   LEGACY_CALENDAR_ORIGINAL_TEXT_MIN_CHARS: 100 * 1024,
 
   KEYS: {
@@ -2008,6 +2008,26 @@ const Storage = {
     list.unshift(record);
     this.saveExpenseRecords(list);
     return record;
+  },
+
+  addExpenseRecords(items) {
+    const incoming = Array.isArray(items) ? items : [];
+    if (!incoming.length) return [];
+    const existing = this.getExpenseRecords();
+    const now = new Date().toISOString();
+    const records = incoming.map(item => {
+      const normalized = typeof ProfitBrain !== 'undefined'
+        ? ProfitBrain.normalizeExpense(item)
+        : { ...item };
+      return {
+        ...normalized,
+        id: normalized.id || ('expense-' + this.generateId()),
+        createdAt: normalized.createdAt || now,
+        updatedAt: now
+      };
+    });
+    this.saveExpenseRecords(records.slice().reverse().concat(existing));
+    return records;
   },
 
   updateExpenseRecord(id, data) {

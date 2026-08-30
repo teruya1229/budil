@@ -4383,6 +4383,45 @@
     }
   }
 
+  function formatInlineExpenseAllFailedMessage(count) {
+    const n = Number(count) || 0;
+    return `売上は保存済み、今回の経費${n}件は1件も保存されていない`;
+  }
+
+  function buildInlineExpenseSavePayload(revenueId, workDate, input) {
+    return {
+      date: workDate || TODAY(),
+      category: input.category || 'その他',
+      amount: Number(input.amount) || 0,
+      memo: buildDailyExpenseMemo(input.content || input.name, input.memo),
+      relatedRevenueId: revenueId,
+      relatedWorkOrderId: '',
+      paymentMethod: '',
+      taxIncluded: true,
+      isRecurring: false,
+      source: 'revenue-inline-expense'
+    };
+  }
+
+  function saveInlineExpensesForRevenue(revenueId, workDate, inputs) {
+    const revId = String(revenueId || '').trim();
+    const items = Array.isArray(inputs) ? inputs : [];
+    const attemptedCount = items.length;
+    if (!revId) return { ok: false, error: 'missing_revenue_id', attemptedCount };
+    if (!attemptedCount) return { ok: true, expenses: [], attemptedCount: 0 };
+    try {
+      const payloads = items.map(input => buildInlineExpenseSavePayload(revId, workDate, input));
+      const created = Storage.addExpenseRecords(payloads);
+      if (!created || created.length !== payloads.length) {
+        return { ok: false, error: 'expense_save_failed', attemptedCount };
+      }
+      return { ok: true, expenses: created, attemptedCount };
+    } catch (err) {
+      console.error('[Budil][inline-expense-save-failed]', err && err.name ? err.name : 'Error');
+      return { ok: false, error: 'expense_save_failed', attemptedCount };
+    }
+  }
+
   function collectInlineExpenseSaveItems(expenseState) {
     if (!expenseState || !expenseState.shouldCreate) return [];
     if (Array.isArray(expenseState.items) && expenseState.items.length) return expenseState.items;
@@ -12001,19 +12040,16 @@
       let expenseOk = true;
       if (confirmationSnapshot.expense.shouldCreate) {
         const expenseItems = collectInlineExpenseSaveItems(confirmationSnapshot.expense);
-        for (const expenseItem of expenseItems) {
-          const expResult = saveInlineExpenseForRevenue(
-            newRecord.id,
-            confirmationSnapshot.payload.workDate || newRecord.workDate,
-            expenseItem
-          );
-          if (!expResult || !expResult.ok) {
-            expenseOk = false;
-            break;
-          }
-        }
-        if (!expenseOk) {
-          alert('売上は保存済みです。経費のみ未保存です。利益管理の経費入力から同じ売上へ紐づけて登録してください。');
+        const expResult = saveInlineExpensesForRevenue(
+          newRecord.id,
+          confirmationSnapshot.payload.workDate || newRecord.workDate,
+          expenseItems
+        );
+        if (!expResult || !expResult.ok) {
+          expenseOk = false;
+          alert(formatInlineExpenseAllFailedMessage(
+            (expResult && expResult.attemptedCount) || expenseItems.length
+          ));
         }
       }
       clearInlineExpenseFields('work-completion');
@@ -21974,19 +22010,16 @@
       }
       if (inlineCheck.shouldCreate && revId) {
         const expenseItems = collectInlineExpenseSaveItems(confirmationSnapshot.expense);
-        for (const expenseItem of expenseItems) {
-          const expResult = saveInlineExpenseForRevenue(
-            revId,
-            confirmationSnapshot.payload.workDate,
-            expenseItem
-          );
-          if (!expResult || !expResult.ok) {
-            expenseOk = false;
-            break;
-          }
-        }
-        if (!expenseOk) {
-          alert('売上は保存済みです。経費のみ未保存です。利益管理の経費入力から同じ売上へ紐づけて登録してください。');
+        const expResult = saveInlineExpensesForRevenue(
+          revId,
+          confirmationSnapshot.payload.workDate,
+          expenseItems
+        );
+        if (!expResult || !expResult.ok) {
+          expenseOk = false;
+          alert(formatInlineExpenseAllFailedMessage(
+            (expResult && expResult.attemptedCount) || expenseItems.length
+          ));
         }
       }
       resetRevenueForm();

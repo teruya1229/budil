@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.12 - 売上確定時の経費明細 0〜3件
+ * Budil v4.13.13 - 売上確定時の経費明細 0〜3件
  * Isolated in-memory fixtures only. No production localStorage.
  */
 import { readFileSync } from 'node:fs';
@@ -37,17 +37,17 @@ for (const file of [
 }
 
 console.log('== version ==');
-assert(index.includes('Budil v4.13.12'), 'index shows Budil v4.13.12');
-assert(index.includes('AI経営脳みそ v4.13.12'), 'header shows v4.13.12');
-assert(index.includes('js/app.js?v=4.13.12'), 'app.js cache buster is 4.13.12');
-assert(index.includes('js/work-completion-brain.js?v=4.13.12'), 'work-completion-brain cache buster is 4.13.12');
-assert(index.includes('css/style.css?v=4.13.12'), 'style.css cache buster is 4.13.12');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.12'"), 'storage version is v4.13.12');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.12'"), 'data-backup version is v4.13.12');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.12'"), 'verify-current pins v4.13.12');
-assert(statusMd.includes('v4.13.12'), 'status.md documents v4.13.12');
-assert(handoffMd.includes('v4.13.12'), 'handoff.md documents v4.13.12');
-assert(decisionLog.includes('v4.13.12'), 'decision-log.md records v4.13.12');
+assert(index.includes('Budil v4.13.13'), 'index shows Budil v4.13.13');
+assert(index.includes('AI経営脳みそ v4.13.13'), 'header shows v4.13.13');
+assert(index.includes('js/app.js?v=4.13.13'), 'app.js cache buster is 4.13.13');
+assert(index.includes('js/work-completion-brain.js?v=4.13.13'), 'work-completion-brain cache buster is 4.13.13');
+assert(index.includes('css/style.css?v=4.13.13'), 'style.css cache buster is 4.13.13');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.13'"), 'storage version is v4.13.13');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.13'"), 'data-backup version is v4.13.13');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.13'"), 'verify-current pins v4.13.13');
+assert(statusMd.includes('v4.13.13'), 'status.md documents v4.13.13');
+assert(handoffMd.includes('v4.13.13'), 'handoff.md documents v4.13.13');
+assert(decisionLog.includes('v4.13.13'), 'decision-log.md records v4.13.13');
 
 console.log('== UI ==');
 assert(index.includes('id="work-completion-inline-expense-list"'), 'work-completion has expense list');
@@ -220,4 +220,4 @@ assert(app.includes('recoverStorageForRevenueConfirmationIfNeeded('), 'v4.13.11 
 assert(app.includes('validateCurrentWorkCompletionSession('), 'session/signature check kept');
 assert(app.includes('confirmRevenueSaveWithDuplicateCheck('), 'duplicate revenue guard kept');
 
-console.log('\nAll v4.13.12 multiple revenue expense checks passed.');
+console.log('\nAll v4.13.13 multiple revenue expense checks passed.');

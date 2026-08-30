@@ -31,16 +31,16 @@ for (const file of ['js/app.js', 'js/profit-brain.js', 'js/storage.js', 'js/data
 }
 
 console.log('== version / cache buster ==');
-assert(html.includes('Budil v4.13.12'), 'index.html shows Budil v4.13.12');
-assert(html.includes('js/app.js?v=4.13.12'), 'app.js cache buster is v4.13.12');
-assert(html.includes('js/profit-brain.js?v=4.13.12'), 'profit-brain cache buster is v4.13.12');
-assert(html.includes('css/style.css?v=4.13.12'), 'style.css cache buster is v4.13.12');
-assert(storageSrc.includes("BUDIL_VERSION: 'v4.13.12'"), 'storage version is v4.13.12');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.12'"), 'data-backup version is v4.13.12');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.12'"), 'verify-current pins v4.13.12');
-assert(statusMd.includes('v4.13.12'), 'status.md documents v4.13.12');
-assert(handoffMd.includes('v4.13.12'), 'handoff.md documents v4.13.12');
-assert(decisionLog.includes('v4.13.12'), 'decision-log.md records v4.13.12');
+assert(html.includes('Budil v4.13.13'), 'index.html shows Budil v4.13.13');
+assert(html.includes('js/app.js?v=4.13.13'), 'app.js cache buster is v4.13.13');
+assert(html.includes('js/profit-brain.js?v=4.13.13'), 'profit-brain cache buster is v4.13.13');
+assert(html.includes('css/style.css?v=4.13.13'), 'style.css cache buster is v4.13.13');
+assert(storageSrc.includes("BUDIL_VERSION: 'v4.13.13'"), 'storage version is v4.13.13');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.13'"), 'data-backup version is v4.13.13');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.13'"), 'verify-current pins v4.13.13');
+assert(statusMd.includes('v4.13.13'), 'status.md documents v4.13.13');
+assert(handoffMd.includes('v4.13.13'), 'handoff.md documents v4.13.13');
+assert(decisionLog.includes('v4.13.13'), 'decision-log.md records v4.13.13');
 
 console.log('== UI: daily / profit / inline expense ==');
 assert(html.includes('id="daily-expense-revenue"'), 'daily expense has revenue select');
@@ -200,9 +200,9 @@ assert(app.includes('handleDailyExpenseQuickSubmit'), 'daily expense submit rema
 assert(app.includes("document.getElementById('daily-expense-revenue')"), 'daily submit reads revenue select');
 assert(app.includes('validateInlineExpenseInput'), 'inline expense validation exists');
 assert(app.includes('inlineExpenseSaveGuard'), 'double-submit guard exists');
-assert(app.includes('売上は保存済みです。経費のみ未保存です'), 'partial save message exists');
+assert(app.includes('売上は保存済み、今回の経費') && app.includes('件は1件も保存されていない'), 'atomic expense-failure message exists');
 assert(app.includes('updateRevenueLinkedExpenseSummary'), 'existing linked expense summary exists');
-assert(app.includes('saveInlineExpenseForRevenue(') && app.includes('newRecord.id'), 'work completion saves confirmed snapshot expense after revenue id');
+assert(app.includes('saveInlineExpensesForRevenue(') && app.includes('newRecord.id'), 'work completion saves confirmed snapshot expenses after revenue id');
 assert(app.includes('confirmationSnapshot.payload.workDate') && app.includes('confirmationSnapshot.expense'), 'revenue form saves the confirmed snapshot expense');
 assert(app.includes('対象内容を入力確認しない過去売上復元からの直接確定は無効です'), 'targetless past recovery save is disabled');
 assert(!app.includes('localStorage.clear('), 'no localStorage.clear');

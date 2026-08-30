@@ -36,12 +36,12 @@ const decisionLog = load('decision-log.md');
 console.log('== v4.12.22 calendar-excluded-manual-include ==');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.13.12'), 'index.html should show v4.12.26');
-assert(indexHtml.includes('js/app.js?v=4.13.12'), 'app.js cache buster should be v4.13.12');
-assert(indexHtml.includes('css/style.css?v=4.13.12'), 'style.css cache buster should be v4.13.12');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.13.12'), 'calendar-candidate cache buster should be v4.13.12');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.12'"), 'storage version should be v4.13.12');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.13.12'"), 'data-backup version should be v4.13.12');
+assert(indexHtml.includes('v4.13.13'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('js/app.js?v=4.13.13'), 'app.js cache buster should be v4.13.13');
+assert(indexHtml.includes('css/style.css?v=4.13.13'), 'style.css cache buster should be v4.13.13');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.13.13'), 'calendar-candidate cache buster should be v4.13.13');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.13'"), 'storage version should be v4.13.13');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.13.13'"), 'data-backup version should be v4.13.13');
 assert(!indexHtml.includes('?v=4.12.7'), 'old cache buster v4.12.7 should be gone');
 assert(statusMd.includes('v4.12.25'), 'status.md should document v4.12.25');
 assert(handoffMd.includes('v4.12.25'), 'handoff.md should document v4.12.25');
@@ -232,7 +232,7 @@ assert(!appJs.includes('calendar.events.insert'), 'must not write back to Google
 assert(!calendarJs.includes('calendar.events.insert'), 'brain must not write back to Google Calendar API');
 assert(!appJs.includes('localStorage.clear'), 'app must not clear localStorage');
 assert(!calendarJs.includes('localStorage.clear'), 'brain must not clear localStorage');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.12'"), 'storage key namespace unchanged (version only)');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.13'"), 'storage key namespace unchanged (version only)');
 assert(!statusMd.includes('budil_manual_include'), 'must not invent new localStorage key docs');
 
 console.log('== prior feature docs retained ==');

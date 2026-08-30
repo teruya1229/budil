@@ -37,10 +37,10 @@ const storageJs = load('js/storage.js');
 const dataBackupJs = load('js/data-backup.js');
 
 // --- バージョン確認 ---
-assert(indexHtml.includes('v4.13.12'), 'index.html should show v4.12.26');
-assert(indexHtml.includes('js/app.js?v=4.13.12'), 'app.js cache buster should be v4.13.12');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.12'"), 'storage.js version should be v4.13.12');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.13.12'"), 'data-backup version should be v4.13.12');
+assert(indexHtml.includes('v4.13.13'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('js/app.js?v=4.13.13'), 'app.js cache buster should be v4.13.13');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.13'"), 'storage.js version should be v4.13.13');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.13.13'"), 'data-backup version should be v4.13.13');
 
 // --- ProfitBrain の見込み利益フォールバック修正確認 ---
 console.log('== ProfitBrain plannedForecastProfit fallback check ==');
