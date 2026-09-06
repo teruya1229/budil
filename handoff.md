@@ -1,6 +1,15 @@
 ﻿# Budil handoff
 
-最終更新: 2026-08-30
+最終更新: 2026-09-06
+
+## Supabase環境（2026/09/06確定）
+
+- production alias: `ai-bantou-dev`（ref: `xvrrlwlgoxbrkhlfyznx` / Free保持 / ACTIVE_HEALTHY）
+- staging: `bc-platform-staging` は削除済み（旧ref: `kocfoitzxrxjprxfcljy`。再利用禁止）
+- 削除理由: Freeの2プロジェクト上限
+- 削除前: DB・Auth・Storage定義・Edge Functionをバックアップ済み。業務データ0件 / Auth user 0件 / Storage 0件
+- 再構築時は新規 Project ref を発行し、旧refへ接続しない
+- `budil-backups` の正本は引き続き sibling `ai-bantou-app`（`ai-bantou-dev`）側
 
 ## 正本
 

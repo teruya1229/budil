@@ -2,6 +2,24 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## Supabase Free整理・bc-platform-staging削除（2026-09-06）
+
+**日付**: 2026-09-06
+
+**背景**: Supabase組織を Free へ戻すとプロジェクト上限が2件になる。残すのは `ai-bantou-dev`（AI番頭主開発＋Budil production alias）と `bc-field-diagnosis-ai`（実験）。Budil専用検証用 `bc-platform-staging` は上限のため削除する。
+
+**判断内容**:
+- `bc-platform-staging`（旧ref: `kocfoitzxrxjprxfcljy`）を削除する
+- 削除前バックアップを必須とし、業務データ0件・Auth user 0件・Storage 0件を確認したうえで削除する
+- 旧refは接続先として再利用しない。必要時はバックアップから新規 Project ref で再構築する
+- production alias（`ai-bantou-dev`）は変更せず Free で保持する。実装コードは今回変更しない
+- Free自動停止があり得るため、常時稼働が必要になる約1週間前に Pro 再契約を検討する
+
+**変更対象（文書のみ）**:
+- `status.md` / `handoff.md` / `decision-log.md`
+- sibling `ai-bantou-app` / `bc-field-diagnosis` の運用記録
+- Browser番頭 `ACCOUNT_MAP.md`（アカウント対応表）
+
 ## v4.13.13 hotfix：複数経費の一括・全件成功保存（2026-08-30）
 
 **日付**: 2026-08-30

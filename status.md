@@ -1,5 +1,15 @@
 ﻿# Budil status
 
+## Supabase Free整理・staging削除（2026/09/06）
+
+- 組織プラン: Free（2プロジェクト上限）
+- production alias（既存 `ai-bantou-dev` / ref: `xvrrlwlgoxbrkhlfyznx`）は Free で継続保持。`budil-backups` も同プロジェクトに保持
+- `bc-platform-staging`（旧ref: `kocfoitzxrxjprxfcljy`）は Free 上限のため 2026-09-06 削除済み
+- 削除前バックアップ済み（DB・Auth・Storage定義・Edge Function）。削除前の業務データ0件・Auth user 0件・Storage 0件
+- 必要時はバックアップから **新規 Project ref** で再構築する。旧refを接続先として再利用しない
+- localhost の staging 接続（旧ref）は無効。実装コードは今回変更していないため、staging再構築まではクラウド検証を production／ローカルバックアップ側で扱う
+- `ai-bantou-dev` は販売中本番ではない。Free自動停止の可能性あり。常時稼働が必要になる約1週間前に Pro 再契約を検討
+
 ## v4.13.13 hotfix：複数経費の途中保存を禁止（一括・全件成功）
 
 - 売上確定時の0〜3件経費を `Storage.addExpenseRecords()` で一括保存する。localStorageの経費配列書込みは1回
