@@ -2,6 +2,26 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.13.15 PDFダウンロード位置ズレ緊急修正（2026-09-07）
+
+**日付**: 2026-09-07
+
+**背景**: v4.13.14の印刷は実機合格。PDFダウンロードだけ、A4は生成されるが帳票が大きく左へずれてクリップされた。
+
+**実測**: 旧PDF hostは `position:fixed; left:-12000px`。`.doc-sheet` の `getBoundingClientRect().left` も `-12000`。幅はA4相当だが座標が巨大な負数で、html2canvasの描画座標へ影響した。
+
+**判断内容**:
+- 印刷経路（`printDocumentStandalone`）は変更しない
+- PDFのみ、独立iframeへstandalone帳票HTMLを生成し、`.doc-sheet` を原点・A4ピクセルへ正規化してからhtml2pdfする
+- 生成前にleft≈0・幅A4を検証する。画面全体スクショや縮小で収める対応はしない
+- 公開版をv4.13.15へ統一する。最終合格は照屋本人の公開版PDF実機確認
+
+**変更対象**:
+- `js/doc-export.js`（PDF経路のみ）
+- `index.html` / `js/storage.js` / `js/data-backup.js` / cache buster / 現行verify期待値
+- `scripts/verify-v41315-pdf-origin-alignment.mjs`（`verify-v41314` 維持）
+- `status.md` / `handoff.md` / `decision-log.md`
+
 ## v4.13.14 請求書・見積書の独立印刷とPDFダウンロード（2026-09-07）
 
 **日付**: 2026-09-07

@@ -104,64 +104,118 @@ const BudilDocExport = {
     return true;
   },
 
+  measurePdfSheetGeometry(sheet) {
+    if (!sheet || !sheet.getBoundingClientRect) {
+      return { ok: false, error: 'sheet_missing' };
+    }
+    const rect = sheet.getBoundingClientRect();
+    const cs = (sheet.ownerDocument && sheet.ownerDocument.defaultView)
+      ? sheet.ownerDocument.defaultView.getComputedStyle(sheet)
+      : window.getComputedStyle(sheet);
+    return {
+      ok: true,
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+      scrollWidth: sheet.scrollWidth,
+      offsetWidth: sheet.offsetWidth,
+      computedWidth: cs.width,
+      computedLeft: cs.left,
+      computedTransform: cs.transform,
+      computedPosition: cs.position,
+      computedMarginLeft: cs.marginLeft
+    };
+  },
+
+  createPdfRenderFrame() {
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('data-budil-doc-pdf-frame', '1');
+    iframe.setAttribute('title', 'budil-doc-pdf-render');
+    iframe.setAttribute('aria-hidden', 'true');
+    // 画面外の巨大マイナス座標ホストは使わない。原点(0,0)の A4 ピクセル枠に置く。
+    iframe.style.cssText = [
+      'position: fixed',
+      'left: 0',
+      'top: 0',
+      'width: 794px',
+      'height: 1123px',
+      'border: 0',
+      'margin: 0',
+      'padding: 0',
+      'opacity: 1',
+      'pointer-events: none',
+      'z-index: -2147483648',
+      'background: #fff',
+      'overflow: hidden',
+      'transform: none'
+    ].join(';');
+    document.body.appendChild(iframe);
+    return iframe;
+  },
+
+  writeHtmlToFrame(iframe, html) {
+    return new Promise((resolve, reject) => {
+      const doc = iframe.contentDocument;
+      const win = iframe.contentWindow;
+      if (!doc || !win) {
+        reject(new Error('pdf_frame_unavailable'));
+        return;
+      }
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        resolve({ doc, win });
+      };
+      iframe.addEventListener('load', finish, { once: true });
+      doc.open();
+      doc.write(html);
+      doc.close();
+      setTimeout(() => {
+        if (doc.readyState === 'complete') finish();
+      }, 30);
+    });
+  },
+
   async downloadDocumentPdf(doc) {
     if (!doc) throw new Error('document_required');
     const filename = DocumentsBrain.buildDocumentExportFilename(doc, 'pdf');
     const html2pdfFactory = await this.ensureHtml2Pdf();
-    const cssText = await this.loadDocumentCssText();
-    const escFn = typeof esc === 'function'
-      ? esc
-      : (s => String(s == null ? '' : s)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;'));
-    const sheetHtml = DocumentsBrain.renderDocumentSheet(doc, escFn);
-    const sealAbs = DocumentsBrain.resolveDocumentAssetUrl(DocumentsBrain.SEAL_IMAGE, location.href);
-    const htmlWithSeal = sheetHtml.replace(
-      /src="assets\/bc-service-seal\.jpg"/g,
-      `src="${sealAbs.replace(/"/g, '&quot;')}"`
-    );
-
-    const host = document.createElement('div');
-    host.setAttribute('data-budil-doc-pdf-host', '1');
-    host.style.cssText = [
-      'position: fixed',
-      'left: -12000px',
-      'top: 0',
-      'width: 210mm',
-      'background: #fff',
-      'color: #111',
-      'z-index: -1',
-      'pointer-events: none',
-      'opacity: 1'
-    ].join(';');
-    const styleEl = document.createElement('style');
-    styleEl.textContent = `
-      [data-budil-doc-pdf-host="1"], [data-budil-doc-pdf-host="1"] * {
-        font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", YuGothic, Meiryo, sans-serif !important;
-      }
-      ${cssText}
-      [data-budil-doc-pdf-host="1"] .doc-sheet {
-        box-shadow: none !important;
-        margin: 0 !important;
-        width: 210mm !important;
-        min-height: 297mm !important;
-        background: #fff !important;
-        color: #111 !important;
-      }
-    `;
-    host.appendChild(styleEl);
-    const mount = document.createElement('div');
-    mount.className = 'doc-print-area';
-    mount.innerHTML = htmlWithSeal;
-    host.appendChild(mount);
-    document.body.appendChild(host);
+    const html = await this.buildCurrentStandaloneHtml(doc, false);
+    const iframe = this.createPdfRenderFrame();
+    let geometry = null;
 
     try {
-      const sheet = host.querySelector('.doc-sheet');
+      const { doc: frameDoc } = await this.writeHtmlToFrame(iframe, html);
+      const sheet = frameDoc.querySelector('.doc-sheet');
       if (!sheet) throw new Error('doc_sheet_missing');
+
+      // iframe 内でも mm 依存を避け、A4 ピクセルで固定する
+      sheet.style.boxShadow = 'none';
+      sheet.style.margin = '0';
+      sheet.style.transform = 'none';
+      sheet.style.position = 'relative';
+      sheet.style.left = '0';
+      sheet.style.top = '0';
+      sheet.style.width = '794px';
+      sheet.style.minHeight = '1123px';
+      sheet.style.maxWidth = '794px';
+      sheet.style.background = '#fff';
+      sheet.style.color = '#111';
+
       await this.waitForImages(sheet);
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+      geometry = this.measurePdfSheetGeometry(sheet);
+      if (!geometry.ok) throw new Error('sheet_geometry_unavailable');
+      if (geometry.left < -1 || geometry.left > 40) {
+        throw new Error('pdf_sheet_not_origin_aligned');
+      }
+      if (geometry.width < 700 || geometry.width > 900) {
+        throw new Error('pdf_sheet_width_not_a4');
+      }
+
       await html2pdfFactory().set({
         margin: 0,
         filename,
@@ -173,7 +227,43 @@ const BudilDocExport = {
           backgroundColor: '#ffffff',
           logging: false,
           imageTimeout: 15000,
-          windowWidth: sheet.scrollWidth || 794
+          scrollX: 0,
+          scrollY: 0,
+          onclone: (clonedDoc) => {
+            const clonedSheet = clonedDoc.querySelector('.doc-sheet');
+            const clonedBody = clonedDoc.body;
+            const clonedHtml = clonedDoc.documentElement;
+            if (clonedHtml) {
+              clonedHtml.style.margin = '0';
+              clonedHtml.style.padding = '0';
+              clonedHtml.style.background = '#fff';
+              clonedHtml.style.width = '794px';
+            }
+            if (clonedBody) {
+              clonedBody.style.margin = '0';
+              clonedBody.style.padding = '0';
+              clonedBody.style.background = '#fff';
+              clonedBody.style.transform = 'none';
+              clonedBody.style.left = '0';
+              clonedBody.style.top = '0';
+              clonedBody.style.position = 'static';
+              clonedBody.style.width = '794px';
+              clonedBody.style.overflow = 'hidden';
+            }
+            if (clonedSheet) {
+              clonedSheet.style.position = 'relative';
+              clonedSheet.style.left = '0';
+              clonedSheet.style.top = '0';
+              clonedSheet.style.margin = '0';
+              clonedSheet.style.transform = 'none';
+              clonedSheet.style.boxShadow = 'none';
+              clonedSheet.style.width = '794px';
+              clonedSheet.style.maxWidth = '794px';
+              clonedSheet.style.minHeight = '1123px';
+              clonedSheet.style.background = '#fff';
+              clonedSheet.style.color = '#111';
+            }
+          }
         },
         jsPDF: {
           unit: 'mm',
@@ -183,9 +273,10 @@ const BudilDocExport = {
         },
         image: { type: 'jpeg', quality: 0.98 }
       }).from(sheet).save();
-      return { ok: true, filename };
+
+      return { ok: true, filename, geometry };
     } finally {
-      host.remove();
+      iframe.remove();
     }
   }
 };

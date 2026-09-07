@@ -1,5 +1,15 @@
 ﻿# Budil status
 
+## v4.13.15 PDFダウンロード位置ズレ緊急修正
+
+- v4.13.14の印刷経路は実機合格のため変更しない（`printDocumentStandalone()` 不変）
+- PDFのみ不合格だった。原因は `left:-12000px` の画面外hostをhtml2canvasがそのまま拾い、帳票が左へずれてクリップされること
+- PDF生成は独立iframe内へstandalone帳票HTMLを書き、`.doc-sheet` を原点(0,0)・794×1123pxへ正規化してからhtml2pdfする
+- 生成前に `getBoundingClientRect().left` が巨大な負数でないこと・幅がA4相当であることを検証する
+- ファイル名仕様・帳票デザイン・税計算・印影・振込先・備考は維持
+- 公開表示、`BUDIL_VERSION`、バックアップ版、変更JS/CSS cache buster、現行verify期待値をv4.13.15へ統一
+- 新規 `scripts/verify-v41315-pdf-origin-alignment.mjs`（`verify-v41314-document-print-pdf-export.mjs` は維持）
+
 ## v4.13.14 請求書・見積書：独立印刷とPDFダウンロード
 
 - 印刷はBudil画面内の `window.print()` をやめ、帳票（`.doc-sheet`）だけの独立HTMLを別ウィンドウで開いて印刷する
