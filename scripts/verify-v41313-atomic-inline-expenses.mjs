@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.13 - 売上確定時の複数経費を一括・全件成功で保存
+ * Budil v4.13.14 - 売上確定時の複数経費を一括・全件成功で保存
  * Isolated in-memory fixtures only. No production localStorage.
  */
 import { readFileSync } from 'node:fs';
@@ -50,17 +50,17 @@ const extractFn = (source, name) => {
 };
 
 console.log('== version ==');
-assert(index.includes('Budil v4.13.13'), 'index shows Budil v4.13.13');
-assert(index.includes('AI経営脳みそ v4.13.13'), 'header shows v4.13.13');
-assert(index.includes('js/app.js?v=4.13.13'), 'app.js cache buster is 4.13.13');
-assert(index.includes('js/storage.js?v=4.13.13'), 'storage.js cache buster is 4.13.13');
-assert(index.includes('css/style.css?v=4.13.13'), 'style.css cache buster is 4.13.13');
-assert(storageSrc.includes("BUDIL_VERSION: 'v4.13.13'"), 'storage version is v4.13.13');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.13'"), 'data-backup version is v4.13.13');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.13'"), 'verify-current pins v4.13.13');
-assert(statusMd.includes('v4.13.13'), 'status.md documents v4.13.13');
-assert(handoffMd.includes('v4.13.13'), 'handoff.md documents v4.13.13');
-assert(decisionLog.includes('v4.13.13'), 'decision-log.md records v4.13.13');
+assert(index.includes('Budil v4.13.14'), 'index shows Budil v4.13.14');
+assert(index.includes('AI経営脳みそ v4.13.14'), 'header shows v4.13.14');
+assert(index.includes('js/app.js?v=4.13.14'), 'app.js cache buster is 4.13.14');
+assert(index.includes('js/storage.js?v=4.13.14'), 'storage.js cache buster is 4.13.14');
+assert(index.includes('css/style.css?v=4.13.14'), 'style.css cache buster is 4.13.14');
+assert(storageSrc.includes("BUDIL_VERSION: 'v4.13.14'"), 'storage version is v4.13.14');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.14'"), 'data-backup version is v4.13.14');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.14'"), 'verify-current pins v4.13.14');
+assert(statusMd.includes('v4.13.14'), 'status.md documents v4.13.14');
+assert(handoffMd.includes('v4.13.14'), 'handoff.md documents v4.13.14');
+assert(decisionLog.includes('v4.13.14'), 'decision-log.md records v4.13.14');
 
 console.log('== source: atomic save wiring ==');
 assert(storageSrc.includes('addExpenseRecords(items)'), 'Storage.addExpenseRecords exists');
@@ -264,4 +264,4 @@ const snap3 = WorkCompletionBrain.createRevenueConfirmationSnapshot({
 assert(snap3.payload.expenseTotal === 70000, 'snapshot expenseTotal stays 70000');
 assert(Array.isArray(snap3.payload.expenseLines) && snap3.payload.expenseLines.length === 3, 'snapshot expenseLines stay 3');
 
-console.log('\nAll v4.13.13 atomic inline expense checks passed.');
+console.log('\nAll v4.13.14 atomic inline expense checks passed.');

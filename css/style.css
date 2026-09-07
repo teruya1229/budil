@@ -11032,6 +11032,9 @@ body.sales-page {
 
   body.doc-printing .sidebar,
   body.doc-printing .sidebar-footer,
+  body.doc-printing .mobile-topbar,
+  body.doc-printing .mobile-nav-backdrop,
+  body.doc-printing .mobile-nav-toggle,
   body.doc-printing .view-header,
   body.doc-printing .no-print,
   body.doc-printing .card:not(#documents-preview-panel),
@@ -11043,7 +11046,8 @@ body.sales-page {
   body.doc-printing .doc-preview-heading,
   body.doc-printing .doc-preview-heading-note,
   body.doc-printing .documents-purpose-note,
-  body.doc-printing .app-toast {
+  body.doc-printing .app-toast,
+  body.doc-printing [data-budil-doc-pdf-host="1"] {
     display: none !important;
   }
 

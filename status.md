@@ -1,5 +1,15 @@
 ﻿# Budil status
 
+## v4.13.14 請求書・見積書：独立印刷とPDFダウンロード
+
+- 印刷はBudil画面内の `window.print()` をやめ、帳票（`.doc-sheet`）だけの独立HTMLを別ウィンドウで開いて印刷する
+- 原因だったモバイル上部バー（メニュー / Budil / 請求書・見積書）は独立帳票に含まれない。印刷CSSでも `.mobile-topbar` を非表示に防御
+- 「PDFダウンロード」ボタンを追加。ブラウザのヘッダー/フッター設定に依存せず `.pdf` を直接保存
+- ファイル名例：`請求書_儀間祐太朗_493_2026-07-05.pdf`（見積書も同形式）
+- 既存のA4帳票デザイン・税計算・印影・振込先・備考は維持。旧「ヘッダーとフッターOFF推奨」案内は廃止
+- 公開表示、`BUDIL_VERSION`、バックアップ版、変更JS/CSS cache buster、現行verify期待値をv4.13.14へ統一
+- 新規 `scripts/verify-v41314-document-print-pdf-export.mjs` / `js/doc-export.js` / `js/vendor/html2pdf.bundle.min.js`
+
 ## Supabase Free整理・staging削除（2026/09/06）
 
 - 組織プラン: Free（2プロジェクト上限）

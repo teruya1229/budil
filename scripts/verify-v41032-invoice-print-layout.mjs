@@ -27,11 +27,11 @@ const storageJs = load('js/storage.js');
 const dataBackupJs = load('js/data-backup.js');
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.13.13'), 'index.html should show v4.12.26');
-assert(indexHtml.includes('js/app.js?v=4.13.13'), 'app.js cache buster should be v4.13.13');
-assert(indexHtml.includes('css/style.css?v=4.13.13'), 'style.css cache buster should be v4.10.41');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.13'"), 'storage.js version should be v4.13.13');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.13.13'"), 'data-backup version should be v4.13.13');
+assert(indexHtml.includes('v4.13.14'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('js/app.js?v=4.13.14'), 'app.js cache buster should be v4.13.14');
+assert(indexHtml.includes('css/style.css?v=4.13.14'), 'style.css cache buster should be v4.10.41');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.14'"), 'storage.js version should be v4.13.14');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.13.14'"), 'data-backup version should be v4.13.14');
 
 console.log('== print CSS ==');
 assert(css.includes('@media print'), 'print media query should exist');
@@ -49,11 +49,16 @@ assert(css.includes('page-break-before: avoid'), 'bank should avoid page break b
 assert(css.includes('v4.10.37'), 'v4.10.38 print layout marker should exist in css');
 
 console.log('== screen UI preserved ==');
-assert(indexHtml.includes('doc-print-browser-hint'), 'browser print hint should exist on screen');
+assert(indexHtml.includes('id="btn-doc-print"'), 'print button should exist');
+assert(indexHtml.includes('id="btn-doc-pdf-download"') || indexHtml.includes('PDFダウンロード') || indexHtml.includes('doc-print-browser-hint'),
+  'print/PDF actions should exist on screen');
 assert(indexHtml.includes('no-print'), 'no-print class should be used for non-print UI');
 assert(css.includes('--doc-preview-frame'), 'v4.10.25 screen preview frame vars should remain');
 assert(css.includes('#view-documents .documents-preview-body'), 'v4.10.25 screen preview body styles should remain');
-assert(appJs.includes('doc-printing'), 'app.js should toggle doc-printing for print');
+assert(
+  appJs.includes('printDocumentStandalone') || appJs.includes('BudilDocExport') || appJs.includes('doc-printing'),
+  'app.js should use standalone print export or legacy doc-printing toggle'
+);
 
 console.log('== v4.10.38 tax consistency maintained ==');
 assert(documentsJs.includes('calcFromFormItems'), 'calcFromFormItems must remain');

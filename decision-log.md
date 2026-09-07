@@ -2,6 +2,25 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.13.14 請求書・見積書の独立印刷とPDFダウンロード（2026-09-07）
+
+**日付**: 2026-09-07
+
+**背景**: 請求書をブラウザ印刷すると、Budilのモバイル上部バー（メニュー / Budil / 請求書・見積書）が印刷・PDFに混入した。A4印刷幅で `max-width: 900px` が当たり `.mobile-topbar` が表示される一方、既存の `body.doc-printing` 非表示リストに含まれていなかった。また「ヘッダーとフッターOFF推奨」に依存する運用をやめ、添付用PDFを直接保存したい。
+
+**判断内容**:
+- 印刷はBudil画面の `window.print()` をやめ、`.doc-sheet` だけの独立HTMLを別ウィンドウで開く
+- 「PDFダウンロード」を追加し、ブラウザ印刷設定に依存せず `.pdf` を直接保存する
+- PDFは帳票DOMのみを対象にし、Budil UIの画面キャプチャは使わない
+- 既存のA4レイアウト・税計算・印影・振込先・備考は変更しない
+- 旧「ヘッダーとフッターOFF推奨」案内は廃止する
+- 公開版をv4.13.14へ統一する
+
+**変更対象**:
+- `index.html` / `js/app.js` / `js/documents-brain.js` / `js/doc-export.js` / `js/vendor/html2pdf.bundle.min.js` / `css/style.css`
+- `scripts/verify-v41314-document-print-pdf-export.mjs` / 現行verifyのバージョン期待値
+- `status.md` / `handoff.md` / `decision-log.md`
+
 ## Supabase Free整理・bc-platform-staging削除（2026-09-06）
 
 **日付**: 2026-09-06

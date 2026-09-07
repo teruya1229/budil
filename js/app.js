@@ -22635,7 +22635,7 @@
               <td class="actions">
                 <button type="button" class="btn btn-secondary btn-sm" data-doc-action="edit" data-doc-id="${esc(n.id)}">編集</button>
                 <button type="button" class="btn btn-secondary btn-sm" data-doc-action="preview" data-doc-id="${esc(n.id)}">プレビュー</button>
-                <button type="button" class="btn btn-secondary btn-sm" data-doc-action="print" data-doc-id="${esc(n.id)}">印刷/PDF</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-doc-action="print" data-doc-id="${esc(n.id)}">印刷</button>
                 ${n.type === 'estimate' && n.status !== 'converted' ? `<button type="button" class="btn btn-secondary btn-sm" data-doc-action="convert" data-doc-id="${esc(n.id)}">請求書へ変換</button>` : ''}
                 <button type="button" class="btn btn-secondary btn-sm" data-doc-action="delete" data-doc-id="${esc(n.id)}">削除</button>
               </td>
@@ -22691,15 +22691,55 @@
     reflectDocumentToRevenueForm(currentDocPreviewId);
   }
 
-  function printDocument() {
-    document.body.classList.add('doc-printing');
-    const cleanup = () => {
-      document.body.classList.remove('doc-printing');
-      window.removeEventListener('afterprint', cleanup);
-    };
-    window.addEventListener('afterprint', cleanup);
-    window.print();
-    setTimeout(cleanup, 1000);
+  async function printDocument() {
+    const doc = currentDocPreviewId ? Storage.getDocumentById(currentDocPreviewId) : null;
+    if (!doc) {
+      alert('印刷する書類がありません。');
+      return;
+    }
+    if (typeof BudilDocExport === 'undefined' || !BudilDocExport.printDocumentStandalone) {
+      alert('印刷機能を読み込めませんでした。');
+      return;
+    }
+    try {
+      await BudilDocExport.printDocumentStandalone(doc);
+    } catch (err) {
+      const code = err && err.message ? err.message : '';
+      if (code === 'popup_blocked') {
+        alert('印刷ウィンドウがブロックされました。ポップアップを許可してから再度お試しください。');
+        return;
+      }
+      console.error('[Budil][doc-print-failed]', code || 'Error');
+      alert('印刷用の帳票を開けませんでした。');
+    }
+  }
+
+  async function downloadDocumentPdf() {
+    const doc = currentDocPreviewId ? Storage.getDocumentById(currentDocPreviewId) : null;
+    if (!doc) {
+      alert('PDFにする書類がありません。');
+      return;
+    }
+    if (typeof BudilDocExport === 'undefined' || !BudilDocExport.downloadDocumentPdf) {
+      alert('PDFダウンロード機能を読み込めませんでした。');
+      return;
+    }
+    const btn = document.getElementById('btn-doc-pdf-download');
+    if (btn) btn.disabled = true;
+    try {
+      const result = await BudilDocExport.downloadDocumentPdf(doc);
+      if (result && result.filename) {
+        showAppToast('PDFを保存しました（' + result.filename + '）');
+      } else {
+        showAppToast('PDFを保存しました');
+      }
+    } catch (err) {
+      const code = err && err.message ? err.message : '';
+      console.error('[Budil][doc-pdf-download-failed]', code || 'Error');
+      alert('PDFを保存できませんでした。通信やブラウザ設定を確認して再度お試しください。');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
   }
 
   function renderDocumentsView() {
@@ -22747,7 +22787,8 @@
       const doc = Storage.getDocumentById(currentDocPreviewId);
       if (doc) openDocumentForm(doc.type, doc);
     });
-    document.getElementById('btn-doc-print')?.addEventListener('click', printDocument);
+    document.getElementById('btn-doc-print')?.addEventListener('click', () => { printDocument(); });
+    document.getElementById('btn-doc-pdf-download')?.addEventListener('click', () => { downloadDocumentPdf(); });
     document.getElementById('btn-doc-convert-invoice')?.addEventListener('click', () => {
       if (currentDocPreviewId) convertEstimateToInvoice(currentDocPreviewId);
     });

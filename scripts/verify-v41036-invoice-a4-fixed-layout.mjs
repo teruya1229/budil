@@ -39,12 +39,12 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.13.13'), 'index.html should show v4.12.26');
-assert(indexHtml.includes('js/app.js?v=4.13.13'), 'app.js cache buster should be v4.13.13');
-assert(indexHtml.includes('css/style.css?v=4.13.13'), 'style.css cache buster should be v4.10.41');
-assert(indexHtml.includes('js/documents-brain.js?v=4.13.13'), 'documents-brain cache buster should be v4.13.13');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.13'"), 'storage.js version should be v4.13.13');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.13.13'"), 'data-backup version should be v4.13.13');
+assert(indexHtml.includes('v4.13.14'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('js/app.js?v=4.13.14'), 'app.js cache buster should be v4.13.14');
+assert(indexHtml.includes('css/style.css?v=4.13.14'), 'style.css cache buster should be v4.10.41');
+assert(indexHtml.includes('js/documents-brain.js?v=4.13.14'), 'documents-brain cache buster should be v4.13.14');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.14'"), 'storage.js version should be v4.13.14');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.13.14'"), 'data-backup version should be v4.13.14');
 
 console.log('== A4 fixed sheet CSS ==');
 assert(css.includes('width: 210mm'), 'doc-sheet should use fixed A4 width');
@@ -200,6 +200,6 @@ assert(css.includes('@media print'), 'print media query should exist');
 assert(css.includes('body.doc-printing'), 'doc-printing print scope should exist');
 assert(css.includes('size: A4 portrait'), 'A4 portrait should be specified');
 assert(css.includes('body.doc-printing .sidebar'), 'sidebar should be hidden when printing');
-assert(appJs.includes('doc-printing'), 'app.js should toggle doc-printing for print');
+assert(appJs.includes('printDocumentStandalone') || appJs.includes('BudilDocExport') || appJs.includes('doc-printing'), 'app.js should use standalone print export or legacy doc-printing');
 
 console.log('\nAll v4.10.38 invoice-a4-fixed-layout checks passed.');

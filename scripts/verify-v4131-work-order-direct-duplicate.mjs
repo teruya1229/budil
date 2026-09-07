@@ -42,16 +42,16 @@ for (const file of ['js/app.js', 'js/revenue-brain.js', 'js/storage.js', 'js/dat
 }
 
 console.log('== version / cache buster ==');
-assert(html.includes('Budil v4.13.13'), 'index.html shows Budil v4.13.13');
-assert(html.includes('js/app.js?v=4.13.13'), 'app.js cache buster is v4.13.13');
-assert(html.includes('js/revenue-brain.js?v=4.13.13'), 'revenue-brain.js cache buster is v4.13.13');
-assert(html.includes('css/style.css?v=4.13.13'), 'style.css cache buster is v4.13.13');
-assert(storage.includes("BUDIL_VERSION: 'v4.13.13'"), 'storage version is v4.13.13');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.13'"), 'data-backup version is v4.13.13');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.13'"), 'verify-current pins v4.13.13');
-assert(statusMd.includes('v4.13.13'), 'status.md documents v4.13.13');
-assert(handoffMd.includes('v4.13.13'), 'handoff.md documents v4.13.13');
-assert(decisionLog.includes('v4.13.13'), 'decision-log.md records v4.13.13');
+assert(html.includes('Budil v4.13.14'), 'index.html shows Budil v4.13.14');
+assert(html.includes('js/app.js?v=4.13.14'), 'app.js cache buster is v4.13.14');
+assert(html.includes('js/revenue-brain.js?v=4.13.14'), 'revenue-brain.js cache buster is v4.13.14');
+assert(html.includes('css/style.css?v=4.13.14'), 'style.css cache buster is v4.13.14');
+assert(storage.includes("BUDIL_VERSION: 'v4.13.14'"), 'storage version is v4.13.14');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.14'"), 'data-backup version is v4.13.14');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.14'"), 'verify-current pins v4.13.14');
+assert(statusMd.includes('v4.13.14'), 'status.md documents v4.13.14');
+assert(handoffMd.includes('v4.13.14'), 'handoff.md documents v4.13.14');
+assert(decisionLog.includes('v4.13.14'), 'decision-log.md records v4.13.14');
 
 console.log('== 1. button only inside existing work-order-form ==');
 const formMatch = html.match(/<form id="work-order-form">([\s\S]*?)<\/form>/);
@@ -167,7 +167,7 @@ assert(!html.includes('>作業完了<') && !html.includes('作業完了</'), 'in
 
 console.log('== docs ==');
 assert(statusMd.includes('直受け追加で複製') || statusMd.includes('直受け追加複製'), 'status.md mentions direct duplicate');
-assert(handoffMd.includes('直受け') && handoffMd.includes('v4.13.13'), 'handoff.md mentions v4.13.13 直受け');
+assert(handoffMd.includes('直受け') && handoffMd.includes('v4.13.14'), 'handoff.md mentions v4.13.14 直受け');
 assert(decisionLog.includes('直受け') && decisionLog.includes('即保存しない'), 'decision-log records no immediate save');
 
 console.log('\nAll v4.13.7 work-order-direct-duplicate checks passed.');

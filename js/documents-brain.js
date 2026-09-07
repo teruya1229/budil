@@ -853,5 +853,150 @@ const DocumentsBrain = {
       linkedRevenueId: rev.id || '',
       linkedDocumentId: ''
     };
+  },
+
+  sanitizeExportFilenamePart(value, fallback) {
+    const raw = String(value == null ? '' : value).trim();
+    const cleaned = raw
+      .replace(/[\\/:*?"<>|]/g, '_')
+      .replace(/\s+/g, '')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '');
+    return cleaned || fallback;
+  },
+
+  buildDocumentExportFilename(doc, extension) {
+    const d = this.normalizeDocument(doc);
+    const typeLabel = d.type === 'estimate' ? '見積書' : '請求書';
+    const customer = this.sanitizeExportFilenamePart(d.customerName, '顧客');
+    const number = this.sanitizeExportFilenamePart(d.number, '未採番');
+    const date = this.sanitizeExportFilenamePart(d.issueDate, '日付なし');
+    const ext = String(extension || 'pdf').replace(/^\./, '') || 'pdf';
+    return `${typeLabel}_${customer}_${number}_${date}.${ext}`;
+  },
+
+  extractDocumentCss(cssText) {
+    const lines = String(cssText || '').split(/\r?\n/);
+    const keep = [];
+    let capturing = false;
+    let depth = 0;
+    for (const line of lines) {
+      const trimmed = line.trim();
+      const startsDoc =
+        trimmed.startsWith('.doc-') ||
+        trimmed.startsWith('@media print') ||
+        trimmed.startsWith('@page');
+      if (!capturing && startsDoc) capturing = true;
+      if (capturing) {
+        keep.push(line);
+        depth += (line.match(/{/g) || []).length;
+        depth -= (line.match(/}/g) || []).length;
+        if (depth <= 0 && trimmed.includes('}')) {
+          capturing = false;
+          depth = 0;
+          keep.push('');
+        }
+      }
+    }
+    return keep.join('\n');
+  },
+
+  resolveDocumentAssetUrl(relativePath, baseHref) {
+    const rel = String(relativePath || '').trim();
+    if (!rel) return '';
+    if (/^(https?:|data:|blob:)/i.test(rel)) return rel;
+    try {
+      return new URL(rel, baseHref || (typeof location !== 'undefined' ? location.href : '')).href;
+    } catch {
+      return rel;
+    }
+  },
+
+  buildStandaloneDocumentHtml(doc, options) {
+    const opts = options && typeof options === 'object' ? options : {};
+    const esc = typeof opts.escFn === 'function'
+      ? opts.escFn
+      : (s => String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;'));
+    const baseHref = opts.baseHref || (typeof location !== 'undefined' ? location.href : '');
+    const cssText = String(opts.cssText || '');
+    const autoPrint = opts.autoPrint === true;
+    const sheetHtml = this.renderDocumentSheet(doc, esc);
+    const sealAbs = this.resolveDocumentAssetUrl(this.SEAL_IMAGE, baseHref);
+    const htmlWithSeal = sheetHtml.replace(
+      /src="assets\/bc-service-seal\.jpg"/g,
+      `src="${esc(sealAbs)}"`
+    );
+    const d = this.normalizeDocument(doc);
+    const title = d.type === 'estimate' ? '見積書' : '請求書';
+    const pageTitle = `${title} ${d.number || ''}`.trim();
+    const printScript = autoPrint
+      ? `<script>
+(function () {
+  function whenReady(fn) {
+    if (document.readyState === 'complete') fn();
+    else window.addEventListener('load', fn, { once: true });
+  }
+  whenReady(function () {
+    var imgs = Array.prototype.slice.call(document.images || []);
+    Promise.all(imgs.map(function (img) {
+      if (img.complete) return Promise.resolve();
+      return new Promise(function (resolve) {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      });
+    })).then(function () {
+      setTimeout(function () { window.focus(); window.print(); }, 50);
+    });
+  });
+})();
+</script>`
+      : '';
+    return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${esc(pageTitle)}</title>
+  <style>
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #fff !important;
+      color: #111 !important;
+    }
+    body {
+      font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", YuGothic, Meiryo, sans-serif;
+    }
+    ${cssText}
+    body.doc-print-standalone .doc-sheet {
+      box-shadow: none !important;
+      margin: 0 auto !important;
+    }
+    @page { size: A4 portrait; margin: 0; }
+    @media print {
+      html, body { background: #fff !important; color: #111 !important; }
+      .doc-sheet {
+        box-shadow: none !important;
+        width: 210mm !important;
+        min-height: 297mm !important;
+        margin: 0 auto !important;
+      }
+      .doc-seal {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body class="doc-print-standalone">
+  <div class="doc-print-area">${htmlWithSeal}</div>
+  ${printScript}
+</body>
+</html>`;
   }
 };
