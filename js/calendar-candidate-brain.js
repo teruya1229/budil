@@ -81,6 +81,15 @@ const CalendarCandidateBrain = {
     '状態': 'confidence'
   },
 
+  // v4.13.16: 明示ラベルのみ。曖昧な文章から推測しない。実経費とは別の計画値。
+  PLANNED_EXPENSE_LABELS: {
+    '予定人件費': { type: 'labor', name: '予定人件費' },
+    '予定外注費': { type: 'outsourcing', name: '予定外注費' },
+    '予定仕入': { type: 'purchase', name: '予定仕入' },
+    '予定材料費': { type: 'materials', name: '予定材料費' }
+  },
+  PLANNED_EXPENSE_TYPE_ORDER: ['labor', 'outsourcing', 'purchase', 'materials'],
+
   resolvePasteField(labelKey) {
     const key = String(labelKey || '').trim();
     if (!key) return '';
@@ -211,6 +220,12 @@ const CalendarCandidateBrain = {
     if (scheduledEndDate && scheduledDate && scheduledEndDate < scheduledDate) {
       scheduledEndDate = scheduledDate;
     }
+    const plannedExpenseLines = this.resolvePlannedExpenseLines(c, [
+      c.memo,
+      originalText || c.originalText || meta.originalText || '',
+      c.title
+    ]);
+    const plannedExpenseTotal = this.sumPlannedExpenseTotal(plannedExpenseLines);
     return {
       scheduledDate,
       scheduledEndDate: scheduledEndDate || '',
@@ -223,6 +238,8 @@ const CalendarCandidateBrain = {
       address: String(c.address || '').trim(),
       source: String(c.source || '').trim(),
       estimateAmount: amount,
+      plannedExpenseLines,
+      plannedExpenseTotal,
       memo: String(c.memo || '').trim(),
       confidence: String(c.confidence || '').trim(),
       confirmationStatus: String(c.confirmationStatus || '').trim(),
@@ -313,6 +330,10 @@ const CalendarCandidateBrain = {
     if (isAllDay && !scheduledEndDate) {
       scheduledEndDate = this.inclusiveEndDateFromExclusive(scheduledDate, end.date);
     }
+    const descriptionText = String(row.description || '').trim();
+    const plannedExpenseLines = this.resolvePlannedExpenseLines({
+      plannedExpenseLines: extracted.plannedExpenseLines
+    }, [descriptionText]);
     return this.normalizeCandidate({
       title: row.title,
       scheduledDate,
@@ -326,6 +347,7 @@ const CalendarCandidateBrain = {
       address,
       source: String(extracted.requestSource || budilImport.source || 'google_calendar').trim(),
       estimateAmount: amount,
+      plannedExpenseLines,
       phone: extracted.phone,
       memo: memoParts.filter(Boolean).join('\n'),
       confidence: confirmationStatus,
@@ -470,6 +492,88 @@ const CalendarCandidateBrain = {
     return { key: m[1].trim(), value: m[2].trim() };
   },
 
+  normalizePlannedExpenseLines(rawLines) {
+    const seen = new Set();
+    const out = [];
+    const list = Array.isArray(rawLines) ? rawLines : [];
+    list.forEach((raw) => {
+      const item = raw && typeof raw === 'object' ? raw : {};
+      const type = String(item.type || '').trim();
+      const def = this.PLANNED_EXPENSE_TYPE_ORDER.includes(type)
+        ? Object.values(this.PLANNED_EXPENSE_LABELS).find(d => d.type === type)
+        : null;
+      const name = String(item.name || (def && def.name) || '').trim();
+      const amount = this.parseAmount(item.amount);
+      if (!def || !name || amount <= 0 || seen.has(type)) return;
+      seen.add(type);
+      out.push({ type, name, amount });
+    });
+    out.sort((a, b) =>
+      this.PLANNED_EXPENSE_TYPE_ORDER.indexOf(a.type) - this.PLANNED_EXPENSE_TYPE_ORDER.indexOf(b.type)
+    );
+    return out;
+  },
+
+  sumPlannedExpenseTotal(lines) {
+    return this.normalizePlannedExpenseLines(lines).reduce((n, line) => n + (Number(line.amount) || 0), 0);
+  },
+
+  extractPlannedExpenseLinesFromText(text) {
+    const found = {};
+    String(text || '')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .split(/\r?\n/)
+      .forEach((rawLine) => {
+        const line = String(rawLine || '').replace(/<[^>]+>/g, '').trim();
+        if (!line) return;
+        const field = this.extractLabelValue(line);
+        if (!field) return;
+        const def = this.PLANNED_EXPENSE_LABELS[field.key];
+        if (!def) return;
+        const amount = this.parseAmount(field.value);
+        if (amount <= 0) return;
+        found[def.type] = { type: def.type, name: def.name, amount };
+      });
+    return this.normalizePlannedExpenseLines(
+      this.PLANNED_EXPENSE_TYPE_ORDER.map(type => found[type]).filter(Boolean)
+    );
+  },
+
+  resolvePlannedExpenseLines(candidate, textSources) {
+    const c = candidate && typeof candidate === 'object' ? candidate : {};
+    if (Array.isArray(c.plannedExpenseLines) && c.plannedExpenseLines.length) {
+      return this.normalizePlannedExpenseLines(c.plannedExpenseLines);
+    }
+    const sources = Array.isArray(textSources) ? textSources : [textSources];
+    for (const src of sources) {
+      const lines = this.extractPlannedExpenseLinesFromText(src);
+      if (lines.length) return lines;
+    }
+    return [];
+  },
+
+  plannedExpenseSignature(lines) {
+    return this.normalizePlannedExpenseLines(lines)
+      .map(line => `${line.type}:${line.amount}`)
+      .join('|');
+  },
+
+  hasPlannedExpenseChange(existing, candidate) {
+    const prev = existing && typeof existing === 'object' ? existing : {};
+    const next = candidate && typeof candidate === 'object' ? candidate : {};
+    const prevLines = this.normalizePlannedExpenseLines(
+      prev.plannedExpenseLines != null
+        ? prev.plannedExpenseLines
+        : this.extractPlannedExpenseLinesFromText([prev.memo, prev.originalText].filter(Boolean).join('\n'))
+    );
+    const nextLines = this.normalizePlannedExpenseLines(
+      next.plannedExpenseLines != null
+        ? next.plannedExpenseLines
+        : this.resolvePlannedExpenseLines(next, [next.memo, next.originalText])
+    );
+    return this.plannedExpenseSignature(prevLines) !== this.plannedExpenseSignature(nextLines);
+  },
+
   parseTitleParts(title) {
     const parts = String(title || '').split(/[／\/|｜]/).map(s => s.trim()).filter(Boolean);
     if (parts.length >= 3) {
@@ -523,6 +627,7 @@ const CalendarCandidateBrain = {
     lines.forEach(line => {
       const field = this.extractLabelValue(line.trim());
       if (!field) return;
+      if (this.PLANNED_EXPENSE_LABELS[field.key]) return;
       const mapped = this.resolvePasteField(field.key);
       if (mapped) this.applyPasteField(fields, mapped, field.value);
     });
@@ -534,6 +639,7 @@ const CalendarCandidateBrain = {
     if (!fields.serviceText && fields.title) {
       fields.serviceText = fields.title;
     }
+    fields.plannedExpenseLines = this.extractPlannedExpenseLinesFromText(text);
     return this.normalizeCandidate(fields, text);
   },
 
@@ -1022,17 +1128,24 @@ const CalendarCandidateBrain = {
         target: found,
         previousSchedule,
         nextSchedule,
-        scheduleChange: this.hasScheduleChange(found, c)
+        scheduleChange: this.hasScheduleChange(found, c),
+        plannedExpenseChange: this.hasPlannedExpenseChange(found, c)
       };
     }
-    if (!this.hasScheduleChange(found, c)) {
+    const scheduleChange = this.hasScheduleChange(found, c);
+    const plannedExpenseChange = this.hasPlannedExpenseChange(found, c);
+    if (!scheduleChange && !plannedExpenseChange) {
       return { kind: 'unchanged', target: found, previousSchedule, nextSchedule };
     }
     return {
       kind: 'schedule-update',
       target: found,
       previousSchedule,
-      nextSchedule
+      nextSchedule,
+      scheduleChange,
+      plannedExpenseChange,
+      plannedExpenseLines: c.plannedExpenseLines || [],
+      plannedExpenseTotal: Number(c.plannedExpenseTotal) || 0
     };
   },
 
@@ -1434,6 +1547,8 @@ const CalendarCandidateBrain = {
       startTime: c.isAllDay ? '' : (c.startTime || '09:00'),
       endTime: c.isAllDay ? '' : (c.endTime || '11:00'),
       estimateAmount: c.estimateAmount,
+      plannedExpenseLines: c.plannedExpenseLines || [],
+      plannedExpenseTotal: Number(c.plannedExpenseTotal) || 0,
       memo: [c.memo, c.cautionNote ? '注意：' + c.cautionNote : ''].filter(Boolean).join('\n'),
       status: 'tentative',
       candidateMeta: meta,

@@ -9711,7 +9711,9 @@
         createdAt: existing.createdAt,
         followUp: existing.followUp,
         calendarAdded: existing.calendarAdded,
-        completedAt: existing.completedAt
+        completedAt: existing.completedAt,
+        plannedExpenseLines: existing.plannedExpenseLines,
+        plannedExpenseTotal: existing.plannedExpenseTotal
       };
       Storage.updateWorkOrder(id, { ...data, ...preserved });
       const saved = Storage.getWorkOrders().find(w => w.id === id);
@@ -10109,10 +10111,18 @@
       processedIds.add(targetId);
       const nextSchedule = item.scheduleUpdate.nextSchedule
         || CalendarCandidateBrain.normalizeScheduleTriple(item.candidate);
+      const syncFields = { ...nextSchedule };
+      if (item.candidate) {
+        syncFields.plannedExpenseLines = item.candidate.plannedExpenseLines || [];
+        syncFields.plannedExpenseTotal = Number(item.candidate.plannedExpenseTotal) || 0;
+      } else if (item.scheduleUpdate.plannedExpenseLines) {
+        syncFields.plannedExpenseLines = item.scheduleUpdate.plannedExpenseLines;
+        syncFields.plannedExpenseTotal = Number(item.scheduleUpdate.plannedExpenseTotal) || 0;
+      }
       const syncResult = Storage.syncWorkOrderScheduleFromCalendar(
         targetId,
         target.calendarDedupeKey,
-        nextSchedule
+        syncFields
       );
       if (syncResult && syncResult.ok && syncResult.unchanged) {
         result.unchangedFromScheduleUpdate += 1;
@@ -10604,10 +10614,15 @@
       const target = item.scheduleUpdate.target;
       const nextSchedule = item.scheduleUpdate.nextSchedule
         || CalendarCandidateBrain.normalizeScheduleTriple(item.candidate);
+      const syncFields = { ...nextSchedule };
+      if (item.candidate) {
+        syncFields.plannedExpenseLines = item.candidate.plannedExpenseLines || [];
+        syncFields.plannedExpenseTotal = Number(item.candidate.plannedExpenseTotal) || 0;
+      }
       const syncResult = Storage.syncWorkOrderScheduleFromCalendar(
         target.id,
         target.calendarDedupeKey,
-        nextSchedule
+        syncFields
       );
       const summary = getCalendarFutureImportSummary(preview);
       if (syncResult && syncResult.ok && !syncResult.unchanged) {
@@ -11812,6 +11827,45 @@
     dateEl.dataset.autoPaymentDate = next;
   }
 
+  function applyInlineExpensePrefill(prefix, lines) {
+    clearInlineExpenseFields(prefix);
+    const list = Array.isArray(lines) ? lines.filter(line => line && (Number(line.amount) > 0 || String(line.name || '').trim())) : [];
+    if (!list.length) return;
+    const listEl = document.getElementById(prefix + '-inline-expense-list');
+    if (!listEl) return;
+    const max = getInlineExpenseMaxLines();
+    list.slice(0, max).forEach((line, index) => {
+      if (index > 0) addInlineExpenseRow(prefix);
+      const rows = listEl.querySelectorAll('.inline-expense-row');
+      const row = rows[index];
+      if (!row) return;
+      const nameEl = row.querySelector('.inline-expense-name');
+      const amountEl = row.querySelector('.inline-expense-amount');
+      if (nameEl) nameEl.value = String(line.name || '').trim();
+      if (amountEl) amountEl.value = Number(line.amount) > 0 ? String(Number(line.amount)) : '';
+    });
+    updateInlineExpenseTotals(prefix);
+  }
+
+  function renderWorkCompletionPlannedExpenseHint(defaults) {
+    const el = document.getElementById('work-completion-planned-expense-hint');
+    if (!el) return;
+    const candidates = defaults && Array.isArray(defaults.plannedExpenseCandidates)
+      ? defaults.plannedExpenseCandidates
+      : [];
+    if (!candidates.length) {
+      el.classList.add('hidden');
+      el.innerHTML = '';
+      return;
+    }
+    el.classList.remove('hidden');
+    el.innerHTML = `
+      <p class="field-hint"><strong>予定経費（確認候補）</strong>：実績と違う場合は修正してください。自動では実経費保存しません。</p>
+      <ul class="work-completion-planned-expense-list">${candidates.map(line =>
+        `<li>${esc(line.name || '予定経費')}：${esc(WorkOrderBrain.formatYen(line.amount))}</li>`
+      ).join('')}</ul>`;
+  }
+
   function openWorkCompletionModal(workOrderId) {
     const wo = Storage.getWorkOrders().find(w => w.id === workOrderId);
     if (!wo) return;
@@ -11852,6 +11906,8 @@
     document.getElementById('work-completion-actual-memo').value = defaults.additionalMemo;
     document.getElementById('work-completion-follow-memo').value = defaults.followMemo;
     clearInlineExpenseFields('work-completion');
+    applyInlineExpensePrefill('work-completion', defaults.inlineExpensePrefill || []);
+    renderWorkCompletionPlannedExpenseHint(defaults);
     const linkedLead = resolveLeadForWorkOrder(wo);
     const leadIdEl = document.getElementById('work-completion-lead-id');
     const noteEl = document.getElementById('work-completion-customer-asset-note');
@@ -11860,8 +11916,9 @@
     if (noteEl) noteEl.classList.toggle('hidden', !!linkedLead);
     const hint = document.getElementById('work-completion-estimate-hint');
     if (hint) {
+      const plannedExpense = WorkOrderBrain.getPlannedExpenseTotal(wo);
       hint.textContent = wo.estimateAmount
-        ? `予定金額：${WorkOrderBrain.formatYen(wo.estimateAmount)}。実績と違う場合は修正してください`
+        ? `予定金額：${WorkOrderBrain.formatYen(wo.estimateAmount)}${plannedExpense > 0 ? ` / 予定経費：${WorkOrderBrain.formatYen(plannedExpense)}` : ''}。実績と違う場合は修正してください`
         : '';
     }
     beginWorkCompletionFormSession(wo);
@@ -11874,6 +11931,7 @@
     workCompletionFormSession = null;
     workCompletionSubmitInFlight = false;
     clearInlineExpenseFields('work-completion');
+    renderWorkCompletionPlannedExpenseHint(null);
     syncWorkCompletionDuplicateDirectButton();
   }
 
@@ -12278,6 +12336,25 @@
     });
   }
 
+  function renderWorkOrderPlannedProfitBlock(workOrder) {
+    const wo = WorkOrderBrain.normalizeWorkOrder(workOrder);
+    const expenseTotal = WorkOrderBrain.getPlannedExpenseTotal(wo);
+    const lines = Array.isArray(wo.plannedExpenseLines) ? wo.plannedExpenseLines : [];
+    if (!lines.length && expenseTotal <= 0 && !(Number(wo.estimateAmount) > 0)) return '';
+    const profit = WorkOrderBrain.getPlannedProfit(wo);
+    const rateLabel = WorkOrderBrain.formatPlannedProfitRate(wo);
+    const detail = lines.length
+      ? `<details class="work-order-planned-expense-details"><summary>予定経費の内訳</summary><ul class="work-order-planned-expense-list">${lines.map(line =>
+        `<li>${esc(line.name || '予定経費')}：${esc(WorkOrderBrain.formatYen(line.amount))}</li>`
+      ).join('')}</ul></details>`
+      : '';
+    return `
+      <div class="work-order-planned-profit">
+        <p class="work-order-item-meta">予定売上：${esc(WorkOrderBrain.formatYen(wo.estimateAmount))} / 予定経費：${esc(WorkOrderBrain.formatYen(expenseTotal))} / 予定利益：${esc(WorkOrderBrain.formatYen(profit))} / 予定利益率：${esc(rateLabel)}</p>
+        ${detail}
+      </div>`;
+  }
+
   function renderWorkOrderItemActions(workOrder) {
     const wo = WorkOrderBrain.normalizeWorkOrder(workOrder);
     const linkedLead = resolveLeadForWorkOrder(wo);
@@ -12330,6 +12407,7 @@
         </div>
         <p class="work-order-item-meta"><strong>${esc(wo.customerName || '（名前なし）')}</strong> / ${esc(wo.serviceText || '—')}</p>
         <p class="work-order-item-meta">エリア：${esc(area)} ${renderAreaDistanceBadge(area, wo.address)} / 予定売上：${esc(WorkOrderBrain.formatYen(wo.estimateAmount))}${typeof CalendarCandidateBrain !== 'undefined' && CalendarCandidateBrain.isCalendarCandidateWorkOrder(wo) && !wo.actualRevenueId ? ' <span class="work-order-not-revenue">（売上未確定）</span>' : ''}</p>
+        ${renderWorkOrderPlannedProfitBlock(wo)}
         ${assetBrief}
         <div class="work-order-item-actions">
           ${renderWorkOrderItemActions(wo)}
@@ -13774,9 +13852,14 @@
       <p class="profit-breakdown-section-label">予定</p>
       ${renderMetricGrid([
         { label: '予定売上', value: RevenueBrain.formatYen(m.scheduledRevenue ?? m.plannedAdditionalRevenue ?? 0) },
-        { label: '予定利益', value: RevenueBrain.formatYen(m.scheduledProfit ?? 0) },
+        { label: '予定経費', value: RevenueBrain.formatYen(s.plannedExpenseEstimate || 0) },
+        { label: '予定利益', value: RevenueBrain.formatYen(
+          (Number(s.plannedExpenseEstimate) > 0 && s.plannedNetProfit != null)
+            ? s.plannedNetProfit
+            : (m.scheduledProfit ?? 0)
+        ) },
         { label: '予定仲介料', value: RevenueBrain.formatYen(scheduledFee) }
-      ], 'profit-breakdown-grid-3')}
+      ])}
       </div>`
       : `<div class="profit-metrics-layout">
       <p class="profit-breakdown-section-label">合計</p>
@@ -13795,9 +13878,14 @@
       <p class="profit-breakdown-section-label">予定</p>
       ${renderMetricGrid([
         { label: '予定売上', value: RevenueBrain.formatYen(m.scheduledRevenue ?? m.plannedAdditionalRevenue ?? 0) },
-        { label: '予定利益', value: RevenueBrain.formatYen(m.scheduledProfit ?? 0) },
+        { label: '予定経費', value: RevenueBrain.formatYen(s.plannedExpenseEstimate || 0) },
+        { label: '予定利益', value: RevenueBrain.formatYen(
+          (Number(s.plannedExpenseEstimate) > 0 && s.plannedNetProfit != null)
+            ? s.plannedNetProfit
+            : (m.scheduledProfit ?? 0)
+        ) },
         { label: '予定仲介料', value: RevenueBrain.formatYen(scheduledFee) }
-      ], 'profit-breakdown-grid-3')}
+      ])}
       </div>`;
     const expenseOverview = s.usesMonthlyResult
       ? ''
@@ -14334,7 +14422,7 @@
           <span>${esc(r.scheduledDate || '—')}</span>
           ${r.distanceLabel ? `<span class="profit-distance-badge">${esc(r.distanceLabel)}</span>` : ''}
         </div>
-        <p class="profit-meta">${esc(r.serviceText || '—')} / 予定売上${esc(ProfitBrain.formatYen(r.estimate))} / 支出${esc(ProfitBrain.formatYen(r.expenseTotal))} / 粗利${esc(ProfitBrain.formatYen(r.forecastProfit))}</p>
+        <p class="profit-meta">${esc(r.serviceText || '—')} / 予定売上${esc(ProfitBrain.formatYen(r.estimate))} / 予定経費${esc(ProfitBrain.formatYen(r.plannedExpenseTotal != null ? r.plannedExpenseTotal : r.expenseTotal))} / 予定利益${esc(ProfitBrain.formatYen(r.plannedProfit != null ? r.plannedProfit : r.forecastProfit))}</p>
         <p class="profit-meta">エリア：${esc(r.area || '—')}</p>
         ${r.cautionText ? `<p class="profit-caution">${esc(r.cautionText)}</p>` : ''}
         ${r.mapUrl ? `<a href="${esc(r.mapUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary">Googleマップで開く</a>` : ''}

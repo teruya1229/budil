@@ -39,12 +39,12 @@ const NG_TERMS = [
 ];
 
 console.log('== version check ==');
-assert(indexHtml.includes('v4.13.15'), 'index.html should show v4.12.26');
-assert(indexHtml.includes('js/app.js?v=4.13.15'), 'app.js cache buster should be v4.13.15');
-assert(indexHtml.includes('css/style.css?v=4.13.15'), 'style.css cache buster should be v4.10.41');
-assert(indexHtml.includes('js/documents-brain.js?v=4.13.15'), 'documents-brain cache buster should be v4.13.15');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.15'"), 'storage.js version should be v4.13.15');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.13.15'"), 'data-backup version should be v4.13.15');
+assert(indexHtml.includes('v4.13.16'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('js/app.js?v=4.13.16'), 'app.js cache buster should be v4.13.16');
+assert(indexHtml.includes('css/style.css?v=4.13.16'), 'style.css cache buster should be v4.10.41');
+assert(indexHtml.includes('js/documents-brain.js?v=4.13.16'), 'documents-brain cache buster should be v4.13.16');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.16'"), 'storage.js version should be v4.13.16');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.13.16'"), 'data-backup version should be v4.13.16');
 
 console.log('== layout structure ==');
 assert(documentsJs.includes('doc-issuer-block'), 'issuer block should exist');

@@ -30,6 +30,12 @@ const WorkOrderBrain = {
     const area = String(item.area || '').trim()
       || (typeof MapBrain !== 'undefined' ? MapBrain.detectAreaFromAddress(address) : '');
     const intakeId = String(item.intakeId || item.receptionIntakeId || item.sourceIntakeId || '').trim();
+    const plannedExpenseLines = typeof CalendarCandidateBrain !== 'undefined'
+      ? CalendarCandidateBrain.normalizePlannedExpenseLines(item.plannedExpenseLines)
+      : (Array.isArray(item.plannedExpenseLines) ? item.plannedExpenseLines : []);
+    const plannedExpenseTotal = typeof CalendarCandidateBrain !== 'undefined'
+      ? CalendarCandidateBrain.sumPlannedExpenseTotal(plannedExpenseLines)
+      : plannedExpenseLines.reduce((n, line) => n + (Number(line && line.amount) || 0), 0);
     const normalized = {
       id: item.id || '',
       intakeId,
@@ -49,6 +55,8 @@ const WorkOrderBrain = {
       endTime: item.isAllDay === true ? '' : String(item.endTime || '').trim(),
       status,
       estimateAmount,
+      plannedExpenseLines,
+      plannedExpenseTotal,
       actualRevenueId: String(item.actualRevenueId || '').trim(),
       memo: String(item.memo || '').trim(),
       calendarAdded: item.calendarAdded === true,
@@ -446,6 +454,29 @@ const WorkOrderBrain = {
       return RevenueBrain.formatYen(amount);
     }
     return (Number(amount) || 0).toLocaleString('ja-JP') + '円';
+  },
+
+  getPlannedExpenseTotal(workOrder) {
+    const wo = this.normalizeWorkOrder(workOrder);
+    return Number(wo.plannedExpenseTotal) || 0;
+  },
+
+  getPlannedProfit(workOrder) {
+    const wo = this.normalizeWorkOrder(workOrder);
+    return (Number(wo.estimateAmount) || 0) - this.getPlannedExpenseTotal(wo);
+  },
+
+  getPlannedProfitRate(workOrder) {
+    const wo = this.normalizeWorkOrder(workOrder);
+    const revenue = Number(wo.estimateAmount) || 0;
+    if (revenue <= 0) return null;
+    return (this.getPlannedProfit(wo) / revenue) * 100;
+  },
+
+  formatPlannedProfitRate(workOrder) {
+    const rate = this.getPlannedProfitRate(workOrder);
+    if (rate == null || Number.isNaN(rate)) return '—';
+    return `${(Math.round(rate * 10) / 10).toLocaleString('ja-JP')}%`;
   },
 
   formatStatus(status) {

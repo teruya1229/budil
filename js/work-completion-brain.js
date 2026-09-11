@@ -173,6 +173,15 @@ const WorkCompletionBrain = {
     const today = String(opts.today || new Date().toISOString().slice(0, 10)).slice(0, 10);
     const workDate = wo.scheduledDate || today;
     const paymentStatus = '未入金';
+    const plannedExpenseLines = typeof CalendarCandidateBrain !== 'undefined'
+      ? CalendarCandidateBrain.normalizePlannedExpenseLines(wo.plannedExpenseLines)
+      : (Array.isArray(wo.plannedExpenseLines) ? wo.plannedExpenseLines : []);
+    const plannedExpenseCandidates = plannedExpenseLines.map(line => ({
+      type: line.type,
+      name: line.name,
+      amount: Number(line.amount) || 0,
+      category: this.resolveExpenseCategoryFromPlannedType(line.type, line.name)
+    }));
     return {
       workDate,
       customerName: wo.customerName || '',
@@ -189,8 +198,28 @@ const WorkCompletionBrain = {
       actualMemo: '',
       followMemo: '',
       cancelReason: '',
-      leadId: wo.leadId || ''
+      leadId: wo.leadId || '',
+      plannedExpenseLines,
+      plannedExpenseTotal: (typeof WorkOrderBrain !== 'undefined' && typeof WorkOrderBrain.getPlannedExpenseTotal === 'function')
+        ? WorkOrderBrain.getPlannedExpenseTotal(wo)
+        : (Number(wo.plannedExpenseTotal) || plannedExpenseLines.reduce((n, line) => n + (Number(line.amount) || 0), 0)),
+      plannedExpenseCandidates,
+      inlineExpensePrefill: plannedExpenseCandidates.slice(0, this.MAX_INLINE_EXPENSE_LINES).map(line => ({
+        name: line.name,
+        amount: line.amount,
+        category: line.category
+      }))
     };
+  },
+
+  resolveExpenseCategoryFromPlannedType(type, name) {
+    const map = {
+      labor: '人件費',
+      outsourcing: '外注費',
+      purchase: 'その他',
+      materials: '薬剤・材料'
+    };
+    return this.resolveExpenseCategoryFromName(name, map[String(type || '').trim()] || 'その他');
   },
 
   MAX_INLINE_EXPENSE_LINES: 3,

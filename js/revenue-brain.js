@@ -587,6 +587,17 @@ const RevenueBrain = {
     const scheduledRevenue = plannedAdditionalRevenue;
     const totalRevenue = confirmedRevenue + plannedAdditionalRevenue;
     const plannedRevenue = totalRevenue;
+    const plannedExpenseEstimate = plannedWorkOrders.reduce((sum, w) => {
+      if (typeof WorkOrderBrain !== 'undefined' && typeof WorkOrderBrain.getPlannedExpenseTotal === 'function') {
+        return sum + WorkOrderBrain.getPlannedExpenseTotal(w);
+      }
+      const wo = w && typeof w === 'object' ? w : {};
+      if (Array.isArray(wo.plannedExpenseLines) && wo.plannedExpenseLines.length) {
+        return sum + wo.plannedExpenseLines.reduce((n, line) => n + (Number(line && line.amount) || 0), 0);
+      }
+      return sum + (Number(wo.plannedExpenseTotal) || 0);
+    }, 0);
+    const plannedNetProfit = scheduledRevenue - plannedExpenseEstimate;
 
     const monthExpense = typeof ProfitBrain !== 'undefined'
       ? ProfitBrain.sumAmount(ProfitBrain.filterMonthExpenses(expenses, monthKey))
@@ -647,6 +658,8 @@ const RevenueBrain = {
       totalFeeAmount,
       totalProfit,
       plannedRevenue,
+      plannedExpenseEstimate,
+      plannedNetProfit,
       monthExpense,
       confirmedProfit,
       scheduledProfit,

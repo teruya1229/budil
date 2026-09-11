@@ -13915,6 +13915,33 @@ body.sales-page {
   font-weight: 600;
 }
 
+.work-order-planned-profit {
+  margin: 0.35rem 0 0;
+}
+
+.work-order-planned-expense-details {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+}
+
+.work-order-planned-expense-list,
+.work-completion-planned-expense-list {
+  margin: 0.25rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.work-completion-planned-expense-hint {
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.work-completion-planned-expense-hint.hidden {
+  display: none;
+}
+
 @media (max-width: 390px) {
   .revenue-inline-expense-block .form-row-2 {
     grid-template-columns: 1fr;

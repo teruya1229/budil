@@ -2,6 +2,26 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.13.16 予定経費・予定利益連携（2026-09-11）
+
+**日付**: 2026-09-11
+
+**背景**: 家電販売・設備工事など仕入・外注・人件費が大きい案件で、施工前に予定利益を把握したい。既存の予定金額取り込みと売上確定フローは維持しつつ、予定経費だけを追加する。
+
+**判断内容**:
+- 明示ラベル（予定人件費／予定外注費／予定仕入／予定材料費）のみ解析。曖昧文からの推測はしない
+- 予定経費は作業予定の `plannedExpenseLines`。実経費（expenseレコード）とは別フィールド
+- 予定利益は `estimateAmount - plannedExpenseTotal`。既存の粗利率ベース見込みは残し、予定経費がある場合の表示を追加
+- 売上確定時は候補表示と最大3件の初期値まで。本人確認前の実経費自動保存は禁止
+- カレンダー再同期は既存の schedule sync ブロック条件を優先し、確定済み実績へ触れない
+- 公開版をv4.13.16へ統一する
+
+**変更対象**:
+- `js/calendar-candidate-brain.js` / `js/work-order-brain.js` / `js/work-completion-brain.js` / `js/profit-brain.js` / `js/revenue-brain.js` / `js/storage.js` / `js/app.js`
+- `index.html` / `css/style.css`
+- `scripts/verify-v41316-planned-expense-profit.mjs` / 現行verifyのバージョン期待値
+- `status.md` / `handoff.md` / `decision-log.md`
+
 ## v4.13.15 PDFダウンロード位置ズレ緊急修正（2026-09-07）
 
 **日付**: 2026-09-07

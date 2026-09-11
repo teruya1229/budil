@@ -3,7 +3,7 @@
  * キー: leads, demandNotes, generatedPosts, generatedMessages, followups, settings
  */
 const Storage = {
-  BUDIL_VERSION: 'v4.13.15',
+  BUDIL_VERSION: 'v4.13.16',
   LEGACY_CALENDAR_ORIGINAL_TEXT_MIN_CHARS: 100 * 1024,
 
   KEYS: {
@@ -1563,6 +1563,14 @@ const Storage = {
     const nextIsAllDay = fields.isAllDay === true;
     const nextStart = nextIsAllDay ? '' : String(fields.startTime || '').trim();
     const nextEnd = nextIsAllDay ? '' : String(fields.endTime || '').trim();
+    const hasPlannedExpensePayload = Object.prototype.hasOwnProperty.call(fields, 'plannedExpenseLines')
+      || Object.prototype.hasOwnProperty.call(fields, 'plannedExpenseTotal');
+    const nextPlannedExpenseLines = typeof CalendarCandidateBrain !== 'undefined'
+      ? CalendarCandidateBrain.normalizePlannedExpenseLines(fields.plannedExpenseLines)
+      : (Array.isArray(fields.plannedExpenseLines) ? fields.plannedExpenseLines : []);
+    const nextPlannedExpenseTotal = typeof CalendarCandidateBrain !== 'undefined'
+      ? CalendarCandidateBrain.sumPlannedExpenseTotal(nextPlannedExpenseLines)
+      : nextPlannedExpenseLines.reduce((n, line) => n + (Number(line && line.amount) || 0), 0);
 
     if (!id || !expectedKey) {
       this.recordOperationLog({
@@ -1647,13 +1655,25 @@ const Storage = {
     const prevIsAllDay = prev.isAllDay === true;
     const prevStart = prevIsAllDay ? '' : String(prev.startTime || '').trim();
     const prevEnd = prevIsAllDay ? '' : String(prev.endTime || '').trim();
-    if (
-      prevDate === nextDate
+    const prevPlannedExpenseLines = typeof CalendarCandidateBrain !== 'undefined'
+      ? CalendarCandidateBrain.normalizePlannedExpenseLines(prev.plannedExpenseLines)
+      : (Array.isArray(prev.plannedExpenseLines) ? prev.plannedExpenseLines : []);
+    const prevPlannedExpenseTotal = typeof CalendarCandidateBrain !== 'undefined'
+      ? CalendarCandidateBrain.sumPlannedExpenseTotal(prevPlannedExpenseLines)
+      : Number(prev.plannedExpenseTotal) || 0;
+    const scheduleUnchanged = prevDate === nextDate
       && prevEndDate === nextEndDate
       && prevIsAllDay === nextIsAllDay
       && prevStart === nextStart
-      && prevEnd === nextEnd
-    ) {
+      && prevEnd === nextEnd;
+    const plannedExpenseUnchanged = !hasPlannedExpensePayload
+      || ((typeof CalendarCandidateBrain !== 'undefined'
+        ? CalendarCandidateBrain.plannedExpenseSignature(prevPlannedExpenseLines)
+        : JSON.stringify(prevPlannedExpenseLines))
+        === (typeof CalendarCandidateBrain !== 'undefined'
+          ? CalendarCandidateBrain.plannedExpenseSignature(nextPlannedExpenseLines)
+          : JSON.stringify(nextPlannedExpenseLines)));
+    if (scheduleUnchanged && plannedExpenseUnchanged) {
       return { ok: true, unchanged: true, workOrder: prev };
     }
 
@@ -1675,24 +1695,22 @@ const Storage = {
       return { ok: false, error: 'backup_failed', blocked: false };
     }
 
+    const updatedPayload = {
+      ...prev,
+      scheduledDate: nextDate,
+      scheduledEndDate: nextIsAllDay ? (nextEndDate || nextDate) : nextEndDate,
+      isAllDay: nextIsAllDay,
+      startTime: nextStart,
+      endTime: nextEnd,
+      id: prev.id
+    };
+    if (hasPlannedExpensePayload) {
+      updatedPayload.plannedExpenseLines = nextPlannedExpenseLines;
+      updatedPayload.plannedExpenseTotal = nextPlannedExpenseTotal;
+    }
     const updated = typeof WorkOrderBrain !== 'undefined'
-      ? WorkOrderBrain.normalizeWorkOrder({
-        ...prev,
-        scheduledDate: nextDate,
-        scheduledEndDate: nextIsAllDay ? (nextEndDate || nextDate) : nextEndDate,
-        isAllDay: nextIsAllDay,
-        startTime: nextStart,
-        endTime: nextEnd,
-        id: prev.id
-      })
-      : {
-        ...prev,
-        scheduledDate: nextDate,
-        scheduledEndDate: nextIsAllDay ? (nextEndDate || nextDate) : nextEndDate,
-        isAllDay: nextIsAllDay,
-        startTime: nextStart,
-        endTime: nextEnd
-      };
+      ? WorkOrderBrain.normalizeWorkOrder(updatedPayload)
+      : updatedPayload;
     updated.updatedAt = new Date().toISOString();
 
     const nextList = list.slice();
@@ -1727,7 +1745,10 @@ const Storage = {
         isAllDay: nextIsAllDay,
         startTime: nextStart,
         endTime: nextEnd
-      }
+      },
+      plannedExpenseUpdated: hasPlannedExpensePayload && !plannedExpenseUnchanged,
+      previousPlannedExpenseTotal: prevPlannedExpenseTotal,
+      nextPlannedExpenseTotal: hasPlannedExpensePayload ? nextPlannedExpenseTotal : prevPlannedExpenseTotal
     });
 
     return { ok: true, unchanged: false, workOrder: updated };

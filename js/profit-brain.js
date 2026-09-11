@@ -356,9 +356,14 @@ const ProfitBrain = {
       .map(w => {
         const linked = this.getExpensesForWorkOrder(w.id, expenses);
         const estimate = this.getWorkOrderEstimateAmount(w);
-        const expenseTotal = this.sumAmount(linked);
+        const plannedExpenseTotal = (typeof WorkOrderBrain !== 'undefined' && typeof WorkOrderBrain.getPlannedExpenseTotal === 'function')
+          ? WorkOrderBrain.getPlannedExpenseTotal(w)
+          : (Number(w && w.plannedExpenseTotal) || 0);
+        // 未完了予定の見込みは計画経費を使う。実経費レコードとは混ぜない。
+        const expenseTotal = plannedExpenseTotal > 0 ? plannedExpenseTotal : this.sumAmount(linked);
         const woProfit = this.computeWorkOrderForecastProfit(w, expenseTotal);
         const forecastProfit = woProfit.forecastProfit;
+        const plannedProfit = estimate - plannedExpenseTotal;
         const area = this.getWorkOrderArea(w, leads);
         const distanceClass = typeof MapBrain !== 'undefined'
           ? MapBrain.classifyAreaDistance(area, w.address || '')
@@ -381,6 +386,8 @@ const ProfitBrain = {
           serviceText: w.serviceText || '',
           estimate,
           expenseTotal,
+          plannedExpenseTotal,
+          plannedProfit,
           marginProfit: woProfit.marginProfit,
           deductionAmount: woProfit.deductionAmount,
           marginRate: woProfit.marginRate,
@@ -430,17 +437,31 @@ const ProfitBrain = {
     const plannedRevenueEstimate = monthPlannedWorkOrders.reduce(
       (n, w) => n + this.getWorkOrderEstimateAmount(w), 0
     );
+    const plannedExpenseEstimate = monthPlannedWorkOrders.reduce((n, w) => {
+      if (typeof WorkOrderBrain !== 'undefined' && typeof WorkOrderBrain.getPlannedExpenseTotal === 'function') {
+        return n + WorkOrderBrain.getPlannedExpenseTotal(w);
+      }
+      const wo = w && typeof w === 'object' ? w : {};
+      if (Array.isArray(wo.plannedExpenseLines) && wo.plannedExpenseLines.length) {
+        return n + wo.plannedExpenseLines.reduce((sum, line) => sum + (Number(line && line.amount) || 0), 0);
+      }
+      return n + (Number(wo.plannedExpenseTotal) || 0);
+    }, 0);
     // 見込み利益 = 作業予定の見込み利益合計
     // 個別粗利率が未設定の場合は当月の確定売上から算出した粗利率（経費控除前）をフォールバックとして適用
+    // v4.13.16: 未完了予定の控除は実経費ではなく plannedExpenseTotal を使う（実績経費と混ぜない）
     const plannedForecastProfit = monthPlannedWorkOrders.reduce((n, w) => {
-      const exp = this.sumAmount(this.getExpensesForWorkOrder(w.id, expenses));
-      const woResult = this.computeWorkOrderForecastProfit(w, exp);
+      const plannedExp = (typeof WorkOrderBrain !== 'undefined' && typeof WorkOrderBrain.getPlannedExpenseTotal === 'function')
+        ? WorkOrderBrain.getPlannedExpenseTotal(w)
+        : (Number(w && w.plannedExpenseTotal) || 0);
+      const woResult = this.computeWorkOrderForecastProfit(w, plannedExp);
       if (woResult.marginUnset && monthGrossRate > 0) {
         const est = this.getWorkOrderEstimateAmount(w);
-        return n + Math.max(0, Math.round(est * monthGrossRate / 100) - exp);
+        return n + Math.max(0, Math.round(est * monthGrossRate / 100) - plannedExp);
       }
       return n + woResult.forecastProfit;
     }, 0);
+    const plannedNetProfit = plannedRevenueEstimate - plannedExpenseEstimate;
 
     // 表示用: 経費控除後利益 ÷ 売上（売上0は0、赤字は負の率、内部丸めなし）
     monthGrossRate = monthRevenue > 0 ? (monthGrossProfit / monthRevenue) * 100 : 0;
@@ -476,6 +497,8 @@ const ProfitBrain = {
       monthMarginGross,
       marginDeductionTotal,
       plannedRevenueEstimate,
+      plannedExpenseEstimate,
+      plannedNetProfit,
       plannedForecastProfit,
       confirmedRevenue,
       confirmedProfit,
