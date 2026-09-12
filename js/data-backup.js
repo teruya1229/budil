@@ -288,6 +288,19 @@ const DataBackup = {
     return 'budil-backup-' + d + '.json';
   },
 
+  aiSnapshotFilename() {
+    const d = new Date();
+    const pad = value => String(value).padStart(2, '0');
+    return 'budil-ai-snapshot-'
+      + d.getFullYear() + '-'
+      + pad(d.getMonth() + 1) + '-'
+      + pad(d.getDate()) + '-'
+      + pad(d.getHours())
+      + pad(d.getMinutes())
+      + pad(d.getSeconds())
+      + '.json';
+  },
+
   recordBackupTime() {
     const settings = Storage.getSettings();
     settings.lastBackupAt = new Date().toISOString();
@@ -305,3 +318,42 @@ const DataBackup = {
     }
   }
 };
+
+(function installAiConfirmationSnapshotButton() {
+  function downloadAiSnapshot() {
+    const payload = DataBackup.exportPayload();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    try {
+      a.href = url;
+      a.download = DataBackup.aiSnapshotFilename();
+      document.body.appendChild(a);
+      a.click();
+      DataBackup.inspectBackupData(payload.data, 'ai-confirm-snapshot');
+    } finally {
+      if (a.parentNode) a.parentNode.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  function bind() {
+    const exportButton = document.getElementById('btn-export-data');
+    if (!exportButton || document.getElementById('btn-export-ai-snapshot')) return;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.id = 'btn-export-ai-snapshot';
+    button.className = 'btn btn-secondary';
+    button.textContent = 'AI確認用バックアップ';
+    button.style.marginLeft = '8px';
+    button.addEventListener('click', downloadAiSnapshot);
+    exportButton.insertAdjacentElement('afterend', button);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bind, { once: true });
+  } else {
+    bind();
+  }
+})();
