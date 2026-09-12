@@ -6544,14 +6544,14 @@
     if (preview) preview.classList.remove('hidden');
   }
 
-  function downloadBudilBackupSnapshot() {
+  function downloadBudilBackupSnapshot(downloadName) {
     const payload = DataBackup.exportPayload();
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     try {
       a.href = url;
-      a.download = DataBackup.filename();
+      a.download = downloadName || DataBackup.filename();
       document.body.appendChild(a);
       a.click();
     } finally {
@@ -6600,6 +6600,12 @@
     DataBackup.recordBackupTime();
     renderBackupStatus();
     renderDataManagement();
+  }
+
+  function exportAiConfirmSnapshot() {
+    const payload = downloadBudilBackupSnapshot(DataBackup.aiSnapshotFilename());
+    DataBackup.inspectBackupData(payload.data, 'ai-snapshot');
+    return payload;
   }
 
   function reloadFormsFromStorage() {
@@ -6667,6 +6673,8 @@
 
   function initDataManagement() {
     document.getElementById('btn-export-data').addEventListener('click', exportBudilData);
+    const aiSnapshotBtn = document.getElementById('btn-export-ai-snapshot');
+    if (aiSnapshotBtn) aiSnapshotBtn.addEventListener('click', exportAiConfirmSnapshot);
 
     const fileInput = document.getElementById('import-file-input');
     document.getElementById('btn-import-select').addEventListener('click', () => fileInput.click());

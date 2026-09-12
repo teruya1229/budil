@@ -1,5 +1,13 @@
 ﻿# Budil status
 
+## v4.13.18 AI確認用バックアップ
+
+- データ管理のローカルバックアップへ「AI確認用バックアップ」ボタンを追加。中身は既存 `DataBackup.exportPayload()` と同一
+- ファイル名のみ `budil-ai-snapshot-YYYY-MM-DD-HHmmss.json`。Downloads保存。復元なし。`lastBackupAt` は更新しない
+- 通常の「バックアップを保存」と復元は既存動作のまま
+- 公開表示、`BUDIL_VERSION`、バックアップ版、全JS/CSS cache buster、現行verify期待値をv4.13.18へ統一
+- 新規 `scripts/verify-v41318-ai-confirm-snapshot.mjs`
+
 ## v4.13.17 実経費入力の固定項目化＋予定利益集計整理
 
 - 売上確定モーダルへ人件費・外注費・仕入れ値・材料費の固定入力欄を追加。実績売上金額は既存欄を「実績売上金額」として表示

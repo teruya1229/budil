@@ -2014,6 +2014,12 @@ body {
   margin-top: 12px;
 }
 
+.data-mgmt-actions-start {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
 .import-preview-meta {
   font-size: 0.88rem;
   color: var(--text-muted);

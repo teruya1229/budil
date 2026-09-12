@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.17 - 予定経費・予定利益連携
+ * Budil v4.13.18 - 予定経費・予定利益連携
  * Isolated fixtures only. No production localStorage.
  */
 import { readFileSync } from 'node:fs';
@@ -41,19 +41,19 @@ const workCompletionJs = load('js/work-completion-brain.js');
 const profitJs = load('js/profit-brain.js');
 
 console.log('== version ==');
-assert(index.includes('Budil v4.13.17'), 'index shows Budil v4.13.17');
-assert(index.includes('js/app.js?v=4.13.17'), 'app.js cache buster is 4.13.17');
-assert(index.includes('js/calendar-candidate-brain.js?v=4.13.17'), 'calendar-candidate cache buster is 4.13.17');
-assert(index.includes('js/work-order-brain.js?v=4.13.17'), 'work-order-brain cache buster is 4.13.17');
-assert(index.includes('js/work-completion-brain.js?v=4.13.17'), 'work-completion-brain cache buster is 4.13.17');
-assert(index.includes('js/profit-brain.js?v=4.13.17'), 'profit-brain cache buster is 4.13.17');
-assert(index.includes('css/style.css?v=4.13.17'), 'style.css cache buster is 4.13.17');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.17'"), 'storage version is v4.13.17');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.17'"), 'data-backup version is v4.13.17');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.17'"), 'verify-current pins v4.13.17');
-assert(statusMd.includes('v4.13.17'), 'status.md documents v4.13.17');
-assert(handoffMd.includes('v4.13.17'), 'handoff.md documents v4.13.17');
-assert(decisionLog.includes('v4.13.17'), 'decision-log.md records v4.13.17');
+assert(index.includes('Budil v4.13.18'), 'index shows Budil v4.13.18');
+assert(index.includes('js/app.js?v=4.13.18'), 'app.js cache buster is 4.13.18');
+assert(index.includes('js/calendar-candidate-brain.js?v=4.13.18'), 'calendar-candidate cache buster is 4.13.18');
+assert(index.includes('js/work-order-brain.js?v=4.13.18'), 'work-order-brain cache buster is 4.13.18');
+assert(index.includes('js/work-completion-brain.js?v=4.13.18'), 'work-completion-brain cache buster is 4.13.18');
+assert(index.includes('js/profit-brain.js?v=4.13.18'), 'profit-brain cache buster is 4.13.18');
+assert(index.includes('css/style.css?v=4.13.18'), 'style.css cache buster is 4.13.18');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.18'"), 'storage version is v4.13.18');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.18'"), 'data-backup version is v4.13.18');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.18'"), 'verify-current pins v4.13.18');
+assert(statusMd.includes('v4.13.18'), 'status.md documents v4.13.18');
+assert(handoffMd.includes('v4.13.18'), 'handoff.md documents v4.13.18');
+assert(decisionLog.includes('v4.13.18'), 'decision-log.md records v4.13.18');
 
 console.log('== wiring / safety ==');
 assert(calendarJs.includes('PLANNED_EXPENSE_LABELS'), 'calendar brain defines planned expense labels');
@@ -251,4 +251,4 @@ const workerMapped = Cal.mapWorkerItemToCandidate({
 assert(workerMapped.estimateAmount === 180000, 'worker amount parsing unchanged');
 assert(workerMapped.plannedExpenseTotal === 115000, 'worker description planned expenses parsed');
 
-console.log('\nAll v4.13.17 planned expense checks passed.');
+console.log('\nAll v4.13.18 planned expense checks passed.');

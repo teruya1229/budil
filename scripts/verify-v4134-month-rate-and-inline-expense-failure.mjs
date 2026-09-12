@@ -30,19 +30,19 @@ for (const file of ['js/app.js', 'js/profit-brain.js', 'js/storage.js', 'js/data
 }
 
 console.log('== version / cache buster ==');
-assert(html.includes('Budil v4.13.17'), 'index.html shows Budil v4.13.17');
-assert(html.includes('js/app.js?v=4.13.17'), 'app.js cache buster is v4.13.17');
-assert(html.includes('js/profit-brain.js?v=4.13.17'), 'profit-brain cache buster is v4.13.17');
-assert(html.includes('css/style.css?v=4.13.17'), 'style.css cache buster is v4.13.17');
-assert(storageSrc.includes("BUDIL_VERSION: 'v4.13.17'"), 'storage version is v4.13.17');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.17'"), 'data-backup version is v4.13.17');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.17'"), 'verify-current pins v4.13.17');
+assert(html.includes('Budil v4.13.18'), 'index.html shows Budil v4.13.18');
+assert(html.includes('js/app.js?v=4.13.18'), 'app.js cache buster is v4.13.18');
+assert(html.includes('js/profit-brain.js?v=4.13.18'), 'profit-brain cache buster is v4.13.18');
+assert(html.includes('css/style.css?v=4.13.18'), 'style.css cache buster is v4.13.18');
+assert(storageSrc.includes("BUDIL_VERSION: 'v4.13.18'"), 'storage version is v4.13.18');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.18'"), 'data-backup version is v4.13.18');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.18'"), 'verify-current pins v4.13.18');
 assert(currentRunner.includes('verify-v4134-month-rate-and-inline-expense-failure.mjs') ||
   /^verify-v4(10|11|12|13)\d.*\.mjs$/.test('verify-v4134-month-rate-and-inline-expense-failure.mjs'),
   'new verify is discoverable by current pattern');
-assert(statusMd.includes('v4.13.17'), 'status.md documents v4.13.17');
-assert(handoffMd.includes('v4.13.17'), 'handoff.md documents v4.13.17');
-assert(decisionLog.includes('v4.13.17'), 'decision-log.md records v4.13.17');
+assert(statusMd.includes('v4.13.18'), 'status.md documents v4.13.18');
+assert(handoffMd.includes('v4.13.18'), 'handoff.md documents v4.13.18');
+assert(decisionLog.includes('v4.13.18'), 'decision-log.md records v4.13.18');
 assert(decisionLog.includes('monthGrossProfit÷monthRevenue') || decisionLog.includes('monthGrossProfit / monthRevenue') ||
   decisionLog.includes('monthGrossProfit÷monthRevenueへ修正') || decisionLog.includes('経費控除後'),
   'decision-log records month rate fix');

@@ -2,6 +2,24 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.13.18 AI確認用バックアップ（2026-09-12）
+
+**日付**: 2026-09-12
+
+**背景**: Browser番頭の budil-read が現在の本番snapshotを読むには、通常バックアップとは別の識別可能なJSONが必要。021788dc は data-backup.js へボタンを動的挿入し、cache buster未更新のため公開ページで表示が不安定だった。
+
+**判断内容**:
+- ボタンは index.html のローカルバックアップへ静的配置する
+- クリック処理は app.js。payloadは既存 `DataBackup.exportPayload()` のみ
+- AI確認用は `recordBackupTime()` しない。通常バックアップと復元は変更しない
+- 公開版をv4.13.18へ統一し、cache busterを更新する
+
+**変更対象**:
+- `index.html` / `js/app.js` / `js/data-backup.js` / `css/style.css`
+- `js/storage.js` / 現行verifyのバージョン期待値
+- `scripts/verify-v41318-ai-confirm-snapshot.mjs`
+- `status.md` / `handoff.md` / `decision-log.md`
+
 ## v4.13.17 実経費入力の固定項目化＋予定利益集計整理（2026-09-12）
 
 **日付**: 2026-09-12
