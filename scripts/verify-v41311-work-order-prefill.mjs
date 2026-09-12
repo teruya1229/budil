@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.16 - work-order 売上確定へ must prefill scheduled fields.
+ * Budil v4.13.17 - work-order 売上確定へ must prefill scheduled fields.
  * Isolated in-memory fixtures only. No production localStorage.
  */
 import { readFileSync } from 'node:fs';
@@ -27,11 +27,11 @@ for (const file of ['js/app.js', 'js/work-completion-brain.js']) {
 }
 
 console.log('== version ==');
-assert(index.includes('Budil v4.13.16'), 'index shows Budil v4.13.16');
-assert(index.includes('js/app.js?v=4.13.16'), 'app.js cache buster is v4.13.16');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.16'"), 'storage version is v4.13.16');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.16'"), 'data-backup version is v4.13.16');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.16'"), 'verify-current pins v4.13.16');
+assert(index.includes('Budil v4.13.17'), 'index shows Budil v4.13.17');
+assert(index.includes('js/app.js?v=4.13.17'), 'app.js cache buster is v4.13.17');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.17'"), 'storage version is v4.13.17');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.17'"), 'data-backup version is v4.13.17');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.17'"), 'verify-current pins v4.13.17');
 
 console.log('== work-order path prefills scheduled values ==');
 assert(app.includes("document.getElementById('work-completion-date').value = defaults.workDate"), 'scheduled date is copied into 対象日');
@@ -104,4 +104,4 @@ assert(ctx.message.includes('対象顧客：ビクター'), 'confirmation shows 
 assert(ctx.message.includes('入力された内訳：N3,R1,KN4'), 'confirmation shows N3,R1,KN4');
 assert(ctx.message.includes('62,000円'), 'confirmation shows 62,000円');
 
-console.log('\nAll v4.13.16 work-order prefill checks passed.');
+console.log('\nAll v4.13.17 work-order prefill checks passed.');

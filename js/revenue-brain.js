@@ -598,6 +598,9 @@ const RevenueBrain = {
       return sum + (Number(wo.plannedExpenseTotal) || 0);
     }, 0);
     const plannedNetProfit = scheduledRevenue - plannedExpenseEstimate;
+    const plannedNetProfitRate = scheduledRevenue > 0
+      ? (plannedNetProfit / scheduledRevenue) * 100
+      : null;
 
     const monthExpense = typeof ProfitBrain !== 'undefined'
       ? ProfitBrain.sumAmount(ProfitBrain.filterMonthExpenses(expenses, monthKey))
@@ -660,6 +663,7 @@ const RevenueBrain = {
       plannedRevenue,
       plannedExpenseEstimate,
       plannedNetProfit,
+      plannedNetProfitRate,
       monthExpense,
       confirmedProfit,
       scheduledProfit,

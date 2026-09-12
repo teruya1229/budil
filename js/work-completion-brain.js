@@ -204,6 +204,7 @@ const WorkCompletionBrain = {
         ? WorkOrderBrain.getPlannedExpenseTotal(wo)
         : (Number(wo.plannedExpenseTotal) || plannedExpenseLines.reduce((n, line) => n + (Number(line.amount) || 0), 0)),
       plannedExpenseCandidates,
+      actualCostPrefill: this.sumActualCostPrefillFromPlanned(plannedExpenseLines),
       inlineExpensePrefill: plannedExpenseCandidates.slice(0, this.MAX_INLINE_EXPENSE_LINES).map(line => ({
         name: line.name,
         amount: line.amount,
@@ -223,6 +224,71 @@ const WorkCompletionBrain = {
   },
 
   MAX_INLINE_EXPENSE_LINES: 3,
+  MAX_COMBINED_EXPENSE_LINES: 7,
+  FIXED_ACTUAL_COST_FIELDS: [
+    { type: 'labor', name: '人件費', category: '人件費' },
+    { type: 'outsourcing', name: '外注費', category: '外注費' },
+    { type: 'purchase', name: '仕入れ値', category: 'その他' },
+    { type: 'materials', name: '材料費', category: '薬剤・材料' }
+  ],
+
+  sumActualCostPrefillFromPlanned(lines) {
+    const sums = { labor: 0, outsourcing: 0, purchase: 0, materials: 0 };
+    (Array.isArray(lines) ? lines : []).forEach(line => {
+      const type = String(line && line.type || '').trim();
+      if (!Object.prototype.hasOwnProperty.call(sums, type)) return;
+      sums[type] += Number(line && line.amount) || 0;
+    });
+    return this.FIXED_ACTUAL_COST_FIELDS.map(field => ({
+      type: field.type,
+      name: field.name,
+      category: field.category,
+      amount: sums[field.type] || 0
+    }));
+  },
+
+  validateFixedActualCostFields(rawValues) {
+    const byType = {};
+    (Array.isArray(rawValues) ? rawValues : []).forEach(raw => {
+      const type = String(raw && raw.type || '').trim();
+      if (type) byType[type] = raw;
+    });
+    const items = [];
+    for (const field of this.FIXED_ACTUAL_COST_FIELDS) {
+      const raw = byType[field.type] || {};
+      const amountRaw = raw.amountRaw != null
+        ? String(raw.amountRaw).trim()
+        : (raw.amount === '' || raw.amount == null ? '' : String(raw.amount).trim());
+      if (amountRaw === '') continue;
+      const amount = Number(amountRaw);
+      if (!Number.isFinite(amount) || amount < 0 || !Number.isInteger(amount)) {
+        return { ok: false, error: `${field.name}は0円以上の整数で入力してください。` };
+      }
+      if (amount === 0) continue;
+      items.push({
+        name: field.name,
+        content: field.name,
+        amount,
+        category: field.category,
+        memo: String(raw.memo || '').trim(),
+        type: field.type
+      });
+    }
+    return { ok: true, items, amount: this.sumInlineExpenseAmount(items) };
+  },
+
+  buildWorkCompletionExpenseState(fixedValues, otherLines) {
+    const fixedCheck = this.validateFixedActualCostFields(fixedValues);
+    if (!fixedCheck.ok) return fixedCheck;
+    const otherCheck = this.validateInlineExpenseLines(otherLines);
+    if (!otherCheck.ok) return otherCheck;
+    const items = [...(fixedCheck.items || []), ...(otherCheck.items || [])];
+    if (items.length > this.MAX_COMBINED_EXPENSE_LINES) {
+      return { ok: false, error: '経費の件数が多すぎます。' };
+    }
+    const amount = this.sumInlineExpenseAmount(items);
+    return { ok: true, shouldCreate: items.length > 0, items, amount };
+  },
 
   resolveExpenseCategoryFromName(name, fallback) {
     const n = String(name || '').trim();
@@ -256,11 +322,12 @@ const WorkCompletionBrain = {
     };
   },
 
-  normalizeInlineExpenseLines(rawLines) {
+  normalizeInlineExpenseLines(rawLines, maxLines) {
+    const max = Number.isFinite(maxLines) && maxLines > 0 ? maxLines : this.MAX_INLINE_EXPENSE_LINES;
     const list = Array.isArray(rawLines) ? rawLines : [];
     const out = [];
     for (const raw of list) {
-      if (out.length >= this.MAX_INLINE_EXPENSE_LINES) break;
+      if (out.length >= max) break;
       out.push(this.normalizeInlineExpenseLine(raw));
     }
     return out;
@@ -270,10 +337,11 @@ const WorkCompletionBrain = {
     return (lines || []).reduce((n, line) => n + (Number(line && line.amount) || 0), 0);
   },
 
-  validateInlineExpenseLines(rawLines) {
-    const lines = this.normalizeInlineExpenseLines(rawLines);
-    if (Array.isArray(rawLines) && rawLines.length > this.MAX_INLINE_EXPENSE_LINES) {
-      return { ok: false, error: '経費は3件までです。' };
+  validateInlineExpenseLines(rawLines, maxLines) {
+    const max = Number.isFinite(maxLines) && maxLines > 0 ? maxLines : this.MAX_INLINE_EXPENSE_LINES;
+    const lines = this.normalizeInlineExpenseLines(rawLines, max);
+    if (Array.isArray(rawLines) && rawLines.length > max) {
+      return { ok: false, error: max === this.MAX_INLINE_EXPENSE_LINES ? '経費は3件までです。' : '経費の件数が多すぎます。' };
     }
     const items = [];
     for (const line of lines) {
@@ -292,8 +360,8 @@ const WorkCompletionBrain = {
         category: line.category,
         memo: line.memo
       });
-      if (items.length > this.MAX_INLINE_EXPENSE_LINES) {
-        return { ok: false, error: '経費は3件までです。' };
+      if (items.length > max) {
+        return { ok: false, error: max === this.MAX_INLINE_EXPENSE_LINES ? '経費は3件までです。' : '経費の件数が多すぎます。' };
       }
     }
     const amount = this.sumInlineExpenseAmount(items);
@@ -309,7 +377,7 @@ const WorkCompletionBrain = {
       ? src.items
       : (src.input && Array.isArray(src.input.items) ? src.input.items : null);
     if (rawItems) {
-      const checked = this.validateInlineExpenseLines(rawItems);
+      const checked = this.validateInlineExpenseLines(rawItems, this.MAX_COMBINED_EXPENSE_LINES);
       if (!checked.ok) return { shouldCreate: false, error: checked.error };
       if (!checked.shouldCreate) return { shouldCreate: false };
       const first = checked.items[0];

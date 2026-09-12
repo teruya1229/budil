@@ -36,6 +36,11 @@ const ProfitBrain = {
     return (Math.round(rate * 10) / 10).toFixed(1) + '%';
   },
 
+  formatPlannedNetProfitRate(profit, revenue) {
+    if (!(Number(revenue) > 0)) return '—';
+    return this.formatRate((Number(profit) / Number(revenue)) * 100);
+  },
+
   sumAmount(items) {
     return (items || []).reduce((n, item) => n + Number(item && item.amount || 0), 0);
   },
@@ -462,6 +467,9 @@ const ProfitBrain = {
       return n + woResult.forecastProfit;
     }, 0);
     const plannedNetProfit = plannedRevenueEstimate - plannedExpenseEstimate;
+    const plannedNetProfitRate = plannedRevenueEstimate > 0
+      ? (plannedNetProfit / plannedRevenueEstimate) * 100
+      : null;
 
     // 表示用: 経費控除後利益 ÷ 売上（売上0は0、赤字は負の率、内部丸めなし）
     monthGrossRate = monthRevenue > 0 ? (monthGrossProfit / monthRevenue) * 100 : 0;
@@ -499,6 +507,7 @@ const ProfitBrain = {
       plannedRevenueEstimate,
       plannedExpenseEstimate,
       plannedNetProfit,
+      plannedNetProfitRate,
       plannedForecastProfit,
       confirmedRevenue,
       confirmedProfit,

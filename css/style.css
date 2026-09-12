@@ -13930,12 +13930,20 @@ body.sales-page {
   padding-left: 1.2rem;
 }
 
-.work-completion-planned-expense-hint {
-  margin: 0.5rem 0 0.75rem;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.02);
+.revenue-inline-expense-title-sub {
+  margin-top: 0.85rem;
+}
+
+.work-completion-actual-cost-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0 0 0.5rem;
+  min-width: 0;
+}
+
+.work-completion-actual-cost-grid .form-row {
+  min-width: 0;
 }
 
 .work-completion-planned-expense-hint.hidden {

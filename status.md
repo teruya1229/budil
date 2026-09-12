@@ -1,5 +1,15 @@
 ﻿# Budil status
 
+## v4.13.17 実経費入力の固定項目化＋予定利益集計整理
+
+- 売上確定モーダルへ人件費・外注費・仕入れ値・材料費の固定入力欄を追加。実績売上金額は既存欄を「実績売上金額」として表示
+- `plannedExpenseLines.type`（labor/outsourcing/purchase/materials）を対応項目へ合算して初期値候補にする。同一type複数は合算。本人確認前はexpense保存しない
+- 0円項目はexpenseレコードを作らない。固定4項目＋その他経費（最大3件）を既存expense形式で一括保存。v4.13.13の全件成功/全件失敗を維持
+- 予定値（plannedExpenseLines / plannedExpenseTotal）は実績保存後も変更しない。予定と実績のフィールドは分離のまま
+- 利益管理の予定欄に予定売上・予定経費・予定利益・予定利益率を表示。予定売上0は利益率「—」。赤字も表示。確定済み（completed / actualRevenueId）は既存完了判定で予定集計から除外
+- 公開表示、`BUDIL_VERSION`、バックアップ版、変更JS/CSS cache buster、現行verify期待値をv4.13.17へ統一
+- 新規 `scripts/verify-v41317-fixed-actual-cost.mjs`
+
 ## v4.13.16 予定経費・予定利益連携
 
 - Googleカレンダー説明欄の明示ラベル（予定人件費／予定外注費／予定仕入／予定材料費）から予定経費を取得する

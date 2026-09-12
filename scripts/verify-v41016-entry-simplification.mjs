@@ -27,10 +27,10 @@ const statusMd = load('status.md');
 const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
-assert(indexHtml.includes('v4.13.16'), 'index.html should show v4.12.26');
-assert(indexHtml.includes('js/app.js?v=4.13.16'), 'app.js cache buster should be v4.13.16');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.16'"), 'storage.js version should be v4.13.16');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.13.16'"), 'data-backup version should be v4.13.16');
+assert(indexHtml.includes('v4.13.17'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('js/app.js?v=4.13.17'), 'app.js cache buster should be v4.13.17');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.17'"), 'storage.js version should be v4.13.17');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.13.17'"), 'data-backup version should be v4.13.17');
 
 const dailyCardStart = indexHtml.indexOf('class="card card-wide card-daily-action-tasks"');
 const dailyCardEnd = indexHtml.indexOf('card-external-check-collapse');

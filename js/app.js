@@ -4165,14 +4165,69 @@
     addBtn.disabled = count >= max;
   }
 
+  function getFixedActualCostFields() {
+    if (typeof WorkCompletionBrain !== 'undefined' && Array.isArray(WorkCompletionBrain.FIXED_ACTUAL_COST_FIELDS)) {
+      return WorkCompletionBrain.FIXED_ACTUAL_COST_FIELDS;
+    }
+    return [
+      { type: 'labor', name: '人件費', category: '人件費' },
+      { type: 'outsourcing', name: '外注費', category: '外注費' },
+      { type: 'purchase', name: '仕入れ値', category: 'その他' },
+      { type: 'materials', name: '材料費', category: '薬剤・材料' }
+    ];
+  }
+
+  function readFixedActualCostRows() {
+    return getFixedActualCostFields().map(field => {
+      const el = document.getElementById('work-completion-cost-' + field.type);
+      const amountRaw = String(el && el.value || '').trim();
+      return {
+        type: field.type,
+        name: field.name,
+        category: field.category,
+        amountRaw,
+        amount: amountRaw === '' ? null : Number(amountRaw)
+      };
+    });
+  }
+
+  function resetFixedActualCostFields() {
+    getFixedActualCostFields().forEach(field => {
+      const el = document.getElementById('work-completion-cost-' + field.type);
+      if (el) el.value = '';
+    });
+  }
+
+  function applyFixedActualCostPrefill(lines) {
+    const list = Array.isArray(lines) ? lines : [];
+    getFixedActualCostFields().forEach(field => {
+      const el = document.getElementById('work-completion-cost-' + field.type);
+      if (!el) return;
+      const found = list.find(line => line && line.type === field.type);
+      const amount = Number(found && found.amount) || 0;
+      el.value = amount > 0 ? String(amount) : '0';
+    });
+  }
+
+  function sumFixedActualCostAmount() {
+    if (typeof WorkCompletionBrain !== 'undefined' && typeof WorkCompletionBrain.validateFixedActualCostFields === 'function') {
+      const checked = WorkCompletionBrain.validateFixedActualCostFields(readFixedActualCostRows());
+      if (checked && checked.ok) return Number(checked.amount) || 0;
+    }
+    return readFixedActualCostRows().reduce((n, row) => {
+      return n + (Number.isFinite(row.amount) && row.amount > 0 ? row.amount : 0);
+    }, 0);
+  }
+
   function updateInlineExpenseTotals(prefix) {
     const lines = readInlineExpenseRows(prefix);
     const checked = typeof WorkCompletionBrain !== 'undefined'
       ? WorkCompletionBrain.validateInlineExpenseLines(lines)
       : { ok: true, amount: lines.reduce((n, line) => n + (Number(line.amount) || 0), 0) };
-    const total = checked.ok ? (Number(checked.amount) || 0) : lines.reduce((n, line) => {
+    const otherTotal = checked.ok ? (Number(checked.amount) || 0) : lines.reduce((n, line) => {
       return n + (Number.isFinite(line.amount) && line.amount > 0 ? line.amount : 0);
     }, 0);
+    const total = otherTotal + (prefix === 'work-completion' ? sumFixedActualCostAmount() : 0);
     const revenueAmount = getInlineExpenseRevenueAmount(prefix);
     const profit = revenueAmount - total;
     const totalEl = document.getElementById(prefix + '-inline-expense-total');
@@ -4249,6 +4304,7 @@
     if (amountEl) amountEl.value = '';
     if (contentEl) contentEl.value = '';
     if (memoEl) memoEl.value = '';
+    if (prefix === 'work-completion') resetFixedActualCostFields();
     populateInlineExpenseCategorySelect(prefix + '-inline-expense-category');
     updateInlineExpenseTotals(prefix);
   }
@@ -11906,7 +11962,7 @@
     document.getElementById('work-completion-actual-memo').value = defaults.additionalMemo;
     document.getElementById('work-completion-follow-memo').value = defaults.followMemo;
     clearInlineExpenseFields('work-completion');
-    applyInlineExpensePrefill('work-completion', defaults.inlineExpensePrefill || []);
+    applyFixedActualCostPrefill(defaults.actualCostPrefill || []);
     renderWorkCompletionPlannedExpenseHint(defaults);
     const linkedLead = resolveLeadForWorkOrder(wo);
     const leadIdEl = document.getElementById('work-completion-lead-id');
@@ -12007,10 +12063,15 @@
         alert('入金日（または入金予定日）を入力してください。売上は登録していません。');
         return;
       }
-      const inlineInput = readInlineExpenseInput('work-completion');
-      const inlineCheck = validateInlineExpenseInput(inlineInput);
-      if (!inlineCheck.ok) {
-        alert(inlineCheck.error);
+      const expenseState = typeof WorkCompletionBrain !== 'undefined'
+        && typeof WorkCompletionBrain.buildWorkCompletionExpenseState === 'function'
+        ? WorkCompletionBrain.buildWorkCompletionExpenseState(
+          readFixedActualCostRows(),
+          readInlineExpenseRows('work-completion')
+        )
+        : validateInlineExpenseInput(readInlineExpenseInput('work-completion'));
+      if (!expenseState.ok) {
+        alert(expenseState.error);
         return;
       }
       const queueSource = document.getElementById('work-completion-queue-source')?.value || 'work-order';
@@ -12022,7 +12083,7 @@
       const confirmationSnapshot = WorkCompletionBrain.createRevenueConfirmationSnapshot(
         wo,
         input,
-        { shouldCreate: inlineCheck.shouldCreate, input: inlineInput, items: inlineCheck.items }
+        { shouldCreate: expenseState.shouldCreate, items: expenseState.items || [] }
       );
       const snapshotCheck = WorkCompletionBrain.validateRevenueConfirmationSnapshot(confirmationSnapshot);
       if (!snapshotCheck.ok) {
@@ -13834,6 +13895,23 @@
       `<div class="profit-summary-item ${item.extraClass || ''}"><span>${esc(item.label)}</span><strong>${esc(item.value)}</strong></div>`;
     const renderMetricGrid = (items, extraClass) =>
       `<div class="profit-breakdown-grid${extraClass ? ` ${extraClass}` : ''}">${items.map(renderMetricItem).join('')}</div>`;
+    const plannedRevenueValue = Number(s.plannedRevenueEstimate) || 0;
+    const plannedExpenseValue = Number(s.plannedExpenseEstimate) || 0;
+    const plannedProfitValue = s.plannedNetProfit != null
+      ? Number(s.plannedNetProfit)
+      : (plannedRevenueValue - plannedExpenseValue);
+    const plannedRateLabel = typeof ProfitBrain !== 'undefined' && typeof ProfitBrain.formatPlannedNetProfitRate === 'function'
+      ? ProfitBrain.formatPlannedNetProfitRate(plannedProfitValue, plannedRevenueValue)
+      : (plannedRevenueValue > 0
+        ? `${(Math.round((plannedProfitValue / plannedRevenueValue) * 1000) / 10).toFixed(1)}%`
+        : '—');
+    const plannedMetricItems = [
+      { label: '予定売上', value: RevenueBrain.formatYen(plannedRevenueValue) },
+      { label: '予定経費', value: RevenueBrain.formatYen(plannedExpenseValue) },
+      { label: '予定利益', value: RevenueBrain.formatYen(plannedProfitValue) },
+      { label: '予定利益率', value: plannedRateLabel },
+      { label: '予定仲介料', value: RevenueBrain.formatYen(scheduledFee) }
+    ];
     const metricsLayout = workflowMode
       ? `<div class="profit-metrics-layout">
       <p class="profit-breakdown-section-label">合計</p>
@@ -13850,16 +13928,7 @@
         { label: '確定仲介料', value: RevenueBrain.formatYen(confirmedFee) }
       ], 'profit-breakdown-grid-3')}
       <p class="profit-breakdown-section-label">予定</p>
-      ${renderMetricGrid([
-        { label: '予定売上', value: RevenueBrain.formatYen(m.scheduledRevenue ?? m.plannedAdditionalRevenue ?? 0) },
-        { label: '予定経費', value: RevenueBrain.formatYen(s.plannedExpenseEstimate || 0) },
-        { label: '予定利益', value: RevenueBrain.formatYen(
-          (Number(s.plannedExpenseEstimate) > 0 && s.plannedNetProfit != null)
-            ? s.plannedNetProfit
-            : (m.scheduledProfit ?? 0)
-        ) },
-        { label: '予定仲介料', value: RevenueBrain.formatYen(scheduledFee) }
-      ])}
+      ${renderMetricGrid(plannedMetricItems)}
       </div>`
       : `<div class="profit-metrics-layout">
       <p class="profit-breakdown-section-label">合計</p>
@@ -13876,16 +13945,7 @@
         { label: '確定仲介料', value: RevenueBrain.formatYen(confirmedFee) }
       ], 'profit-breakdown-grid-3')}
       <p class="profit-breakdown-section-label">予定</p>
-      ${renderMetricGrid([
-        { label: '予定売上', value: RevenueBrain.formatYen(m.scheduledRevenue ?? m.plannedAdditionalRevenue ?? 0) },
-        { label: '予定経費', value: RevenueBrain.formatYen(s.plannedExpenseEstimate || 0) },
-        { label: '予定利益', value: RevenueBrain.formatYen(
-          (Number(s.plannedExpenseEstimate) > 0 && s.plannedNetProfit != null)
-            ? s.plannedNetProfit
-            : (m.scheduledProfit ?? 0)
-        ) },
-        { label: '予定仲介料', value: RevenueBrain.formatYen(scheduledFee) }
-      ])}
+      ${renderMetricGrid(plannedMetricItems)}
       </div>`;
     const expenseOverview = s.usesMonthlyResult
       ? ''
