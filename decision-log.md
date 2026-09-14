@@ -2,6 +2,24 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.13.19 集客チェックを Browser番頭高速READへ統合（2026-09-14）
+
+**日付**: 2026-09-14
+
+**背景**: Browser番頭の4広告診断は Phase6/8 後に高速化した一方、Budil集客チェックは `marketing_local_api.py` が独自CDP＋`Page.bringToFront`＋固定sleepのため遅く、共通Chromeの最小化も維持できなかった。
+
+**判断内容**:
+- Ads/GA4/SC の実行エンジンは Browser番頭側を単一正本にする
+- Budilは `/collect/all` を優先し、失敗時のみ既存3本APIへフォールバック
+- 保存用JSON形は維持。UI入口は既存「集客データを取得して保存」のまま
+- 通常READでは restore/maximize/bringToFront しない
+
+**変更対象**:
+- `js/app.js` / `index.html` / `js/storage.js` / `js/data-backup.js`
+- `scripts/verify-v41319-marketing-fast-read.mjs` / 現行verifyのバージョン期待値
+- `status.md` / `handoff.md` / `decision-log.md`
+- Browser番頭 `marketing_local_api.py`（別リポジトリ）
+
 ## v4.13.18 AI確認用バックアップ（2026-09-12）
 
 **日付**: 2026-09-12

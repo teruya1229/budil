@@ -1,5 +1,13 @@
 ﻿# Budil status
 
+## v4.13.19 集客チェックを Browser番頭高速READへ統合
+
+- 「集客データを取得して保存」は Browser番頭 `/collect/all` を優先。個別3本APIは互換フォールバック
+- 保存形式（広告records / GA4 records / Search Console snapshot）は変更なし
+- 共通Chromeは最小化維持（restore/maximize/focus_steal=0）。Ads/GA4/SC write=0
+- 公開表示、`BUDIL_VERSION`、バックアップ版、全JS/CSS cache buster、現行verify期待値をv4.13.19へ統一
+- 新規 `scripts/verify-v41319-marketing-fast-read.mjs`
+
 ## v4.13.18 AI確認用バックアップ
 
 - データ管理のローカルバックアップへ「AI確認用バックアップ」ボタンを追加。中身は既存 `DataBackup.exportPayload()` と同一

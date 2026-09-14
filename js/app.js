@@ -17423,53 +17423,82 @@
       lastMarketingRunMeta.browserStarting = !health.cdpReady;
       renderMarketingSyncStatus(getLatestMarketingSnapshot() || undefined);
 
-      const requests = [
-        ['googleAds', 'Google広告', '/collect/google-ads', 2],
-        ['ga4', 'GA4', '/collect/ga4', 3],
-        ['searchConsole', 'Search Console', '/collect/search-console', 4]
-      ];
-      for (const [key, label, path, step] of requests) {
-        setMarketingProgress(step);
-        try {
-          const result = await requestMarketingLocalApi(path, 'POST');
-          if (result && result.browserStatus) {
-            lastMarketingRunMeta.browserStatus = result.browserStatus;
-            if (lastMarketingHealth) {
-              lastMarketingHealth = {
-                ...lastMarketingHealth,
-                browserStatus: result.browserStatus,
-                cdpReady: result.cdpReady != null ? result.cdpReady : lastMarketingHealth.cdpReady,
-                checkedAt: new Date().toISOString()
-              };
-            }
+      const applyServiceResult = (key, label, result) => {
+        if (result && result.browserStatus) {
+          lastMarketingRunMeta.browserStatus = result.browserStatus;
+          if (lastMarketingHealth) {
+            lastMarketingHealth = {
+              ...lastMarketingHealth,
+              browserStatus: result.browserStatus,
+              cdpReady: result.cdpReady != null ? result.cdpReady : lastMarketingHealth.cdpReady,
+              checkedAt: new Date().toISOString()
+            };
           }
-          lastMarketingRunMeta.browserStarting = false;
-          if (isMarketingBrowserEnsureFailure(result)) {
-            throw new Error(marketingBrowserFailureMessage(result));
-          }
-          const validationError = validateMarketingServiceResult(result, label);
-          if (validationError) {
-            serviceResults[key] = { status: 'error', errors: [validationError], records: [], queries: [], pages: [] };
-          } else {
-            serviceResults[key] = result;
-          }
-        } catch (err) {
-          lastMarketingRunMeta.browserStarting = false;
-          const message = err && err.message ? err.message : '取得失敗';
-          if (/BROWSER_|Browser番頭|正本Chrome|CDP|READY待機|CONFLICT|状態を確認できない|起動に失敗/.test(message)) {
-            throw err;
-          }
-          serviceResults[key] = {
-            status: 'error',
-            errors: [label + ': ' + message],
-            records: [],
-            queries: [],
-            pages: []
-          };
+        }
+        lastMarketingRunMeta.browserStarting = false;
+        if (isMarketingBrowserEnsureFailure(result)) {
+          throw new Error(marketingBrowserFailureMessage(result));
+        }
+        const validationError = validateMarketingServiceResult(result, label);
+        if (validationError) {
+          serviceResults[key] = { status: 'error', errors: [validationError], records: [], queries: [], pages: [] };
+        } else {
+          serviceResults[key] = result;
         }
         if (serviceResults[key] && serviceResults[key].status !== 'success') {
           saveStats.failed += 1;
           saveStats.errors.push(...(serviceResults[key].errors || [label + ': 取得失敗']));
+        }
+      };
+
+      let usedCombined = false;
+      try {
+        setMarketingProgress(2, 'Google広告・GA4・Search Consoleを一括取得中');
+        const combined = await requestMarketingLocalApi('/collect/all', 'POST');
+        if (combined && (combined.googleAds || combined.ga4 || combined.searchConsole)) {
+          usedCombined = true;
+          applyServiceResult('googleAds', 'Google広告', combined.googleAds);
+          setMarketingProgress(3);
+          applyServiceResult('ga4', 'GA4', combined.ga4);
+          setMarketingProgress(4);
+          applyServiceResult('searchConsole', 'Search Console', combined.searchConsole);
+        }
+      } catch (err) {
+        lastMarketingRunMeta.browserStarting = false;
+        const message = err && err.message ? err.message : '取得失敗';
+        if (/BROWSER_|Browser番頭|正本Chrome|CDP|READY待機|CONFLICT|状態を確認できない|起動に失敗/.test(message)) {
+          throw err;
+        }
+        usedCombined = false;
+      }
+
+      if (!usedCombined) {
+        const requests = [
+          ['googleAds', 'Google広告', '/collect/google-ads', 2],
+          ['ga4', 'GA4', '/collect/ga4', 3],
+          ['searchConsole', 'Search Console', '/collect/search-console', 4]
+        ];
+        for (const [key, label, path, step] of requests) {
+          setMarketingProgress(step);
+          try {
+            const result = await requestMarketingLocalApi(path, 'POST');
+            applyServiceResult(key, label, result);
+          } catch (err) {
+            lastMarketingRunMeta.browserStarting = false;
+            const message = err && err.message ? err.message : '取得失敗';
+            if (/BROWSER_|Browser番頭|正本Chrome|CDP|READY待機|CONFLICT|状態を確認できない|起動に失敗/.test(message)) {
+              throw err;
+            }
+            serviceResults[key] = {
+              status: 'error',
+              errors: [label + ': ' + message],
+              records: [],
+              queries: [],
+              pages: []
+            };
+            saveStats.failed += 1;
+            saveStats.errors.push(...(serviceResults[key].errors || [label + ': 取得失敗']));
+          }
         }
       }
 
