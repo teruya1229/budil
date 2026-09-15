@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.19 - AI確認用バックアップ
+ * Budil v4.13.20 - AI確認用バックアップ
  * Isolated fixtures only. No production localStorage. No restore.
  */
 import { readFileSync } from 'node:fs';
@@ -45,18 +45,18 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version ==');
-assert(index.includes('Budil v4.13.19'), 'index shows Budil v4.13.19');
-assert(index.includes('AI経営脳みそ v4.13.19'), 'header shows v4.13.19');
-assert(index.includes('js/app.js?v=4.13.19'), 'app.js cache buster is 4.13.19');
-assert(index.includes('js/data-backup.js?v=4.13.19'), 'data-backup cache buster is 4.13.19');
-assert(index.includes('css/style.css?v=4.13.19'), 'style.css cache buster is 4.13.19');
+assert(index.includes('Budil v4.13.20'), 'index shows Budil v4.13.20');
+assert(index.includes('AI経営脳みそ v4.13.20'), 'header shows v4.13.20');
+assert(index.includes('js/app.js?v=4.13.20'), 'app.js cache buster is 4.13.20');
+assert(index.includes('js/data-backup.js?v=4.13.20'), 'data-backup cache buster is 4.13.20');
+assert(index.includes('css/style.css?v=4.13.20'), 'style.css cache buster is 4.13.20');
 assert(!index.includes('?v=4.13.17'), 'old cache buster 4.13.17 is gone from index');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.19'"), 'storage version is v4.13.19');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.19'"), 'data-backup version is v4.13.19');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.19'"), 'verify-current pins v4.13.19');
-assert(statusMd.includes('v4.13.19'), 'status.md documents v4.13.19');
-assert(handoffMd.includes('v4.13.19'), 'handoff.md documents v4.13.19');
-assert(decisionLog.includes('v4.13.19'), 'decision-log records v4.13.19');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.20'"), 'storage version is v4.13.20');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.20'"), 'data-backup version is v4.13.20');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.20'"), 'verify-current pins v4.13.20');
+assert(statusMd.includes('v4.13.20'), 'status.md documents v4.13.20');
+assert(handoffMd.includes('v4.13.20'), 'handoff.md documents v4.13.20');
+assert(decisionLog.includes('v4.13.20'), 'decision-log records v4.13.20');
 
 console.log('== UI wiring ==');
 assert(index.includes('id="btn-export-data"'), 'usual backup button remains');
@@ -123,4 +123,4 @@ const usualName = runInContext('DataBackup.filename()', ctx);
 assert(/^budil-backup-\d{4}-\d{2}-\d{2}\.json$/.test(usualName), 'usual filename format unchanged');
 assert(/^budil-ai-snapshot-\d{4}-\d{2}-\d{2}-\d{6}\.json$/.test(aiName), 'AI filename format');
 
-console.log('\nAll v4.13.19 AI confirm snapshot checks passed.');
+console.log('\nAll v4.13.20 AI confirm snapshot checks passed.');

@@ -1,5 +1,16 @@
 ﻿# Budil status
 
+## v4.13.20 Googleカレンダー1ボタン連携を Chrome 152 Local Network Access に対応
+
+- 公開HTTPS版Budilから `127.0.0.1:43821` へ接続するとき、Chrome 145+/152 の loopback permission を区別する
+- `/health` と `/sync` は既存 `fetchCalendarLocalApi` を共通利用し、対応ブラウザでは `targetAddressSpace: 'loopback'` を付ける
+- 権限確認は「Googleカレンダーを更新」クリック後の接続失敗時のみ。ページロードでは要求しない
+- worker未起動 / permission denied / prompt / timeout / API HTTPエラーを誤って同一文言にしない
+- calendar-sync-worker の bind（`127.0.0.1:43821`）と CORS/PNA ヘッダは変更なし。LAN公開なし
+- Google Calendar は読取専用のまま。失敗時は既存Budilデータを変更しない
+- 新規 `scripts/verify-v41320-calendar-lna-loopback.mjs`
+- 公開表示、`BUDIL_VERSION`、バックアップ版、全JS/CSS cache buster、現行verify期待値をv4.13.20へ統一
+
 ## v4.13.19 集客チェックを Browser番頭高速READへ統合
 
 - 「集客データを取得して保存」は Browser番頭 `/collect/all` を優先。個別3本APIは互換フォールバック

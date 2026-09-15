@@ -2,6 +2,24 @@
 
 重要な判断を「いつ / なぜ / 何を見て / 次にどうするか」まで残すためのログです。
 
+## v4.13.20 Googleカレンダー1ボタン連携を Chrome 152 Local Network Access に対応（2026-09-15）
+
+**日付**: 2026-09-15
+
+**背景**: Local API（`http://127.0.0.1:43821/health`）は起動しているのに、公開HTTPS版Budilの「Googleカレンダーを更新」が「カレンダー連携が起動していません」になる。Chrome 145+/152 は public origin から loopback への接続を `loopback-network` 許可の後ろに置く。既存実装は fetch 失敗をほぼ未起動扱いにしていた。
+
+**判断内容**:
+- Chrome Fetch が対応していれば `targetAddressSpace: 'loopback'` を付け、未対応ブラウザは通常fetchへフォールバック
+- Permissions API は `loopback-network` を第一候補、`local-network-access` を互換用。TypeErrorは握りつぶして従来判定へ戻す
+- 権限UIはボタン操作起点の `/health` fetch で出す。ページロードでは要求しない
+- worker の `127.0.0.1:43821` bind、許可origin、CORS、`Access-Control-Allow-Private-Network` は維持。0.0.0.0禁止
+- Google Calendar は READ ONLY。失敗時は既存データを変更しない
+
+**変更対象**:
+- `js/app.js` / `index.html` / `js/storage.js` / `js/data-backup.js`
+- `scripts/verify-v41320-calendar-lna-loopback.mjs` / `scripts/verify-v41215-calendar-local-api-one-button.mjs` / 現行verifyのバージョン期待値
+- `status.md` / `handoff.md` / `decision-log.md`
+
 ## v4.13.19 集客チェックを Browser番頭高速READへ統合（2026-09-14）
 
 **日付**: 2026-09-14

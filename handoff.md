@@ -1,6 +1,6 @@
 ﻿# Budil handoff
 
-最終更新: 2026-09-12
+最終更新: 2026-09-15
 
 ## Supabase環境（2026/09/06確定）
 
@@ -26,7 +26,7 @@
 - **必須**: `../calendar-sync-worker/run-budil-calendar-export.bat`
 - **必須**: `hub/functions` の依存関係（googleapis 等）。依存は `hub/functions` で npm install
 - **禁止**: Budil root での npm install
-- **現行合格コマンド**: `node scripts/verify-current.mjs`（v4.13.19）
+- **現行合格コマンド**: `node scripts/verify-current.mjs`（v4.13.20）
 - **前提不足時**: 本体不具合ではなく「検証環境不足」と判定。runner 開始時に停止する
 
 ## 構造化請求書 CLI（Browser番頭接続済み・Gmail未接続）
@@ -45,7 +45,8 @@
 
 | 項目 | 値 |
 |------|-----|
-| 最新バージョン | v4.13.19（集客チェック高速READ統合） |
+| 最新バージョン | v4.13.20（Chrome 152 Local Network Access / カレンダー1ボタン） |
+| v4.13.20 カレンダーLNA対応 | 公開Budil→`127.0.0.1:43821` に `targetAddressSpace: 'loopback'`。未起動と loopback permission を分離。worker変更なし。失敗時は既存データ非破壊 |
 | v4.13.19 集客チェック高速READ | 「集客データを取得して保存」は Browser番頭 `/collect/all` 優先。個別3本は互換フォールバック。保存形式不変。共通Chrome最小化維持 |
 | v4.13.18 AI確認用バックアップ | データ管理へ「AI確認用バックアップ」。payloadは既存exportPayloadと同一。ファイル名だけAI用。lastBackupAt非更新。通常バックアップ/復元は不変 |
 | v4.13.17 実経費固定項目 | 売上確定に人件費・外注費・仕入れ値・材料費の固定欄。予定typeを合算初期値。0円は保存しない。全件成功/全件失敗維持。利益管理に予定利益率。確定済みは予定集計から除外 |

@@ -30,13 +30,13 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version / cache buster ==');
-assert(indexHtml.includes('v4.13.19'), 'index.html should show v4.12.26');
-assert(indexHtml.includes('js/app.js?v=4.13.19'), 'app.js cache buster should be v4.13.19');
-assert(indexHtml.includes('css/style.css?v=4.13.19'), 'style.css cache buster should be v4.13.19');
-assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.13.19'), 'calendar-candidate cache buster should be v4.13.19');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.19'"), 'storage version should be v4.13.19');
-assert(dataBackupJs.includes("APP_VERSION: 'v4.13.19'"), 'data-backup version should be v4.13.19');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.19'"), 'verify-current EXPECTED_VERSION should be v4.13.19');
+assert(indexHtml.includes('v4.13.20'), 'index.html should show v4.12.26');
+assert(indexHtml.includes('js/app.js?v=4.13.20'), 'app.js cache buster should be v4.13.20');
+assert(indexHtml.includes('css/style.css?v=4.13.20'), 'style.css cache buster should be v4.13.20');
+assert(indexHtml.includes('js/calendar-candidate-brain.js?v=4.13.20'), 'calendar-candidate cache buster should be v4.13.20');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.20'"), 'storage version should be v4.13.20');
+assert(dataBackupJs.includes("APP_VERSION: 'v4.13.20'"), 'data-backup version should be v4.13.20');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.20'"), 'verify-current EXPECTED_VERSION should be v4.13.20');
 assert(!indexHtml.includes('?v=4.12.14'), 'old cache buster v4.12.14 should be gone');
 assert(statusMd.includes('v4.12.25'), 'status.md should document v4.12.25');
 assert(handoffMd.includes('v4.12.25'), 'handoff.md should document v4.12.25');
@@ -66,6 +66,8 @@ assert(!appJs.includes('0.0.0.0'), 'must not reference 0.0.0.0');
 console.log('== error messages ==');
 for (const msg of [
   'カレンダー連携が起動していません。PCでローカル連携を起動してから、もう一度お試しください。',
+  'ChromeでBudilからPC内のカレンダー連携への接続がブロックされています。',
+  'PC内のカレンダー連携への接続許可が必要です。',
   'ローカル連携へ接続できません。Chromeのローカルネットワーク許可と連携ツールの起動状態を確認してください。',
   'カレンダーを更新中です。完了後にもう一度お試しください。',
   '連続更新を避け、数秒後にもう一度お試しください。',
@@ -86,7 +88,7 @@ assert(
   'saveAll must call shared commit helper'
 );
 assert(
-  /function handleCalendarExportLatestClick\(\) \{[\s\S]{0,5000}?commitSavableCalendarCandidates/.test(appJs),
+  /function handleCalendarExportLatestClick\(\) \{[\s\S]{0,8000}?commitSavableCalendarCandidates/.test(appJs),
   'local API flow must call shared commit helper'
 );
 assert(!appJs.includes('localStorage.clear'), 'localStorage.clear forbidden');

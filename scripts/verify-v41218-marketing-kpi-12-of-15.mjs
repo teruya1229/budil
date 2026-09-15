@@ -22,9 +22,9 @@ for (const file of ['js/app.js', 'js/analytics-brain.js']) {
   execFileSync(process.execPath, ['--check', join(root, file)], { stdio: 'inherit' });
 }
 
-assert(html.includes('v4.13.19'), 'index.html shows v4.12.26');
-assert(html.includes('js/app.js?v=4.13.19'), 'app.js cache buster is v4.13.19');
-assert(html.includes('css/style.css?v=4.13.19'), 'style.css cache buster is v4.13.19');
+assert(html.includes('v4.13.20'), 'index.html shows v4.12.26');
+assert(html.includes('js/app.js?v=4.13.20'), 'app.js cache buster is v4.13.20');
+assert(html.includes('css/style.css?v=4.13.20'), 'style.css cache buster is v4.13.20');
 assert(app.includes('buildMarketingSnapshotMetrics'), 'metrics builder exists');
 assert(app.includes('metricStatus'), 'metricStatus is persisted');
 assert(app.includes('KPI取得数'), 'KPI取得数 label exists');

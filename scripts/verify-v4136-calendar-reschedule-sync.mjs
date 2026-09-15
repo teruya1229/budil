@@ -29,11 +29,11 @@ for (const file of ['js/app.js', 'js/storage.js', 'js/calendar-candidate-brain.j
 }
 
 console.log('== version / cache buster ==');
-assert(html.includes('Budil v4.13.19'), 'index.html shows Budil v4.13.19');
-assert(html.includes('js/app.js?v=4.13.19'), 'app.js cache buster is v4.13.19');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.19'"), 'storage version is v4.13.19');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.19'"), 'data-backup version is v4.13.19');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.19'"), 'verify-current pins v4.13.19');
+assert(html.includes('Budil v4.13.20'), 'index.html shows Budil v4.13.20');
+assert(html.includes('js/app.js?v=4.13.20'), 'app.js cache buster is v4.13.20');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.20'"), 'storage version is v4.13.20');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.20'"), 'data-backup version is v4.13.20');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.20'"), 'verify-current pins v4.13.20');
 assert(
   /^verify-v4(10|11|12|13)\d.*\.mjs$/.test('verify-v4136-calendar-reschedule-sync.mjs'),
   'new verify is discoverable by current pattern'

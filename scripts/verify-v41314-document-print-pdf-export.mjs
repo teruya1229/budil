@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.19 - 請求書・見積書の独立印刷とPDFダウンロード
+ * Budil v4.13.20 - 請求書・見積書の独立印刷とPDFダウンロード
  * Isolated fixtures only. No production localStorage.
  */
 import { readFileSync, existsSync } from 'node:fs';
@@ -37,17 +37,17 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version ==');
-assert(index.includes('Budil v4.13.19'), 'index shows Budil v4.13.19');
-assert(index.includes('js/app.js?v=4.13.19'), 'app.js cache buster is 4.13.19');
-assert(index.includes('js/documents-brain.js?v=4.13.19'), 'documents-brain cache buster is 4.13.19');
-assert(index.includes('js/doc-export.js?v=4.13.19'), 'doc-export cache buster is 4.13.19');
-assert(index.includes('css/style.css?v=4.13.19'), 'style.css cache buster is 4.13.19');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.19'"), 'storage version is v4.13.19');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.19'"), 'data-backup version is v4.13.19');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.19'"), 'verify-current pins v4.13.19');
-assert(statusMd.includes('v4.13.19'), 'status.md documents v4.13.19');
-assert(handoffMd.includes('v4.13.19'), 'handoff.md documents v4.13.19');
-assert(decisionLog.includes('v4.13.19'), 'decision-log.md records v4.13.19');
+assert(index.includes('Budil v4.13.20'), 'index shows Budil v4.13.20');
+assert(index.includes('js/app.js?v=4.13.20'), 'app.js cache buster is 4.13.20');
+assert(index.includes('js/documents-brain.js?v=4.13.20'), 'documents-brain cache buster is 4.13.20');
+assert(index.includes('js/doc-export.js?v=4.13.20'), 'doc-export cache buster is 4.13.20');
+assert(index.includes('css/style.css?v=4.13.20'), 'style.css cache buster is 4.13.20');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.20'"), 'storage version is v4.13.20');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.20'"), 'data-backup version is v4.13.20');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.20'"), 'verify-current pins v4.13.20');
+assert(statusMd.includes('v4.13.20'), 'status.md documents v4.13.20');
+assert(handoffMd.includes('v4.13.20'), 'handoff.md documents v4.13.20');
+assert(decisionLog.includes('v4.13.20'), 'decision-log.md records v4.13.20');
 
 console.log('== UI / wiring ==');
 assert(index.includes('id="btn-doc-print"'), 'print button exists');
@@ -57,7 +57,7 @@ assert(index.includes('PDFダウンロード'), 'PDF download label present');
 assert(!index.includes('ヘッダーとフッター'), 'old header/footer OFF guidance is removed');
 assert(!index.includes('印刷 / PDF'), 'combined print/PDF label is removed');
 assert(!app.includes('>印刷/PDF<'), 'list action no longer says 印刷/PDF');
-assert(index.includes('js/doc-export.js?v=4.13.19'), 'doc-export script is loaded');
+assert(index.includes('js/doc-export.js?v=4.13.20'), 'doc-export script is loaded');
 assert(existsSync(join(root, 'js/vendor/html2pdf.bundle.min.js')), 'html2pdf vendor bundle exists');
 assert(app.includes('BudilDocExport.printDocumentStandalone'), 'print uses standalone exporter');
 assert(app.includes('BudilDocExport.downloadDocumentPdf'), 'PDF uses download exporter');
@@ -200,4 +200,4 @@ assert(sheet.includes('class="doc-sheet"'), 'screen renderDocumentSheet unchange
 assert(sheet.includes('doc-seal'), 'seal markup remains');
 assert(sheet.includes('doc-bank') || sheet.includes('振込先'), 'bank block remains for invoice');
 
-console.log('\nAll v4.13.19 document print/PDF export checks passed.');
+console.log('\nAll v4.13.20 document print/PDF export checks passed.');

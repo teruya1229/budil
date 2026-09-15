@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.19 - PDFダウンロード位置ズレ修正
+ * Budil v4.13.20 - PDFダウンロード位置ズレ修正
  * Isolated fixtures only. No production localStorage.
  * 印刷経路（printDocumentStandalone）は不変であることを確認する。
  */
@@ -38,19 +38,19 @@ const handoffMd = load('handoff.md');
 const decisionLog = load('decision-log.md');
 
 console.log('== version ==');
-assert(index.includes('Budil v4.13.19'), 'index shows Budil v4.13.19');
-assert(index.includes('js/app.js?v=4.13.19'), 'app.js cache buster is 4.13.19');
-assert(index.includes('js/doc-export.js?v=4.13.19'), 'doc-export cache buster is 4.13.19');
-assert(index.includes('js/documents-brain.js?v=4.13.19'), 'documents-brain cache buster is 4.13.19');
-assert(index.includes('css/style.css?v=4.13.19'), 'style.css cache buster is 4.13.19');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.19'"), 'storage version is v4.13.19');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.19'"), 'data-backup version is v4.13.19');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.19'"), 'verify-current pins v4.13.19');
-assert(statusMd.includes('v4.13.19'), 'status.md documents v4.13.19');
-assert(handoffMd.includes('v4.13.19'), 'handoff.md documents v4.13.19');
-assert(decisionLog.includes('v4.13.19'), 'decision-log.md records v4.13.19');
-assert(printPdfVerify.includes('v4.13.19') || printPdfVerify.includes('4.13.19'),
-  'v4.13.14 print/PDF verify kept and version-aligned to 4.13.19');
+assert(index.includes('Budil v4.13.20'), 'index shows Budil v4.13.20');
+assert(index.includes('js/app.js?v=4.13.20'), 'app.js cache buster is 4.13.20');
+assert(index.includes('js/doc-export.js?v=4.13.20'), 'doc-export cache buster is 4.13.20');
+assert(index.includes('js/documents-brain.js?v=4.13.20'), 'documents-brain cache buster is 4.13.20');
+assert(index.includes('css/style.css?v=4.13.20'), 'style.css cache buster is 4.13.20');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.20'"), 'storage version is v4.13.20');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.20'"), 'data-backup version is v4.13.20');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.20'"), 'verify-current pins v4.13.20');
+assert(statusMd.includes('v4.13.20'), 'status.md documents v4.13.20');
+assert(handoffMd.includes('v4.13.20'), 'handoff.md documents v4.13.20');
+assert(decisionLog.includes('v4.13.20'), 'decision-log.md records v4.13.20');
+assert(printPdfVerify.includes('v4.13.20') || printPdfVerify.includes('4.13.20'),
+  'v4.13.14 print/PDF verify kept and version-aligned to 4.13.20');
 
 console.log('== PDF origin alignment (source) ==');
 assert(exportJs.includes('createPdfRenderFrame'), 'PDF uses dedicated render iframe');
@@ -237,4 +237,4 @@ const badGeometry = Export.measurePdfSheetGeometry(badSheet);
 assert(badGeometry.left === -12000, 'old offscreen host would report left:-12000');
 assert(badGeometry.left < -1, 'huge negative left is detectable');
 
-console.log('\nAll v4.13.19 PDF origin alignment checks passed.');
+console.log('\nAll v4.13.20 PDF origin alignment checks passed.');

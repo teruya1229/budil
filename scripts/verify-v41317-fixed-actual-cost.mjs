@@ -1,5 +1,5 @@
 /**
- * Budil v4.13.19 - 実経費固定項目化＋予定利益集計整理
+ * Budil v4.13.20 - 実経費固定項目化＋予定利益集計整理
  * Isolated fixtures only. No production localStorage.
  */
 import { readFileSync } from 'node:fs';
@@ -44,17 +44,17 @@ const revenueBrainSrc = load('js/revenue-brain.js');
 const css = load('css/style.css');
 
 console.log('== version ==');
-assert(index.includes('Budil v4.13.19'), 'index shows Budil v4.13.19');
-assert(index.includes('js/app.js?v=4.13.19'), 'app.js cache buster is 4.13.19');
-assert(index.includes('js/work-completion-brain.js?v=4.13.19'), 'work-completion-brain cache buster is 4.13.19');
-assert(index.includes('js/profit-brain.js?v=4.13.19'), 'profit-brain cache buster is 4.13.19');
-assert(index.includes('css/style.css?v=4.13.19'), 'style.css cache buster is 4.13.19');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.19'"), 'storage version is v4.13.19');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.19'"), 'data-backup version is v4.13.19');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.19'"), 'verify-current pins v4.13.19');
-assert(statusMd.includes('v4.13.19'), 'status.md documents v4.13.19');
-assert(handoffMd.includes('v4.13.19'), 'handoff.md documents v4.13.19');
-assert(decisionLog.includes('v4.13.19'), 'decision-log.md records v4.13.19');
+assert(index.includes('Budil v4.13.20'), 'index shows Budil v4.13.20');
+assert(index.includes('js/app.js?v=4.13.20'), 'app.js cache buster is 4.13.20');
+assert(index.includes('js/work-completion-brain.js?v=4.13.20'), 'work-completion-brain cache buster is 4.13.20');
+assert(index.includes('js/profit-brain.js?v=4.13.20'), 'profit-brain cache buster is 4.13.20');
+assert(index.includes('css/style.css?v=4.13.20'), 'style.css cache buster is 4.13.20');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.20'"), 'storage version is v4.13.20');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.20'"), 'data-backup version is v4.13.20');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.20'"), 'verify-current pins v4.13.20');
+assert(statusMd.includes('v4.13.20'), 'status.md documents v4.13.20');
+assert(handoffMd.includes('v4.13.20'), 'handoff.md documents v4.13.20');
+assert(decisionLog.includes('v4.13.20'), 'decision-log.md records v4.13.20');
 
 console.log('== wiring / safety ==');
 assert(index.includes('id="work-completion-cost-labor"'), 'completion modal has 人件費 field');
@@ -415,4 +415,4 @@ const retry = sandbox.saveInlineExpensesForRevenue('rev-atomic-4', '2026-09-20',
 assert(retry.ok && retry.expenses.length === 4, 'CASE4 retry saves all 4');
 assert(Storage.getExpenseRecords().filter(e => e.relatedRevenueId === 'rev-atomic-4').length === 4, 'CASE4 retry is exactly 4, not leftover plus 4');
 
-console.log('\nAll v4.13.19 fixed actual cost checks passed.');
+console.log('\nAll v4.13.20 fixed actual cost checks passed.');

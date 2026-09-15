@@ -39,11 +39,11 @@ const dataBackup = load('js/data-backup.js');
 const currentRunner = load('scripts/verify-current.mjs');
 
 console.log('== version ==');
-assert(html.includes('Budil v4.13.19'), 'index shows Budil v4.13.19');
-assert(html.includes('js/app.js?v=4.13.19'), 'app.js cache buster v4.13.19');
-assert(storageJs.includes("BUDIL_VERSION: 'v4.13.19'"), 'storage v4.13.19');
-assert(dataBackup.includes("APP_VERSION: 'v4.13.19'"), 'data-backup v4.13.19');
-assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.19'"), 'verify-current v4.13.19');
+assert(html.includes('Budil v4.13.20'), 'index shows Budil v4.13.20');
+assert(html.includes('js/app.js?v=4.13.20'), 'app.js cache buster v4.13.20');
+assert(storageJs.includes("BUDIL_VERSION: 'v4.13.20'"), 'storage v4.13.20');
+assert(dataBackup.includes("APP_VERSION: 'v4.13.20'"), 'data-backup v4.13.20');
+assert(currentRunner.includes("EXPECTED_VERSION = 'v4.13.20'"), 'verify-current v4.13.20');
 assert(html.includes('work-order-all-day'), 'all-day checkbox exists');
 assert(html.includes('work-order-end-date'), 'end date field exists');
 assert(app.includes('syncWorkOrderAllDayFormUi'), 'all-day form sync exists');

@@ -10075,10 +10075,75 @@
     el.classList.remove('hidden');
   }
 
+  async function queryCalendarLoopbackPermission() {
+    const result = { supported: false, name: null, state: 'unsupported' };
+    try {
+      if (typeof navigator === 'undefined' || !navigator.permissions || typeof navigator.permissions.query !== 'function') {
+        return result;
+      }
+      const names = ['loopback-network', 'local-network-access'];
+      for (let i = 0; i < names.length; i += 1) {
+        const name = names[i];
+        try {
+          const status = await navigator.permissions.query({ name: name });
+          const state = status && status.state != null ? String(status.state) : '';
+          if (!state) continue;
+          result.supported = true;
+          result.name = name;
+          result.state = state;
+          return result;
+        } catch (_) {
+          // TypeError when the permission name is unknown in this browser
+        }
+      }
+    } catch (_) {
+      // Permissions API missing or blocked
+    }
+    return result;
+  }
+
+  function buildCalendarLocalApiFetchInit(baseInit) {
+    const init = {};
+    const src = baseInit || {};
+    const keys = Object.keys(src);
+    for (let i = 0; i < keys.length; i += 1) {
+      const key = keys[i];
+      if (src[key] !== undefined) init[key] = src[key];
+    }
+    try {
+      if (typeof Request === 'undefined') return init;
+      void new Request('http://127.0.0.1/', {
+        method: 'GET',
+        targetAddressSpace: 'loopback'
+      });
+      init.targetAddressSpace = 'loopback';
+    } catch (_) {
+      // Unsupported browsers must keep a normal fetch init.
+    }
+    return init;
+  }
+
+  function classifyCalendarLocalApiFetchFailure(error, permission, phase) {
+    if (error && error.code === 'timeout') return 'timeout';
+    if (error && error.code === 'stale_response') return 'stale_response';
+    const perm = permission || {};
+    const state = perm.supported ? String(perm.state || '') : 'unsupported';
+    if (state === 'denied') return 'permission_denied';
+    if (state === 'prompt' || state === 'unknown') return 'permission_prompt';
+    if (phase === 'sync') return 'network';
+    return 'not_running';
+  }
+
   function mapCalendarLocalApiError(kind, details) {
     const info = details || {};
     if (kind === 'timeout') {
       return 'カレンダーの取得がタイムアウトしました。既存データは変更していません。';
+    }
+    if (kind === 'permission_denied') {
+      return 'ChromeでBudilからPC内のカレンダー連携への接続がブロックされています。';
+    }
+    if (kind === 'permission_prompt') {
+      return 'PC内のカレンダー連携への接続許可が必要です。';
     }
     if (kind === 'not_running') {
       return 'カレンダー連携が起動していません。PCでローカル連携を起動してから、もう一度お試しください。';
@@ -10092,7 +10157,7 @@
     if (kind === 'rate_limited' || info.code === 'rate_limited' || info.status === 429) {
       return '連続更新を避け、数秒後にもう一度お試しください。';
     }
-    if (kind === 'parse' || kind === 'save') {
+    if (kind === 'parse' || kind === 'save' || kind === 'api_error') {
       return 'カレンダーを更新できませんでした。既存データは変更していません。';
     }
     return 'カレンダーを更新できませんでした。既存データは変更していません。';
@@ -10122,14 +10187,28 @@
     const timeoutMs = Number.isFinite(opts.timeoutMs) ? opts.timeoutMs : CALENDAR_LOCAL_API_TIMEOUT_MS;
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     const requestGeneration = opts.generation;
+    const requestInit = buildCalendarLocalApiFetchInit({
+      method: opts.method || 'GET',
+      signal: controller.signal,
+      cache: 'no-store',
+      headers: opts.headers || {},
+      body: opts.body
+    });
     try {
-      const res = await fetch(url, {
-        method: opts.method || 'GET',
-        signal: controller.signal,
-        cache: 'no-store',
-        headers: opts.headers || {},
-        body: opts.body
-      });
+      let res;
+      try {
+        res = await fetch(url, requestInit);
+      } catch (error) {
+        if (requestInit && requestInit.targetAddressSpace === 'loopback' && error && error.name === 'TypeError' && /targetAddressSpace|loopback/i.test(String(error && error.message || ''))) {
+          const fallbackInit = {};
+          Object.keys(requestInit).forEach((key) => {
+            if (key !== 'targetAddressSpace') fallbackInit[key] = requestInit[key];
+          });
+          res = await fetch(url, fallbackInit);
+        } else {
+          throw error;
+        }
+      }
       if (requestGeneration != null && requestGeneration !== opts.activeGenerationRef.value) {
         const stale = new Error('stale_response');
         stale.code = 'stale_response';
@@ -10288,6 +10367,20 @@
     }
   }
 
+  async function applyCalendarLocalApiFetchFailure(error, phase) {
+    if (error && error.code === 'stale_response') return 'stale_response';
+    let permission = { supported: false, name: null, state: 'unsupported' };
+    if (!(error && error.code === 'timeout')) {
+      permission = await queryCalendarLoopbackPermission();
+    }
+    const kind = classifyCalendarLocalApiFetchFailure(error, permission, phase);
+    if (kind === 'not_running') {
+      renderCalendarExportGuide(true);
+    }
+    renderCalendarExportStatus(mapCalendarLocalApiError(kind));
+    return kind;
+  }
+
   async function handleCalendarExportLatestClick() {
     const exportBtn = document.getElementById('btn-calendar-export-latest');
     if (calendarLocalSyncInFlight) return;
@@ -10317,19 +10410,15 @@
           activeGenerationRef
         });
       } catch (error) {
-        if (error && error.code === 'timeout') {
-          renderCalendarExportStatus(mapCalendarLocalApiError('timeout'));
-          return;
-        }
-        if (error && error.code === 'stale_response') return;
-        renderCalendarExportGuide(true);
-        renderCalendarExportStatus(mapCalendarLocalApiError('not_running'));
+        await applyCalendarLocalApiFetchFailure(error, 'health');
         return;
       }
 
       if (!health.res.ok || !health.body || health.body.ok !== true) {
-        renderCalendarExportGuide(true);
-        renderCalendarExportStatus(mapCalendarLocalApiError('not_running'));
+        renderCalendarExportStatus(mapCalendarLocalApiError('api_error', {
+          code: health.body && health.body.code,
+          status: health.res.status
+        }));
         return;
       }
 
@@ -10355,19 +10444,13 @@
       try {
         sync = await fetchCalendarLocalApi(CALENDAR_LOCAL_API_SYNC_URL, syncRequestOptions);
       } catch (error) {
-        if (error && error.code === 'timeout') {
-          renderCalendarExportStatus(mapCalendarLocalApiError('timeout'));
-          return;
-        }
-        if (error && error.code === 'stale_response') return;
-        renderCalendarExportGuide(true);
-        renderCalendarExportStatus(mapCalendarLocalApiError('network'));
+        await applyCalendarLocalApiFetchFailure(error, 'sync');
         return;
       }
 
       if (!sync.res.ok || !sync.body || sync.body.ok !== true || !sync.body.payload) {
         const code = sync.body && sync.body.code;
-        renderCalendarExportStatus(mapCalendarLocalApiError(code || 'failed', {
+        renderCalendarExportStatus(mapCalendarLocalApiError(code || 'api_error', {
           code,
           status: sync.res.status
         }));
