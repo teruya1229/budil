@@ -450,12 +450,29 @@
     if (!raw || raw.length > 480 || new TextEncoder().encode(raw).length > 2048) {
       return Promise.resolve({ ok: false, code: 'instruction_invalid' });
     }
-    var permittedNames = ['比嘉清子', '田中太郎', '佐藤美咲', '田中さん', '田中', '比嘉', '佐藤'];
-    var revision = /金額|合計/.test(raw) && /修正|変更|直し|変えて|にして/.test(raw);
-    if (!permittedNames.some(function (name) { return raw.includes(name); }) && !revision) {
-      return Promise.resolve({ ok: false, code: 'fixture_only' });
-    }
-    if (/電話|住所|〒|郵便|メール|@|https?:\/\/|登録|送信|入金済み|請求書発行/.test(raw)) {
+    // Full-match fictional grammar: block arbitrary PII/prompts BEFORE transmitting
+    // even to the authenticated test endpoint. The backend enforces this again.
+    var clean = raw.replace(/[\s　]/g, '')
+      .replace(/[０-９]/g, function (c) {
+        return String.fromCharCode(c.charCodeAt(0) - 0xfee0);
+      }).replace(/，/g, ',');
+    var yen = '(?:[1-9][0-9]{0,8}|[1-9][0-9]{0,2}(?:,[0-9]{3})+)';
+    var demoCreate = new RegExp(
+      '^(?:比嘉清子|田中太郎|佐藤美咲|田中)(?:さん|様)?の' +
+      '(?:エアコン洗浄|エアコンクリーニング)' +
+      '(?:[1-9]|[12][0-9]|30)台を' +
+      '(?:税込|税抜|税別|内税|外税)?' + yen +
+      '円で見積(?:書)?(?:も)?(?:作って|して|お願い)?$'
+    );
+    var demoRevision = new RegExp(
+      '^(?:金額|合計)(?:を)?(?:税込|税抜|税別|内税|外税)?' +
+      yen + '円(?:に)?(?:変更|修正|直し|直して|して|変えて)$'
+    );
+    var amountMatch = clean.match(/([0-9][0-9,]*)円/);
+    var explicitAmount = amountMatch ? Number(amountMatch[1].replace(/,/g, '')) : 0;
+    if ((!demoCreate.test(clean) && !demoRevision.test(clean)) ||
+        !Number.isSafeInteger(explicitAmount) || explicitAmount <= 0 ||
+        explicitAmount > 100000000) {
       return Promise.resolve({ ok: false, code: 'fixture_only' });
     }
     return getValidAccessToken().then(function (tokenResult) {
