@@ -1,3 +1,12 @@
+## 2026-11-05 夕方 Budil×GPT 認証接続の整合化（開発ブランチのみ）
+
+- 重要原因: Budilのlocalhostバックアップ認証設定に書かれた旧staging Supabaseは現在の接続プロジェクト一覧に存在せず、公開側のGPT Edge関数とは認証先が不一致。既存バックアップ設定を無断変更しない。
+- `experiments/budil-gpt-phase1/trial-auth.js`にlocalhost:8765・`budil-gpt-phase1-demo.html`限定の試験認証を追加。BC既存Supabaseを利用し、公開版Budil/バックアップセッションとキー空間を完全分離。
+- `js/budil-cloud.js::interpretFixture`は当該デモだけ専用試験認証を利用する。ブラウザ側で架空顧客の定型文法に完全一致しない入力を外部転送前に拒否。
+- `scripts/verify-budil-gpt-trial-auth.mjs`: ネットワークを完全モックにした12/12 PASS。見積24/24・予約〜請求28/28もPASS。Chromium 390pxの見積/請求A4実PDF E2EとGPTボタンの模擬応答／誤金額拒否もPASS（GitHub run 42002281000）。
+- 別リポジトリ `ai-bantou-app`のGPT Edgeにlocalhost:8765 CORS許可を追加。Deno実体の型チェックをCIへ追加して露出した18件の型エラーを修正し、`deno check` PASS（run 42002698340）。20/20指示検証・22/22認証/テナント/レート制限模擬テストPASS。
+- 未実施: 実OpenAI APIキー/課金設定、実GPT通信、Edgeデプロイ、本番顧客/Calendar/銀行API接続、iOS/Android実機、正式Windows verify-current。これらをテストPASSと混同しない。
+
 ## 2026-11-05 Budil×GPT Phase1-3 架空会話ワークフロー拡張
 
 - 見積承認後、架空カレンダー空き確認→本人予約承認→架空作業完了→既存Budil請求変換→請求PDF→PaymentBrain未入金→架空銀行金額照合候補を追加。実Google・銀行・顧客・localStorageへの書込なし。
