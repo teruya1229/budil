@@ -1,3 +1,11 @@
+## Budil×GPT Phase1 本物のChromium検品結果（2026-11-05）
+
+- Draft PR: Budil `https://github.com/teruya1229/budil/pull/1`; GPTの安全な認証試験Gateway `https://github.com/teruya1229/ai-bantou-app/pull/5`。
+- 開発Branchだけに見積mock/UI→GPT出力検証入口→BudilCloud認証付き解析試験クライアントを実装。プロジェクト標準の顧客照合・税・帳票を再利用。
+- GitHub Linux Actions run `41994258861` fixture-linux PASS、22/22 Node E2E関連テスト、390px表示と実PDF生成。生成PDF A4 1ページ、184,476バイト、日本語表示を画像で検品済み。最初の試験で文字化け・空白2ページがあったため実測に基づきfixture限定PDF height修正、Linux CIにNoto CJK追加。
+- Windows self-hosted runner `bc-bantou-dev` はジョブqueued、正式`verify-current`・実機iPhone/Android・GPT API通信は未確認。完成・公開済み扱い禁止。
+- Supabase `ai-bantou-dev` に既存JWT/tenant/rate-limitがあることをREADで確認。新規有料Projectは作らず、API secret/料金/本番設定・Edge deployも触らない。
+
 ## 2026-11-05 Budil×GPT 開発再開（検証ブランチ限定）
 
 - 2026-11-04本人の最優先決定：Budilをスマホの音声・テキスト・写真で事務作業を遂行できるAI業務番頭へ進化。AIが作業、人間が確認・承認。既存Budilが金額・税・帳票の正本。
