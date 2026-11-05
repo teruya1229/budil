@@ -262,6 +262,68 @@ async function run() {
   await evaluate("document.getElementById('fixture-approve').click()");
   assert.equal(await evaluate("document.getElementById('fixture-approved-summary').innerText.includes('20,000円')"),true);
   console.log('PASS: mocked GPT quote and revision retain human approvals');
+  // Entire anonymous quotation UI path with MOCKED GPT response. It must
+  // never access or send real customers, and require manual selection.
+  await evaluate("document.getElementById('privacy-preview').click()");
+  const wireText=await evaluate("document.getElementById('privacy-wire').textContent");
+  assert.ok(wireText.includes('お客様のエアコンクリーニング1台を税抜8000円'));
+  assert.ok(!wireText.includes('山田花子'),'privacy preview must not expose original customer');
+  console.log('PASS: browser anonymizes original fictitious name without network');
+
+  const fakeReply={
+    ok:true, phase:'interpret_only', input_mode:'anonymized',
+    requires_human_approval:true, action:'estimate_create', can_execute:false,
+    needs_user_input:false, customer_name:'お客様', service_name:'エアコン洗浄',
+    quantity:2,total_yen:18000,tax_mode:'included',amount_scope:'total'
+  };
+  await evaluate("window.__privacyServerCalls=0;window.BudilCloud.interpretAnonymizedQuote=async()=>{window.__privacyServerCalls++;return "+JSON.stringify(fakeReply)+"}");
+  await evaluate("document.getElementById('privacy-instruction').value='実顧客太郎さんのエアコン洗浄2台を税込18,000円で見積して';document.getElementById('privacy-send').click()");
+  assert.equal(await evaluate("window.__privacyServerCalls"),0);
+  assert.equal(await evaluate("document.getElementById('privacy-candidates').classList.contains('fixture-hidden')"),true);
+  console.log('PASS: live/nonfictional name cannot trigger external request from demo');
+
+  await evaluate("document.getElementById('privacy-instruction').value='田中太郎さんのエアコン洗浄2台を税込18,000円で見積して';document.getElementById('privacy-send').click()");
+  for(let i=0;i<80;i++){
+    if(await evaluate("!document.getElementById('privacy-candidates').classList.contains('fixture-hidden')"))break;
+    await sleep(40);
+  }
+  assert.equal(await evaluate("window.__privacyServerCalls"),1);
+  assert.equal(await evaluate("document.querySelectorAll('#privacy-candidate-list button').length"),2);
+  console.log('PASS: anonymous GPT result reaches local customer resolution (2 equal names)');
+  await evaluate("document.querySelectorAll('#privacy-candidate-list button')[1].click()");
+  assert.equal(await evaluate("document.getElementById('privacy-draft-summary').innerText.includes('18,000円')"),true);
+  assert.equal(await evaluate("document.getElementById('privacy-approved').classList.contains('fixture-hidden')"),true);
+  await evaluate("document.getElementById('privacy-revision').value='金額を税込20,000円に変更';document.getElementById('privacy-revise').click()");
+  assert.equal(await evaluate("document.getElementById('privacy-draft-summary').innerText.includes('20,000円')"),true);
+  await evaluate("document.getElementById('privacy-approve').click()");
+  assert.equal(await evaluate("document.getElementById('privacy-approved-summary').innerText.includes('20,000円')"),true);
+  console.log('PASS: anonymous local quote revision and explicit approval');
+
+  const existingPdfs=new Set(readdirSync(downloadDir).filter(x=>x.endsWith('.pdf')));
+  await evaluate("document.getElementById('privacy-pdf').click()");
+  let privatePdf='';
+  for(let i=0;i<260;i++){
+    const files=readdirSync(downloadDir).filter(x=>x.endsWith('.pdf')&&!existingPdfs.has(x));
+    if(files.length){
+      const full=join(downloadDir,files[0]);
+      if(statSync(full).size>5000){privatePdf=full;break;}
+    }
+    await sleep(100);
+  }
+  if(!privatePdf){
+    const msg=await evaluate("document.getElementById('privacy-status').textContent");
+    throw Error('anonymized_fixture_pdf_not_saved: '+msg);
+  }
+  const pdfCheck=spawnSync('pdfinfo',[privatePdf],{encoding:'utf8'});
+  assert.equal(pdfCheck.status,0);
+  assert.equal(Number((pdfCheck.stdout.match(/^Pages:\s+(\d+)/m)||[])[1]),1);
+  assert.equal((await evaluate("window.__privacyServerCalls")),1,
+    'local revisions/approval/PDF must not send another GPT call');
+  const safeWidth=await evaluate("({scroll:document.documentElement.scrollWidth,inner:window.innerWidth})");
+  assert.ok(safeWidth.scroll<=safeWidth.inner+2,'privacy section 390px overflow');
+  const shot=await cdp.command('Page.captureScreenshot',{format:'png'});
+  if(shot.data)writeFileSync(join(workDir,'anonymized-mobile-390.png'),Buffer.from(shot.data,'base64'));
+  console.log('PASS: anonymized quote A4 single-page PDF and 390px privacy view');
   console.log("BUDIL_GPT_BROWSER_E2E_PASS");
 
 }
