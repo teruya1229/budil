@@ -1,3 +1,12 @@
+## 2026-11-05 Budil×GPT Phase1 実ブラウザ・PDF 検品結果（開発専用）
+
+- Linux GitHub ActionsでNode 22構文検証と隔離回帰 **22/22 PASS**、Chromium CDPでスマホ幅390px横スクロールなし・架空顧客選択→税込18,000円→20,000円修正→承認→PDF保存までE2E PASS。
+- 出力PDF実測 **A4・1ページ・184,476バイト**、日本語Noto CJK表示・明細・合計・デモ注記を画像で検品済み。以前のUbuntu試験で見つかった日本語文字化けと空白2ページ目を、CI日本語フォント追加とfixture限定PDF高さの変更で修正。
+- GitHub Actions job `fixture-linux`: run `41994258861` PASS。Windows self-hosted `bc-bantou-dev` jobはqueuedのため未検証。
+- GPTサーバーのsourceは`teruya1229/ai-bantou-app`別PR #5に作成。認証・所属・レート制限・固定JSONスキーマ・架空データ制限を実装。**未デプロイ・未課金・未認証実通信**。
+- 既存Budil本番main、料金、税計算、帳票デザイン、customer/Calendar/Revenueは未変更。PDF出力は通常経路1123pxのまま、fixture限定指定時だけ1110px。
+- 本番・iPhone/Android実機・GPT実通信・予約/売上/請求/入金の一括会話処理は未完成。フル`verify-current.mjs`は正式Windows環境待ち。
+
 ## Budil×GPT Phase 1 架空データ専用プロトタイプ（開発ブランチのみ・2026-11-05）
 
 - ブランチ: `feat/budil-gpt-phase1-fixture-20261105`。`main`・本番GitHub Pagesは未変更。
