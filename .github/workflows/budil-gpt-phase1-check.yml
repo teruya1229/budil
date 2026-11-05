@@ -8,7 +8,7 @@ permissions:
   contents: read
 concurrency:
   group: budil-gpt-phase1-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   fixture:
     runs-on: [self-hosted, Windows, bc-bantou-dev]
