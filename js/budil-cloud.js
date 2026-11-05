@@ -443,7 +443,18 @@
    */
   function interpretFixture(instruction) {
     var cfg = getConfig();
-    if (!cfg || cfg.env !== 'production') {
+    var localTrial = null;
+    var path = '';
+    try { path = String(global.location && global.location.pathname || ''); } catch (_e) {}
+    // Dedicated localhost fictional-data demo only. Does NOT modify Budil
+    // backup auth, staging selection, or production authentication.
+    if (cfg && cfg.env === 'staging' &&
+        path === '/budil-gpt-phase1-demo.html' &&
+        global.BudilGptTrialAuth && global.BudilGptTrialAuth.supported()) {
+      localTrial = global.BudilGptTrialAuth;
+      cfg = localTrial.gatewayConfig();
+    }
+    if (!cfg || (cfg.env !== 'production' && !localTrial)) {
       return Promise.resolve({ ok: false, code: 'gpt_fixture_origin_unavailable' });
     }
     var raw = String(instruction || '').trim();
@@ -475,7 +486,8 @@
         explicitAmount > 100000000) {
       return Promise.resolve({ ok: false, code: 'fixture_only' });
     }
-    return getValidAccessToken().then(function (tokenResult) {
+    var readToken = localTrial ? localTrial.getValidAccessToken : getValidAccessToken;
+    return readToken().then(function (tokenResult) {
       if (!tokenResult.ok || !tokenResult.accessToken) {
         return { ok: false, code: CODE.NOT_SIGNED_IN, message: 'ログインが必要です' };
       }
