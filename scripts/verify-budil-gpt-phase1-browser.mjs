@@ -235,6 +235,33 @@ async function run() {
   assert.ok(width2.scroll<=width2.inner+2,'workflow has horizontal overflow');
   const screenshot2=await cdp.command('Page.captureScreenshot',{format:'png'});
   if(screenshot2.data)writeFileSync(join(workDir,'workflow-mobile-390.png'),Buffer.from(screenshot2.data,'base64'));
+  // Fake server responses exercise the GPT-button flow WITHOUT any external API requests.
+  await evaluate("document.getElementById('fixture-reset').click()");
+  await evaluate("window.__gptFixtureReplies=[{\"ok\":true,\"phase\":\"interpret_only\",\"action\":\"estimate_create\",\"can_execute\":false,\"needs_user_input\":false,\"customer_name\":\"比嘉清子\",\"service_name\":\"エアコン洗浄\",\"quantity\":2,\"total_yen\":22000,\"amount_scope\":\"total\",\"tax_mode\":\"included\"},{\"ok\":true,\"phase\":\"interpret_only\",\"action\":\"estimate_create\",\"can_execute\":false,\"needs_user_input\":false,\"customer_name\":\"比嘉清子\",\"service_name\":\"エアコン洗浄\",\"quantity\":2,\"total_yen\":18000,\"amount_scope\":\"total\",\"tax_mode\":\"included\"},{\"ok\":true,\"phase\":\"interpret_only\",\"action\":\"estimate_revision\",\"can_execute\":false,\"needs_user_input\":false,\"total_yen\":20000,\"amount_scope\":\"total\",\"tax_mode\":\"included\"}];window.BudilCloud.interpretFixture=async()=>window.__gptFixtureReplies.shift()");
+  await evaluate("document.getElementById('fixture-gpt-start').click()");
+  for(let i=0;i<40;i++){
+    if((await evaluate("document.getElementById('fixture-status').textContent")).includes('一致しません'))break;
+    await sleep(30);
+  }
+  assert.equal(await evaluate("document.getElementById('fixture-candidates').classList.contains('fixture-hidden')"),true);
+  console.log('PASS: simulated GPT hallucinated price rejected before customer confirmation');
+  await evaluate("document.getElementById('fixture-gpt-start').click()");
+  for(let i=0;i<40;i++){
+    if(await evaluate("!document.getElementById('fixture-candidates').classList.contains('fixture-hidden')"))break;
+    await sleep(30);
+  }
+  assert.equal(await evaluate("document.querySelectorAll('#fixture-candidate-list button').length"),1);
+  await evaluate("document.querySelector('#fixture-candidate-list button').click()");
+  await evaluate("document.getElementById('fixture-revision').value='金額を税込20,000円に変更';document.getElementById('fixture-gpt-revise').click()");
+  for(let i=0;i<40;i++){
+    if(await evaluate("document.getElementById('fixture-draft-summary').innerText.includes('20,000円')"))break;
+    await sleep(30);
+  }
+  assert.equal(await evaluate("document.getElementById('fixture-draft-summary').innerText.includes('20,000円')"),true);
+  assert.equal(await evaluate("document.getElementById('fixture-approved').classList.contains('fixture-hidden')"),true);
+  await evaluate("document.getElementById('fixture-approve').click()");
+  assert.equal(await evaluate("document.getElementById('fixture-approved-summary').innerText.includes('20,000円')"),true);
+  console.log('PASS: mocked GPT quote and revision retain human approvals');
   console.log("BUDIL_GPT_BROWSER_E2E_PASS");
 
 }
