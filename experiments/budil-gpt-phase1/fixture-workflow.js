@@ -27,6 +27,42 @@
     if(a<0||b<0||b<=a||b-a>480) return fail('TIME_INVALID','終了は開始より後、作業時間は8時間以内に指定してください。');
     return {ok:true,date,start,end};
   }
+  // Narrow grammar for offline voice transcription — not GPT and no arbitrary
+  // instruction execution. Absolute date must be supplied; never infer "Friday".
+  function parseVoiceCommand(raw) {
+    if(typeof raw!=='string'||!raw.trim()||raw.length>180) {
+      return fail('COMMAND_INVALID','180文字以内で話してください。');
+    }
+    const str=raw.replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xfee0))
+      .replace(/[\s　]/g,'').trim();
+    const appointment=str.match(/^([0-9]{4})年([0-9]{1,2})月([0-9]{1,2})日([0-9]{1,2})時(?:([0-9]{1,2})分)?から([0-9]{1,2})時(?:([0-9]{1,2})分)?まで(?:に)?予約(?:案)?(?:を)?(?:作って|して|お願い)?$/);
+    if(appointment){
+      const [,y,m,d,h,mm,eh,emm]=appointment;
+      const date=y+'-'+m.padStart(2,'0')+'-'+d.padStart(2,'0');
+      const start=h.padStart(2,'0')+':'+(mm||'00').padStart(2,'0');
+      const end=eh.padStart(2,'0')+':'+(emm||'00').padStart(2,'0');
+      const validation=validSlot(date,start,end);
+      return validation.ok ? {ok:true,action:'slot_preview',date,start,end,
+        requiresConfirmation:true} : validation;
+    }
+    if(/^(?:作業を)?完了(?:にして|にする|して)$/.test(str)) {
+      return {ok:true,action:'request_completion',requiresConfirmation:true};
+    }
+    if(/^(?:請求書を|請求書)(?:作って|作成して)$/.test(str)) {
+      return {ok:true,action:'invoice_draft',requiresConfirmation:true};
+    }
+    if(/^(?:今月の)?未入金(?:を)?(?:教えて|確認して)$/.test(str)) {
+      return {ok:true,action:'read_receivables',requiresConfirmation:false};
+    }
+    if(/^比嘉清子(?:さん|様)?の(?:請求書|見積書)を(?:探して|検索して)$/.test(str)){
+      return {ok:true,action:'fixture_search',query:'比嘉清子',
+        requiresConfirmation:false};
+    }
+    if(/(?:金曜|金曜日|明日|来週|[0-9]{1,2}月[0-9]{1,2}日)/.test(str)) {
+      return fail('ABSOLUTE_DATE_REQUIRED','予約は年・月・日・開始・終了時刻を指定してください。');
+    }
+    return fail('COMMAND_UNSUPPORTED','架空デモで対応していない指示です。登録・入金確定は実行しません。');
+  }
   function makeSession(quoteCoreSession, deps) {
     const source = quoteCoreSession && quoteCoreSession.approved;
     const id = quoteCoreSession && quoteCoreSession.selectedCustomerId;
@@ -161,7 +197,7 @@
     return {ok:true,code:'FIXTURE_SEARCH',documents:copy(result)};
   }
   const api=Object.freeze({
-    DEMO_BUSY,validSlot,makeSession,prepareAppointment,confirmAppointment,
+    DEMO_BUSY,validSlot,parseVoiceCommand,makeSession,prepareAppointment,confirmAppointment,
     completeWorkOrder,prepareInvoice,approveInvoice,approvedInvoiceForPdf,
     unpaidSummary,matchFictionalBankEntry,findDocuments
   });
