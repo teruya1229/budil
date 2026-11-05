@@ -10,6 +10,7 @@
   let exportInFlight = false;
   let pdfCompleted = false;
   let speechRecognizer = null;
+  let gptRequestInFlight = false;
 
   function show(id, yes) {
     $(id).classList.toggle('fixture-hidden', !yes);
@@ -101,6 +102,53 @@
     const result = Core.start(session, value);
     processResult(result);
   }
+  async function interpretWithGpt(isRevision) {
+    if (gptRequestInFlight) return;
+    const requiredStage = isRevision ? 'draft' : 'idle';
+    if (session.stage !== requiredStage) {
+      return status('先に現在の作業を完了するかリセットしてください。', true);
+    }
+    if (!window.BudilCloud || typeof window.BudilCloud.interpretFixture !== 'function') {
+      return status('GPT接続が利用できません。通常のテキスト入力を利用してください。', true);
+    }
+    const raw = isRevision ? $('fixture-revision').value : $('fixture-instruction').value;
+    // No user/customer records are loaded from Budil here.
+    const initialSession = session;
+    const initialRevision = session.revision;
+    gptRequestInFlight = true;
+    $('fixture-gpt-start').disabled = true;
+    $('fixture-gpt-revise').disabled = true;
+    status('認証済みの試験接続を確認しています。');
+    try {
+      const output = await window.BudilCloud.interpretFixture(raw);
+      if (session !== initialSession || session.revision !== initialRevision) {
+        return status('別の下書きへ切り替わったため解析結果を破棄しました。', true);
+      }
+      if (!output || !output.ok) {
+        const code = output && output.code || 'unknown';
+        return status('GPT試験接続は使用できません（' + code + '）。模擬会話・テキスト入力は引き続き使えます。', true);
+      }
+      if (output.needs_user_input) {
+        return status(output.followup || '不足情報があります。指示内容を修正してください。', true);
+      }
+      if (isRevision) {
+        const result = Core.reviseStructured(session, raw, output);
+        if (!result.ok) return status(result.message, true);
+        summary('fixture-draft-summary', result.doc, result.revision);
+        $('fixture-revision').value = '';
+        return status('GPT解析結果から下書きを更新しました。本人の承認までは確定しません。');
+      }
+      const result = Core.startStructured(session, raw, output);
+      processResult(result);
+    } catch (_) {
+      status('GPT試験接続に失敗しました。模擬会話は利用できます。', true);
+    } finally {
+      gptRequestInFlight = false;
+      $('fixture-gpt-start').disabled = false;
+      $('fixture-gpt-revise').disabled = false;
+    }
+  }
+
   function followup() {
     let result;
     if (session.stage === 'need_tax_mode') {
@@ -201,6 +249,8 @@
   }
 
   $('fixture-start').addEventListener('click', start);
+  $('fixture-gpt-start').addEventListener('click', () => interpretWithGpt(false));
+  $('fixture-gpt-revise').addEventListener('click', () => interpretWithGpt(true));
   $('fixture-followup-submit').addEventListener('click', followup);
   $('fixture-revise').addEventListener('click', revise);
   $('fixture-approve').addEventListener('click', approve);
