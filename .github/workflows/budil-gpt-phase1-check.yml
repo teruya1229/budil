@@ -1,0 +1,43 @@
+name: Budil GPT Phase 1 isolated checks
+on:
+  push:
+    branches:
+      - feat/budil-gpt-phase1-fixture-20261105
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: budil-gpt-phase1-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  fixture:
+    runs-on: [self-hosted, Windows, bc-bantou-dev]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout isolated branch (never writes to existing C dev worktrees)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - name: Confirm checked-out development branch
+        shell: pwsh
+        run: |
+          if ('${{ github.ref_name }}' -ne 'feat/budil-gpt-phase1-fixture-20261105') { throw 'unexpected_branch' }
+          node --version
+      - name: Check isolated JS syntax
+        shell: pwsh
+        run: |
+          node --check experiments/budil-gpt-phase1/fixture-core.js
+          node --check experiments/budil-gpt-phase1/fixture-ui.js
+          node --check js/budil-cloud.js
+          node --check scripts/verify-budil-gpt-phase1-fixture.mjs
+      - name: Run 22 fictional-data regression tests
+        shell: pwsh
+        run: node scripts/verify-budil-gpt-phase1-fixture.mjs
+      - name: Assert no production entrypoint or business calculations touched
+        shell: pwsh
+        run: |
+          $changed = (git diff --name-only bf6d132a47aff26b3f38c5ef68f269b362c7f6ed HEAD) -split "`n"
+          $blocked = @('index.html','js/app.js','js/storage.js','js/documents-brain.js','js/doc-export.js','js/revenue-brain.js','js/payment-brain.js')
+          foreach ($path in $changed) { if ($blocked -contains $path.Trim()) { throw "protected_file_changed:$path" } }
+          Write-Host 'protected production code unchanged'
