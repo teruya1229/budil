@@ -73,6 +73,7 @@ jobs:
           node --check js/budil-gpt-anonymize.js
           node scripts/verify-budil-gpt-anonymize.mjs
           node scripts/verify-budil-gpt-local-quote.mjs
+          node scripts/verify-budil-gpt-anonymized-client.mjs
           node scripts/verify-v41314-document-print-pdf-export.mjs
           node scripts/verify-v41315-pdf-origin-alignment.mjs
       - name: Install CJK font and PDF inspection tools (CI only)
