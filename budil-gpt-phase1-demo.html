@@ -54,6 +54,23 @@
   </header>
   <div class="fixture-alert" role="note"><strong>開発専用デモです。</strong> 通常は限定ルールの模擬処理です。GPT解析ボタンは既存ログイン済み・試験API許可済みの場合だけ利用でき、現在は試験API未公開です。お客様情報の取得・保存、外部送信、カレンダー登録は行いません。発行するPDFも架空データの検証用です。</div>
 
+  <section id="fixture-gpt-auth" class="fixture-card fixture-hidden" aria-labelledby="fixture-gpt-auth-title">
+    <h2 id="fixture-gpt-auth-title">GPT試験接続のログイン（ローカル専用）</h2>
+    <p class="fixture-desc">公開版Budilのバックアップ用アカウントとは別の試験セッションです。新しいSupabaseプロジェクトは作りません。GPTサーバーが未デプロイの間は解析できません。</p>
+    <form id="fixture-auth-form" autocomplete="off">
+      <label for="fixture-auth-email" class="fixture-desc">既存BC認証アカウントのメールアドレス</label>
+      <input id="fixture-auth-email" class="fixture-input" type="email" autocomplete="username" required maxlength="254">
+      <label for="fixture-auth-password" class="fixture-desc">パスワード</label>
+      <input id="fixture-auth-password" class="fixture-input" type="password" autocomplete="current-password" required maxlength="512">
+      <div class="fixture-action-row">
+        <button id="fixture-auth-login" type="submit" class="fixture-button secondary">試験用ログイン</button>
+        <button id="fixture-auth-logout" type="button" class="fixture-button secondary">試験セッションを終了</button>
+      </div>
+    </form>
+    <p id="fixture-auth-status" class="fixture-status" role="status" aria-live="polite"></p>
+    <p class="fixture-optional-note">認証情報は画面・ログ・見積データに含めません。セッションはこのタブの試験専用領域にだけ保管します。</p>
+  </section>
+
   <section class="fixture-card" aria-labelledby="instruction-title">
     <h2 id="instruction-title">1. 話す・入力する</h2>
     <p class="fixture-desc">「比嘉清子さんのエアコン洗浄2台を税込18,000円で見積して」など、フルネーム・台数・合計金額・税込/税抜を伝えてください。</p>
@@ -197,6 +214,7 @@
 <script src="js/customer-resolve-entrypoint.js"></script>
 <script src="js/doc-export.js"></script>
 <script src="js/budil-cloud.js"></script>
+<script src="experiments/budil-gpt-phase1/trial-auth.js"></script>
 <script src="experiments/budil-gpt-phase1/fixture-core.js"></script>
 <script src="js/work-order-brain.js"></script>
 <script src="experiments/budil-gpt-phase1/fixture-workflow.js"></script>
