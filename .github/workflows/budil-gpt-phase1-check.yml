@@ -66,6 +66,8 @@ jobs:
           node scripts/verify-budil-gpt-phase1-fixture.mjs
           node --check experiments/budil-gpt-phase1/fixture-workflow.js
           node scripts/verify-budil-gpt-fixture-workflow.mjs
+          node --check experiments/budil-gpt-phase1/trial-auth.js
+          node scripts/verify-budil-gpt-trial-auth.mjs
       - name: Install CJK font and PDF inspection tools (CI only)
         run: |
           sudo apt-get update -qq
