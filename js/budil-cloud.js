@@ -435,6 +435,56 @@
     });
   }
 
+  /**
+   * Read-only Phase1 GPT interpreter — ONLY fictional inputs.
+   * Shares the existing Supabase login/session pathway; does not access Budil
+   * Storage, create records, or approve/execute generated commands.
+   * Backend is disabled until explicitly enabled and deployed.
+   */
+  function interpretFixture(instruction) {
+    var cfg = getConfig();
+    if (!cfg || cfg.env !== 'production') {
+      return Promise.resolve({ ok: false, code: 'gpt_fixture_origin_unavailable' });
+    }
+    var raw = String(instruction || '').trim();
+    if (!raw || raw.length > 480 || new TextEncoder().encode(raw).length > 2048) {
+      return Promise.resolve({ ok: false, code: 'instruction_invalid' });
+    }
+    var permittedNames = ['比嘉清子', '田中太郎', '佐藤美咲', '田中さん', '田中', '比嘉', '佐藤'];
+    var revision = /金額|合計/.test(raw) && /修正|変更|直し|変えて|にして/.test(raw);
+    if (!permittedNames.some(function (name) { return raw.includes(name); }) && !revision) {
+      return Promise.resolve({ ok: false, code: 'fixture_only' });
+    }
+    if (/電話|住所|〒|郵便|メール|@|https?:\/\/|登録|送信|入金済み|請求書発行/.test(raw)) {
+      return Promise.resolve({ ok: false, code: 'fixture_only' });
+    }
+    return getValidAccessToken().then(function (tokenResult) {
+      if (!tokenResult.ok || !tokenResult.accessToken) {
+        return { ok: false, code: CODE.NOT_SIGNED_IN, message: 'ログインが必要です' };
+      }
+      return doFetch(cfg.url + '/functions/v1/budil-gpt-interpret', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + tokenResult.accessToken,
+          apikey: cfg.publishableKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ instruction: raw, mode: 'fixture' }),
+        timeoutMs: 20000
+      }).then(function (response) {
+        if (response.timeout) return { ok: false, code: CODE.TIMEOUT };
+        if (response.networkError) return { ok: false, code: CODE.NETWORK };
+        if (response.status !== 200 || !response.body || response.body.ok !== true) {
+          return { ok: false, code: response.body && response.body.code || CODE.UNKNOWN };
+        }
+        if (response.body.phase !== 'interpret_only' || response.body.can_execute !== false) {
+          return { ok: false, code: 'unsafe_interpret_response' };
+        }
+        return response.body;
+      });
+    });
+  }
+
   function isBackupInFlight() {
     return backupInFlight;
   }
@@ -451,6 +501,7 @@
     logout: logout,
     backupNow: backupNow,
     fetchLatest: fetchLatest,
+    interpretFixture: interpretFixture,
     isBackupInFlight: isBackupInFlight
   };
 })(typeof window !== 'undefined' ? window : globalThis);
