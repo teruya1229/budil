@@ -148,6 +148,46 @@
       '架空データの検索結果：'+r.documents.length+'件 / '+(names.join('、')||'該当なし');
     info('実顧客の検索やサーバー送信は行っていません。');
   }
+  function interpretCommand(){
+    if(!session)return info('先に見積を承認してから進めてください。',true);
+    const r=Flow.parseVoiceCommand($('fixture-work-command').value);
+    if(!r.ok)return info(r.message,true);
+    if(r.action==='slot_preview'){
+      if(session.stage!=='ready')return info('予約済みの架空案件です。再登録はしません。',true);
+      $('fixture-work-date').value=r.date;
+      $('fixture-work-start').value=r.start;
+      $('fixture-work-end').value=r.end;
+      checkSlot();
+      return info('予約案の日時を読み取りました。空き状況と内容を確認し、本人の承認ボタンを押してください。');
+    }
+    if(r.action==='request_completion'){
+      if(session.stage!=='scheduled')return info('架空予約の承認後に作業完了できます。',true);
+      focusSection('fixture-workflow-completed');
+      return info('「架空作業の完了を承認」を押した場合だけ、状態を変更します。');
+    }
+    if(r.action==='invoice_draft')return draftInvoice();
+    if(r.action==='read_receivables')return unpaid();
+    if(r.action==='fixture_search'){
+      $('fixture-search-query').value=r.query;
+      return search();
+    }
+    info('未対応の操作です。',true);
+  }
+  function listenForCommand(){
+    const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!Recognition)return info('音声認識に対応していないため、テキスト入力を使ってください。',true);
+    try{
+      const recog=new Recognition();
+      recog.lang='ja-JP';recog.interimResults=false;recog.maxAlternatives=1;
+      recog.onresult=e=>{
+        const transcript=String(e.results[0][0].transcript||'').slice(0,180);
+        $('fixture-work-command').value=transcript;
+        info('音声を入力欄へ転記しました。内容を確認して「次の指示を理解」を押してください。');
+      };
+      recog.onerror=()=>info('音声入力に失敗しました。テキスト入力を利用してください。',true);
+      recog.start();
+    }catch(_){info('音声認識の開始に失敗しました。',true);}
+  }
   function reset(){
     session=null;previewToken='';pdfDone=false;exporting=false;
     show('fixture-workflow',false);
@@ -156,6 +196,8 @@
     $('fixture-invoice-pdf').disabled=false;
   }
   $('fixture-continue').addEventListener('click',begin);
+  $('fixture-work-interpret').addEventListener('click',interpretCommand);
+  $('fixture-work-speak').addEventListener('click',listenForCommand);
   $('fixture-work-check').addEventListener('click',checkSlot);
   $('fixture-work-book').addEventListener('click',book);
   $('fixture-complete').addEventListener('click',complete);
