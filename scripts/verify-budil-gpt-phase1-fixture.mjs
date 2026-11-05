@@ -139,4 +139,78 @@ check('16. no production page/index or storage modification in fixture', () => {
   assert.ok(!/localStorage\.|sessionStorage\.|Storage\.getLeads|Storage\.addDocument|Calendar\.|fetch\(/.test(core + ui));
   assert.equal(F.createSession().stage, 'idle');
 });
-console.log('Budil×GPT Phase 1 fixture: ' + count + '/16 PASS');
+check('17. structured interpretation creates same 18000-yen quote without bypassing selection', () => {
+  const s = F.createSession();
+  const r = F.startStructured(s, '比嘉清子さんのエアコン洗浄2台を税込18,000円で見積して', {
+    ok: true, phase: 'interpret_only', action: 'estimate_create', can_execute: false,
+    needs_user_input: false, customer_name: '比嘉清子', service_name: 'エアコン洗浄',
+    quantity: 2, total_yen: 18000, amount_scope: 'total', tax_mode: 'included'
+  }, deps);
+  assert.equal(r.code, 'CANDIDATES');
+  assert.equal(s.stage, 'candidate');
+  assert.equal(F.getApprovedForPdf(s).code, 'NOT_APPROVED');
+  assert.equal(F.selectCustomer(s, 'fixture-c003', deps).doc.total, 18000);
+});
+check('18. structured hallucinated price denied before state change', () => {
+  const s = F.createSession();
+  const r = F.startStructured(s, '比嘉清子さんのエアコン洗浄2台を税込18,000円で見積して', {
+    ok: true, phase: 'interpret_only', action: 'estimate_create', can_execute: false,
+    needs_user_input: false, customer_name: '比嘉清子', service_name: 'エアコン洗浄',
+    quantity: 2, total_yen: 90000, amount_scope: 'total', tax_mode: 'included'
+  }, deps);
+  assert.equal(r.code, 'STRUCTURED_INVALID');
+  assert.equal(s.stage, 'idle');
+});
+check('19. structured output never bypasses a missing field or forbidden action', () => {
+  const s = F.createSession();
+  const input = '比嘉清子さんのエアコン洗浄2台を税込18,000円で見積して';
+  for (const extra of [
+    { needs_user_input: true },
+    { action: 'customer_delete' },
+    { can_execute: true },
+    { phase: 'apply' }
+  ]) {
+    const result = F.startStructured(s, input, {
+      ok: true, phase: 'interpret_only', action: 'estimate_create', can_execute: false,
+      needs_user_input: false, customer_name: '比嘉清子', service_name: 'エアコン洗浄',
+      quantity: 2, total_yen: 18000, amount_scope: 'total', tax_mode: 'included',
+      ...extra
+    }, deps);
+    assert.equal(result.code, 'STRUCTURED_NOT_READY');
+    assert.equal(s.stage, 'idle');
+  }
+});
+check('20. structured revision requires new approval', () => {
+  const s = makeSingle();
+  const revised = F.reviseStructured(s, '金額を税込20,000円に変更', {
+    ok: true, phase: 'interpret_only', action: 'estimate_revision',
+    needs_user_input: false, can_execute: false, total_yen: 20000,
+    tax_mode: 'included', amount_scope: 'total'
+  }, deps);
+  assert.equal(revised.code, 'DRAFT_REVISED');
+  assert.equal(revised.doc.total, 20000);
+  assert.equal(F.approve(s, 1).code, 'STALE_REVISION');
+  assert.equal(F.approve(s, 2).code, 'APPROVED_FIXTURE');
+});
+check('21. structured revision malicious price preserves original', () => {
+  const s = makeSingle();
+  const old = JSON.stringify(s.draft);
+  const result = F.reviseStructured(s, '金額を税込20,000円に変更', {
+    ok: true, phase: 'interpret_only', action: 'estimate_revision',
+    needs_user_input: false, can_execute: false, total_yen: 18000,
+    tax_mode: 'included', amount_scope: 'total'
+  }, deps);
+  assert.equal(result.code, 'STRUCTURED_INVALID');
+  assert.equal(JSON.stringify(s.draft), old);
+});
+check('22. GPT branch only calls authenticated cloud client, never raw API', () => {
+  const ui = load('experiments/budil-gpt-phase1/fixture-ui.js');
+  const cloud = load('js/budil-cloud.js');
+  assert.ok(ui.includes('Core.startStructured'));
+  assert.ok(ui.includes('Core.reviseStructured'));
+  assert.ok(ui.includes('BudilCloud.interpretFixture'));
+  assert.ok(cloud.includes("'/functions/v1/budil-gpt-interpret'"));
+  assert.ok(cloud.includes('getValidAccessToken'));
+  assert.ok(!ui.includes('OPENAI_API_KEY'));
+});
+console.log('Budil×GPT Phase 1 fixture: ' + count + '/22 PASS');
