@@ -1,3 +1,12 @@
+## 2026-11-05 Budil×GPT 開発継続：GPT試験認証とDeno検証
+
+- Budil Draft PR #1内でlocalhost限定試験認証を追加。旧staging欠落の不整合に対して、既存バックアップ設定は触らずGPT試験だけBC既存Supabaseに向ける。パスワード・JWTはチャットにもリポジトリにも出していない。
+- 新規ファイル: `experiments/budil-gpt-phase1/trial-auth.js`, `scripts/verify-budil-gpt-trial-auth.mjs`。ローカル開発サーバーは127.0.0.1:8765に限定。実顧客禁止。
+- GitHub CI Budil run 42002281000: mock login 12/12、見積24/24、予定/請求28/28、390px Chromium E2E・A4見積請求PDF、GPT解析結果の嘘金額拒否と本人承認までPASS。
+- GPTサーバーDraft PR #5: Deno2依存取得設定修正、TypeScript 18件の静的エラー修正、`deno check` PASS run 42002698340。Intent20/20・Edgeモック22/22。Edgeは未デプロイ、OPENAI_API_KEY未確認、実API未通信。
+- Windows Codex A READ-only検証依頼 `budil-gpt-native-verify-readonly-20261105-v1` は `completion_origin_unverified` でUSER_ACTION_REQUIREDになり、Windows Runner検証には至らなかった。再依頼を機械的に繰り返さない。
+- 次の実際の完成条件: OpenAIキーと上限料金の本人指定/安全なサーバーSecret設定、最小fixtureのみの実通信テスト、本人承認付き実業務API、同期・スマホ実機検品。main/公開URL/本番データ未変更。
+
 ## Budil×GPT 2026-11-05 追加実装・引継ぎ
 
 - Budil Draft PR #1 `feat/budil-gpt-phase1-fixture-20261105`: Phase1見積に加え、架空の予約→作業→請求→入金確認をスマホ用の会話入力で連続実行可能。別途 `ai-bantou-app` Draft PR #5 にJWT/tenant/3回/分のGPT指示解釈Gatewayがあり、未デプロイ・初期無効。
