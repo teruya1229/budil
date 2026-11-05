@@ -86,6 +86,8 @@ jobs:
           path: |
             ${{ runner.temp }}/budil-gpt-qa/mobile-390.png
             ${{ runner.temp }}/budil-gpt-qa/estimate-preview.png
+            ${{ runner.temp }}/budil-gpt-qa/invoice-preview.png
+            ${{ runner.temp }}/budil-gpt-qa/workflow-mobile-390.png
             ${{ runner.temp }}/budil-gpt-qa/downloads/*.pdf
           if-no-files-found: ignore
           retention-days: 3
