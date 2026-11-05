@@ -25,6 +25,9 @@
       .replace(/[　\s]+/g, '');
   }
   function parseYen(s) {
+    if (/-[0-9][0-9,]*円/.test(s)) {
+      return fail('AMOUNT_INVALID', 'マイナス金額は指定できません。');
+    }
     const matches = [...s.matchAll(/([0-9][0-9,]*)円/g)];
     if (matches.length !== 1) return fail('AMOUNT_REQUIRED', '合計金額を円単位で1つ指定してください。');
     const digits = matches[0][1].replace(/,/g, '');
