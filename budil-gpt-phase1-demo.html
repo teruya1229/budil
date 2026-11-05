@@ -115,6 +115,14 @@
     <h2 id="fixture-workflow-title">5. 予約から請求まで（架空データのみ）</h2>
     <p class="fixture-alert"><strong>これは架空業務の一連動作テストです。</strong> 実際のGoogleカレンダーの空き確認・登録、顧客への請求、銀行データ照合は行いません。</p>
     <div id="fixture-workflow-quote-summary" class="fixture-summary"></div>
+    <p class="fixture-desc">予約・作業完了・請求・未入金の架空指示を話すか入力してください。例：「2026年11月13日13時から15時まで予約して」</p>
+    <label class="fixture-desc" for="fixture-work-command">次の指示</label>
+    <textarea id="fixture-work-command" class="fixture-input" rows="2" maxlength="180">2026年11月13日13時から15時まで予約して</textarea>
+    <div class="fixture-action-row">
+      <button id="fixture-work-speak" type="button" class="fixture-button secondary">🎤 次の指示を音声入力</button>
+      <button id="fixture-work-interpret" type="button" class="fixture-button">次の指示を理解</button>
+    </div>
+
     <p class="fixture-desc">架空カレンダーの予約状況を確認します。例：2026年11月13日の10〜11時はデモ上の予約済み時間です。</p>
     <label class="fixture-desc" for="fixture-work-date">予約日（架空）</label>
     <input id="fixture-work-date" class="fixture-input" type="date" value="2026-11-13">
