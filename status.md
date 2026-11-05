@@ -1,4 +1,13 @@
-﻿# Budil status
+## Budil×GPT Phase 1 架空データ専用プロトタイプ（開発ブランチのみ・2026-11-05）
+
+- ブランチ: `feat/budil-gpt-phase1-fixture-20261105`。`main`・本番GitHub Pagesは未変更。
+- 既存`CustomerResolveEntrypoint` / `DocumentsBrain` / `BudilDocExport`の再利用を優先し、孤立した検証用ページ`budil-gpt-phase1-demo.html`とfixture core/UI、16項目テストを追加。
+- 文字またはブラウザ音声認識で指示→架空顧客候補の本人選択→見積下書き→修正→承認→PDF関数呼出までの**コード経路**を実装。会話理解はMOCKでありGPTサーバー未接続。
+- 実GitHubソースに対する隔離JS実行（Node互換shim）で16/16 PASS。正式Windows Nodeテスト・ブラウザ実PDF保存・iPhone/Android実機確認は未実施、完成判定しない。
+- `localStorage`/顧客データ/請求/カレンダーの本番操作なし。既存帳票デザイン・料金・計算ロジック不変。
+- 設計と検証範囲の詳細は`experiments/budil-gpt-phase1/README.md`。
+
+# Budil status
 
 ## v4.13.20 Googleカレンダー1ボタン連携を Chrome 152 Local Network Access に対応
 
