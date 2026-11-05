@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Budil×GPT Phase 1 — 架空データ検証</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  body.budil-fixture { background:#edf3f8; color:#172c42; font-family:"Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif; }
+  .fixture-shell { max-width:720px; padding:24px 16px 64px; margin:0 auto; }
+  .fixture-shell * { box-sizing:border-box; }
+  .fixture-head { background:#132d47; color:#fff; border-radius:22px; padding:22px; margin-bottom:16px; }
+  .fixture-head h1 {font-size:clamp(1.35rem,5vw,1.85rem);line-height:1.4;margin:5px 0 9px;color:#fff;}
+  .fixture-head p {color:#cbdbe9;line-height:1.65;margin:0;}
+  .fixture-tag {display:inline-block;font-size:.72rem;font-weight:750;letter-spacing:.08em;color:#132d47;background:#c4ecdf;border-radius:99px;padding:5px 10px;}
+  .fixture-card {background:#fff;color:#172c42;box-shadow:0 8px 25px rgba(16,40,64,.055);padding:20px;border-radius:18px;margin:14px 0;}
+  .fixture-card h2 {font-size:1.06rem;line-height:1.5;color:#163751;margin:0 0 10px;}
+  .fixture-card p {margin:8px 0;line-height:1.65;}
+  .fixture-desc {font-size:.92rem;color:#496075;}
+  .fixture-alert {font-size:.9rem;background:#fef1db;border-radius:12px;padding:12px 14px;color:#664010;line-height:1.65;}
+  .fixture-input {font-size:16px!important;background:#fff!important;color:#102a43!important;border:1px solid #9cacba!important;border-radius:12px!important;width:100%;padding:13px!important;line-height:1.5;}
+  .fixture-button {border:0;border-radius:12px;padding:13px 16px;min-height:48px;cursor:pointer;font:inherit;font-size:.95rem;font-weight:750;color:#fff;background:#17658a;}
+  .fixture-button:disabled {background:#b4c4cc;color:#435765;cursor:not-allowed;}
+  .fixture-button.secondary {color:#123a57;background:#dcebf3;}
+  .fixture-button.danger {background:#8d3949;}
+  .fixture-action-row {display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+  .fixture-action-row .fixture-button {flex:1 1 145px;}
+  .fixture-choice {display:block;width:100%;text-align:left;color:#1a3f58;border:1px solid #b4c9d7;background:#f4f9fc;padding:13px 14px;border-radius:13px;margin-top:9px;cursor:pointer;font-size:1rem;line-height:1.6;}
+  .fixture-choice:focus-visible, .fixture-button:focus-visible {outline:3px solid #e48b31;outline-offset:2px;}
+  .fixture-hidden {display:none!important;}
+  .fixture-summary {margin:12px 0;border:1px solid #c6d7e0;border-radius:12px;overflow:hidden;}
+  .fixture-summary dl {display:grid;grid-template-columns:116px 1fr;gap:0;margin:0;}
+  .fixture-summary dt,.fixture-summary dd {padding:10px 12px;border-bottom:1px solid #e4edf2;margin:0;font-size:.91rem;overflow-wrap:anywhere;}
+  .fixture-summary dt {background:#f4f9fc;font-weight:700;}
+  .fixture-total {font-size:1.4rem;font-weight:800;color:#165272;}
+  .fixture-status {font-size:.92rem;line-height:1.65;min-height:23px;color:#264963;margin-top:12px;}
+  .fixture-status.error {color:#9d2939;}
+  .fixture-foot {font-size:.77rem;color:#506b80;line-height:1.6;margin:16px 0;}
+  .fixture-optional-note {font-size:.82rem;color:#51697d;}
+  @media(max-width:420px) {
+    .fixture-shell {padding:12px 10px 48px;}
+    .fixture-head,.fixture-card {padding:16px;border-radius:16px;}
+    .fixture-summary dl {grid-template-columns:97px 1fr;}
+    .fixture-summary dt,.fixture-summary dd {padding:9px;font-size:.83rem;}
+  }
+</style>
+</head>
+<body class="budil-fixture">
+<main class="fixture-shell">
+  <header class="fixture-head">
+    <span class="fixture-tag">PHASE 1 / ISOLATED MOCK</span>
+    <h1>Budil×GPT<br>話しかけて見積書を作る</h1>
+    <p>音声・テキスト → 架空の顧客検索 → 見積書の確認・修正 → 承認 → Budilと同じ形式のPDF</p>
+  </header>
+  <div class="fixture-alert" role="note"><strong>開発専用デモです。</strong> 会話解釈は限定ルールの模擬処理であり、GPT本番接続ではありません。お客様情報の取得・保存、外部送信、カレンダー登録は行いません。発行するPDFも架空データの検証用です。</div>
+
+  <section class="fixture-card" aria-labelledby="instruction-title">
+    <h2 id="instruction-title">1. 話す・入力する</h2>
+    <p class="fixture-desc">「比嘉清子さんのエアコン洗浄2台を税込18,000円で見積して」など、フルネーム・台数・合計金額・税込/税抜を伝えてください。</p>
+    <label for="fixture-instruction" class="fixture-desc">指示する内容</label>
+    <textarea id="fixture-instruction" class="fixture-input" rows="3" maxlength="220">比嘉清子さんのエアコン洗浄2台を税込18,000円で見積して</textarea>
+    <div class="fixture-action-row">
+      <button id="fixture-speak-instruction" class="fixture-button secondary" type="button">🎤 音声で入力</button>
+      <button id="fixture-start" class="fixture-button" type="button">見積の下書きを作る</button>
+    </div>
+    <p id="fixture-status" class="fixture-status" role="status" aria-live="polite">架空の顧客4件のみで安全に試せます。</p>
+  </section>
+
+  <section id="fixture-followup" class="fixture-card fixture-hidden" aria-labelledby="followup-title">
+    <h2 id="followup-title">2. 不足情報を確認</h2>
+    <p id="fixture-followup-help" class="fixture-desc"></p>
+    <label for="fixture-followup-text" class="fixture-desc">回答</label>
+    <input id="fixture-followup-text" class="fixture-input" type="text" maxlength="80" placeholder="税込 または 税抜 / 顧客フルネーム">
+    <div class="fixture-action-row">
+      <button id="fixture-followup-submit" type="button" class="fixture-button">回答して続ける</button>
+      <button id="fixture-followup-speak" type="button" class="fixture-button secondary">🎤 音声で回答</button>
+    </div>
+  </section>
+
+  <section id="fixture-candidates" class="fixture-card fixture-hidden" aria-labelledby="candidates-title">
+    <h2 id="candidates-title">2. 顧客を本人が確認</h2>
+    <p class="fixture-desc">同姓同名・1件ヒットの場合も自動確定しません。架空の顧客を選択してください。</p>
+    <div id="fixture-candidate-list"></div>
+  </section>
+
+  <section id="fixture-draft" class="fixture-card fixture-hidden" aria-labelledby="draft-title">
+    <h2 id="draft-title">3. 見積下書き・修正</h2>
+    <p class="fixture-desc">既存Budilの見積テンプレートと税計算を使用。承認までは保存・PDF生成しません。</p>
+    <div id="fixture-draft-summary" class="fixture-summary"></div>
+    <label for="fixture-revision" class="fixture-desc">修正する内容（このデモでは合計金額のみ）</label>
+    <input id="fixture-revision" class="fixture-input" type="text" maxlength="220" placeholder="金額を税込20,000円に変更">
+    <div class="fixture-action-row">
+      <button id="fixture-revise" type="button" class="fixture-button secondary">修正を反映</button>
+      <button id="fixture-speak-revision" type="button" class="fixture-button secondary">🎤 修正を話す</button>
+    </div>
+    <div class="fixture-action-row">
+      <button id="fixture-approve" type="button" class="fixture-button">この内容を確認・承認</button>
+    </div>
+    <p class="fixture-optional-note">修正が入ると前の確認内容は無効になります。表示中の金額を確認して承認してください。</p>
+  </section>
+
+  <section id="fixture-approved" class="fixture-card fixture-hidden" aria-labelledby="approved-title">
+    <h2 id="approved-title">4. 承認完了・PDF出力</h2>
+    <p class="fixture-desc">承認済みのスナップショットのみ、既存BudilのPDFエンジンで出力します。実データへの書き込みはありません。</p>
+    <div id="fixture-approved-summary" class="fixture-summary"></div>
+    <div class="fixture-action-row">
+      <button id="fixture-pdf" type="button" class="fixture-button">承認済み見積書をPDF保存</button>
+    </div>
+  </section>
+
+  <div class="fixture-action-row">
+    <button id="fixture-reset" type="button" class="fixture-button danger">架空デモを最初からやり直す</button>
+  </div>
+  <p class="fixture-foot">Budil v4.13.20 本体と独立した検証画面です。実際の顧客情報、localStorage、Googleカレンダー、クラウド、売上・入金データには接続していません。音声入力はブラウザにより利用できない場合があります。ブラウザの音声認識機能を使う場合、ブラウザ事業者の処理が行われる可能性があるため、個人情報は話さないでください。</p>
+</main>
+<script src="js/payment-brain.js"></script>
+<script src="js/documents-brain.js"></script>
+<script src="js/customer-resolve-entrypoint.js"></script>
+<script src="js/doc-export.js"></script>
+<script src="experiments/budil-gpt-phase1/fixture-core.js"></script>
+<script src="experiments/budil-gpt-phase1/fixture-ui.js"></script>
+</body>
+</html>
