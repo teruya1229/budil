@@ -147,6 +147,73 @@
     }
     return resolveName(session, deps);
   }
+  // Boundary for a future authenticated server-side GPT interpreter.
+  // GPT describes fields; Budil still resolves customer, calculates and requires approval.
+  function startStructured(session, instruction, output, deps) {
+    if (!session || session.stage !== 'idle') {
+      return fail('SESSION_NOT_IDLE', '進行中の作業を完了するかリセットしてください。');
+    }
+    if (!output || output.ok !== true || output.phase !== 'interpret_only' ||
+        output.can_execute !== false || output.needs_user_input === true ||
+        output.action !== 'estimate_create') {
+      return fail('STRUCTURED_NOT_READY', '不足情報または未対応操作があります。内容をテキストで確認してください。');
+    }
+    const raw = normalizeInput(instruction);
+    const customerName = String(output.customer_name || '').trim().replace(/(さん|様|御中)$/, '');
+    const service = String(output.service_name || '').trim();
+    const quantity = output.quantity;
+    const amount = output.total_yen;
+    const taxMode = output.tax_mode === 'included' ? 'taxIncluded'
+      : output.tax_mode === 'excluded' ? 'taxExcluded' : '';
+    const mentionedAmount = [...raw.matchAll(/([0-9][0-9,]*)円/g)]
+      .some((m) => Number(m[1].replace(/,/g, '')) === amount);
+    if (!customerName || !service || !raw.includes(normalizeInput(customerName)) ||
+        !raw.includes(normalizeInput(service)) || !mentionedAmount ||
+        !Number.isSafeInteger(quantity) || quantity < 1 || quantity > MAX_QTY ||
+        !raw.includes(String(quantity) + '台') ||
+        !Number.isSafeInteger(amount) || amount < 1 || amount > MAX_YEN ||
+        output.amount_scope !== 'total' || !taxMode ||
+        (taxMode === 'taxIncluded' && !/税込|内税/.test(raw)) ||
+        (taxMode === 'taxExcluded' && !/税抜|税別|外税/.test(raw))) {
+      return fail('STRUCTURED_INVALID', '指示内容とAIの抽出結果が一致しません。実行せず確認が必要です。');
+    }
+    session.intent = { customerName, service, quantity, amount, taxMode };
+    return resolveName(session, deps);
+  }
+
+  function reviseStructured(session, instruction, output, deps) {
+    if (!session || session.stage !== 'draft') return fail('REVISION_BLOCKED', '承認前の下書きだけ修正できます。');
+    if (!output || output.ok !== true || output.phase !== 'interpret_only' ||
+        output.action !== 'estimate_revision' || output.needs_user_input === true ||
+        output.can_execute !== false || output.amount_scope !== 'total') {
+      return fail('STRUCTURED_NOT_READY', '修正内容が不明なため下書きは変更していません。');
+    }
+    const amount = output.total_yen;
+    const raw = normalizeInput(instruction);
+    const explicitlyMentioned = [...raw.matchAll(/([0-9][0-9,]*)円/g)]
+      .some((m) => Number(m[1].replace(/,/g, '')) === amount);
+    if (!Number.isSafeInteger(amount) || amount < 1 || amount > MAX_YEN ||
+        !explicitlyMentioned || !/修正|変更|直し|変えて|にして/.test(raw)) {
+      return fail('STRUCTURED_INVALID', '修正指示と抽出金額が一致しません。');
+    }
+    let taxMode = session.intent.taxMode;
+    if (output.tax_mode === 'included') {
+      if (!/税込|内税/.test(raw)) return fail('STRUCTURED_INVALID', '税込指定が見つかりません。');
+      taxMode = 'taxIncluded';
+    } else if (output.tax_mode === 'excluded') {
+      if (!/税抜|税別|外税/.test(raw)) return fail('STRUCTURED_INVALID', '税抜指定が見つかりません。');
+      taxMode = 'taxExcluded';
+    }
+    const nextIntent = Object.assign({}, session.intent, { amount, taxMode });
+    const next = makeDraft(nextIntent, session.selectedCustomerName, deps);
+    if (!next.ok) return next;
+    session.intent = nextIntent;
+    session.draft = next.doc;
+    session.revision += 1;
+    session.approved = null;
+    return { ok: true, code: 'DRAFT_REVISED', revision: session.revision, doc: structuredCopy(session.draft) };
+  }
+
   function answerTaxMode(session, raw, deps) {
     if (!session || session.stage !== 'need_tax_mode') return fail('SESSION_NOT_WAITING', '税区分の回答待ちではありません。');
     const mode = taxModeFromText(normalizeInput(raw));
@@ -255,7 +322,7 @@
 
   const api = Object.freeze({
     fixtureCustomers: () => FIXTURE_CUSTOMERS.map((c) => Object.assign({}, c)),
-    parseInitial, parseCorrection, createSession, start, answerTaxMode, answerName,
+    parseInitial, parseCorrection, createSession, start, startStructured, reviseStructured, answerTaxMode, answerName,
     selectCustomer, revise, approve, getApprovedForPdf
   });
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
