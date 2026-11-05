@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const load = (p) => readFileSync(join(root, p), 'utf8');
-const ctx = createContext({ console: { log() {}, warn() {}, error() {} }, Date, Intl });
+const ctx = createContext({ console: { log() {}, warn() {}, error() {} }, Date, Intl, URL });
 for (const p of [
   'js/documents-brain.js',
   'js/customer-resolve-entrypoint.js',
