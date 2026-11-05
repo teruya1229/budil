@@ -259,6 +259,44 @@
       }));
     }
   });
+  const trial = window.BudilGptTrialAuth;
+  const authAvailable = trial && trial.supported();
+  show('fixture-gpt-auth', !!authAvailable);
+  if (authAvailable) {
+    const authStatus = () => {
+      const status = trial.getAuthStatus();
+      $('fixture-auth-status').textContent = status.signedIn
+        ? '試験セッションにログイン済みです。GPT APIが未デプロイの場合は解析されません。'
+        : '未ログイン。必要な場合のみ既存のBC認証でログインしてください。';
+    };
+    $('fixture-auth-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const email = $('fixture-auth-email').value;
+      const pass = $('fixture-auth-password').value;
+      $('fixture-auth-password').value = '';
+      $('fixture-auth-login').disabled = true;
+      try {
+        const result = await trial.login(email, pass);
+        $('fixture-auth-email').value = '';
+        authStatus();
+        if (!result.ok) {
+          $('fixture-auth-status').textContent = '試験認証に失敗しました（' + result.code + '）。';
+        }
+      } catch (_) {
+        $('fixture-auth-status').textContent = '試験認証を確認できませんでした。';
+      } finally {
+        $('fixture-auth-login').disabled = false;
+      }
+    });
+    $('fixture-auth-logout').addEventListener('click', () => {
+      trial.logout();
+      $('fixture-auth-email').value = '';
+      $('fixture-auth-password').value = '';
+      authStatus();
+    });
+    authStatus();
+  }
+
   $('fixture-start').addEventListener('click', start);
   $('fixture-gpt-start').addEventListener('click', () => interpretWithGpt(false));
   $('fixture-gpt-revise').addEventListener('click', () => interpretWithGpt(true));
