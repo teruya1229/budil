@@ -206,6 +206,40 @@
     <p id="fixture-workflow-status" class="fixture-status" aria-live="polite" role="status"></p>
   </section>
 
+  <section id="fixture-privacy" class="fixture-card" aria-labelledby="privacy-title">
+    <h2 id="privacy-title">匿名化した見積指示の試運転（架空顧客限定）</h2>
+    <p class="fixture-alert">ここも開発用です。実顧客のデータを使わず、氏名を「お客様」に置き換えてからGPTへ送る操作を確認します。ブラウザの音声認識は外部サービスを使う場合があるため、架空の名前だけを話してください。</p>
+    <label class="fixture-desc" for="privacy-instruction">架空の顧客で見積を指示</label>
+    <textarea id="privacy-instruction" class="fixture-input" rows="2" maxlength="220">山田花子様のエアコンクリーニング1台を税別8,000円で見積書作って</textarea>
+    <div class="fixture-action-row">
+      <button id="privacy-preview" class="fixture-button secondary" type="button">送信内容を確認（通信なし）</button>
+      <button id="privacy-speak" class="fixture-button secondary" type="button">🎤 架空の指示を話す</button>
+      <button id="privacy-send" class="fixture-button" type="button">匿名文だけGPT解析（試験用）</button>
+    </div>
+    <p class="fixture-desc" id="privacy-wire"></p>
+    <p id="privacy-status" class="fixture-status" role="status" aria-live="polite">架空顧客「山田花子」「田中太郎」のみで試せます。</p>
+    <div id="privacy-candidates" class="fixture-hidden">
+      <h2>顧客を本人が選択</h2>
+      <div id="privacy-candidate-list"></div>
+    </div>
+    <div id="privacy-draft" class="fixture-hidden">
+      <h2>端末内の下書き（未発行）</h2>
+      <div id="privacy-draft-summary" class="fixture-summary"></div>
+      <label class="fixture-desc" for="privacy-revision">金額を修正（外部送信しません）</label>
+      <input id="privacy-revision" class="fixture-input" type="text" maxlength="220" placeholder="金額を税込20,000円に変更">
+      <div class="fixture-action-row">
+        <button id="privacy-revise" class="fixture-button secondary" type="button">下書きを修正</button>
+        <button id="privacy-approve" class="fixture-button" type="button">この下書きを承認</button>
+      </div>
+    </div>
+    <div id="privacy-approved" class="fixture-hidden">
+      <h2>承認済み・未発行</h2>
+      <div id="privacy-approved-summary" class="fixture-summary"></div>
+      <button id="privacy-pdf" class="fixture-button" type="button">未発行見積PDFを端末へ保存</button>
+    </div>
+    <button id="privacy-reset" class="fixture-button secondary" type="button">匿名化の試運転をリセット</button>
+  </section>
+
   <div class="fixture-action-row">
     <button id="fixture-reset" type="button" class="fixture-button danger">架空デモを最初からやり直す</button>
   </div>
@@ -215,6 +249,7 @@
 <script src="js/documents-brain.js"></script>
 <script src="js/customer-resolve-entrypoint.js"></script>
 <script src="js/doc-export.js"></script>
+<script src="js/budil-gpt-anonymize.js"></script>
 <script src="js/budil-cloud.js"></script>
 <script src="experiments/budil-gpt-phase1/trial-auth.js"></script>
 <script src="experiments/budil-gpt-phase1/fixture-core.js"></script>
@@ -222,5 +257,6 @@
 <script src="experiments/budil-gpt-phase1/fixture-workflow.js"></script>
 <script src="experiments/budil-gpt-phase1/fixture-ui.js"></script>
 <script src="experiments/budil-gpt-phase1/fixture-workflow-ui.js"></script>
+<script src="experiments/budil-gpt-phase1/fixture-anonymized-ui.js"></script>
 </body>
 </html>
