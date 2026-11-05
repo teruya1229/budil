@@ -1,3 +1,12 @@
+## 2026-11-05 夜・GPT向けローカル業務検索入口追加（本番未接続）
+
+- 新規 `js/budil-gpt-readonly.js`：`customer.search`, `document.search`, `work.search`, `receivables.summary` の4操作だけを許可。既存 `CustomerResolveEntrypoint` と `PaymentBrain.summarizeReceivables` に計算・本人確認の判断を委ねる。
+- すべてローカル読取専用、明示同意 `consent===true` がなければgetLeads等も呼ばない。依存するデータ関数は外部から注入するだけで、業務localStorageを勝手に読まない。
+- ローカルUI向けビューには必要最小限の顧客候補・帳票番号・予定日だけを返し、GPT向け `modelReceipt` は件数、状態、可否フラグだけ。顧客名・連絡先・住所・明細・未入金金額はGPT向けレシートに含めない。
+- 顧客名は完全一致のみ・1件でも本人選択、複数候補で自動確定なし。帳票件数が上限を超えたとき部分結果を表示しない。未入金は既存PaymentBrainを使用し、入金済みへの書込みなし。
+- `scripts/verify-budil-gpt-readonly.mjs` を追加。GitHub Actions `42008748780` Linux Node環境で **20/20 PASS**、同runの他の模擬E2EもPASS。
+- 本番UI・サーバー・本番顧客には未接続。実OpenAI API、実端末、保存・同期・Google Calendar登録・請求発行・銀行照合は引き続き未完。
+
 ## 2026-11-05 Budil×GPT 開発継続：GPT試験認証とDeno検証
 
 - Budil Draft PR #1内でlocalhost限定試験認証を追加。旧staging欠落の不整合に対して、既存バックアップ設定は触らずGPT試験だけBC既存Supabaseに向ける。パスワード・JWTはチャットにもリポジトリにも出していない。
