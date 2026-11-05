@@ -1,3 +1,11 @@
+## Budil×GPT 2026-11-05 追加実装・引継ぎ
+
+- Budil Draft PR #1 `feat/budil-gpt-phase1-fixture-20261105`: Phase1見積に加え、架空の予約→作業→請求→入金確認をスマホ用の会話入力で連続実行可能。別途 `ai-bantou-app` Draft PR #5 にJWT/tenant/3回/分のGPT指示解釈Gatewayがあり、未デプロイ・初期無効。
+- 回帰見積24項目、下流業務28項目。Linux CDP 390pxで2つのA4 PDF（見積・請求）が各1ページ出力、未入金に入金確定の誤更新なし。GitHub Actions run `41997499331` のLinux E2E成功。書き込みは揮発架空メモリのみ。
+- 最初のquote 18,000円を20,000円に修正後、20,000円で請求/未入金が一致。本体のDocumentsBrain、WorkOrderBrain、PaymentBrainを流用。実顧客/Calendar/銀行/本番mainは未変更。
+- browser speechの音声認識自体とiPhone/Android実機、実OpenAI API、予約の真正Google Calendar API登録、取引データ保存・同期、銀行照合証拠、全verify-currentは未達。完成扱い禁止。
+- 次は認証付きGPTの実通信検証（APIキー・料金承認が必要）、実スマホと権限・安全検品、予約登録/本番業務APIを一機能ずつ検証。白Cursor・Codex B使用なし。
+
 ## Budil×GPT Phase1 本物のChromium検品結果（2026-11-05）
 
 - Draft PR: Budil `https://github.com/teruya1229/budil/pull/1`; GPTの安全な認証試験Gateway `https://github.com/teruya1229/ai-bantou-app/pull/5`。
