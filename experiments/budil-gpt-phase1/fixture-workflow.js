@@ -45,7 +45,7 @@
       return validation.ok ? {ok:true,action:'slot_preview',date,start,end,
         requiresConfirmation:true} : validation;
     }
-    if(/^(?:作業を)?完了(?:にして|にする|して)$/.test(str)) {
+    if(/^(?:作業を|作業)?完了(?:にして|にする|して)$/.test(str)) {
       return {ok:true,action:'request_completion',requiresConfirmation:true};
     }
     if(/^(?:請求書を|請求書)(?:作って|作成して)$/.test(str)) {
