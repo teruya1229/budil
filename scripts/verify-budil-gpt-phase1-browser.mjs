@@ -194,13 +194,15 @@ async function run() {
   // draft invoice -> explicit approval -> PDF -> unpaid -> safe match.
   await evaluate("document.getElementById('fixture-continue').click()");
   assert.equal(await evaluate("document.getElementById('fixture-workflow').classList.contains('fixture-hidden')"),false);
-  await evaluate("document.getElementById('fixture-work-check').click()");
+  await evaluate("document.getElementById('fixture-work-interpret').click()");
   assert.equal(await evaluate("document.getElementById('fixture-workflow-review').classList.contains('fixture-hidden')"),false);
   await evaluate("document.getElementById('fixture-work-book').click()");
   assert.equal(await evaluate("document.getElementById('fixture-workflow-booked-summary').innerText.includes('Google未登録')"),true);
   console.log("PASS: fictional availability and explicit booking, no Google writes");
+  await evaluate("document.getElementById('fixture-work-command').value='作業完了にして';document.getElementById('fixture-work-interpret').click()");
+  assert.equal(await evaluate("document.getElementById('fixture-workflow-status').innerText.includes('承認')"),true);
   await evaluate("document.getElementById('fixture-complete').click()");
-  await evaluate("document.getElementById('fixture-invoice-preview').click()");
+  await evaluate("document.getElementById('fixture-work-command').value='請求書を作って';document.getElementById('fixture-work-interpret').click()");
   assert.equal(await evaluate("document.getElementById('fixture-workflow-invoice-summary').innerText.includes('20,000円')"),true);
   console.log("PASS: existing Budil work completion and invoice draft");
   await evaluate("document.getElementById('fixture-invoice-approve').click()");
@@ -224,7 +226,7 @@ async function run() {
   ],{encoding:'utf8'});
   assert.equal(invoicePreview.status,0,'invoice_preview_failed');
   console.log("PASS: actual 1-page fictional invoice PDF saved; size="+invoiceData.length);
-  await evaluate("document.getElementById('fixture-unpaid').click()");
+  await evaluate("document.getElementById('fixture-work-command').value='未入金を教えて';document.getElementById('fixture-work-interpret').click()");
   assert.equal(await evaluate("document.getElementById('fixture-workflow-bank-summary').innerText.includes('20,000円')"),true);
   await evaluate("document.getElementById('fixture-bank-amount').value='20000';document.getElementById('fixture-bank-match').click()");
   assert.equal(await evaluate("document.getElementById('fixture-workflow-status').innerText.includes('未入金のまま')"),true);
