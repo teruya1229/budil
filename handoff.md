@@ -1,4 +1,13 @@
-﻿# Budil handoff
+## 2026-11-05 Budil×GPT 開発再開（検証ブランチ限定）
+
+- 2026-11-04本人の最優先決定：Budilをスマホの音声・テキスト・写真で事務作業を遂行できるAI業務番頭へ進化。AIが作業、人間が確認・承認。既存Budilが金額・税・帳票の正本。
+- Phase1隔離検証の開発ブランチ`feat/budil-gpt-phase1-fixture-20261105`を`main`の`bf6d132a`から作成。実顧客・Googleカレンダー・本番localStorageには触れていない。
+- 追加: ルート`budil-gpt-phase1-demo.html`、`experiments/budil-gpt-phase1/fixture-core.js`、`fixture-ui.js`、README、`scripts/verify-budil-gpt-phase1-fixture.mjs`。
+- 目的のコード経路は架空顧客照合→見積下書き→会話修正→明示承認→既存Budil PDF関数。会話パーサーは固定MOCK。実GPT・認証/権限サーバー・本番連携・スマホ実機は未完成。
+- 2026-11-05 GitHub実ソースを隔離JS実行（Node互換shim）した16項目回帰PASS。正式Windows Runner実行とPDF実ファイル生成、PC/スマホ実機検品は未検証。
+- 続きは同ブランチ内でWindows正式環境のnode --check / node scripts/verify-budil-gpt-phase1-fixture.mjs / node scripts/verify-current.mjsを実行し、ブラウザPDF・390px表示を確認する。GPTサーバー接続はその後、安全な認証APIで別途設計。本番main反映前に結果を検品する。
+
+# Budil handoff
 
 最終更新: 2026-09-15
 
