@@ -56,6 +56,7 @@ pass('normal local Budil page cannot access trial auth',()=>assert.equal(wrong.B
 const world=makeWorld('8765','/budil-gpt-phase1-demo.html');
 pass('only dedicated fixture page has trial auth',()=>assert.equal(world.BudilGptTrialAuth.supported(),true));
 pass('not signed in starts with isolated session',()=>assert.equal(world.BudilGptTrialAuth.getAuthStatus().signedIn,false));
+pass('trial gateway explicitly selects preexisting BC Supabase',()=>assert.equal(world.BudilGptTrialAuth.gatewayConfig().url,'https://xvrrlwlgoxbrkhlfyznx.supabase.co'));
 const blocked=await world.BudilCloud.interpretFixture('比嘉清子さんのエアコン洗浄2台を税込18,000円で見積して');
 pass('auth required before any network',()=>{
   assert.equal(blocked.code,'not_signed_in');
