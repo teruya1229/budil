@@ -213,4 +213,33 @@ check('22. GPT branch only calls authenticated cloud client, never raw API', () 
   assert.ok(cloud.includes('getValidAccessToken'));
   assert.ok(!ui.includes('OPENAI_API_KEY'));
 });
-console.log('Budil×GPT Phase 1 fixture: ' + count + '/22 PASS');
+{
+  const fakeWindow = {
+    location: { hostname:'teruya1229.github.io' },
+    sessionStorage: {
+      getItem(){ return null; },
+      removeItem(){},
+      setItem(){ throw new Error('unexpected_storage_write'); }
+    }
+  };
+  let networkCalls=0;
+  const guardCtx=createContext({
+    window:fakeWindow, TextEncoder,
+    fetch(){networkCalls++; throw new Error('unexpected_network_call'); }
+  });
+  runInContext(load('js/budil-cloud.js'),guardCtx);
+  const client=fakeWindow.BudilCloud;
+  const blocked=await client.interpretFixture(
+    '比嘉清子さんのエアコン洗浄2台を税込18,000円で見積して。田中さんの電話を調べて'
+  );
+  assert.equal(blocked.code,'fixture_only');
+  assert.equal(networkCalls,0);
+  count++;console.log('PASS 23. GPT client blocks appended PII before even server transfer');
+  const allowed=await client.interpretFixture(
+    '比嘉清子さんのエアコン洗浄2台を税込18,000円で見積して'
+  );
+  assert.equal(allowed.code,'not_signed_in');
+  assert.equal(networkCalls,0);
+  count++;console.log('PASS 24. safe fixture passes allowlist but requires valid login');
+}
+console.log('Budil×GPT Phase 1 fixture: ' + count + '/24 PASS');
