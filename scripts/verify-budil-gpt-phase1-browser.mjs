@@ -7,15 +7,17 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdtempSync, existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { mkdtempSync, mkdirSync, existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, dirname, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const workDir = mkdtempSync(join(tmpdir(), "budil-gpt-browser-"));
+const workDir = process.env.BUDIL_TEST_OUTPUT_DIR || mkdtempSync(join(tmpdir(), "budil-gpt-browser-"));
+mkdirSync(workDir, { recursive: true });
 const userDataDir = join(workDir, "chrome-profile");
 const downloadDir = join(workDir, "downloads");
+mkdirSync(downloadDir, { recursive: true });
 const browserCandidates = [
   process.env.CHROME_BIN,
   process.platform === "win32" ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" : "",
@@ -139,6 +141,8 @@ async function run() {
   const width = await evaluate("({scroll:document.documentElement.scrollWidth,inner:window.innerWidth})");
   assert.ok(width.scroll <= width.inner + 2, "390px horizontal overflow " + JSON.stringify(width));
   console.log("PASS: 390px layout no horizontal scroll");
+  const screenshot = await cdp.command("Page.captureScreenshot", { format: "png" });
+  if (screenshot.data) writeFileSync(join(workDir, "mobile-390.png"), Buffer.from(screenshot.data, "base64"));
 
   await evaluate("document.getElementById('fixture-start').click()");
   assert.equal(await evaluate("document.querySelectorAll('#fixture-candidate-list button').length"), 1);
