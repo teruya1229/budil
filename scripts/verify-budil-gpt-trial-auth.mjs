@@ -26,12 +26,17 @@ const makeWorld=(port,pathname)=>{
       if(url.includes('/auth/v1/token?'))return new Response(JSON.stringify({
         access_token:'fictional_test_token',refresh_token:'fictional_refresh_token',expires_in:3600
       }),{status:200,headers:{'Content-Type':'application/json'}});
-      if(url.includes('/functions/v1/budil-gpt-interpret'))return new Response(JSON.stringify({
-        ok:true,phase:'interpret_only',can_execute:false,
-        action:'estimate_create',customer_name:'比嘉清子',service_name:'エアコン洗浄',
-        quantity:2,total_yen:18000,tax_mode:'included',amount_scope:'total',
-        needs_user_input:false
-      }),{status:200,headers:{'Content-Type':'application/json'}});
+      if(url.includes('/functions/v1/budil-gpt-interpret')){
+        const body = init.method === 'GET'
+          ? {ok:true,phase:'readiness_only',enabled:false,key_configured:true,
+              model_supported:true,ready:false,external_request_sent:false}
+          : {ok:true,phase:'interpret_only',can_execute:false,
+              action:'estimate_create',customer_name:'比嘉清子',service_name:'エアコン洗浄',
+              quantity:2,total_yen:18000,tax_mode:'included',amount_scope:'total',
+              needs_user_input:false};
+        return new Response(JSON.stringify(body),{status:200,
+          headers:{'Content-Type':'application/json'}});
+      }
       throw new Error('unexpected_external_network');
     }
   };
@@ -96,4 +101,32 @@ pass('trial logout clears only trial auth storage',()=>{
   assert.equal(world.BudilGptTrialAuth.getAuthStatus().signedIn,false);
   assert.equal(memory.size,0);
 });
-console.log('Budil GPT localhost trial auth '+checks+'/12 PASS (no real network)');
+const noAuthReady=await world.BudilCloud.getFixtureGptReadiness();
+pass('13. readiness after signout is blocked before network',()=>{
+  assert.equal(noAuthReady.code,'not_signed_in');
+  assert.equal(network.length,2);
+});
+const other=makeWorld('3000','/budil-gpt-phase1-demo.html');
+const wrongOrigin=await other.BudilCloud.getFixtureGptReadiness();
+pass('14. readiness is not available from other ports or normal Budil',()=>{
+  assert.equal(wrongOrigin.code,'gpt_fixture_origin_unavailable');
+  assert.equal(network.length,2);
+});
+const signedAgain=await world.BudilGptTrialAuth.login('demo@example.invalid','fixture-password');
+assert.equal(signedAgain.ok,true);
+const ready=await world.BudilCloud.getFixtureGptReadiness();
+pass('15. authenticated readiness only returns booleans, no key or paid GPT call',()=>{
+  assert.equal(ready.ok,true);
+  assert.equal(ready.phase,'readiness_only');
+  assert.equal(ready.ready,false);
+  assert.equal(ready.keyConfigured,true);
+  assert.equal(ready.enabled,false);
+  assert.equal(ready.externalRequestSent,false);
+  assert.equal(network.length,4);
+  assert.equal(network[3].init.method,'GET');
+  assert.equal(network[3].url,'https://xvrrlwlgoxbrkhlfyznx.supabase.co/functions/v1/budil-gpt-interpret');
+  assert.equal(JSON.stringify(ready).includes('fictional_test_token'),false);
+  assert.equal(JSON.stringify(ready).includes('fixture-password'),false);
+});
+world.BudilGptTrialAuth.logout();
+console.log('Budil GPT localhost trial auth '+checks+'/15 PASS (no real network)');
