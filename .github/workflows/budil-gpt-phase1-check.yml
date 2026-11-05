@@ -11,6 +11,8 @@ concurrency:
   cancel-in-progress: true
 jobs:
   fixture:
+    # Windows runner is not registered for this repo yet; explicitly enable only when available.
+    if: ${{ vars.BUDIL_WINDOWS_CI_ENABLED == 'true' }}
     runs-on: [self-hosted, Windows, bc-bantou-dev]
     timeout-minutes: 15
     steps:
