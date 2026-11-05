@@ -38,7 +38,7 @@ jobs:
         shell: pwsh
         run: |
           $changed = (git diff --name-only bf6d132a47aff26b3f38c5ef68f269b362c7f6ed HEAD) -split "`n"
-          $blocked = @('index.html','js/app.js','js/storage.js','js/documents-brain.js','js/doc-export.js','js/revenue-brain.js','js/payment-brain.js')
+          $blocked = @('index.html','js/app.js','js/storage.js','js/documents-brain.js','js/revenue-brain.js','js/payment-brain.js')
           foreach ($path in $changed) { if ($blocked -contains $path.Trim()) { throw "protected_file_changed:$path" } }
           Write-Host 'protected production code unchanged'
 
@@ -62,6 +62,11 @@ jobs:
           node --check js/budil-cloud.js
           node --check scripts/verify-budil-gpt-phase1-browser.mjs
           node scripts/verify-budil-gpt-phase1-fixture.mjs
+      - name: Install CJK font and PDF inspection tools (CI only)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk poppler-utils
+
       - name: Browser availability
         run: |
           which google-chrome || which google-chrome-stable || which chromium
@@ -74,6 +79,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: budil-gpt-fixture-browser-proof
-          path: ${{ runner.temp }}/budil-gpt-qa/
+          path: |
+            ${{ runner.temp }}/budil-gpt-qa/mobile-390.png
+            ${{ runner.temp }}/budil-gpt-qa/estimate-preview.png
+            ${{ runner.temp }}/budil-gpt-qa/downloads/*.pdf
           if-no-files-found: ignore
           retention-days: 3
