@@ -205,6 +205,7 @@
       speechRecognizer = null;
     }
     session = Core.createSession();
+    document.dispatchEvent(new Event('budil-fixture-reset'));
     pdfCompleted = false;
     exportInFlight = false;
     hideFuture();
@@ -248,6 +249,16 @@
     }
   }
 
+  window.BudilGptFixtureBridge = Object.freeze({
+    getApprovedQuoteSession() {
+      if (session.stage !== 'approved' || !session.approved || !session.selectedCustomerId) return null;
+      return JSON.parse(JSON.stringify({
+        stage: 'approved',
+        selectedCustomerId: session.selectedCustomerId,
+        approved: session.approved
+      }));
+    }
+  });
   $('fixture-start').addEventListener('click', start);
   $('fixture-gpt-start').addEventListener('click', () => interpretWithGpt(false));
   $('fixture-gpt-revise').addEventListener('click', () => interpretWithGpt(true));
