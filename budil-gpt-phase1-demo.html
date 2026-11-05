@@ -52,7 +52,7 @@
     <h1>Budil×GPT<br>話しかけて見積書を作る</h1>
     <p>音声・テキスト → 架空の顧客検索 → 見積書の確認・修正 → 承認 → Budilと同じ形式のPDF</p>
   </header>
-  <div class="fixture-alert" role="note"><strong>開発専用デモです。</strong> 会話解釈は限定ルールの模擬処理であり、GPT本番接続ではありません。お客様情報の取得・保存、外部送信、カレンダー登録は行いません。発行するPDFも架空データの検証用です。</div>
+  <div class="fixture-alert" role="note"><strong>開発専用デモです。</strong> 通常は限定ルールの模擬処理です。GPT解析ボタンは既存ログイン済み・試験API許可済みの場合だけ利用でき、現在は試験API未公開です。お客様情報の取得・保存、外部送信、カレンダー登録は行いません。発行するPDFも架空データの検証用です。</div>
 
   <section class="fixture-card" aria-labelledby="instruction-title">
     <h2 id="instruction-title">1. 話す・入力する</h2>
@@ -62,6 +62,7 @@
     <div class="fixture-action-row">
       <button id="fixture-speak-instruction" class="fixture-button secondary" type="button">🎤 音声で入力</button>
       <button id="fixture-start" class="fixture-button" type="button">見積の下書きを作る</button>
+      <button id="fixture-gpt-start" class="fixture-button secondary" type="button">GPT解析（認証済み・テストのみ）</button>
     </div>
     <p id="fixture-status" class="fixture-status" role="status" aria-live="polite">架空の顧客4件のみで安全に試せます。</p>
   </section>
@@ -92,6 +93,7 @@
     <div class="fixture-action-row">
       <button id="fixture-revise" type="button" class="fixture-button secondary">修正を反映</button>
       <button id="fixture-speak-revision" type="button" class="fixture-button secondary">🎤 修正を話す</button>
+      <button id="fixture-gpt-revise" type="button" class="fixture-button secondary">GPTで修正内容を理解</button>
     </div>
     <div class="fixture-action-row">
       <button id="fixture-approve" type="button" class="fixture-button">この内容を確認・承認</button>
@@ -117,6 +119,7 @@
 <script src="js/documents-brain.js"></script>
 <script src="js/customer-resolve-entrypoint.js"></script>
 <script src="js/doc-export.js"></script>
+<script src="js/budil-cloud.js"></script>
 <script src="experiments/budil-gpt-phase1/fixture-core.js"></script>
 <script src="experiments/budil-gpt-phase1/fixture-ui.js"></script>
 </body>
