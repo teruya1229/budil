@@ -514,6 +514,49 @@
     });
   }
 
+  /**
+   * Authenticated, no-cost GPT readiness probe for the isolated localhost
+   * fictional-data demo. Reuses the trial Auth session, NEVER the backup
+   * session. Returns booleans only, no key material or customer data.
+   */
+  function getFixtureGptReadiness() {
+    var trial = global.BudilGptTrialAuth;
+    if (!trial || !trial.supported || !trial.supported()) {
+      return Promise.resolve({ok:false,code:'gpt_fixture_origin_unavailable'});
+    }
+    var config = trial.gatewayConfig();
+    if (!config) return Promise.resolve({ok:false,code:'gpt_fixture_origin_unavailable'});
+    return trial.getValidAccessToken().then(function (token) {
+      if (!token || !token.ok || !token.accessToken) {
+        return {ok:false,code:CODE.NOT_SIGNED_IN};
+      }
+      return doFetch(config.url + '/functions/v1/budil-gpt-interpret', {
+        method: 'GET',
+        headers: {
+          Authorization: 'Bearer ' + token.accessToken,
+          apikey: config.publishableKey
+        },
+        timeoutMs: 12000
+      }).then(function (response) {
+        if (response.timeout) return {ok:false,code:CODE.TIMEOUT};
+        if (response.networkError) return {ok:false,code:CODE.NETWORK};
+        if (response.status !== 200 || !response.body ||
+            response.body.phase !== 'readiness_only' || response.body.ok !== true) {
+          return {ok:false,code:response.body && response.body.code || 'readiness_unavailable'};
+        }
+        return {
+          ok:true,
+          phase:'readiness_only',
+          enabled:response.body.enabled === true,
+          keyConfigured:response.body.key_configured === true,
+          modelSupported:response.body.model_supported === true,
+          ready:response.body.ready === true,
+          externalRequestSent:false
+        };
+      });
+    });
+  }
+
   function isBackupInFlight() {
     return backupInFlight;
   }
@@ -531,6 +574,7 @@
     backupNow: backupNow,
     fetchLatest: fetchLatest,
     interpretFixture: interpretFixture,
+    getFixtureGptReadiness: getFixtureGptReadiness,
     isBackupInFlight: isBackupInFlight
   };
 })(typeof window !== 'undefined' ? window : globalThis);
