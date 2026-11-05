@@ -5,7 +5,7 @@
  * Browser executable: CHROME_BIN or google-chrome/chromium.
  */
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 import { mkdtempSync, mkdirSync, existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -179,7 +179,16 @@ async function run() {
   }
   const pdfBytes = readFileSync(pdf);
   assert.equal(pdfBytes.subarray(0, 5).toString("ascii"), "%PDF-");
-  console.log("PASS: real browser PDF saved; size=" + pdfBytes.length);
+  const info = spawnSync("pdfinfo", [pdf], { encoding: "utf8" });
+  if (info.status !== 0) throw new Error("pdfinfo_unavailable");
+  const count = Number((info.stdout.match(/^Pages:\s+(\d+)/m) || [])[1]);
+  assert.equal(count, 1, "PDF must be exactly 1 page; got " + count);
+  const preview = spawnSync("pdftoppm", [
+    "-f", "1", "-singlefile", "-png", "-r", "110", pdf,
+    join(workDir, "estimate-preview")
+  ], { encoding: "utf8" });
+  assert.equal(preview.status, 0, "pdf_preview_render_failed");
+  console.log("PASS: real browser PDF saved; size=" + pdfBytes.length + "; pages=" + count);
   // Never echo or persist any customer record; this is a demo-only PDF.
   console.log("BUDIL_GPT_BROWSER_E2E_PASS");
 }
