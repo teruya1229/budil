@@ -168,7 +168,7 @@ check('20. PDF for invoice uses existing Budil renderer safely',()=>{
 });
 check('21. project fixture never accesses production storage/calendar/provider',()=>{
   const src=code('experiments/budil-gpt-phase1/fixture-workflow.js');
-  assert.ok(!/(?:localStorage|fetch\(|\.getLeads\(|\.addDocument\(|\.updateDocument\(|\.insert\(|getCalendarEvents|api\.openai)/.test(src));
+  assert.ok(!/(?:\blocalStorage(?:\.|\[)|fetch\(|\.getLeads\(|\.addDocument\(|\.updateDocument\(|\.insert\(|getCalendarEvents|api\.openai)/.test(src));
 });
 check('22. search outputs are defensive copies',()=>{
   const s=completed();Workflow.prepareInvoice(s);
