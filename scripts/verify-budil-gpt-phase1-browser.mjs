@@ -190,7 +190,51 @@ async function run() {
   assert.equal(preview.status, 0, "pdf_preview_render_failed");
   console.log("PASS: real browser PDF saved; size=" + pdfBytes.length + "; pages=" + count);
   // Never echo or persist any customer record; this is a demo-only PDF.
+  // Continue in the *same* browser session: appointment -> completion ->
+  // draft invoice -> explicit approval -> PDF -> unpaid -> safe match.
+  await evaluate("document.getElementById('fixture-continue').click()");
+  assert.equal(await evaluate("document.getElementById('fixture-workflow').classList.contains('fixture-hidden')"),false);
+  await evaluate("document.getElementById('fixture-work-check').click()");
+  assert.equal(await evaluate("document.getElementById('fixture-workflow-review').classList.contains('fixture-hidden')"),false);
+  await evaluate("document.getElementById('fixture-work-book').click()");
+  assert.equal(await evaluate("document.getElementById('fixture-workflow-booked-summary').innerText.includes('Google未登録')"),true);
+  console.log("PASS: fictional availability and explicit booking, no Google writes");
+  await evaluate("document.getElementById('fixture-complete').click()");
+  await evaluate("document.getElementById('fixture-invoice-preview').click()");
+  assert.equal(await evaluate("document.getElementById('fixture-workflow-invoice-summary').innerText.includes('18,000円')"),true);
+  console.log("PASS: existing Budil work completion and invoice draft");
+  await evaluate("document.getElementById('fixture-invoice-approve').click()");
+  await evaluate("document.getElementById('fixture-invoice-pdf').click()");
+  let invoicePdf = "";
+  for(let i=0;i<250;i++){
+    const names=readdirSync(downloadDir);
+    const match=names.find(n=>n.includes('請求書')&&n.toLowerCase().endsWith('.pdf')&&!n.endsWith('.crdownload'));
+    if(match&&statSync(join(downloadDir,match)).size>5000){invoicePdf=join(downloadDir,match);break;}
+    await sleep(100);
+  }
+  if(!invoicePdf)throw new Error("fixture_invoice_pdf_not_downloaded");
+  const invoiceData=readFileSync(invoicePdf);
+  assert.equal(invoiceData.subarray(0,5).toString('ascii'),'%PDF-');
+  const invoiceInfo=spawnSync('pdfinfo',[invoicePdf],{encoding:'utf8'});
+  assert.equal(invoiceInfo.status,0,"invoice_pdfinfo_failed");
+  const invoicePageCount=Number((invoiceInfo.stdout.match(/^Pages:\s+(\d+)/m)||[])[1]);
+  assert.equal(invoicePageCount,1,'Invoice A4 must fit in one page');
+  const invoicePreview=spawnSync('pdftoppm',[
+    '-f','1','-singlefile','-png','-r','110',invoicePdf,join(workDir,'invoice-preview')
+  ],{encoding:'utf8'});
+  assert.equal(invoicePreview.status,0,'invoice_preview_failed');
+  console.log("PASS: actual 1-page fictional invoice PDF saved; size="+invoiceData.length);
+  await evaluate("document.getElementById('fixture-unpaid').click()");
+  assert.equal(await evaluate("document.getElementById('fixture-workflow-bank-summary').innerText.includes('18,000円')"),true);
+  await evaluate("document.getElementById('fixture-bank-match').click()");
+  assert.equal(await evaluate("document.getElementById('fixture-workflow-status').innerText.includes('未入金のまま')"),true);
+  console.log("PASS: receivables computed and bank match did not mark paid");
+  const width2=await evaluate("({scroll:document.documentElement.scrollWidth,inner:window.innerWidth})");
+  assert.ok(width2.scroll<=width2.inner+2,'workflow has horizontal overflow');
+  const screenshot2=await cdp.command('Page.captureScreenshot',{format:'png'});
+  if(screenshot2.data)writeFileSync(join(workDir,'workflow-mobile-390.png'),Buffer.from(screenshot2.data,'base64'));
   console.log("BUDIL_GPT_BROWSER_E2E_PASS");
+
 }
 try {
   await run();
