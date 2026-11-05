@@ -41,3 +41,39 @@ jobs:
           $blocked = @('index.html','js/app.js','js/storage.js','js/documents-brain.js','js/doc-export.js','js/revenue-brain.js','js/payment-brain.js')
           foreach ($path in $changed) { if ($blocked -contains $path.Trim()) { throw "protected_file_changed:$path" } }
           Write-Host 'protected production code unchanged'
+
+  fixture-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout isolated feature branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - name: Node 22 (fixture only)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run native Node syntax and unit tests
+        run: |
+          node --check experiments/budil-gpt-phase1/fixture-core.js
+          node --check experiments/budil-gpt-phase1/fixture-ui.js
+          node --check js/budil-cloud.js
+          node --check scripts/verify-budil-gpt-phase1-browser.mjs
+          node scripts/verify-budil-gpt-phase1-fixture.mjs
+      - name: Browser availability
+        run: |
+          which google-chrome || which google-chrome-stable || which chromium
+      - name: Real browser 390px and PDF E2E with fictional data
+        env:
+          BUDIL_TEST_OUTPUT_DIR: ${{ runner.temp }}/budil-gpt-qa
+        run: node scripts/verify-budil-gpt-phase1-browser.mjs
+      - name: Upload fictional fixture proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: budil-gpt-fixture-browser-proof
+          path: ${{ runner.temp }}/budil-gpt-qa/
+          if-no-files-found: ignore
+          retention-days: 3
