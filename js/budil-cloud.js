@@ -557,6 +557,66 @@
     });
   }
 
+  /**
+   * Experimental REAL-NAME-COMPATIBLE interpretation path:
+   * keep the customer name on the device, send only the standardized
+   * customer-neutral service/quantity/total/tax sentence.
+   * This is available ONLY from the localhost fictional-data demo.
+   * The Edge endpoint independently requires a separate disabled-by-default
+   * BUDIL_GPT_ANONYMIZED_ENABLED flag.
+   */
+  function interpretAnonymizedQuote(original) {
+    var tool = typeof BudilGptAnonymize !== 'undefined'
+      ? BudilGptAnonymize : global.BudilGptAnonymize;
+    if (!tool || typeof tool.prepare !== 'function' ||
+        typeof tool.verifyResult !== 'function') {
+      return Promise.resolve({ok:false,code:'anonymizer_unavailable'});
+    }
+    var local = tool.prepare(original);
+    if (!local.ok) return Promise.resolve({ok:false,code:local.code});
+    var trial = global.BudilGptTrialAuth;
+    if (!trial || !trial.supported || !trial.supported()) {
+      return Promise.resolve({ok:false,code:'gpt_fixture_origin_unavailable'});
+    }
+    var config = trial.gatewayConfig();
+    if (!config || !tool.acceptsWire(local.wire)) {
+      return Promise.resolve({ok:false,code:'anonymized_wire_invalid'});
+    }
+    return trial.getValidAccessToken().then(function (token) {
+      if (!token || !token.ok || !token.accessToken) {
+        return {ok:false,code:CODE.NOT_SIGNED_IN};
+      }
+      // Deliberately omit original, customerName, id and any other local data.
+      return doFetch(config.url + '/functions/v1/budil-gpt-interpret', {
+        method:'POST',
+        headers:{
+          Authorization:'Bearer ' + token.accessToken,
+          apikey:config.publishableKey,
+          'Content-Type':'application/json'
+        },
+        body:JSON.stringify({
+          mode: local.wire.mode,
+          instruction: local.wire.instruction
+        }),
+        timeoutMs:20000
+      }).then(function (response) {
+        if (response.timeout) return {ok:false,code:CODE.TIMEOUT};
+        if (response.networkError) return {ok:false,code:CODE.NETWORK};
+        if (response.status !== 200 || !response.body || response.body.ok !== true) {
+          return {ok:false,code:response.body && response.body.code || CODE.UNKNOWN};
+        }
+        if (response.body.input_mode !== 'anonymized' ||
+            response.body.requires_human_approval !== true) {
+          return {ok:false,code:'anonymized_response_unverified'};
+        }
+        var verified = tool.verifyResult(original,response.body);
+        if (!verified.ok) return {ok:false,code:verified.code || 'anonymized_response_unverified'};
+        // Return the server schema, NOT the locally parsed customer name.
+        return response.body;
+      });
+    });
+  }
+
   function isBackupInFlight() {
     return backupInFlight;
   }
@@ -575,6 +635,7 @@
     fetchLatest: fetchLatest,
     interpretFixture: interpretFixture,
     getFixtureGptReadiness: getFixtureGptReadiness,
+    interpretAnonymizedQuote: interpretAnonymizedQuote,
     isBackupInFlight: isBackupInFlight
   };
 })(typeof window !== 'undefined' ? window : globalThis);
