@@ -88,7 +88,7 @@
       return fail('WORK_NOT_SCHEDULED','架空予定を先に承認してください。');
     if(permit!==true) return fail('PERMIT_REQUIRED','本人の作業完了承認が必要です。');
     session.workOrder=session.deps.workOrderBrain.normalizeWorkOrder({
-      ...session.workOrder,status:'completed',completedAt:'2026-11-13T15:00:00+09:00'
+      ...session.workOrder,status:'completed',completedAt:session.workOrder.scheduledDate+'T'+session.workOrder.endTime+':00+09:00'
     });
     session.stage='completed';
     return {ok:true,code:'FIXTURE_WORK_COMPLETED',workOrder:copy(session.workOrder)};
@@ -106,6 +106,7 @@
       number:'DEMO-INV-001',
       status:'draft',
       note:'【架空デモ・未発行】実際の請求・送付・入金依頼は禁止。',
+      bankInfo:'【架空デモ】振込禁止・実際の振込先情報ではありません。',
       paymentStatus:'pending',paidAmount:0,paidDate:'',
       unpaidAmount:estimate.total,expectedPaymentDate:draft.dueDate,
       linkedDocumentId:'',linkedRevenueId:''
