@@ -188,7 +188,7 @@
     $('fixture-pdf').disabled = true;
     status('既存Budilの形式で架空見積書PDFを生成します。');
     try {
-      const exported = await window.BudilDocExport.downloadDocumentPdf(result.doc);
+      const exported = await window.BudilDocExport.downloadDocumentPdf(result.doc, { fixtureSinglePage: true });
       if (!exported || exported.ok !== true) throw new Error('PDF出力結果が不明です。');
       pdfCompleted = true;
       status('PDF保存処理が完了しました：' + exported.filename + '。ファイルが端末に保存されたかご確認ください。');
