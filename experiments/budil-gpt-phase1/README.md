@@ -45,3 +45,15 @@ Production main and GitHub Pages remain unchanged. Original tax, rounding, estim
 - A narrow offline parser handles explicit utterances such as `2026年11月13日13時から15時まで予約して`, `作業完了にして`, `請求書を作って`, and `未入金を教えて`. It is NOT broad AI natural language and cannot use real calendar/bank records.
 - `js/budil-cloud.js` now blocks non-fixture input BEFORE sending any instruction to the authenticated server; the server independently enforces a full-match fixture grammar. The OpenAI server-side gateway remains disabled and undeployed.
 - Never infer a time from `金曜日` or conclude paid from matching amounts alone.
+
+## 2026-11-05 evening: separate GPT trial Auth compatibility
+
+- The old Budil backup client points local origins at a different Supabase staging project. That project is not present in the current connected Supabase account. **Do not change the existing backup login or localStorage data for this mismatch.**
+- New `experiments/budil-gpt-phase1/trial-auth.js` creates a separate, localhost-only trial session using the **existing BC Auth project**. Only `http://localhost:8765/budil-gpt-phase1-demo.html` and `http://127.0.0.1:8765/budil-gpt-phase1-demo.html` may use it. The production Budil session is unchanged.
+- `js/budil-cloud.js::interpretFixture` uses the trial session only from that exact path/origin; all regular Budil login/backup paths keep their prior behavior.
+- The trial login UI accepts credentials in the browser; this project does not inspect or log them. Do not enter a real customer's credentials. No credentials were used during automated verification.
+- Only fictional phrases matching a strict allowlist are ever eligible for outbound GPT requests; added prompts, contact information or real customer details are rejected in both browser and Edge.
+- GitHub Actions `42002281000`: **24/24 quote, 28/28 workflow, 12/12 localhost trial-auth tests PASS**, plus Chromium mobile width and estimate/invoice real PDF E2E. The GPT-button browser test uses fake server answers, rejects a deliberately hallucinated price, and still requires customer/final approval.
+- The Edge gateway remains **undeployed and disabled**. Repo `teruya1229/ai-bantou-app` Actions `42002698340` additionally passed **Deno static type checking** with `npm:@supabase/server@1.3.0` dependency resolution (after fixing 18 TypeScript errors); its 20 intent / 22 mocked security cases PASS.
+- No actual Supabase user login, OpenAI API call, iPhone/Android physical device, production Calendar reservation, customer synchronization, paid invoice or bank reconciliation was performed. A draft PR/CI PASS is not product completion.
+- The user's next indispensable external step is to approve a dedicated API project/key with a spending ceiling and configure it only as an encrypted Supabase Edge secret. Do not put the secret in GitHub, public JS, chat, or console.
