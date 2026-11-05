@@ -57,3 +57,12 @@ Production main and GitHub Pages remain unchanged. Original tax, rounding, estim
 - The Edge gateway remains **undeployed and disabled**. Repo `teruya1229/ai-bantou-app` Actions `42002698340` additionally passed **Deno static type checking** with `npm:@supabase/server@1.3.0` dependency resolution (after fixing 18 TypeScript errors); its 20 intent / 22 mocked security cases PASS.
 - No actual Supabase user login, OpenAI API call, iPhone/Android physical device, production Calendar reservation, customer synchronization, paid invoice or bank reconciliation was performed. A draft PR/CI PASS is not product completion.
 - The user's next indispensable external step is to approve a dedicated API project/key with a spending ceiling and configure it only as an encrypted Supabase Edge secret. Do not put the secret in GitHub, public JS, chat, or console.
+
+
+## 2026-11-05: Existing API key reuse and cost-free readiness
+
+- Existing OpenAI key has already been used by a separate BC PDF Cloudflare Worker (verified via prior implementation records). **Cloudflare Worker Secret is isolated from Supabase** and is never readable or auto-copied by this page. Do not make a new key merely to run this test.
+- Added `BudilCloud.getFixtureGptReadiness()` and an explicit `GPT接続の準備を確認（API料金なし）` button. This uses the localhost-only Supabase Auth session and sends authenticated `GET /functions/v1/budil-gpt-interpret`, never the paid OpenAI endpoint, never a customer record, and never the key value.
+- The unmodified production Budil and backup login are unaffected. A missing Edge deployment, disabled service or missing server-side Secret reports **not ready**, not fake success.
+- Node mock auth tests **15/15 PASS**, with external GPT calls set to zero. Browser quote/invoice/390px PDF E2E continues to pass. GitHub Actions Budil run `42012058320`.
+- Actual key reuse is **NOT VERIFIED** in the Budil Supabase environment. The existing Cloudflare Worker Secret cannot be moved automatically using available integrations, and live GPT requests were not made. Future setup must bind the existing key as an encrypted server-side Secret without displaying it in GitHub Pages or chat. No production Edge function was deployed.
