@@ -28,9 +28,9 @@
     const approved=bridge&&bridge.getApprovedQuoteSession();
     if(!approved) return info('架空見積書の承認が先に必要です。',true);
     const result=Flow.makeSession(approved,{
-      documentsBrain:window.DocumentsBrain,
-      workOrderBrain:window.WorkOrderBrain,
-      paymentBrain:window.PaymentBrain
+      documentsBrain:typeof DocumentsBrain !== 'undefined' ? DocumentsBrain : null,
+      workOrderBrain:typeof WorkOrderBrain !== 'undefined' ? WorkOrderBrain : null,
+      paymentBrain:typeof PaymentBrain !== 'undefined' ? PaymentBrain : null
     });
     if(!result.ok) return info(result.message,true);
     session=result;previewToken='';pdfDone=false;
