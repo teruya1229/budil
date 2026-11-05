@@ -288,6 +288,33 @@
         $('fixture-auth-login').disabled = false;
       }
     });
+    $('fixture-gpt-readiness').addEventListener('click', async () => {
+      const button = $('fixture-gpt-readiness');
+      const resultText = $('fixture-gpt-readiness-status');
+      button.disabled = true;
+      resultText.textContent = '認証済みの接続準備だけを確認中。GPTへの有料リクエストは行いません。';
+      try {
+        const readiness = await window.BudilCloud.getFixtureGptReadiness();
+        if (!readiness || !readiness.ok) {
+          resultText.textContent = '接続準備を確認できません（' +
+            (readiness && readiness.code || 'unavailable') +
+            '）。本番設定の変更やAPI通信は行っていません。';
+        } else if (readiness.ready) {
+          resultText.textContent = 'GPTサーバーのキー・モデル・有効化設定が揃っています。実通信は未検証です。';
+        } else {
+          const parts = [];
+          if (!readiness.enabled) parts.push('試験サーバーが無効');
+          if (!readiness.keyConfigured) parts.push('サーバー側にキー未登録');
+          if (!readiness.modelSupported) parts.push('指定モデル未対応');
+          resultText.textContent = '準備未完了：' + parts.join('、') +
+            '。既存の別サービスに保存したキーは自動共有されません。';
+        }
+      } catch (_) {
+        resultText.textContent = '接続確認に失敗しました。キー・認証情報は表示していません。';
+      } finally {
+        button.disabled = false;
+      }
+    });
     $('fixture-auth-logout').addEventListener('click', () => {
       trial.logout();
       $('fixture-auth-email').value = '';
