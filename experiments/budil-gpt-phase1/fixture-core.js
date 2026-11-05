@@ -90,6 +90,7 @@
   function createSession() {
     return {
       stage: 'idle',
+      kind: 'fixture',
       intent: null,
       candidates: [],
       selectedCustomerId: '',
@@ -113,13 +114,20 @@
   function resolveName(session, deps) {
     const loaded = getDependencies(deps);
     if (!loaded.ok) return loaded;
+    const local = session.kind === 'local';
+    if (local && (!deps || deps.localAccessConsent !== true ||
+        !Array.isArray(deps.localLeads))) {
+      return fail('LOCAL_CONSENT_REQUIRED', '端末内の顧客照合には本人の許可が必要です。');
+    }
     const response = loaded.customerResolver.resolve(
       { name: session.intent.customerName },
-      { leads: FIXTURE_CUSTOMERS }
+      { leads: local ? deps.localLeads : FIXTURE_CUSTOMERS }
     );
     if (response.status === 'not_found') {
       session.stage = 'need_name';
-      return fail('CUSTOMER_NOT_FOUND', '架空顧客と一致しません。フルネームを入力してください。', {
+      return fail('CUSTOMER_NOT_FOUND', session.kind === 'local'
+        ? '端末内に一致する顧客がありません。フルネームを確認してください。'
+        : '架空顧客と一致しません。フルネームを入力してください。', {
         candidates: []
       });
     }
@@ -149,6 +157,39 @@
   }
   // Boundary for a future authenticated server-side GPT interpreter.
   // GPT describes fields; Budil still resolves customer, calculates and requires approval.
+  function startAnonymized(session, instruction, output, deps) {
+    if (!session || session.stage !== 'idle') {
+      return fail('SESSION_NOT_IDLE', '先に進行中の下書きを完了するかリセットしてください。');
+    }
+    if (!deps || deps.localAccessConsent !== true ||
+        !Array.isArray(deps.localLeads)) {
+      return fail('LOCAL_CONSENT_REQUIRED', '端末内の顧客を検索する前に本人の許可が必要です。');
+    }
+    if (!output || output.input_mode !== 'anonymized' ||
+        output.requires_human_approval !== true) {
+      return fail('ANONYMIZED_RESPONSE_INVALID', '匿名化した試験結果として確認できません。');
+    }
+    const tool = deps.anonymizer ||
+      (typeof BudilGptAnonymize !== 'undefined' ? BudilGptAnonymize : null);
+    if (!tool || typeof tool.verifyResult !== 'function') {
+      return fail('ANONYMIZER_REQUIRED', '匿名化検証モジュールが見つかりません。');
+    }
+    // Re-parse ORIGINAL instruction locally. Only anonymized wire fields
+    // ever reach GPT. Reject hallucinated names, services, costs and quantities.
+    const verified = tool.verifyResult(instruction, output);
+    if (!verified.ok) {
+      return fail('ANONYMIZED_RESPONSE_INVALID', 'GPTの結果が元の指示と一致しません。');
+    }
+    const local = verified.local;
+    session.kind = 'local';
+    session.intent = {
+      customerName: local.customerName, service: local.serviceName,
+      quantity: local.quantity, amount: local.totalYen,
+      taxMode: local.taxMode === 'included' ? 'taxIncluded' : 'taxExcluded'
+    };
+    return resolveName(session, deps);
+  }
+
   function startStructured(session, instruction, output, deps) {
     if (!session || session.stage !== 'idle') {
       return fail('SESSION_NOT_IDLE', '進行中の作業を完了するかリセットしてください。');
@@ -183,6 +224,7 @@
 
   function reviseStructured(session, instruction, output, deps) {
     if (!session || session.stage !== 'draft') return fail('REVISION_BLOCKED', '承認前の下書きだけ修正できます。');
+    if (session.kind === 'local') return fail('LOCAL_STRUCTURED_REVISION_DISABLED', '実顧客の修正は端末内で確認してください。');
     if (!output || output.ok !== true || output.phase !== 'interpret_only' ||
         output.action !== 'estimate_revision' || output.needs_user_input === true ||
         output.can_execute !== false || output.amount_scope !== 'total') {
@@ -205,7 +247,7 @@
       taxMode = 'taxExcluded';
     }
     const nextIntent = Object.assign({}, session.intent, { amount, taxMode });
-    const next = makeDraft(nextIntent, session.selectedCustomerName, deps);
+    const next = makeDraft(nextIntent, session.selectedCustomerName, deps, session.kind);
     if (!next.ok) return next;
     session.intent = nextIntent;
     session.draft = next.doc;
@@ -228,7 +270,7 @@
     session.intent.customerName = name;
     return resolveName(session, deps);
   }
-  function makeDraft(intent, customerName, deps) {
+  function makeDraft(intent, customerName, deps, kind) {
     const loaded = getDependencies(deps);
     if (!loaded.ok) return loaded;
     const docs = loaded.documentsBrain;
@@ -252,7 +294,7 @@
     const doc = docs.normalizeDocument(Object.assign({}, template, {
       id: '',
       type: 'estimate',
-      title: '【デモ】' + intent.service,
+      title: (kind === 'local' ? '【未発行】' : '【デモ】') + intent.service,
       customerName,
       status: 'draft',
       items: mode === 'taxIncluded' ? calc.displayItems : calc.items,
@@ -261,7 +303,9 @@
       total: calc.total,
       taxMode: mode,
       taxSettings: calc.taxSettings,
-      note: '【デモ・架空顧客】検証用です。お客様への送付・正式発行は禁止。'
+      note: kind === 'local'
+        ? '【未発行・端末内下書き】顧客と金額を本人が確認してください。送付・正式発行はまだ行っていません。'
+        : '【デモ・架空顧客】検証用です。お客様への送付・正式発行は禁止。'
     }));
     if (doc.total !== calc.total || doc.subtotal !== calc.subtotal) {
       return fail('CALC_MISMATCH', '既存Budilの税計算と帳票表示が一致しません。');
@@ -273,7 +317,7 @@
     const candidate = session.candidates.find((c) => c.customerId === String(customerId));
     if (!candidate) return fail('CUSTOMER_SELECTION_INVALID', '表示候補以外は選択できません。');
     const intent = session.intent;
-    const draft = makeDraft(intent, candidate.displayName, deps);
+    const draft = makeDraft(intent, candidate.displayName, deps, session.kind);
     if (!draft.ok) return draft;
     session.selectedCustomerId = candidate.customerId;
     session.selectedCustomerName = candidate.displayName;
@@ -294,7 +338,7 @@
       amount: parsed.amount,
       taxMode: parsed.taxMode || session.intent.taxMode
     });
-    const next = makeDraft(nextIntent, session.selectedCustomerName, deps);
+    const next = makeDraft(nextIntent, session.selectedCustomerName, deps, session.kind);
     if (!next.ok) return next;
     session.intent = nextIntent;
     session.draft = next.doc;
@@ -311,7 +355,8 @@
     }
     session.approved = structuredCopy(session.draft);
     session.stage = 'approved';
-    return { ok: true, code: 'APPROVED_FIXTURE', doc: structuredCopy(session.approved) };
+    return { ok: true, code: session.kind === 'local' ? 'APPROVED_LOCAL_DRAFT' : 'APPROVED_FIXTURE',
+      doc: structuredCopy(session.approved), persisted: false };
   }
   function getApprovedForPdf(session) {
     if (!session || session.stage !== 'approved' || !session.approved) {
@@ -322,7 +367,7 @@
 
   const api = Object.freeze({
     fixtureCustomers: () => FIXTURE_CUSTOMERS.map((c) => Object.assign({}, c)),
-    parseInitial, parseCorrection, createSession, start, startStructured, reviseStructured, answerTaxMode, answerName,
+    parseInitial, parseCorrection, createSession, start, startAnonymized, startStructured, reviseStructured, answerTaxMode, answerName,
     selectCustomer, revise, approve, getApprovedForPdf
   });
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
