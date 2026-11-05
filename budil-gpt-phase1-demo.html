@@ -48,7 +48,7 @@
 <body class="budil-fixture">
 <main class="fixture-shell">
   <header class="fixture-head">
-    <span class="fixture-tag">PHASE 1 / ISOLATED MOCK</span>
+    <span class="fixture-tag">PHASE 1–3 / FICTIONAL DATA ONLY</span>
     <h1>Budil×GPT<br>話しかけて見積書を作る</h1>
     <p>音声・テキスト → 架空の顧客検索 → 見積書の確認・修正 → 承認 → Budilと同じ形式のPDF</p>
   </header>
@@ -107,7 +107,76 @@
     <div id="fixture-approved-summary" class="fixture-summary"></div>
     <div class="fixture-action-row">
       <button id="fixture-pdf" type="button" class="fixture-button">承認済み見積書をPDF保存</button>
+      <button id="fixture-continue" type="button" class="fixture-button secondary">予約・請求・入金の架空デモへ進む</button>
     </div>
+  </section>
+
+  <section id="fixture-workflow" class="fixture-card fixture-hidden" aria-labelledby="fixture-workflow-title">
+    <h2 id="fixture-workflow-title">5. 予約から請求まで（架空データのみ）</h2>
+    <p class="fixture-alert"><strong>これは架空業務の一連動作テストです。</strong> 実際のGoogleカレンダーの空き確認・登録、顧客への請求、銀行データ照合は行いません。</p>
+    <div id="fixture-workflow-quote-summary" class="fixture-summary"></div>
+    <p class="fixture-desc">架空カレンダーの予約状況を確認します。例：2026年11月13日の10〜11時はデモ上の予約済み時間です。</p>
+    <label class="fixture-desc" for="fixture-work-date">予約日（架空）</label>
+    <input id="fixture-work-date" class="fixture-input" type="date" value="2026-11-13">
+    <div class="fixture-action-row">
+      <label class="fixture-desc" style="flex:1 1 120px">開始
+        <input id="fixture-work-start" class="fixture-input" type="time" value="13:00">
+      </label>
+      <label class="fixture-desc" style="flex:1 1 120px">終了
+        <input id="fixture-work-end" class="fixture-input" type="time" value="15:00">
+      </label>
+    </div>
+    <div class="fixture-action-row">
+      <button id="fixture-work-check" class="fixture-button secondary" type="button">架空予定の空き確認</button>
+    </div>
+    <div id="fixture-workflow-review" class="fixture-hidden">
+      <div id="fixture-workflow-slot-summary" class="fixture-summary"></div>
+      <div class="fixture-action-row">
+        <button id="fixture-work-book" type="button" class="fixture-button">この架空予定を承認</button>
+      </div>
+    </div>
+    <div id="fixture-workflow-completed" class="fixture-hidden">
+      <h2>6. 作業完了・請求下書き</h2>
+      <div id="fixture-workflow-booked-summary" class="fixture-summary"></div>
+      <div class="fixture-action-row">
+        <button id="fixture-complete" type="button" class="fixture-button">架空作業の完了を承認</button>
+        <button id="fixture-invoice-preview" type="button" class="fixture-button secondary" disabled>既存Budilで請求下書き</button>
+      </div>
+    </div>
+    <div id="fixture-workflow-invoice" class="fixture-hidden">
+      <h2>7. 請求書を確認</h2>
+      <div id="fixture-workflow-invoice-summary" class="fixture-summary"></div>
+      <div class="fixture-action-row">
+        <button id="fixture-invoice-approve" type="button" class="fixture-button">この架空請求書を承認</button>
+      </div>
+    </div>
+    <div id="fixture-workflow-invoice-approved" class="fixture-hidden">
+      <p class="fixture-desc">実際の発行はせず、架空・未発行のPDFのみを作成します。</p>
+      <div class="fixture-action-row">
+        <button id="fixture-invoice-pdf" type="button" class="fixture-button">架空請求書をPDF保存</button>
+      </div>
+    </div>
+    <div id="fixture-workflow-bank" class="fixture-hidden">
+      <h2>8. 未入金の確認・架空明細照合</h2>
+      <div class="fixture-action-row">
+        <button id="fixture-unpaid" type="button" class="fixture-button secondary">未入金を確認</button>
+      </div>
+      <div id="fixture-workflow-bank-summary" class="fixture-summary"></div>
+      <p class="fixture-desc">架空銀行明細の金額だけを試し、入金済みには変更しません。</p>
+      <label for="fixture-bank-amount" class="fixture-desc">架空の入金額</label>
+      <input id="fixture-bank-amount" class="fixture-input" type="number" min="1" max="100000000" value="18000">
+      <div class="fixture-action-row">
+        <button id="fixture-bank-match" type="button" class="fixture-button secondary">金額の一致候補を確認</button>
+      </div>
+      <h2>9. 架空帳票の検索</h2>
+      <label for="fixture-search-query" class="fixture-desc">顧客名・見積書・請求書で検索</label>
+      <input id="fixture-search-query" class="fixture-input" type="text" value="比嘉清子">
+      <div class="fixture-action-row">
+        <button id="fixture-search" type="button" class="fixture-button secondary">架空データを検索</button>
+      </div>
+      <p id="fixture-workflow-search-result" class="fixture-desc"></p>
+    </div>
+    <p id="fixture-workflow-status" class="fixture-status" aria-live="polite" role="status"></p>
   </section>
 
   <div class="fixture-action-row">
@@ -121,6 +190,9 @@
 <script src="js/doc-export.js"></script>
 <script src="js/budil-cloud.js"></script>
 <script src="experiments/budil-gpt-phase1/fixture-core.js"></script>
+<script src="js/work-order-brain.js"></script>
+<script src="experiments/budil-gpt-phase1/fixture-workflow.js"></script>
 <script src="experiments/budil-gpt-phase1/fixture-ui.js"></script>
+<script src="experiments/budil-gpt-phase1/fixture-workflow-ui.js"></script>
 </body>
 </html>
