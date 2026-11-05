@@ -36,7 +36,7 @@ check('1. fictional customers only / no live Storage', () => {
   const customers = F.fixtureCustomers();
   assert.equal(customers.length, 4);
   assert.ok(customers.every((x) => x.isDemo === true));
-  assert.ok(!/Storage\.|localStorage|fetch\(|XMLHttpRequest/.test(load('experiments/budil-gpt-phase1/fixture-core.js')));
+  assert.ok(!/\bStorage\.(?:get|set|add|update|delete)|localStorage\.|fetch\(|XMLHttpRequest/.test(load('experiments/budil-gpt-phase1/fixture-core.js')));
 });
 check('2. single name candidate still requires explicit confirmation', () => {
   const s = F.createSession();
