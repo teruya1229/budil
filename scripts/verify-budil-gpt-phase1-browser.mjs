@@ -201,7 +201,7 @@ async function run() {
   console.log("PASS: fictional availability and explicit booking, no Google writes");
   await evaluate("document.getElementById('fixture-complete').click()");
   await evaluate("document.getElementById('fixture-invoice-preview').click()");
-  assert.equal(await evaluate("document.getElementById('fixture-workflow-invoice-summary').innerText.includes('18,000円')"),true);
+  assert.equal(await evaluate("document.getElementById('fixture-workflow-invoice-summary').innerText.includes('20,000円')"),true);
   console.log("PASS: existing Budil work completion and invoice draft");
   await evaluate("document.getElementById('fixture-invoice-approve').click()");
   await evaluate("document.getElementById('fixture-invoice-pdf').click()");
@@ -225,8 +225,8 @@ async function run() {
   assert.equal(invoicePreview.status,0,'invoice_preview_failed');
   console.log("PASS: actual 1-page fictional invoice PDF saved; size="+invoiceData.length);
   await evaluate("document.getElementById('fixture-unpaid').click()");
-  assert.equal(await evaluate("document.getElementById('fixture-workflow-bank-summary').innerText.includes('18,000円')"),true);
-  await evaluate("document.getElementById('fixture-bank-match').click()");
+  assert.equal(await evaluate("document.getElementById('fixture-workflow-bank-summary').innerText.includes('20,000円')"),true);
+  await evaluate("document.getElementById('fixture-bank-amount').value='20000';document.getElementById('fixture-bank-match').click()");
   assert.equal(await evaluate("document.getElementById('fixture-workflow-status').innerText.includes('未入金のまま')"),true);
   console.log("PASS: receivables computed and bank match did not mark paid");
   const width2=await evaluate("({scroll:document.documentElement.scrollWidth,inner:window.innerWidth})");
