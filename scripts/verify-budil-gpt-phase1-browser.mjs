@@ -335,6 +335,15 @@ async function run() {
   const mainShot=await cdp.command('Page.captureScreenshot',{format:'png'});
   if(mainShot.data)writeFileSync(join(workDir,'budil-live-panel-390.png'),Buffer.from(mainShot.data,'base64'));
   console.log('PASS: actual Budil main menu opens local-first assistant panel at mobile width');
+  await evaluate("document.getElementById('budil-gpt-input').value='未入金合計を教えて';document.getElementById('budil-gpt-run').click()");
+  assert.equal(await evaluate("document.getElementById('budil-gpt-status').textContent.includes('チェック')"),true);
+  await evaluate("document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+  assert.equal(await evaluate("document.getElementById('budil-gpt-result').textContent.includes('Budil端末内の未入金集計')"),true);
+  assert.equal(await evaluate("document.getElementById('budil-gpt-consent').checked"),false);
+  await evaluate("document.getElementById('budil-gpt-close').click()");
+  assert.equal(await evaluate("document.getElementById('budil-gpt-shell').hidden"),true);
+  assert.equal(await evaluate("document.getElementById('budil-gpt-input').value"),'');
+  console.log('PASS: actual Budil local data action requires consent and clears after close');
   console.log("BUDIL_GPT_BROWSER_E2E_PASS");
 
 }
