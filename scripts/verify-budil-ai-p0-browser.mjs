@@ -109,7 +109,7 @@ async function run() {
 
   const activePortFile = join(userDataDir, "DevToolsActivePort");
   let remotePort = 0;
-  for (let i = 0; i < 120; i++) {
+  for (let i = 0; i < 300; i++) {
     if (existsSync(activePortFile)) {
       remotePort = Number(readFileSync(activePortFile, "utf8").split(/\r?\n/)[0]);
       if (remotePort) break;
