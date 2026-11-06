@@ -19,7 +19,7 @@ const cases=[
   ['田中太郎様の見積書を確認したい',true,'document.search','田中太郎'],
   ['田中太郎さんの作業予定を教えてください',true,'work.search','田中太郎'],
   ['田中太郎さんを探してください',true,'customer.search','田中太郎'],
-  ['田中太郎さんを確認して',true,'customer.search','田中太郎'],
+  ['今月の利益はいくら？',true,'profit.summary','current_month_estimate'],
   ['来月の見積書を探して',false,null,null],
   ['先週の請求書を検索して',false,null,null],
   ['未入金はいくら？ 銀行と照合して',false,null,null],
@@ -36,7 +36,7 @@ for(let i=0;i<cases.length;i++){
    assert.equal(r.action,action,'case '+(i+1)+' action');
    assert.equal(r.networkUsed,false,'case '+(i+1)+' offline');
    assert.equal(r.readOnly,true,'case '+(i+1)+' read');
-   if(action==='receivables.summary')assert.equal(r.scope,scope);
+   if(action==='receivables.summary'||action==='profit.summary')assert.equal(r.scope,scope);
    if(action==='document.period')assert.equal(r.request.month,scope);
    if(action==='customer.search'||action==='document.search'||action==='work.search')
      assert.equal(r.request.query,scope);
