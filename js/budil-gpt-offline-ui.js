@@ -52,7 +52,7 @@
   }
   function close(){
     if(voice){try{voice.abort();}catch(_){/* browser voice */}voice=null;}
-    resetVisible();shell.hidden=true;
+    readinessSeq++;resetVisible();shell.hidden=true;
     if(focusedBefore&&typeof focusedBefore.focus==='function')focusedBefore.focus();
   }
   function node(tag,text,cls){
@@ -271,7 +271,46 @@
       voice.start();
     }catch(_){voice=null;status('音声入力を開始できません。',true);}
   }
+
+  // Readiness is explicitly initiated by the user, never on page load.
+  // One request at a time. No raw instruction, customer, document or amount
+  // is included in the request: the shared login is handled inside BudilCloud.
+  let readinessBusy=false,readinessSeq=0;
+  async function checkGptReadiness(){
+    if(readinessBusy)return;
+    const output=$('budil-gpt-readiness-status');
+    const cloud=window.BudilCloud;
+    if(!cloud || typeof cloud.getGptReadiness!=='function'){
+      output.textContent='GPT接続機能は利用できません。';
+      return;
+    }
+    const seq=++readinessSeq;
+    readinessBusy=true;
+    const button=$('budil-gpt-readiness');button.disabled=true;
+    output.textContent='GPT接続設定を確認しています（AIへの有料通信なし）。';
+    try{
+      const result=await cloud.getGptReadiness();
+      if(seq!==readinessSeq || shell.hidden)return;
+      if(!result || result.ok!==true){
+        const code=result && result.code || 'unavailable';
+        output.textContent=code==='not_signed_in'
+          ? '設定画面のクラウドバックアップでログインしてから、再度ご確認ください。'
+          : 'GPT接続状態を確認できませんでした（'+code+'）。';
+      }else{
+        output.textContent=result.ready
+          ? 'GPT基盤の設定は準備完了です。ただし自然言語業務操作はまだ有効化していません。'
+          : 'GPT基盤はまだ利用開始できません。APIキーや試験許可の設定状況を確認してください。';
+      }
+    }catch(_){
+      if(seq===readinessSeq && !shell.hidden)
+        output.textContent='GPT接続状態を確認できませんでした。';
+    }finally{
+      readinessBusy=false;button.disabled=false;
+    }
+  }
+
   openButton.addEventListener('click',open);
+  $('budil-gpt-readiness').addEventListener('click',checkGptReadiness);
   $('budil-gpt-close').addEventListener('click',close);
   $('budil-gpt-backdrop').addEventListener('click',close);
   $('budil-gpt-run').addEventListener('click',run);
