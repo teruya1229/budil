@@ -123,6 +123,29 @@
       { name: session.intent.customerName },
       { leads: local ? deps.localLeads : FIXTURE_CUSTOMERS }
     );
+    // Local surname-only quotes: present bounded candidates, never auto-pick.
+    // Exact-name matching remains the default, and the fiction demo is untouched.
+    if(local && response.status==='not_found' &&
+       /^[一-龯々ぁ-んァ-ヶ]{2,4}$/u.test(session.intent.customerName) &&
+       typeof loaded.customerResolver.normalizeName==='function' &&
+       typeof loaded.customerResolver.leadDisplayName==='function' &&
+       typeof loaded.customerResolver.toCandidate==='function') {
+      const prefix=loaded.customerResolver.normalizeName(session.intent.customerName);
+      const suggestions=deps.localLeads.filter(lead=>{
+        const candidate=loaded.customerResolver.normalizeName(
+          loaded.customerResolver.leadDisplayName(lead));
+        return candidate.length>prefix.length && candidate.startsWith(prefix);
+      });
+      if(suggestions.length>0 && suggestions.length<=10) {
+        session.candidates=suggestions.map(lead=>
+          loaded.customerResolver.toCandidate(lead,'surname_suggestion'));
+        session.stage='candidate';
+        return {ok:true,code:'CANDIDATES',candidates:session.candidates.slice(),
+          message:'姓だけの検索結果です。地域などを確認して本人を選択してください。'};
+      }
+      if(suggestions.length>10)
+        return fail('CUSTOMER_TOO_MANY','候補が10件を超えました。フルネームを確認してください。');
+    }
     if (response.status === 'not_found') {
       session.stage = 'need_name';
       return fail('CUSTOMER_NOT_FOUND', session.kind === 'local'
