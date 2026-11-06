@@ -29,4 +29,4 @@ assert.match(ui,/BudilCloud\.fetchLatestPayload\(\)/,'only explicit snapshot loa
 assert.match(ui,/\.addEventListener\('click',/,'user gesture required');
 assert.ok(!/\bfetch\s*\(/.test(ui),'UI must not bypass authenticated BudilCloud');
 assert.ok(cloud.includes('fetchLatestPayload: fetchLatestPayload'),'read-only cloud API');
-console.log('BUDIL_CLOUD_SERVER_CONTRACT 21/21 PASS');
+console.log('BUDIL_CLOUD_SERVER_CONTRACT_PASS');
