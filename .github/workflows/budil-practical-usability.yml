@@ -21,6 +21,23 @@ jobs:
         env:
           BUDIL_AUDIT_DIR: ${{ runner.temp }}/budil-practical-audit
         run: node scripts/audit-budil-realworld-usability.mjs
+      - name: Verify live public URL and practical mobile flows
+        env:
+          BUDIL_LIVE_URL: https://teruya1229.github.io/budil/
+          BUDIL_TEST_OUTPUT_DIR: ${{ runner.temp }}/budil-browser-usability
+        run: |
+          which google-chrome || which chromium
+          node scripts/audit-budil-public-browser.mjs
+      - name: Preserve live browser screen and generated test PDF
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: budil-usability-mobile-evidence
+          path: |
+            ${{ runner.temp }}/budil-browser-usability/budil-release-390.png
+            ${{ runner.temp }}/budil-browser-usability/downloads/*.pdf
+          if-no-files-found: ignore
+          retention-days: 5
       - name: Preserve complete audit results
         uses: actions/upload-artifact@v4
         if: always()
