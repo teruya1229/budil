@@ -3548,7 +3548,7 @@
 
         <h2 class="backup-section-heading">クラウドバックアップ</h2>
         <div id="cloud-backup-card" class="card card-wide card-cloud-backup">
-          <p class="data-mgmt-desc">ローカルバックアップとは別に、Budilアカウントでログインしてクラウドへも保存できます。保存のみの機能で、クラウドからの復元・自動同期・自動バックアップは行いません。復元はローカルバックアップのみです。</p>
+          <p class="data-mgmt-desc">ローカルバックアップとは別に、Budilアカウントでログインしてクラウドへも保存できます。保存と、本人確認付きの最新クラウドバックアップの手動復元に対応します。自動同期・自動バックアップは行いません。</p>
           <p id="cloud-backup-conn-status" class="cloud-backup-line">接続先: —</p>
           <p id="cloud-backup-login-status" class="cloud-backup-line">ログイン状態: —</p>
           <p id="cloud-backup-last" class="cloud-backup-line">最終クラウドバックアップ: —</p>
@@ -3570,6 +3570,23 @@
             <button type="button" id="btn-cloud-backup" class="btn btn-primary hidden" disabled>クラウドへバックアップ</button>
           </div>
           <p id="cloud-backup-result" class="cloud-backup-result" aria-live="polite"></p>
+          <div id="cloud-restore-section" class="cloud-restore-section">
+            <h3>クラウドから安全に復元（手動）</h3>
+            <p class="data-mgmt-desc">別端末で保存した最新のクラウドデータを確認できます。自動同期ではありません。復元すると対象のローカルデータが上書きされるため、先に現在の端末のバックアップを保存してください。</p>
+            <div class="data-mgmt-actions">
+              <button type="button" id="btn-cloud-restore-preview" class="btn btn-secondary hidden" disabled>クラウドの最新データを確認</button>
+              <button type="button" id="btn-cloud-restore-download" class="btn btn-secondary" disabled>この端末のバックアップJSONを保存</button>
+            </div>
+            <p id="cloud-restore-summary" class="cloud-backup-result" role="status" aria-live="polite"></p>
+            <label class="form-check" for="cloud-restore-saved">
+              <input type="checkbox" id="cloud-restore-saved" disabled>
+              <span>この端末のバックアップJSONが保存できたことを確認しました</span>
+            </label>
+            <div class="data-mgmt-actions">
+              <button type="button" id="btn-cloud-restore-apply" class="btn btn-primary" disabled>確認したクラウドデータをこの端末へ復元</button>
+              <button type="button" id="btn-cloud-restore-reload" class="btn btn-secondary hidden">復元後の画面を再読み込み</button>
+            </div>
+          </div>
         </div>
 
         <div class="card card-wide card-test-data">
@@ -4177,7 +4194,8 @@
   <script src="js/executive-brain.js?v=4.13.20"></script>
   <script src="js/card-ocr.js?v=4.13.20"></script>
   <script src="js/data-backup.js?v=4.13.20"></script>
-  <script src="js/budil-cloud.js?v=20261106c"></script>
+  <script src="js/budil-cloud.js?v=20261106restore1"></script>
+  <script src="js/budil-cloud-restore.js?v=20261106restore1"></script>
   <script src="js/app.js?v=4.13.20"></script>
   <script src="js/customer-resolve-entrypoint.js?v=20261106a"></script>
   <script src="js/budil-gpt-readonly.js?v=20261106a"></script>
@@ -4187,5 +4205,6 @@
   <script src="js/budil-gpt-conversation.js?v=20261106d"></script>
   <script src="experiments/budil-gpt-phase1/fixture-core.js?v=20261106a"></script>
   <script src="js/budil-gpt-offline-ui.js?v=20261106e"></script>
+  <script src="js/budil-cloud-restore-ui.js?v=20261106restore1"></script>
 </body>
 </html>
