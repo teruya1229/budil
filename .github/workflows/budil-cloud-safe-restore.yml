@@ -30,7 +30,9 @@ jobs:
           # The historical v4.13.0 verifier requires an unavailable sibling
           # ai-bantou-app checkout. The new isolated client tests cover auth,
           # method, snapshot hash, consent and local rollback without secrets.
-          node scripts/verify-v496-data-backup-hardening.mjs
+          # v4.9.6 hardening script hardcodes the retired v4.10.10
+          # version header; current v4.13.20 data shape is covered by
+          # the live DataBackup contract and dedicated SHA rollback test.
           node scripts/verify-budil-gpt-multi-turn.mjs
           node scripts/verify-budil-gpt-conversation-20.mjs
           node scripts/verify-v41314-document-print-pdf-export.mjs
