@@ -129,12 +129,15 @@ export default {
     }
 
     const userId = ctx.userClaims.id;
+    // The deployed context does not bundle generated DB types. Explicitly
+    // localize the untyped query client; auth and tenant guards stay strict.
+    const admin = ctx.supabaseAdmin as any;
 
     // 3. active membership: exactly one allowed
     const {
       data: memberships,
       error: membershipError,
-    } = await ctx.supabaseAdmin
+    } = await admin
       .from("tenant_memberships")
       .select("tenant_id, role")
       .eq("user_id", userId)
@@ -159,7 +162,7 @@ export default {
     const membershipTenantId = memberships[0].tenant_id;
 
     // 4. active tenant (server-derived only; client never supplies tenant_id/tenant_code)
-    const { data: tenant, error: tenantError } = await ctx.supabaseAdmin
+    const { data: tenant, error: tenantError } = await admin
       .from("tenants")
       .select("id")
       .eq("id", membershipTenantId)
@@ -179,7 +182,7 @@ export default {
     // GET /latest
     // ---------------------------------------------------------------------
     if (isLatestRoute || isDownloadRoute) {
-      const { data: latest, error: latestError } = await ctx.supabaseAdmin
+      const { data: latest, error: latestError } = await admin
         .from("budil_snapshots")
         .select(isDownloadRoute ? "id, created_at, app_version, backup_version, content_hash, payload" : "id, created_at, app_version, backup_version, content_hash")
         .eq("tenant_id", membershipTenantId)
@@ -259,7 +262,7 @@ export default {
     const contentHash = await sha256Hex(stableStringify(payload));
 
     // 7. atomic insert (unique on tenant_id + idempotency_key prevents double-create)
-    const { data: inserted, error: insertError } = await ctx.supabaseAdmin
+    const { data: inserted, error: insertError } = await admin
       .from("budil_snapshots")
       .insert({
         tenant_id: membershipTenantId,
@@ -277,7 +280,7 @@ export default {
     if (insertError) {
       // unique conflict → inspect existing (never auto-overwrite, never duplicate)
       if (insertError.code === "23505") {
-        const { data: existing, error: existingError } = await ctx.supabaseAdmin
+        const { data: existing, error: existingError } = await admin
           .from("budil_snapshots")
           .select("id, created_at, app_version, content_hash")
           .eq("tenant_id", membershipTenantId)
