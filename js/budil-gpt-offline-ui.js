@@ -394,9 +394,13 @@
           ? '設定画面のクラウドバックアップでログインしてから、再度ご確認ください。'
           : 'GPT接続状態を確認できませんでした（'+code+'）。';
       }else{
-        output.textContent=result.ready
-          ? 'GPT基盤の設定は準備完了です。ただし自然言語業務操作はまだ有効化していません。'
-          : 'GPT基盤はまだ利用開始できません。APIキーや試験許可の設定状況を確認してください。';
+        output.textContent=result.readonlyReady
+          ? '匿名の集計質問をGPTで分類できます。外部送信と端末読取の同意が毎回必要です。'
+          : result.anonymizedReady
+          ? '匿名の見積指示GPT解析が使用可能です。集計質問のGPTはまだ無効です。'
+          : result.ready
+          ? 'GPT基盤は準備済みですが、会話解析の個別機能はまだ無効です。'
+          : 'GPTはまだ利用開始できません。APIキーや試験許可の設定状況を確認してください。';
       }
     }catch(_){
       if(seq===readinessSeq && !shell.hidden)
