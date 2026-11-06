@@ -33,7 +33,7 @@ const BudilGptLocalCommands = (() => {
     const endAnchor=String.fromCharCode(36);
     const profitMonthly=new RegExp('^今月の利益(?:はいくら(?:ですか)?|を'+readVerb+')'+endAnchor).test(text);
     if(profitMonthly){
-      if(typeof today!=='string'||!/^(?:19|20)\\d{2}-(?:0[1-9]|1[0-2])-\\d{2}$/.test(today))
+      if(typeof today!=='string'||!/^(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-\d{2}$/.test(today))
         return deny('DATE_REQUIRED');
       return Object.freeze({
         ok:true,action:'profit.summary',
