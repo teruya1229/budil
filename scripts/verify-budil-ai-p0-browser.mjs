@@ -86,12 +86,20 @@ function createCdp(wsUrl) {
   });
 }
 async function run() {
-  server = createServer((req, res) => {
-    try { getFile(new URL(req.url, "http://localhost").pathname, res); }
-    catch { res.writeHead(500); res.end("error"); }
-  });
-  await new Promise((resolveOpen) => server.listen(0, "127.0.0.1", resolveOpen));
-  const port = server.address().port;
+  // Optional production verification still uses a disposable Chrome profile.
+  // Never use an existing user's browser or persistent Budil data.
+  const liveUrl=process.env.BUDIL_LIVE_VERIFY_URL || '';
+  if(liveUrl && liveUrl!=='https://teruya1229.github.io/budil/')
+    throw new Error('live_origin_not_allowlisted');
+  let port=0;
+  if(!liveUrl){
+    server=createServer((req,res)=>{
+      try { getFile(new URL(req.url, "http://localhost").pathname,res); }
+      catch { res.writeHead(500);res.end("error"); }
+    });
+    await new Promise((resolveOpen)=>server.listen(0,"127.0.0.1",resolveOpen));
+    port=server.address().port;
+  }
   chrome = spawn(browser, [
     "--headless=new", "--disable-gpu", "--disable-dev-shm-usage",
     "--no-first-run", "--no-default-browser-check", "--no-sandbox",
@@ -122,7 +130,7 @@ async function run() {
   await cdp.command("Browser.setDownloadBehavior", {
     behavior: "allow", downloadPath: downloadDir
   });
-  const url="http://127.0.0.1:"+port+"/index.html";
+  const url=liveUrl || ("http://127.0.0.1:"+port+"/index.html");
   await cdp.command("Page.navigate",{url});
   async function evaluate(expression) {
     const result=await cdp.command("Runtime.evaluate",{
