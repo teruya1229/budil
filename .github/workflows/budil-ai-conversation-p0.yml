@@ -56,3 +56,29 @@ jobs:
             ${{ runner.temp }}/budil-p0-qa/downloads/*.pdf
           if-no-files-found: ignore
           retention-days: 3
+
+  windows-japanese:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate Windows Chrome Japanese text and P0 mobile workflow
+        env:
+          BUDIL_TEST_OUTPUT_DIR: ${{ runner.temp }}/budil-p0-windows
+        run: node scripts/verify-budil-ai-p0-browser.mjs
+      - name: Retain Japanese Windows artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: budil-p0-windows-390px-pdf
+          path: |
+            ${{ runner.temp }}/budil-p0-windows/budil-release-390.png
+            ${{ runner.temp }}/budil-p0-windows/downloads/*.pdf
+          if-no-files-found: ignore
+          retention-days: 3
