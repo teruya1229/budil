@@ -52,7 +52,7 @@ const BudilGptLocalCommands = (() => {
         readOnly:true,networkUsed:false
       });
     }
-    const customer=text.match(/^(.+?)を(?:探して|検索して)$/);
+    const customer=text.match(/^(.+?)(?:さん|様)を(?:探して|検索して)$/);
     if(customer){
       const name=safeName(customer[1]);if(!name)return deny('NAME_INVALID');
       return Object.freeze({
