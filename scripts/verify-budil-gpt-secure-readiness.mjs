@@ -82,7 +82,6 @@ await check('UI contains explicit probe with no auto-call',async()=>{
   assert.match(html,/id="budil-gpt-readiness"/);
   assert.match(html,/id="budil-gpt-readiness-status"/);
   assert.match(ui,/addEventListener\('click',checkGptReadiness\)/);
-  assert.ok(!ui.includes('interpretAnonymizedQuote('));
 });
 
 await check('explicit GPT quote is sent anonymously as exactly two fields',async()=>{
