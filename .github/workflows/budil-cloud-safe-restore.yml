@@ -56,7 +56,9 @@ jobs:
             sudo apt-get -y -qq install poppler-utils
           fi
       - name: Exercise Budil assistant in isolated Chrome with fictional data
-        run: node scripts/verify-budil-ai-p0-browser.mjs
+        run: |
+          node scripts/verify-budil-ai-p0-browser.mjs
+          node scripts/verify-budil-cloud-restore-browser.mjs
   edge-typecheck:
     runs-on: ubuntu-latest
     timeout-minutes: 12
