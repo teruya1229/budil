@@ -4090,7 +4090,7 @@
         </div>
         <button type="button" id="budil-gpt-close" class="budil-gpt-btn budil-gpt-btn-secondary budil-gpt-close" aria-label="閉じる">×</button>
       </header>
-      <p class="budil-gpt-muted">Budilに保存されている、この端末の顧客・帳票・作業予定・未入金を会話形式で確認できます。現在の解析は端末内の限定文法で、OpenAI APIには送信しません。</p>
+      <p class="budil-gpt-muted">Budilに保存されている、この端末の顧客・帳票・作業予定・未入金を会話形式で確認できます。操作内容の解析は現在も端末内の限定文法です。GPT接続確認は既存ログインを使用した無課金の状態確認のみで、顧客情報や見積内容は送信しません。</p>
       <label class="budil-gpt-label" for="budil-gpt-input">やってほしいこと</label>
       <textarea id="budil-gpt-input" class="budil-gpt-input" maxlength="220" rows="3" placeholder="例：田中太郎さんを探して"></textarea>
       <p class="budil-gpt-disclaimer">入力例：田中太郎さんを探して ／ 田中太郎さんの請求書を探して ／ 田中太郎さんの作業予定を教えて ／ 未入金合計を教えて ／ 田中太郎さんのエアコン洗浄2台を税込18,000円で見積して</p>
@@ -4100,6 +4100,7 @@
       </label>
       <div class="budil-gpt-actions">
         <button type="button" id="budil-gpt-run" class="budil-gpt-btn">内容を確認して実行</button>
+        <button type="button" id="budil-gpt-readiness" class="budil-gpt-btn budil-gpt-btn-secondary">GPT接続状態を確認（無料・読取のみ）</button>
         <button type="button" id="budil-gpt-clear" class="budil-gpt-btn budil-gpt-btn-secondary">入力をクリア</button>
       </div>
       <hr class="budil-gpt-divider">
@@ -4109,6 +4110,7 @@
       </label>
       <button type="button" id="budil-gpt-speech" class="budil-gpt-btn budil-gpt-btn-secondary">🎤 音声を文字入力</button>
       <p id="budil-gpt-status" class="budil-gpt-status" role="status" aria-live="polite"></p>
+      <p id="budil-gpt-readiness-status" class="budil-gpt-status" role="status" aria-live="polite"></p>
       <div id="budil-gpt-result" class="budil-gpt-result" aria-live="polite"></div>
       <div id="budil-gpt-candidates" hidden>
         <hr class="budil-gpt-divider">
@@ -4163,7 +4165,7 @@
   <script src="js/executive-brain.js?v=4.13.20"></script>
   <script src="js/card-ocr.js?v=4.13.20"></script>
   <script src="js/data-backup.js?v=4.13.20"></script>
-  <script src="js/budil-cloud.js?v=4.13.20"></script>
+  <script src="js/budil-cloud.js?v=20261106b"></script>
   <script src="js/app.js?v=4.13.20"></script>
   <script src="js/customer-resolve-entrypoint.js?v=20261106a"></script>
   <script src="js/budil-gpt-readonly.js?v=20261106a"></script>
@@ -4171,6 +4173,6 @@
   <script src="js/budil-gpt-anonymize.js?v=20261106a"></script>
   <script src="js/budil-gpt-local-commands.js?v=20261106a"></script>
   <script src="experiments/budil-gpt-phase1/fixture-core.js?v=20261106a"></script>
-  <script src="js/budil-gpt-offline-ui.js?v=20261106a"></script>
+  <script src="js/budil-gpt-offline-ui.js?v=20261106b"></script>
 </body>
 </html>
