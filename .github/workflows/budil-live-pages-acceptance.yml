@@ -1,0 +1,40 @@
+name: Budil published URL isolated Chrome acceptance
+on:
+  push:
+    branches:
+      - feat/budil-conversation-acceptance-20261106
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install A4 PDF inspection
+        run: |
+          if ! command -v pdfinfo >/dev/null 2>&1; then
+            sudo apt-get -y -qq install poppler-utils
+          fi
+      - name: Exercise production Pages in disposable Chrome
+        env:
+          BUDIL_LIVE_VERIFY_URL: https://teruya1229.github.io/budil/
+          BUDIL_TEST_OUTPUT_DIR: ${{ runner.temp }}/budil-live-verification
+        run: node scripts/verify-budil-ai-p0-browser.mjs
+      - name: Preserve fictional screenshots and PDF only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: budil-live-verification
+          path: |
+            ${{ runner.temp }}/budil-live-verification/budil-release-390.png
+            ${{ runner.temp }}/budil-live-verification/downloads/*.pdf
+          if-no-files-found: ignore
+          retention-days: 3
