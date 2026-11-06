@@ -7,6 +7,9 @@ const diff=spawnSync('git',['diff','--name-only',base,'HEAD'],{encoding:'utf8'})
 assert.equal(diff.status,0,'git_diff_unavailable (checkout must fetch history)');
 const paths=diff.stdout.trim().split('\n').filter(Boolean);
 const allowed=[
+  'index.html',
+  'js/budil-gpt-conversation.js',
+  'scripts/verify-budil-gpt-multi-turn.mjs',
   'js/budil-gpt-offline-ui.js',
   'js/budil-gpt-local-commands.js',
   'js/budil-gpt-readonly.js',
