@@ -203,7 +203,9 @@
     if(!window.BudilDocExport)return status('PDF出力機能を利用できません。',true);
     exporting=true;$('budil-gpt-pdf').disabled=true;
     try{
-      const out=await window.BudilDocExport.downloadDocumentPdf(result.doc);
+      // A single-line, unsaved assistant draft uses the existing 1110px A4
+      // rounding guard; all normal Budil PDFs retain their original settings.
+      const out=await window.BudilDocExport.downloadDocumentPdf(result.doc,{fixtureSinglePage:true});
       if(!out||out.ok!==true)throw Error('PDF_NOT_SAVED');
       pdfDone=true;
       status('未発行の見積PDF保存処理が完了しました。端末の保存先をご確認ください。');
