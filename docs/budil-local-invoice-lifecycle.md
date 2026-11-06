@@ -1,0 +1,9 @@
+# Local invoice lifecycle boundary
+
+The assistant can prepare an invoice from one explicitly selected work order **only when Budil already records that work order as completed**. The user supplies the actual work date, amount and tax basis, invoice date, due date, bank transfer method, and expected payment date. The preview is read only. A separate confirmation saves one pending, draft invoice in the local documents collection. It does not mark a work order complete, create revenue, mark a payment paid, export a PDF, or write to Google.
+
+An actual in-session quote can be converted only after the user selects its customer and approves the quote. The user then supplies the invoice and payment dates, previews the result, and approves the invoice separately. The original quote and derived invoice are inserted together in one `budil_documents` write; the invoice keeps `sourceEstimateId`, item amounts, tax settings, tax, and total. No missing values are fabricated.
+
+The lifecycle saves a safety backup before the documents write and verifies the saved collection. A save or verification failure attempts to restore the prior documents. A failed backup blocks the write. A failed rollback is reported explicitly. The exact work order or quote and documents collection are checked again before saving, and a source key or invoice number duplicate blocks the write.
+
+Budil currently stores work orders, revenue, and documents under separate localStorage keys. A new completion, revenue confirmation, and invoice cannot be committed atomically with this storage API. The combined utterance “田中さんの作業を完了にして請求書を作って” therefore does **not** perform that combined write. It can only select an already completed work order for an invoice. The original-19 audit leaves that utterance unsupported as a complete action.

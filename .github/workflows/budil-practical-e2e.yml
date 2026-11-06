@@ -1,0 +1,83 @@
+name: Budil full practical workflows acceptance
+on:
+  push:
+    branches:
+      - feat/budil-practical-e2e-20261106
+permissions:
+  contents: read
+jobs:
+  business-and-backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Preserve business rules, backend safeguards, and real local workflow units
+        run: |
+          node --check js/budil-gpt-offline-ui.js
+          node --check js/budil-gpt-booking.js
+          node --check js/budil-gpt-invoice-lifecycle.js
+          node --check js/budil-gpt-bank-reconcile.js
+          node --check js/budil-gpt-public-read.js
+          deno check supabase/functions/budil-backups/index.ts
+          deno check supabase/functions/budil-gpt-interpret/index.ts
+          deno run --no-check scripts/verify-budil-gpt-readonly-privacy.ts
+          node scripts/verify-budil-gpt-booking.mjs
+          node scripts/verify-budil-gpt-invoice-lifecycle.mjs
+          node scripts/verify-budil-gpt-combined-lifecycle.mjs
+          node scripts/verify-budil-gpt-bank-reconcile.mjs
+          node scripts/verify-budil-cloud-safe-restore.mjs
+          node scripts/verify-budil-cloud-restore-server.mjs
+          node scripts/verify-budil-gpt-public-read.mjs
+          node scripts/verify-budil-gpt-conversation-20.mjs
+          node scripts/verify-v41314-document-print-pdf-export.mjs
+          node scripts/verify-v41315-pdf-origin-alignment.mjs
+          node scripts/audit-budil-original-19.mjs
+  chrome-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Ensure PDF inspection
+        run: |
+          if ! command -v pdfinfo >/dev/null 2>&1; then
+            sudo apt-get -y -qq install poppler-utils
+          fi
+      - name: Disposable Chrome 390px all flows with fictional data
+        run: |
+          node scripts/verify-budil-ai-p0-browser.mjs
+          node scripts/verify-budil-gpt-booking-browser.mjs
+          node scripts/verify-budil-gpt-invoice-browser.mjs
+          node scripts/verify-budil-gpt-bank-browser.mjs
+          node scripts/verify-budil-cloud-restore-browser.mjs
+  chrome-windows:
+    runs-on: windows-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Windows Chrome 390px actual quote, booking, invoice and bank UI
+        run: |
+          node scripts/verify-budil-ai-p0-browser.mjs
+          node scripts/verify-budil-gpt-booking-browser.mjs
+          node scripts/verify-budil-gpt-invoice-browser.mjs
+          node scripts/verify-budil-gpt-bank-browser.mjs
