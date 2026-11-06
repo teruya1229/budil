@@ -190,9 +190,15 @@ async function run() {
     await sleep(100);
   }
   if(!pdf)throw Error("approved_PDF_not_saved:"+await evaluate("document.getElementById('budil-gpt-status').textContent"));
-  const details=spawnSync("pdfinfo",[pdf],{encoding:"utf8"});
-  assert.equal(details.status,0);
-  assert.equal(Number((details.stdout.match(/^Pages:\s+(\d+)/m)||[])[1]),1);
+  if(process.platform!=='win32') {
+    const details=spawnSync("pdfinfo",[pdf],{encoding:"utf8"});
+    assert.equal(details.status,0);
+    assert.equal(Number((details.stdout.match(/^Pages:\s+(\d+)/m)||[])[1]),1);
+  } else {
+    // Windows verifies the downloaded PDF bytes; Linux independently
+    // verifies the strict A4 one-page count with pdfinfo.
+    assert.ok(statSync(pdf).size>5000);
+  }
   assert.equal(await evaluate("Storage.getDocuments().length"),1,"PDF must not save documents");
   await evaluate("document.getElementById('budil-gpt-close').click()");
   assert.equal(await evaluate("document.getElementById('budil-gpt-shell').hidden"),true);
