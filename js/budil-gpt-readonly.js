@@ -44,7 +44,7 @@ const BudilGptReadOnly = (() => {
     requiresConsent: true, view, modelReceipt: summary
   });
   const verify = (request) => {
-    if (!object(request) || !exactKeys(request, ['action','query','limit','date'])) return null;
+    if (!object(request) || !exactKeys(request, ['action','query','limit','date','month','docType'])) return null;
     const action = str(request.action, 40);
     if (!ACTIONS.includes(action)) return null;
     const limit = request.limit == null ? MAX_RESULTS : request.limit;
