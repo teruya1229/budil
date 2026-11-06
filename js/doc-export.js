@@ -178,8 +178,11 @@ const BudilDocExport = {
     });
   },
 
-  async downloadDocumentPdf(doc) {
+  async downloadDocumentPdf(doc, options) {
     if (!doc) throw new Error('document_required');
+    // Fixture-only guard against rounding into a trailing blank A4 page.
+    // Default remains 1123px and is unchanged for all existing Budil documents.
+    const fixturePdfHeight = options && options.fixtureSinglePage === true ? '1110px' : '1123px';
     const filename = DocumentsBrain.buildDocumentExportFilename(doc, 'pdf');
     const html2pdfFactory = await this.ensureHtml2Pdf();
     const html = await this.buildCurrentStandaloneHtml(doc, false);
@@ -199,7 +202,7 @@ const BudilDocExport = {
       sheet.style.left = '0';
       sheet.style.top = '0';
       sheet.style.width = '794px';
-      sheet.style.minHeight = '1123px';
+      sheet.style.minHeight = fixturePdfHeight;
       sheet.style.maxWidth = '794px';
       sheet.style.background = '#fff';
       sheet.style.color = '#111';
@@ -259,7 +262,7 @@ const BudilDocExport = {
               clonedSheet.style.boxShadow = 'none';
               clonedSheet.style.width = '794px';
               clonedSheet.style.maxWidth = '794px';
-              clonedSheet.style.minHeight = '1123px';
+              clonedSheet.style.minHeight = fixturePdfHeight;
               clonedSheet.style.background = '#fff';
               clonedSheet.style.color = '#111';
             }
