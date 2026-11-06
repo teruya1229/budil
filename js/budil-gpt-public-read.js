@@ -46,7 +46,7 @@ const BudilGptPublicRead=(()=>{
       response.weekday!=='none'||response.hour!==null||response.minute!==null)
      return deny('model_result_mismatch');
    return Object.freeze({ok:true,parsed:{
-      ok:true,action:expected.action,
+      ok:true,action:expected.action,document_type:expected.document_type,
       periodLabel:expected.period==='last_month'?'先月':'今月',
       scope:expected.scope==='this_month_expected'?'this_month_expected':'all',
       readOnly:true,networkUsed:true
