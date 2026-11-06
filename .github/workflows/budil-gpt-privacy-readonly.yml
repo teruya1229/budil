@@ -38,3 +38,22 @@ jobs:
           node scripts/verify-budil-gpt-conversation-20.mjs
           node scripts/verify-budil-ai-p0-contract.mjs
           node scripts/verify-v41314-document-print-pdf-export.mjs
+
+  browser-consent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: PDF inspection dependency
+        run: |
+          if ! command -v pdfinfo >/dev/null 2>&1; then
+            sudo apt-get -y -qq install poppler-utils
+          fi
+      - name: Isolated fictional Chrome E2E
+        run: node scripts/verify-budil-ai-p0-browser.mjs
