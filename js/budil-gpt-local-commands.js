@@ -78,7 +78,7 @@ const BudilGptLocalCommands = (() => {
         readOnly:true,networkUsed:false
       });
     }
-    const customer=text.match(new RegExp('^(.+?)(?:さん|様)を(?:探して|検索して|探してください|検索してください|見せて|確認して)'+endAnchor));
+    const customer=text.match(new RegExp('^(.+?)(?:さん|様)?を(?:探して|検索して|探してください|検索してください|見せて|確認して)'+endAnchor));
     if(customer){
       const name=safeName(customer[1]);if(!name)return deny('NAME_INVALID');
       return Object.freeze({
