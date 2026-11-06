@@ -62,7 +62,8 @@ const BudilCloudRestore=(()=>{
           return fail('unsafe_backup_keys');
         const validated=dataBackup.validatePayload(payload);
         if(!validated || validated.valid!==true)return fail('invalid_backup');
-        if(canonical(payload).length>8*1024*1024)return fail('snapshot_too_large');
+        if(new TextEncoder().encode(canonical(payload)).length>8*1024*1024)
+          return fail('snapshot_too_large');
         const expected=String(latest.contentHash);
         const computed=await digest(payload,webCrypto);
         if(computed!==expected)return fail('snapshot_hash_mismatch');
@@ -77,7 +78,7 @@ const BudilCloudRestore=(()=>{
           ok:true,snapshotId:latest.snapshotId,
           createdAt:String(latest.createdAt||''),
           backupVersion:String(payload.backupVersion||''),
-          changed:computed!==(await digest(dataBackup.exportPayload(),webCrypto)),
+          changed:(await digest(payload.data,webCrypto))!==localHash,
           keyCount:keys.length,remoteItems:remoteCount,localItems:localCount,
           requiresSavedLocalBackup:true,requiresConfirmation:true,
           persisted:false,networkUsed:false
