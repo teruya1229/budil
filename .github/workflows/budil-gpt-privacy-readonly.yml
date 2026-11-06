@@ -29,6 +29,10 @@ jobs:
         run: deno run --no-check scripts/verify-budil-gpt-readonly-privacy.ts
       - name: Original GPT quote and PDF regressions
         run: |
+          node --check js/budil-gpt-public-read.js
+          node --check js/budil-cloud.js
+          node --check js/budil-gpt-offline-ui.js
+          node scripts/verify-budil-gpt-public-read.mjs
           node scripts/verify-budil-gpt-anonymize.mjs
           node scripts/verify-budil-gpt-secure-readiness.mjs
           node scripts/verify-budil-gpt-conversation-20.mjs
