@@ -25,6 +25,7 @@
   let session=Core?Core.createSession():null;
   let quoteDeps=null,focusedBefore=null,voice=null,exporting=false,pdfDone=false;
   let pendingQuoteFields=null;
+  let pendingNewCustomer=null;
   const resultBox=$('budil-gpt-result'),statusBox=$('budil-gpt-status');
   function hide(id,yes){$(id).hidden=!!yes;}
   function status(message,error=false){
@@ -32,7 +33,9 @@
     statusBox.classList.toggle('budil-gpt-error',!!error);
   }
   function resetQuote(){
-    pendingQuoteFields=null;
+    pendingQuoteFields=null;pendingNewCustomer=null;
+    hide('budil-gpt-customer-create',true);
+    $('budil-gpt-customer-create-preview').replaceChildren();
     if(Core)session=Core.createSession();
     quoteDeps=null;pdfDone=false;exporting=false;
     $('budil-gpt-pdf').disabled=false;
@@ -264,6 +267,28 @@
         }
       }
     }
+    if(parsed.ok && parsed.action==='customer.create.preview'){
+      if($('budil-gpt-consent').checked!==true)
+        return status('重複を確認するため、端末データの読取にチェックしてください。',true);
+      const fullName=parsed.request.name;
+      try{
+        const leads=Data.getLeads();
+        const duplicate=leads.some(c=>
+          Resolver.normalizeName(Resolver.leadDisplayName(c))===
+          Resolver.normalizeName(fullName));
+        $('budil-gpt-consent').checked=false;
+        if(duplicate)return status('同じ名前の顧客が登録済みです。誤登録防止のため追加しません。',true);
+        pendingNewCustomer=fullName;
+        const preview=$('budil-gpt-customer-create-preview');
+        preview.replaceChildren();
+        const box=node('div',undefined,'budil-gpt-item');
+        box.append(node('p','登録予定の氏名：'+fullName));
+        box.append(node('p','電話・住所は未入力。本人が登録を確定するまで保存しません。'));
+        preview.append(box);
+        hide('budil-gpt-customer-create',false);
+        return status('登録内容を確認してください。確定ボタンを押すまで保存しません。');
+      }catch(_){return status('顧客データの重複確認に失敗しました。',true);}
+    }
     if(!parsed.ok)return status('指示を確認してください（'+parsed.code+'）。元の下書きは変更していません。',true);
     if($('budil-gpt-consent').checked!==true)
       return status('端末内の顧客・帳票データを読む場合は、確認欄にチェックしてください。',true);
@@ -435,7 +460,42 @@
   $('budil-gpt-readiness').addEventListener('click',checkGptReadiness);
   $('budil-gpt-close').addEventListener('click',close);
   $('budil-gpt-backdrop').addEventListener('click',close);
+
+  function confirmNewCustomer(){
+    const name=pendingNewCustomer;
+    if(!name||!Data||!Resolver||
+       typeof Data.addLead!=='function'||typeof Data.getLeads!=='function')
+      return status('承認待ちの顧客登録がありません。',true);
+    const btn=$('budil-gpt-customer-create-confirm');
+    btn.disabled=true;
+    try{
+      const leads=Data.getLeads();
+      if(leads.some(c=>Resolver.normalizeName(Resolver.leadDisplayName(c))===
+          Resolver.normalizeName(name))){
+        pendingNewCustomer=null;hide('budil-gpt-customer-create',true);
+        return status('登録直前に同名の顧客を検出しました。追加しません。',true);
+      }
+      // Preserve the original data before applying a user-approved write.
+      if(typeof Data.createSafetyBackup==='function' && Data.KEYS &&
+         Data.KEYS.LEADS){
+        Data.createSafetyBackup({reason:'budil_gpt_customer_create',
+          targetKey:Data.KEYS.LEADS,data:leads,beforeCount:leads.length});
+      }
+      const created=Data.addLead({name,source:'Budil AI業務番頭'});
+      if(!created||!created.id)throw Error('SAVE_FAILED');
+      pendingNewCustomer=null;
+      hide('budil-gpt-customer-create',true);
+      resultBox.replaceChildren();
+      title('顧客登録完了');
+      item([['氏名',created.name],['登録先','この端末のBudil顧客管理'],
+        ['電話・住所','未登録'],['クラウド同期','未実施']]);
+      status('氏名を端末に保存しました。住所・電話は顧客管理で追記してください。');
+    }catch(_){return status('顧客を保存できませんでした。追加状態を顧客管理で確認してください。',true);}
+    finally{btn.disabled=false;}
+  }
+
   $('budil-gpt-run').addEventListener('click',run);
+  $('budil-gpt-customer-create-confirm').addEventListener('click',confirmNewCustomer);
   $('budil-gpt-speech').addEventListener('click',speech);
   $('budil-gpt-revise').addEventListener('click',revise);
   $('budil-gpt-approve').addEventListener('click',approve);
