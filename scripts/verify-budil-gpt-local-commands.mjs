@@ -34,8 +34,11 @@ check('global receivables summary with explicit local date',()=>{
   const r=parse('未入金合計を教えて');assert.equal(r.action,'receivables.summary');
   assert.equal(r.request.date,'2026-11-06');
 });
-check('relative month phrase is refused, not misrepresented',()=>{
-  assert.equal(parse('今月の未入金を教えて').ok,false);
+check('monthly unpaid phrase is explicitly scoped to expected payments',()=>{
+  const r=parse('今月の未入金を教えて');
+  assert.equal(r.ok,true);
+  assert.equal(r.action,'receivables.summary');
+  assert.equal(r.scope,'this_month_expected');
 });
 check('date must be passed by caller',()=>{
   const r=P.parse('未入金を教えて',{});assert.equal(r.code,'DATE_REQUIRED');
