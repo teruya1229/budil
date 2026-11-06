@@ -314,6 +314,24 @@ async function run() {
     await evaluate("document.getElementById('budil-gpt-clear').click()");
     console.log("BUDIL_MULTI_TURN_BROWSER_PASS: missing price/tax, two-turn followups, consent, no persisted writes");
 
+    const oldCustomerCount=await evaluate("Storage.getLeads().length");
+    await evaluate("document.getElementById('budil-gpt-input').value='比嘉清子さんを新規顧客として登録して';document.getElementById('budil-gpt-run').click()");
+    assert.equal(await evaluate("document.getElementById('budil-gpt-customer-create').hidden"),true);
+    assert.equal(await evaluate("Storage.getLeads().length"),oldCustomerCount);
+    await evaluate("document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+    assert.equal(await evaluate("document.getElementById('budil-gpt-customer-create').hidden"),false);
+    assert.equal(await evaluate("Storage.getLeads().length"),oldCustomerCount);
+    await evaluate("document.getElementById('budil-gpt-customer-create-confirm').click()");
+    assert.equal(await evaluate("Storage.getLeads().length"),oldCustomerCount+1);
+    assert.equal(await evaluate("Storage.getLeads().filter(x=>x.name==='比嘉清子').length"),1);
+    assert.ok((await evaluate("document.getElementById('budil-gpt-status').textContent")).includes('氏名を端末に保存'));
+    await evaluate("document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+    assert.equal(await evaluate("Storage.getLeads().length"),oldCustomerCount+1);
+    assert.ok((await evaluate("document.getElementById('budil-gpt-status').textContent")).includes('同じ名前'));
+    await evaluate("document.getElementById('budil-gpt-clear').click()");
+    console.log("BUDIL_CUSTOMER_APPROVAL_BROWSER_PASS: preview no writes, one explicit save, duplicate blocked");
+
+
   }
 
 
