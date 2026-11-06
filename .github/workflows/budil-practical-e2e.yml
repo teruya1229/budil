@@ -40,7 +40,6 @@ jobs:
           node scripts/verify-budil-gpt-conversation-20.mjs
           node scripts/verify-v41314-document-print-pdf-export.mjs
           node scripts/verify-v41315-pdf-origin-alignment.mjs
-          node scripts/audit-budil-original-19.mjs
   chrome-linux:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -64,6 +63,7 @@ jobs:
           node scripts/verify-budil-gpt-invoice-browser.mjs
           node scripts/verify-budil-gpt-bank-browser.mjs
           node scripts/verify-budil-cloud-restore-browser.mjs
+          node scripts/audit-budil-original-19.mjs
   chrome-windows:
     runs-on: windows-latest
     timeout-minutes: 22
