@@ -75,7 +75,7 @@ const BudilGptReadOnly = (() => {
     // never identity matches. The canonical exact-ID resolver is unchanged.
     // Only 2-4 Japanese characters qualify; no arbitrary substring matching.
     if(result.status==='not_found' &&
-       /^[\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}]{2,4}$/u.test(request.query) &&
+       /^[一-龯々ぁ-んァ-ヶ]{2,4}$/u.test(request.query) &&
        typeof deps.customerResolver.normalizeName==='function' &&
        typeof deps.customerResolver.leadDisplayName==='function' &&
        typeof deps.customerResolver.toCandidate==='function') {
