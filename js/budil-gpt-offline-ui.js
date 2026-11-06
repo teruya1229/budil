@@ -9,14 +9,6 @@
   const $=id=>document.getElementById(id);
   const shell=$('budil-gpt-shell'),openButton=$('budil-gpt-open');
   if(!shell||!openButton)return;
-  const ready=[
-    'BudilGptLocalCommands','BudilGptLocalSource','BudilGptReadOnly',
-    'BudilGptAnonymize','BudilGptFixtureCore','CustomerResolveEntrypoint',
-    'DocumentsBrain','PaymentBrain','Storage'
-  ].every(name=>{
-    try{return typeof window[name]!=='undefined'||
-      typeof eval === 'undefined' ? false : true;}catch(_){return false;}
-  });
   // Classic non-module Budil scripts expose lexical const bindings, not
   // necessarily window props. Test them directly, no eval/network access.
   const Commands=typeof BudilGptLocalCommands!=='undefined'?BudilGptLocalCommands:null;
