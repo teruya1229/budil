@@ -38,3 +38,29 @@ jobs:
           fi
           node scripts/verify-budil-ai-p0-browser.mjs
           node scripts/verify-budil-cloud-restore-browser.mjs
+
+  windows-browser:
+    runs-on: windows-latest
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Browser verification at 390px, fictional data only
+        env:
+          BUDIL_TEST_OUTPUT_DIR: ${{ runner.temp }}/budil-integration-win
+        run: node scripts/verify-budil-ai-p0-browser.mjs
+      - name: Keep isolated screenshots and generated PDFs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: budil-integration-windows-390
+          path: |
+            ${{ runner.temp }}/budil-integration-win/budil-release-390.png
+            ${{ runner.temp }}/budil-integration-win/downloads/*.pdf
+          if-no-files-found: ignore
+          retention-days: 3
