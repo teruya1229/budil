@@ -19,6 +19,7 @@
   const Resolver=typeof CustomerResolveEntrypoint!=='undefined'?CustomerResolveEntrypoint:null;
   const Docs=typeof DocumentsBrain!=='undefined'?DocumentsBrain:null;
   const Payment=typeof PaymentBrain!=='undefined'?PaymentBrain:null;
+  const Profit=typeof ProfitBrain!=='undefined'?ProfitBrain:null;
   const Data=typeof Storage!=='undefined'?Storage:null;
   let session=Core?Core.createSession():null;
   let quoteDeps=null,focusedBefore=null,voice=null,exporting=false,pdfDone=false;
@@ -135,6 +136,16 @@
         ['カレンダー','Googleへの登録・変更なし']]);
       return status('作業予定の表示のみです。Googleの空き状況とは照合していません。');
     }
+    if(parsed.action==='profit.summary'){
+      title('今月の利益（Budil端末内・概算）');
+      item([['対象月',view.month],['当月の売上集計',yen(view.monthRevenue)],
+        ['当月の経費集計',yen(view.monthExpense)],
+        ['概算利益',yen(view.monthGrossProfit)],
+        ['確定売上',yen(view.confirmedRevenue)],
+        ['確定利益（紐付け済み経費反映）',yen(view.confirmedProfit)],
+        ['作業予定の利益見込み',yen(view.plannedForecastProfit)]]);
+      return status('既存ProfitBrainの計算結果です。月次実績・売上明細の差や未登録経費で変動します。確定申告用利益ではありません。');
+    }
     if(parsed.action==='receivables.summary'){
       const monthly=parsed.scope==='this_month_expected';
       title(monthly?'今月入金予定の未入金':'Budil端末内の未入金集計');
@@ -214,7 +225,7 @@
       return;
     }
     const gateway=Source.make({storage:Data,readonly:ReadOnly,
-      customerResolver:Resolver,paymentBrain:Payment});
+      customerResolver:Resolver,paymentBrain:Payment,profitBrain:Profit});
     const answer=gateway.query(parsed.request,true);
     queryResult(parsed,answer);
   }
