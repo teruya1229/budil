@@ -301,6 +301,19 @@ async function run() {
     assert.equal(await evaluate("Storage.getRevenueRecords().length"),1);
     assert.equal(await evaluate("Storage.getExpenseRecords().length"),1);
     console.log("BUDIL_PROFIT_BROWSER_PASS: existing ProfitBrain, approximate month, no writes");
+
+    await evaluate("document.getElementById('budil-gpt-input').value='田中さんのエアコン洗浄2台で見積を作って';document.getElementById('budil-gpt-run').click()");
+    assert.ok((await evaluate("document.getElementById('budil-gpt-status').textContent")).includes('合計金額'));
+    await evaluate("document.getElementById('budil-gpt-input').value='18,000円';document.getElementById('budil-gpt-run').click()");
+    assert.ok((await evaluate("document.getElementById('budil-gpt-status').textContent")).includes('税込'));
+    await evaluate("document.getElementById('budil-gpt-input').value='税込';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+    assert.equal(await evaluate("document.querySelectorAll('#budil-gpt-candidate-list button').length"),2);
+    await evaluate("document.querySelectorAll('#budil-gpt-candidate-list button')[0].click()");
+    assert.ok((await evaluate("document.getElementById('budil-gpt-draft-preview').textContent")).includes('18,000円'));
+    assert.equal(await evaluate("Storage.getDocuments().length"),3);
+    await evaluate("document.getElementById('budil-gpt-clear').click()");
+    console.log("BUDIL_MULTI_TURN_BROWSER_PASS: missing price/tax, two-turn followups, consent, no persisted writes");
+
   }
 
 
