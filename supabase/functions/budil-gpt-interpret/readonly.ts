@@ -24,7 +24,7 @@ type Obj=Record<string,unknown>;
 function isObj(v:unknown):v is Obj{
   return !!v && typeof v==="object" && !Array.isArray(v);
 }
-const deny=(code:string)=>({ok:false,code});
+const deny=(code:string)=>({ok:false as const,code});
 export function safeReadInstruction(raw:unknown){
   if(typeof raw!=="string"||raw.length<2||raw.length>180)return deny("read_input_invalid");
   const text=raw.trim();
@@ -45,7 +45,7 @@ export function safeReadInstruction(raw:unknown){
   const availability=/^(?:今週|来週)?(?:の)?[月火水木金土日]曜(?:日)?の?(?:午前|午後)?[０-９0-9]{1,2}時(?:[０-９0-9]{1,2}分)?(?:、)?(?:空いてる|空いていますか|空きある|空きはありますか|予約できる|予約可能ですか)?$/u;
   if(![monthDocs,unpaid,profit,availability].some(re=>re.test(flat)))
     return deny("read_topic_not_allowlisted");
-  return {ok:true,input:text};
+  return {ok:true as const,input:text};
 }
 const dayCodes=["mon","tue","wed","thu","fri","sat","sun"];
 const dayChars=["月","火","水","木","金","土","日"];
@@ -111,7 +111,7 @@ export function verifyReadOnlyIntent(input:unknown,model:unknown){
       model.hour!==null||model.minute!==null)
       return deny("read_unsupported_shape_invalid");
   }
-  return {ok:true,action:a,period,document_type:doc,scope,weekday,
+  return {ok:true as const,action:a,period,document_type:doc,scope,weekday,
     hour:model.hour,minute:model.minute,
     needs_user_input:Boolean(model.needs_user_input||a==="unsupported"),
     followup:punct(model.followup),
