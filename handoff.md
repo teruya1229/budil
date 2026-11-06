@@ -1,4 +1,47 @@
-﻿# Budil handoff
+## 2026-11-05 夜・GPT向けローカル業務検索入口追加（本番未接続）
+
+- 新規 `js/budil-gpt-readonly.js`：`customer.search`, `document.search`, `work.search`, `receivables.summary` の4操作だけを許可。既存 `CustomerResolveEntrypoint` と `PaymentBrain.summarizeReceivables` に計算・本人確認の判断を委ねる。
+- すべてローカル読取専用、明示同意 `consent===true` がなければgetLeads等も呼ばない。依存するデータ関数は外部から注入するだけで、業務localStorageを勝手に読まない。
+- ローカルUI向けビューには必要最小限の顧客候補・帳票番号・予定日だけを返し、GPT向け `modelReceipt` は件数、状態、可否フラグだけ。顧客名・連絡先・住所・明細・未入金金額はGPT向けレシートに含めない。
+- 顧客名は完全一致のみ・1件でも本人選択、複数候補で自動確定なし。帳票件数が上限を超えたとき部分結果を表示しない。未入金は既存PaymentBrainを使用し、入金済みへの書込みなし。
+- `scripts/verify-budil-gpt-readonly.mjs` を追加。GitHub Actions `42008748780` Linux Node環境で **20/20 PASS**、同runの他の模擬E2EもPASS。
+- 本番UI・サーバー・本番顧客には未接続。実OpenAI API、実端末、保存・同期・Google Calendar登録・請求発行・銀行照合は引き続き未完。
+
+## 2026-11-05 Budil×GPT 開発継続：GPT試験認証とDeno検証
+
+- Budil Draft PR #1内でlocalhost限定試験認証を追加。旧staging欠落の不整合に対して、既存バックアップ設定は触らずGPT試験だけBC既存Supabaseに向ける。パスワード・JWTはチャットにもリポジトリにも出していない。
+- 新規ファイル: `experiments/budil-gpt-phase1/trial-auth.js`, `scripts/verify-budil-gpt-trial-auth.mjs`。ローカル開発サーバーは127.0.0.1:8765に限定。実顧客禁止。
+- GitHub CI Budil run 42002281000: mock login 12/12、見積24/24、予定/請求28/28、390px Chromium E2E・A4見積請求PDF、GPT解析結果の嘘金額拒否と本人承認までPASS。
+- GPTサーバーDraft PR #5: Deno2依存取得設定修正、TypeScript 18件の静的エラー修正、`deno check` PASS run 42002698340。Intent20/20・Edgeモック22/22。Edgeは未デプロイ、OPENAI_API_KEY未確認、実API未通信。
+- Windows Codex A READ-only検証依頼 `budil-gpt-native-verify-readonly-20261105-v1` は `completion_origin_unverified` でUSER_ACTION_REQUIREDになり、Windows Runner検証には至らなかった。再依頼を機械的に繰り返さない。
+- 次の実際の完成条件: OpenAIキーと上限料金の本人指定/安全なサーバーSecret設定、最小fixtureのみの実通信テスト、本人承認付き実業務API、同期・スマホ実機検品。main/公開URL/本番データ未変更。
+
+## Budil×GPT 2026-11-05 追加実装・引継ぎ
+
+- Budil Draft PR #1 `feat/budil-gpt-phase1-fixture-20261105`: Phase1見積に加え、架空の予約→作業→請求→入金確認をスマホ用の会話入力で連続実行可能。別途 `ai-bantou-app` Draft PR #5 にJWT/tenant/3回/分のGPT指示解釈Gatewayがあり、未デプロイ・初期無効。
+- 回帰見積24項目、下流業務28項目。Linux CDP 390pxで2つのA4 PDF（見積・請求）が各1ページ出力、未入金に入金確定の誤更新なし。GitHub Actions run `41997499331` のLinux E2E成功。書き込みは揮発架空メモリのみ。
+- 最初のquote 18,000円を20,000円に修正後、20,000円で請求/未入金が一致。本体のDocumentsBrain、WorkOrderBrain、PaymentBrainを流用。実顧客/Calendar/銀行/本番mainは未変更。
+- browser speechの音声認識自体とiPhone/Android実機、実OpenAI API、予約の真正Google Calendar API登録、取引データ保存・同期、銀行照合証拠、全verify-currentは未達。完成扱い禁止。
+- 次は認証付きGPTの実通信検証（APIキー・料金承認が必要）、実スマホと権限・安全検品、予約登録/本番業務APIを一機能ずつ検証。白Cursor・Codex B使用なし。
+
+## Budil×GPT Phase1 本物のChromium検品結果（2026-11-05）
+
+- Draft PR: Budil `https://github.com/teruya1229/budil/pull/1`; GPTの安全な認証試験Gateway `https://github.com/teruya1229/ai-bantou-app/pull/5`。
+- 開発Branchだけに見積mock/UI→GPT出力検証入口→BudilCloud認証付き解析試験クライアントを実装。プロジェクト標準の顧客照合・税・帳票を再利用。
+- GitHub Linux Actions run `41994258861` fixture-linux PASS、22/22 Node E2E関連テスト、390px表示と実PDF生成。生成PDF A4 1ページ、184,476バイト、日本語表示を画像で検品済み。最初の試験で文字化け・空白2ページがあったため実測に基づきfixture限定PDF height修正、Linux CIにNoto CJK追加。
+- Windows self-hosted runner `bc-bantou-dev` はジョブqueued、正式`verify-current`・実機iPhone/Android・GPT API通信は未確認。完成・公開済み扱い禁止。
+- Supabase `ai-bantou-dev` に既存JWT/tenant/rate-limitがあることをREADで確認。新規有料Projectは作らず、API secret/料金/本番設定・Edge deployも触らない。
+
+## 2026-11-05 Budil×GPT 開発再開（検証ブランチ限定）
+
+- 2026-11-04本人の最優先決定：Budilをスマホの音声・テキスト・写真で事務作業を遂行できるAI業務番頭へ進化。AIが作業、人間が確認・承認。既存Budilが金額・税・帳票の正本。
+- Phase1隔離検証の開発ブランチ`feat/budil-gpt-phase1-fixture-20261105`を`main`の`bf6d132a`から作成。実顧客・Googleカレンダー・本番localStorageには触れていない。
+- 追加: ルート`budil-gpt-phase1-demo.html`、`experiments/budil-gpt-phase1/fixture-core.js`、`fixture-ui.js`、README、`scripts/verify-budil-gpt-phase1-fixture.mjs`。
+- 目的のコード経路は架空顧客照合→見積下書き→会話修正→明示承認→既存Budil PDF関数。会話パーサーは固定MOCK。実GPT・認証/権限サーバー・本番連携・スマホ実機は未完成。
+- 2026-11-05 GitHub実ソースを隔離JS実行（Node互換shim）した16項目回帰PASS。正式Windows Runner実行とPDF実ファイル生成、PC/スマホ実機検品は未検証。
+- 続きは同ブランチ内でWindows正式環境のnode --check / node scripts/verify-budil-gpt-phase1-fixture.mjs / node scripts/verify-current.mjsを実行し、ブラウザPDF・390px表示を確認する。GPTサーバー接続はその後、安全な認証APIで別途設計。本番main反映前に結果を検品する。
+
+# Budil handoff
 
 最終更新: 2026-09-15
 

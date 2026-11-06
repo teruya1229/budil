@@ -435,6 +435,188 @@
     });
   }
 
+  /**
+   * Read-only Phase1 GPT interpreter — ONLY fictional inputs.
+   * Shares the existing Supabase login/session pathway; does not access Budil
+   * Storage, create records, or approve/execute generated commands.
+   * Backend is disabled until explicitly enabled and deployed.
+   */
+  function interpretFixture(instruction) {
+    var cfg = getConfig();
+    var localTrial = null;
+    var path = '';
+    try { path = String(global.location && global.location.pathname || ''); } catch (_e) {}
+    // Dedicated localhost fictional-data demo only. Does NOT modify Budil
+    // backup auth, staging selection, or production authentication.
+    if (cfg && cfg.env === 'staging' &&
+        path === '/budil-gpt-phase1-demo.html' &&
+        global.BudilGptTrialAuth && global.BudilGptTrialAuth.supported()) {
+      localTrial = global.BudilGptTrialAuth;
+      cfg = localTrial.gatewayConfig();
+    }
+    if (!cfg || (cfg.env !== 'production' && !localTrial)) {
+      return Promise.resolve({ ok: false, code: 'gpt_fixture_origin_unavailable' });
+    }
+    var raw = String(instruction || '').trim();
+    if (!raw || raw.length > 480 || new TextEncoder().encode(raw).length > 2048) {
+      return Promise.resolve({ ok: false, code: 'instruction_invalid' });
+    }
+    // Full-match fictional grammar: block arbitrary PII/prompts BEFORE transmitting
+    // even to the authenticated test endpoint. The backend enforces this again.
+    var clean = raw.replace(/[\s　]/g, '')
+      .replace(/[０-９]/g, function (c) {
+        return String.fromCharCode(c.charCodeAt(0) - 0xfee0);
+      }).replace(/，/g, ',');
+    var yen = '(?:[1-9][0-9]{0,8}|[1-9][0-9]{0,2}(?:,[0-9]{3})+)';
+    var demoCreate = new RegExp(
+      '^(?:比嘉清子|田中太郎|佐藤美咲|田中)(?:さん|様)?の' +
+      '(?:エアコン洗浄|エアコンクリーニング)' +
+      '(?:[1-9]|[12][0-9]|30)台を' +
+      '(?:税込|税抜|税別|内税|外税)?' + yen +
+      '円で見積(?:書)?(?:も)?(?:作って|して|お願い)?$'
+    );
+    var demoRevision = new RegExp(
+      '^(?:金額|合計)(?:を)?(?:税込|税抜|税別|内税|外税)?' +
+      yen + '円(?:に)?(?:変更|修正|直し|直して|して|変えて)$'
+    );
+    var amountMatch = clean.match(/([0-9][0-9,]*)円/);
+    var explicitAmount = amountMatch ? Number(amountMatch[1].replace(/,/g, '')) : 0;
+    if ((!demoCreate.test(clean) && !demoRevision.test(clean)) ||
+        !Number.isSafeInteger(explicitAmount) || explicitAmount <= 0 ||
+        explicitAmount > 100000000) {
+      return Promise.resolve({ ok: false, code: 'fixture_only' });
+    }
+    var readToken = localTrial ? localTrial.getValidAccessToken : getValidAccessToken;
+    return readToken().then(function (tokenResult) {
+      if (!tokenResult.ok || !tokenResult.accessToken) {
+        return { ok: false, code: CODE.NOT_SIGNED_IN, message: 'ログインが必要です' };
+      }
+      return doFetch(cfg.url + '/functions/v1/budil-gpt-interpret', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + tokenResult.accessToken,
+          apikey: cfg.publishableKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ instruction: raw, mode: 'fixture' }),
+        timeoutMs: 20000
+      }).then(function (response) {
+        if (response.timeout) return { ok: false, code: CODE.TIMEOUT };
+        if (response.networkError) return { ok: false, code: CODE.NETWORK };
+        if (response.status !== 200 || !response.body || response.body.ok !== true) {
+          return { ok: false, code: response.body && response.body.code || CODE.UNKNOWN };
+        }
+        if (response.body.phase !== 'interpret_only' || response.body.can_execute !== false) {
+          return { ok: false, code: 'unsafe_interpret_response' };
+        }
+        return response.body;
+      });
+    });
+  }
+
+  /**
+   * Authenticated, no-cost GPT readiness probe for the isolated localhost
+   * fictional-data demo. Reuses the trial Auth session, NEVER the backup
+   * session. Returns booleans only, no key material or customer data.
+   */
+  function getFixtureGptReadiness() {
+    var trial = global.BudilGptTrialAuth;
+    if (!trial || !trial.supported || !trial.supported()) {
+      return Promise.resolve({ok:false,code:'gpt_fixture_origin_unavailable'});
+    }
+    var config = trial.gatewayConfig();
+    if (!config) return Promise.resolve({ok:false,code:'gpt_fixture_origin_unavailable'});
+    return trial.getValidAccessToken().then(function (token) {
+      if (!token || !token.ok || !token.accessToken) {
+        return {ok:false,code:CODE.NOT_SIGNED_IN};
+      }
+      return doFetch(config.url + '/functions/v1/budil-gpt-interpret', {
+        method: 'GET',
+        headers: {
+          Authorization: 'Bearer ' + token.accessToken,
+          apikey: config.publishableKey
+        },
+        timeoutMs: 12000
+      }).then(function (response) {
+        if (response.timeout) return {ok:false,code:CODE.TIMEOUT};
+        if (response.networkError) return {ok:false,code:CODE.NETWORK};
+        if (response.status !== 200 || !response.body ||
+            response.body.phase !== 'readiness_only' || response.body.ok !== true) {
+          return {ok:false,code:response.body && response.body.code || 'readiness_unavailable'};
+        }
+        return {
+          ok:true,
+          phase:'readiness_only',
+          enabled:response.body.enabled === true,
+          keyConfigured:response.body.key_configured === true,
+          modelSupported:response.body.model_supported === true,
+          ready:response.body.ready === true,
+          externalRequestSent:false
+        };
+      });
+    });
+  }
+
+  /**
+   * Experimental REAL-NAME-COMPATIBLE interpretation path:
+   * keep the customer name on the device, send only the standardized
+   * customer-neutral service/quantity/total/tax sentence.
+   * This is available ONLY from the localhost fictional-data demo.
+   * The Edge endpoint independently requires a separate disabled-by-default
+   * BUDIL_GPT_ANONYMIZED_ENABLED flag.
+   */
+  function interpretAnonymizedQuote(original) {
+    var tool = typeof BudilGptAnonymize !== 'undefined'
+      ? BudilGptAnonymize : global.BudilGptAnonymize;
+    if (!tool || typeof tool.prepare !== 'function' ||
+        typeof tool.verifyResult !== 'function') {
+      return Promise.resolve({ok:false,code:'anonymizer_unavailable'});
+    }
+    var local = tool.prepare(original);
+    if (!local.ok) return Promise.resolve({ok:false,code:local.code});
+    var trial = global.BudilGptTrialAuth;
+    if (!trial || !trial.supported || !trial.supported()) {
+      return Promise.resolve({ok:false,code:'gpt_fixture_origin_unavailable'});
+    }
+    var config = trial.gatewayConfig();
+    if (!config || !tool.acceptsWire(local.wire)) {
+      return Promise.resolve({ok:false,code:'anonymized_wire_invalid'});
+    }
+    return trial.getValidAccessToken().then(function (token) {
+      if (!token || !token.ok || !token.accessToken) {
+        return {ok:false,code:CODE.NOT_SIGNED_IN};
+      }
+      // Deliberately omit original, customerName, id and any other local data.
+      return doFetch(config.url + '/functions/v1/budil-gpt-interpret', {
+        method:'POST',
+        headers:{
+          Authorization:'Bearer ' + token.accessToken,
+          apikey:config.publishableKey,
+          'Content-Type':'application/json'
+        },
+        body:JSON.stringify({
+          mode: local.wire.mode,
+          instruction: local.wire.instruction
+        }),
+        timeoutMs:20000
+      }).then(function (response) {
+        if (response.timeout) return {ok:false,code:CODE.TIMEOUT};
+        if (response.networkError) return {ok:false,code:CODE.NETWORK};
+        if (response.status !== 200 || !response.body || response.body.ok !== true) {
+          return {ok:false,code:response.body && response.body.code || CODE.UNKNOWN};
+        }
+        if (response.body.input_mode !== 'anonymized' ||
+            response.body.requires_human_approval !== true) {
+          return {ok:false,code:'anonymized_response_unverified'};
+        }
+        var verified = tool.verifyResult(original,response.body);
+        if (!verified.ok) return {ok:false,code:verified.code || 'anonymized_response_unverified'};
+        // Return the server schema, NOT the locally parsed customer name.
+        return response.body;
+      });
+    });
+  }
+
   function isBackupInFlight() {
     return backupInFlight;
   }
@@ -451,6 +633,9 @@
     logout: logout,
     backupNow: backupNow,
     fetchLatest: fetchLatest,
+    interpretFixture: interpretFixture,
+    getFixtureGptReadiness: getFixtureGptReadiness,
+    interpretAnonymizedQuote: interpretAnonymizedQuote,
     isBackupInFlight: isBackupInFlight
   };
 })(typeof window !== 'undefined' ? window : globalThis);

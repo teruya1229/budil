@@ -1,0 +1,120 @@
+name: Budil GPT Phase 1 isolated checks
+on:
+  push:
+    branches:
+      - feat/budil-gpt-phase1-fixture-20261105
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: budil-gpt-phase1-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  fixture:
+    # Windows runner is not registered for this repo yet; explicitly enable only when available.
+    if: ${{ vars.BUDIL_WINDOWS_CI_ENABLED == 'true' }}
+    runs-on: [self-hosted, Windows, bc-bantou-dev]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout isolated branch (never writes to existing C dev worktrees)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+          fetch-depth: 0
+      - name: Confirm checked-out development branch
+        shell: pwsh
+        run: |
+          if ('${{ github.ref_name }}' -ne 'feat/budil-gpt-phase1-fixture-20261105') { throw 'unexpected_branch' }
+          node --version
+      - name: Check isolated JS syntax
+        shell: pwsh
+        run: |
+          node --check experiments/budil-gpt-phase1/fixture-core.js
+          node --check experiments/budil-gpt-phase1/fixture-ui.js
+          node --check js/budil-cloud.js
+          node --check scripts/verify-budil-gpt-phase1-fixture.mjs
+      - name: Run 22 fictional-data regression tests
+        shell: pwsh
+        run: node scripts/verify-budil-gpt-phase1-fixture.mjs
+      - name: Verify additive-only index UI and original business modules
+        shell: pwsh
+        run: node scripts/verify-budil-gpt-main-integration.mjs
+      - name: Verify local business command parser and offline quote
+        shell: pwsh
+        run: |
+          node scripts/verify-budil-gpt-local-commands.mjs
+          node scripts/verify-budil-gpt-local-quote.mjs
+      - name: Assert no production entrypoint or business calculations touched
+        shell: pwsh
+        run: |
+          $changed = (git diff --name-only bf6d132a47aff26b3f38c5ef68f269b362c7f6ed HEAD) -split "`n"
+          $blocked = @('js/app.js','js/storage.js','js/documents-brain.js','js/revenue-brain.js','js/payment-brain.js','js/work-order-brain.js')
+          foreach ($path in $changed) { if ($blocked -contains $path.Trim()) { throw "protected_file_changed:$path" } }
+          Write-Host 'protected production code unchanged'
+
+  fixture-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout isolated feature branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+          fetch-depth: 0
+      - name: Node 22 (fixture only)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run native Node syntax and unit tests
+        run: |
+          node --check experiments/budil-gpt-phase1/fixture-core.js
+          node --check experiments/budil-gpt-phase1/fixture-ui.js
+          node --check js/budil-cloud.js
+          node --check scripts/verify-budil-gpt-phase1-browser.mjs
+          node scripts/verify-budil-gpt-phase1-fixture.mjs
+          node --check experiments/budil-gpt-phase1/fixture-workflow.js
+          node scripts/verify-budil-gpt-fixture-workflow.mjs
+          node --check experiments/budil-gpt-phase1/trial-auth.js
+          node scripts/verify-budil-gpt-trial-auth.mjs
+          node --check js/budil-gpt-readonly.js
+          node scripts/verify-budil-gpt-readonly.mjs
+          node --check js/budil-gpt-local-source.js
+          node scripts/verify-budil-gpt-local-source.mjs
+          node scripts/verify-budil-gpt-local-commands.mjs
+          node --check js/budil-gpt-offline-ui.js
+          node scripts/verify-budil-gpt-main-integration.mjs
+          node --check js/budil-gpt-anonymize.js
+          node scripts/verify-budil-gpt-anonymize.mjs
+          node scripts/verify-budil-gpt-local-quote.mjs
+          node scripts/verify-budil-gpt-anonymized-client.mjs
+          node scripts/verify-v41314-document-print-pdf-export.mjs
+          node scripts/verify-v41315-pdf-origin-alignment.mjs
+      - name: Install CJK font and PDF inspection tools (CI only)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk poppler-utils
+
+      - name: Browser availability
+        run: |
+          which google-chrome || which google-chrome-stable || which chromium
+      - name: Real browser 390px and PDF E2E with fictional data
+        env:
+          BUDIL_TEST_OUTPUT_DIR: ${{ runner.temp }}/budil-gpt-qa
+        run: node scripts/verify-budil-gpt-phase1-browser.mjs
+      - name: Upload fictional fixture proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: budil-gpt-fixture-browser-proof
+          path: |
+            ${{ runner.temp }}/budil-gpt-qa/mobile-390.png
+            ${{ runner.temp }}/budil-gpt-qa/estimate-preview.png
+            ${{ runner.temp }}/budil-gpt-qa/invoice-preview.png
+            ${{ runner.temp }}/budil-gpt-qa/workflow-mobile-390.png
+            ${{ runner.temp }}/budil-gpt-qa/anonymized-mobile-390.png
+            ${{ runner.temp }}/budil-gpt-qa/budil-live-panel-390.png
+            ${{ runner.temp }}/budil-gpt-qa/downloads/*.pdf
+          if-no-files-found: ignore
+          retention-days: 3

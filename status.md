@@ -1,4 +1,48 @@
-﻿# Budil status
+## 2026-11-05 夜・GPT向けローカル業務検索入口追加（本番未接続）
+
+- 新規 `js/budil-gpt-readonly.js`：`customer.search`, `document.search`, `work.search`, `receivables.summary` の4操作だけを許可。既存 `CustomerResolveEntrypoint` と `PaymentBrain.summarizeReceivables` に計算・本人確認の判断を委ねる。
+- すべてローカル読取専用、明示同意 `consent===true` がなければgetLeads等も呼ばない。依存するデータ関数は外部から注入するだけで、業務localStorageを勝手に読まない。
+- ローカルUI向けビューには必要最小限の顧客候補・帳票番号・予定日だけを返し、GPT向け `modelReceipt` は件数、状態、可否フラグだけ。顧客名・連絡先・住所・明細・未入金金額はGPT向けレシートに含めない。
+- 顧客名は完全一致のみ・1件でも本人選択、複数候補で自動確定なし。帳票件数が上限を超えたとき部分結果を表示しない。未入金は既存PaymentBrainを使用し、入金済みへの書込みなし。
+- `scripts/verify-budil-gpt-readonly.mjs` を追加。GitHub Actions `42008748780` Linux Node環境で **20/20 PASS**、同runの他の模擬E2EもPASS。
+- 本番UI・サーバー・本番顧客には未接続。実OpenAI API、実端末、保存・同期・Google Calendar登録・請求発行・銀行照合は引き続き未完。
+
+## 2026-11-05 夕方 Budil×GPT 認証接続の整合化（開発ブランチのみ）
+
+- 重要原因: Budilのlocalhostバックアップ認証設定に書かれた旧staging Supabaseは現在の接続プロジェクト一覧に存在せず、公開側のGPT Edge関数とは認証先が不一致。既存バックアップ設定を無断変更しない。
+- `experiments/budil-gpt-phase1/trial-auth.js`にlocalhost:8765・`budil-gpt-phase1-demo.html`限定の試験認証を追加。BC既存Supabaseを利用し、公開版Budil/バックアップセッションとキー空間を完全分離。
+- `js/budil-cloud.js::interpretFixture`は当該デモだけ専用試験認証を利用する。ブラウザ側で架空顧客の定型文法に完全一致しない入力を外部転送前に拒否。
+- `scripts/verify-budil-gpt-trial-auth.mjs`: ネットワークを完全モックにした12/12 PASS。見積24/24・予約〜請求28/28もPASS。Chromium 390pxの見積/請求A4実PDF E2EとGPTボタンの模擬応答／誤金額拒否もPASS（GitHub run 42002281000）。
+- 別リポジトリ `ai-bantou-app`のGPT Edgeにlocalhost:8765 CORS許可を追加。Deno実体の型チェックをCIへ追加して露出した18件の型エラーを修正し、`deno check` PASS（run 42002698340）。20/20指示検証・22/22認証/テナント/レート制限模擬テストPASS。
+- 未実施: 実OpenAI APIキー/課金設定、実GPT通信、Edgeデプロイ、本番顧客/Calendar/銀行API接続、iOS/Android実機、正式Windows verify-current。これらをテストPASSと混同しない。
+
+## 2026-11-05 Budil×GPT Phase1-3 架空会話ワークフロー拡張
+
+- 見積承認後、架空カレンダー空き確認→本人予約承認→架空作業完了→既存Budil請求変換→請求PDF→PaymentBrain未入金→架空銀行金額照合候補を追加。実Google・銀行・顧客・localStorageへの書込なし。
+- 下流の日本語音声入力は現在、限定ルールのmock。絶対日付・時刻を明示しない予約は拒否。`作業完了にして`、`請求書を作って`、`未入金を教えて`を安全な状態遷移に分解し、更新前の本人承認を維持。
+- ブランチでのNode回帰：見積24件・予約〜入金28件を追加。Linux Chromium E2E `41997499331`で見積→架空予約→作業→請求→入金確認を会話入力でPASS、PDFは見積A4 1ページ184476bytes・請求A4 1ページ225896bytes。
+- ブラウザからサーバーへは架空の定型指示以外送らないようガード強化。サーバー側も完全一致文法で外部GPT転送を制限。実GPT API未接続・未公開。
+- 続きは正式Windowsテスト、本物のGPT認証接続、スマホ実機操作、実業務データ連携。main未変更。完成宣言禁止。
+
+## 2026-11-05 Budil×GPT Phase1 実ブラウザ・PDF 検品結果（開発専用）
+
+- Linux GitHub ActionsでNode 22構文検証と隔離回帰 **22/22 PASS**、Chromium CDPでスマホ幅390px横スクロールなし・架空顧客選択→税込18,000円→20,000円修正→承認→PDF保存までE2E PASS。
+- 出力PDF実測 **A4・1ページ・184,476バイト**、日本語Noto CJK表示・明細・合計・デモ注記を画像で検品済み。以前のUbuntu試験で見つかった日本語文字化けと空白2ページ目を、CI日本語フォント追加とfixture限定PDF高さの変更で修正。
+- GitHub Actions job `fixture-linux`: run `41994258861` PASS。Windows self-hosted `bc-bantou-dev` jobはqueuedのため未検証。
+- GPTサーバーのsourceは`teruya1229/ai-bantou-app`別PR #5に作成。認証・所属・レート制限・固定JSONスキーマ・架空データ制限を実装。**未デプロイ・未課金・未認証実通信**。
+- 既存Budil本番main、料金、税計算、帳票デザイン、customer/Calendar/Revenueは未変更。PDF出力は通常経路1123pxのまま、fixture限定指定時だけ1110px。
+- 本番・iPhone/Android実機・GPT実通信・予約/売上/請求/入金の一括会話処理は未完成。フル`verify-current.mjs`は正式Windows環境待ち。
+
+## Budil×GPT Phase 1 架空データ専用プロトタイプ（開発ブランチのみ・2026-11-05）
+
+- ブランチ: `feat/budil-gpt-phase1-fixture-20261105`。`main`・本番GitHub Pagesは未変更。
+- 既存`CustomerResolveEntrypoint` / `DocumentsBrain` / `BudilDocExport`の再利用を優先し、孤立した検証用ページ`budil-gpt-phase1-demo.html`とfixture core/UI、16項目テストを追加。
+- 文字またはブラウザ音声認識で指示→架空顧客候補の本人選択→見積下書き→修正→承認→PDF関数呼出までの**コード経路**を実装。会話理解はMOCKでありGPTサーバー未接続。
+- 実GitHubソースに対する隔離JS実行（Node互換shim）で16/16 PASS。正式Windows Nodeテスト・ブラウザ実PDF保存・iPhone/Android実機確認は未実施、完成判定しない。
+- `localStorage`/顧客データ/請求/カレンダーの本番操作なし。既存帳票デザイン・料金・計算ロジック不変。
+- 設計と検証範囲の詳細は`experiments/budil-gpt-phase1/README.md`。
+
+# Budil status
 
 ## v4.13.20 Googleカレンダー1ボタン連携を Chrome 152 Local Network Access に対応
 
