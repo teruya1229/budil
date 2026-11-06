@@ -43,6 +43,7 @@
     $('budil-gpt-input').value='';$('budil-gpt-revision').value='';
     $('budil-gpt-consent').checked=false;
     $('budil-gpt-voice-consent').checked=false;
+    $('budil-gpt-remote-consent').checked=false;
   }
   function open(){
     focusedBefore=document.activeElement;
@@ -52,7 +53,7 @@
   }
   function close(){
     if(voice){try{voice.abort();}catch(_){/* browser voice */}voice=null;}
-    readinessSeq++;resetVisible();shell.hidden=true;
+    readinessSeq++;interpretSeq++;resetVisible();shell.hidden=true;
     if(focusedBefore&&typeof focusedBefore.focus==='function')focusedBefore.focus();
   }
   function node(tag,text,cls){
@@ -309,7 +310,59 @@
     }
   }
 
+
+  let interpretBusy=false,interpretSeq=0;
+  async function interpretQuoteWithGpt(){
+    if(interpretBusy)return;
+    if(!Core||!Anon||!Resolver||!Docs||!Data)
+      return status('見積機能が利用できません。',true);
+    if(session && session.stage!=='idle')
+      return status('進行中の見積を保持しています。別の見積はクリアしてから実行してください。',true);
+    if($('budil-gpt-consent').checked!==true ||
+       $('budil-gpt-remote-consent').checked!==true)
+      return status('端末データの読取と匿名化データの外部送信の両方にチェックが必要です。',true);
+    const raw=$('budil-gpt-input').value;
+    const prepared=Anon.prepare(raw);
+    if(!prepared.ok || !Anon.acceptsWire(prepared.wire))
+      return status('このGPT試験は顧客名・作業・台数・税込/税抜・合計金額を明示したエアコン見積のみ対応です。',true);
+    const cloud=window.BudilCloud;
+    if(!cloud || typeof cloud.interpretAnonymizedQuote!=='function')
+      return status('GPT接続機能が利用できません。',true);
+    const seq=++interpretSeq;
+    interpretBusy=true;
+    const button=$('budil-gpt-interpret');button.disabled=true;
+    $('budil-gpt-consent').checked=false;
+    $('budil-gpt-remote-consent').checked=false;
+    status('顧客名を除いた見積指示をGPTで解析しています。');
+    try {
+      const answer=await cloud.interpretAnonymizedQuote(raw);
+      if(seq!==interpretSeq || shell.hidden)return;
+      if(!answer || answer.ok!==true || answer.verified!==true ||
+         answer.phase!=='interpret_only')
+        return status('GPT解析は完了できませんでした（'+(answer&&answer.code||'unavailable')+'）。端末の見積は変更していません。',true);
+      // Read local records only after explicit prior consent, and only after
+      // the server result has passed the original local-instruction check.
+      const localLeads=Data.getLeads();
+      quoteDeps={documentsBrain:Docs,customerResolver:Resolver,anonymizer:Anon,
+        localAccessConsent:true,localLeads};
+      const started=Core.startAnonymized(session,raw,answer.intent,quoteDeps);
+      if(!started.ok){
+        quoteDeps=null;
+        return status(started.message||started.code,true);
+      }
+      resultBox.replaceChildren();
+      quoteCandidates(started);
+      status('GPTの解析結果を端末で再確認しました。顧客候補を選択してください。見積は未保存です。');
+    }catch(_){
+      if(seq===interpretSeq && !shell.hidden)
+        status('GPT解析または端末データ読取に失敗しました。見積は保存していません。',true);
+    }finally{
+      interpretBusy=false;button.disabled=false;
+    }
+  }
+
   openButton.addEventListener('click',open);
+  $('budil-gpt-interpret').addEventListener('click',interpretQuoteWithGpt);
   $('budil-gpt-readiness').addEventListener('click',checkGptReadiness);
   $('budil-gpt-close').addEventListener('click',close);
   $('budil-gpt-backdrop').addEventListener('click',close);
