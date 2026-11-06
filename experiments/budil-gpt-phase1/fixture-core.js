@@ -157,6 +157,41 @@
   }
   // Boundary for a future authenticated server-side GPT interpreter.
   // GPT describes fields; Budil still resolves customer, calculates and requires approval.
+  /**
+   * Offline first: validate the exact instruction on-device and create an
+   * unsaved quote draft using Budil's existing price/tax engine. This NEVER
+   * sends a GPT request or accesses Storage without explicit consent.
+   * Normal GPT operation can use startAnonymized separately.
+   */
+  function startLocalParsed(session, instruction, deps) {
+    if (!session || session.stage !== 'idle') {
+      return fail('SESSION_NOT_IDLE', '進行中の操作をリセットしてください。');
+    }
+    if (!deps || deps.localAccessConsent !== true ||
+        !Array.isArray(deps.localLeads)) {
+      return fail('LOCAL_CONSENT_REQUIRED', '端末内の顧客を検索する前に本人の許可が必要です。');
+    }
+    const tool = deps.anonymizer ||
+      (typeof BudilGptAnonymize !== 'undefined' ? BudilGptAnonymize : null);
+    if (!tool || typeof tool.prepare !== 'function') {
+      return fail('ANONYMIZER_REQUIRED', 'ローカルの指示解析モジュールが必要です。');
+    }
+    const parsed = tool.prepare(instruction);
+    if (!parsed.ok) {
+      return fail('LOCAL_INSTRUCTION_INVALID', '作業・台数・税込/税抜・総額を明示してください。');
+    }
+    const local = parsed.local;
+    session.kind = 'local';
+    session.intent = {
+      customerName: local.customerName,
+      service: local.serviceName,
+      quantity: local.quantity,
+      amount: local.totalYen,
+      taxMode: local.taxMode === 'included' ? 'taxIncluded' : 'taxExcluded'
+    };
+    return resolveName(session, deps);
+  }
+
   function startAnonymized(session, instruction, output, deps) {
     if (!session || session.stage !== 'idle') {
       return fail('SESSION_NOT_IDLE', '先に進行中の下書きを完了するかリセットしてください。');
@@ -367,7 +402,7 @@
 
   const api = Object.freeze({
     fixtureCustomers: () => FIXTURE_CUSTOMERS.map((c) => Object.assign({}, c)),
-    parseInitial, parseCorrection, createSession, start, startAnonymized, startStructured, reviseStructured, answerTaxMode, answerName,
+    parseInitial, parseCorrection, createSession, start, startLocalParsed, startAnonymized, startStructured, reviseStructured, answerTaxMode, answerName,
     selectCustomer, revise, approve, getApprovedForPdf
   });
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
