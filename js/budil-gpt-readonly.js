@@ -9,7 +9,7 @@
 const BudilGptReadOnly = (() => {
   'use strict';
   const ACTIONS = Object.freeze([
-    'customer.search', 'document.search', 'work.search', 'receivables.summary'
+    'customer.search', 'document.search', 'document.period', 'work.search', 'receivables.summary'
   ]);
   const MAX_RESULTS = 10;
   const BAD_INPUT = 'INVALID_INPUT';
@@ -52,6 +52,14 @@ const BudilGptReadOnly = (() => {
     if (action === 'receivables.summary') {
       if(!exactKeys(request,['action','date']) || !validDate(request.date)) return null;
       return {action,date:request.date};
+    }
+    if (action === 'document.period') {
+      if(!exactKeys(request,['action','month','docType','limit']) ||
+         typeof request.month !== 'string' ||
+         !/^(?:19|20)\d{2}-(?:0[1-9]|1[0-2])$/.test(request.month) ||
+         (request.docType !== 'estimate' && request.docType !== 'invoice'))
+        return null;
+      return {action,month:request.month,docType:request.docType,limit};
     }
     if(!exactKeys(request,['action','query','limit'])) return null;
     const query = str(request.query, 120);
@@ -104,6 +112,27 @@ const BudilGptReadOnly = (() => {
     return ok(request.action,{count:matching.length,tooMany,documents:view},
       receipt(request.action,matching.length?'matched':'not_found',matching.length,tooMany));
   };
+  const documentPeriod = (request,deps) => {
+    const docs=toArray(deps,'getDocuments');
+    if(!docs)return fail('DEPENDENCY_MISSING');
+    const typed=docs.filter(doc=>object(doc)&&doc.type===request.docType);
+    const undatedCount=typed.filter(doc=>!validDate(doc.issueDate)).length;
+    const matches=typed.filter(doc=>validDate(doc.issueDate)&&
+      doc.issueDate.slice(0,7)===request.month);
+    const tooMany=matches.length>request.limit;
+    const view=matches.slice(0,request.limit).map(doc=>({
+      documentId:String(doc.id||''),
+      type:request.docType,number:String(doc.number||''),
+      customerName:String(doc.customerName||''),
+      total:Number.isSafeInteger(doc.total)&&doc.total>=0?doc.total:null,
+      issueDate:doc.issueDate,
+      status:String(doc.status||'')
+    }));
+    return ok(request.action,{
+      count:matches.length,tooMany,documents:view,
+      month:request.month,documentType:request.docType,undatedCount
+    },receipt(request.action,matches.length?'matched':'not_found',matches.length,tooMany));
+  };
   const work = (request,deps) => {
     const orders=toArray(deps,'getWorkOrders');
     if(!orders)return fail('DEPENDENCY_MISSING');
@@ -148,6 +177,7 @@ const BudilGptReadOnly = (() => {
     try {
       if(normalized.action==='customer.search')return customer(normalized,deps);
       if(normalized.action==='document.search')return document(normalized,deps);
+      if(normalized.action==='document.period')return documentPeriod(normalized,deps);
       if(normalized.action==='work.search')return work(normalized,deps);
       if(normalized.action==='receivables.summary')return receivables(normalized,deps);
     } catch(_) { return fail('READ_UNAVAILABLE'); }
