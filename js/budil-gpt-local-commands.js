@@ -34,10 +34,11 @@ const BudilGptLocalCommands = (() => {
     // Customer creation is never automatic. This is a preview-only intent;
     // the UI performs exact-name duplicate rechecks and a separate approve.
     const newCustomer=text.match(/^([一-龯々ぁ-んァ-ヶA-Za-z・ー]{3,32})(?:さん|様)を新規顧客として登録して$/u);
-    if(newCustomer && !/(?:秘密|メモ|個人情報|削除|変更)/.test(newCustomer[1])){
+    const newName=newCustomer ? newCustomer[1].replace(/(さん|様)$/,'') : '';
+    if(newCustomer && newName.length>=3 && !/(?:秘密|メモ|個人情報|削除|変更)/.test(newName)){
       return Object.freeze({
         ok:true,action:'customer.create.preview',
-        request:{name:newCustomer[1]},readOnly:false,persisted:false,
+        request:{name:newName},readOnly:false,persisted:false,
         requiresUserConfirmation:true,networkUsed:false
       });
     }
