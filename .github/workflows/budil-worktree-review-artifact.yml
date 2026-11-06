@@ -1,0 +1,50 @@
+name: Budil isolated worktree review artifact
+on:
+  push:
+    branches:
+      - ops/budil-worktree-review-artifact-20261106
+permissions:
+  contents: read
+jobs:
+  collect-reviewed-local-code:
+    if: github.repository == 'teruya1229/budil'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 12
+    steps:
+      - name: Read isolated committed code only (no secret or customer data)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = 'C:\dev\budil\.codex-worktrees\booking-20261106'
+          $expected = 'bd7ca28dfcc50224d5661551f05b55954aff7b62'
+          $baseline = 'b7123b3e883568de1fef0729ee9558afc0cdc21b'
+          if (!(Test-Path -LiteralPath $root)) { throw 'isolated_worktree_missing' }
+          $head = ((& git -C $root rev-parse HEAD) | Out-String).Trim()
+          $branchName = ((& git -C $root branch --show-current) | Out-String).Trim()
+          if ($head -ne $expected) { throw 'worktree_head_changed' }
+          if ($branchName -ne 'feat/local-booking-lifecycle-20261106') { throw 'worktree_branch_mismatch' }
+          $dirty = @( & git -C $root status --porcelain )
+          if ($dirty.Count -gt 0) { throw 'isolated_worktree_not_clean' }
+          $files = @( & git -C $root diff --diff-filter=ACMR --name-only $baseline $expected )
+          if ($LASTEXITCODE -ne 0 -or $files.Count -lt 4 -or $files.Count -gt 60) { throw 'unexpected_change_list' }
+          $allowed = '^(index\.html|js/[^/]+\.js|scripts/(verify-[^/]+|audit-budil-original-19)\.mjs|docs/budil-local-[^/]+\.md|\.github/workflows/budil-conversation-20\.yml|experiments/budil-gpt-phase1/fixture-core\.js)$'
+          foreach ($file in $files) {
+            if ($file -notmatch $allowed) { throw 'unexpected_source_file_path' }
+            if ($file -match '(?i)secret|credential|token|password|\.env') { throw 'sensitive_source_file_name' }
+          }
+          $zip = Join-Path $env:RUNNER_TEMP 'budil-verified-isolated-code.zip'
+          $manifest = Join-Path $env:RUNNER_TEMP 'budil-verified-isolated-manifest.txt'
+          & git -C $root archive --format=zip "--output=$zip" $expected -- $files
+          if ($LASTEXITCODE -ne 0 -or !(Test-Path $zip)) { throw 'archive_failed' }
+          @('branch=' + $branchName,'head=' + $head,'baseline=' + $baseline,'files=' + $files.Count) + $files |
+            Set-Content -Path $manifest -Encoding utf8
+          Write-Output ('BUDIL_ISOLATED_ARTIFACT_CREATED files=' + $files.Count)
+      - name: Save only reviewed committed source and manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: budil-isolated-source-review-20261106
+          path: |
+            ${{ runner.temp }}/budil-verified-isolated-code.zip
+            ${{ runner.temp }}/budil-verified-isolated-manifest.txt
+          retention-days: 3
+          if-no-files-found: error
