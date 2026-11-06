@@ -437,6 +437,47 @@
 
 
   /**
+   * Explicit authenticated download of the latest immutable snapshot.
+   * This NEVER restores or writes local data; caller must validate the
+   * content hash and seek a separate human approval before import.
+   */
+  function fetchLatestPayload() {
+    if (!isAvailable()) return Promise.resolve({ ok:false, code:CODE.DISABLED });
+    var cfg = getConfig();
+    return getValidAccessToken().then(function(tokenResult) {
+      if(!tokenResult.ok || !tokenResult.accessToken)
+        return {ok:false,code:CODE.NOT_SIGNED_IN};
+      return doFetch(cfg.url+'/functions/v1/budil-backups/latest/payload',{
+        method:'GET',
+        headers:{Authorization:'Bearer '+tokenResult.accessToken,
+          apikey:cfg.publishableKey},
+        timeoutMs:25000
+      }).then(function(result){
+        if(result.timeout)return {ok:false,code:CODE.TIMEOUT};
+        if(result.networkError)return {ok:false,code:CODE.NETWORK};
+        if(result.status===401)return {ok:false,code:CODE.UNAUTHORIZED};
+        if(result.status!==200 || !result.body || result.body.ok!==true)
+          return {ok:false,code:result.body && result.body.code || CODE.UNKNOWN};
+        const latest=result.body.latest;
+        if(latest===null)return {ok:true,latest:null};
+        if(!latest || typeof latest!=='object' || Array.isArray(latest) ||
+           typeof latest.snapshotId!=='string' ||
+           !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/.test(latest.snapshotId) ||
+           typeof latest.contentHash!=='string' ||
+           !/^[0-9a-f]{64}$/.test(latest.contentHash) ||
+           !latest.payload || typeof latest.payload!=='object' ||
+           Array.isArray(latest.payload))
+          return {ok:false,code:'invalid_snapshot_response'};
+        return {ok:true,latest:{
+          snapshotId:latest.snapshotId,createdAt:String(latest.createdAt||''),
+          appVersion:String(latest.appVersion||''),
+          contentHash:latest.contentHash,payload:latest.payload
+        }};
+      });
+    });
+  }
+
+  /**
    * Budil GPT readiness: authenticated GET only, never billable, no customer
    * data, API key values or storage contents. Shares the existing backup
    * login without exposing its access token to other frontend modules.
@@ -551,6 +592,7 @@
     logout: logout,
     backupNow: backupNow,
     fetchLatest: fetchLatest,
+    fetchLatestPayload: fetchLatestPayload,
     getGptReadiness: getGptReadiness,
     interpretAnonymizedQuote: interpretAnonymizedQuote,
     isBackupInFlight: isBackupInFlight
