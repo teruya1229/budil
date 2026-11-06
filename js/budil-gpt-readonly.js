@@ -9,7 +9,7 @@
 const BudilGptReadOnly = (() => {
   'use strict';
   const ACTIONS = Object.freeze([
-    'customer.search', 'document.search', 'document.period', 'work.search', 'receivables.summary'
+    'customer.search', 'document.search', 'document.period', 'work.search', 'receivables.summary', 'profit.summary'
   ]);
   const MAX_RESULTS = 10;
   const BAD_INPUT = 'INVALID_INPUT';
@@ -49,7 +49,7 @@ const BudilGptReadOnly = (() => {
     if (!ACTIONS.includes(action)) return null;
     const limit = request.limit == null ? MAX_RESULTS : request.limit;
     if (!Number.isInteger(limit) || limit < 1 || limit > MAX_RESULTS) return null;
-    if (action === 'receivables.summary') {
+    if (action === 'receivables.summary' || action === 'profit.summary') {
       if(!exactKeys(request,['action','date']) || !validDate(request.date)) return null;
       return {action,date:request.date};
     }
@@ -71,6 +71,33 @@ const BudilGptReadOnly = (() => {
     const leads=toArray(deps,'getLeads');
     if(!leads) return fail('DEPENDENCY_MISSING');
     const result=deps.customerResolver.resolve({name:request.query,limit:request.limit},{leads});
+    // Surname-only searches are read-only, bounded candidate suggestions,
+    // never identity matches. The canonical exact-ID resolver is unchanged.
+    // Only 2-4 Japanese characters qualify; no arbitrary substring matching.
+    if(result.status==='not_found' &&
+       /^[一-龯々ぁ-んァ-ヶ]{2,4}$/u.test(request.query) &&
+       typeof deps.customerResolver.normalizeName==='function' &&
+       typeof deps.customerResolver.leadDisplayName==='function' &&
+       typeof deps.customerResolver.toCandidate==='function') {
+      const queryName=deps.customerResolver.normalizeName(request.query);
+      const suggestions=leads.filter(lead=>{
+        const name=deps.customerResolver.normalizeName(deps.customerResolver.leadDisplayName(lead));
+        return name.length>queryName.length && name.startsWith(queryName);
+      });
+      const tooMany=suggestions.length>request.limit;
+      const candidates=tooMany?[]:suggestions.map(lead=>({
+        ...deps.customerResolver.toCandidate(lead,'surname_suggestion'),
+        requiresUserConfirmation:true
+      }));
+      if(suggestions.length){
+        return ok(request.action,{
+          status:tooMany?'too_many':'surname_suggestions',
+          candidateCount:suggestions.length,candidates,
+          selectedCustomerId:null,requiresUserConfirmation:true
+        },receipt(request.action,tooMany?'too_many':'surname_suggestions',
+          suggestions.length,tooMany));
+      }
+    }
     const count=Number(result.candidateCount)||0;
     // Reuse the original Budil identity resolver. Do not "auto-confirm"
     // a single candidate matched by name.
@@ -133,6 +160,32 @@ const BudilGptReadOnly = (() => {
       month:request.month,documentType:request.docType,undatedCount
     },receipt(request.action,matches.length?'matched':'not_found',matches.length,tooMany));
   };
+  const profit = (request,deps) => {
+    if(!deps || !deps.profitBrain ||
+       typeof deps.profitBrain.getPeriodProfitSummary!=='function')return fail('DEPENDENCY_MISSING');
+    const revenues=toArray(deps,'getRevenueRecords');
+    const expenses=toArray(deps,'getExpenseRecords');
+    const workOrders=toArray(deps,'getWorkOrders');
+    if(!revenues||!expenses||!workOrders)return fail('DEPENDENCY_MISSING');
+    const summary=deps.profitBrain.getPeriodProfitSummary({
+      today:request.date,monthKey:request.date.slice(0,7),
+      revenues,expenses,workOrders
+    });
+    if(!object(summary))return fail('READ_UNAVAILABLE');
+    const required=['monthRevenue','monthExpense','monthGrossProfit',
+      'confirmedRevenue','confirmedProfit','plannedForecastProfit'];
+    if(!required.every(k=>Number.isFinite(summary[k])))return fail('READ_UNAVAILABLE');
+    return ok(request.action,{
+      month:request.date.slice(0,7),
+      monthRevenue:summary.monthRevenue,
+      monthExpense:summary.monthExpense,
+      monthGrossProfit:summary.monthGrossProfit,
+      confirmedRevenue:summary.confirmedRevenue,
+      confirmedProfit:summary.confirmedProfit,
+      plannedForecastProfit:summary.plannedForecastProfit,
+      approximation:true,noBankReconciliation:true
+    },receipt(request.action,'estimated',1));
+  };
   const work = (request,deps) => {
     const orders=toArray(deps,'getWorkOrders');
     if(!orders)return fail('DEPENDENCY_MISSING');
@@ -180,6 +233,7 @@ const BudilGptReadOnly = (() => {
       if(normalized.action==='document.period')return documentPeriod(normalized,deps);
       if(normalized.action==='work.search')return work(normalized,deps);
       if(normalized.action==='receivables.summary')return receivables(normalized,deps);
+      if(normalized.action==='profit.summary')return profit(normalized,deps);
     } catch(_) { return fail('READ_UNAVAILABLE'); }
     return fail('ACTION_NOT_ALLOWED');
   }

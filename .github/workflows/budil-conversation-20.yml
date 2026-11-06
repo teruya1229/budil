@@ -1,0 +1,39 @@
+name: Budil 20 natural Japanese scenarios
+on:
+  push:
+    branches:
+      - feat/budil-conversation-acceptance-20261106
+  pull_request:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  twenty-scenarios:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Japanese commands and protected business modules
+        run: |
+          node --check js/budil-gpt-local-commands.js
+          node --check js/budil-gpt-conversation.js
+          node --check js/budil-gpt-offline-ui.js
+          node scripts/verify-budil-gpt-multi-turn.mjs
+          node --check js/budil-gpt-readonly.js
+          node scripts/verify-budil-gpt-conversation-20.mjs
+          node scripts/audit-budil-original-19.mjs
+          node scripts/verify-budil-gpt-local-commands.mjs
+          node scripts/verify-budil-ai-p0-contract.mjs
+          node scripts/verify-budil-gpt-anonymize.mjs
+          node scripts/verify-budil-gpt-local-source.mjs
+          node scripts/verify-budil-gpt-readonly.mjs
+          node scripts/verify-v41314-document-print-pdf-export.mjs
+          node scripts/verify-v41315-pdf-origin-alignment.mjs

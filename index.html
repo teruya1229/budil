@@ -4117,6 +4117,13 @@
       <p id="budil-gpt-status" class="budil-gpt-status" role="status" aria-live="polite"></p>
       <p id="budil-gpt-readiness-status" class="budil-gpt-status" role="status" aria-live="polite"></p>
       <div id="budil-gpt-result" class="budil-gpt-result" aria-live="polite"></div>
+      <div id="budil-gpt-customer-create" hidden>
+        <hr class="budil-gpt-divider">
+        <h3>新規顧客の登録前確認</h3>
+        <div id="budil-gpt-customer-create-preview"></div>
+        <p class="budil-gpt-disclaimer">登録するのは氏名のみです。電話・住所は後から顧客管理で追加してください。すでに同名の顧客がいる場合は登録しません。</p>
+        <button type="button" id="budil-gpt-customer-create-confirm" class="budil-gpt-btn">この顧客を登録する（端末に保存）</button>
+      </div>
       <div id="budil-gpt-candidates" hidden>
         <hr class="budil-gpt-divider">
         <h3>顧客候補を本人が選択</h3>
@@ -4139,7 +4146,7 @@
         <div id="budil-gpt-approved-preview"></div>
         <button type="button" id="budil-gpt-pdf" class="budil-gpt-btn">見積PDFを端末に保存</button>
       </div>
-      <p class="budil-gpt-disclaimer">この先行版は売上・顧客・予定を登録・変更しません。Googleカレンダーの空き確認や銀行照合も未実施です。PDFは本人承認後のみ出力します。</p>
+      <p class="budil-gpt-disclaimer">この先行版は本人承認時の氏名のみの顧客追加を除き、売上・顧客・予定を登録・変更しません。Googleカレンダーの空き確認や銀行照合も未実施です。PDFは本人承認後のみ出力します。</p>
     </section>
   </div>
 
@@ -4177,7 +4184,8 @@
   <script src="js/budil-gpt-local-source.js?v=20261106a"></script>
   <script src="js/budil-gpt-anonymize.js?v=20261106a"></script>
   <script src="js/budil-gpt-local-commands.js?v=20261106a"></script>
+  <script src="js/budil-gpt-conversation.js?v=20261106d"></script>
   <script src="experiments/budil-gpt-phase1/fixture-core.js?v=20261106a"></script>
-  <script src="js/budil-gpt-offline-ui.js?v=20261106c"></script>
+  <script src="js/budil-gpt-offline-ui.js?v=20261106e"></script>
 </body>
 </html>

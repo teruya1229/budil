@@ -12,6 +12,7 @@
   // Classic non-module Budil scripts expose lexical const bindings, not
   // necessarily window props. Test them directly, no eval/network access.
   const Commands=typeof BudilGptLocalCommands!=='undefined'?BudilGptLocalCommands:null;
+  const Conversation=typeof BudilGptConversation!=='undefined'?BudilGptConversation:null;
   const Source=typeof BudilGptLocalSource!=='undefined'?BudilGptLocalSource:null;
   const ReadOnly=typeof BudilGptReadOnly!=='undefined'?BudilGptReadOnly:null;
   const Anon=typeof BudilGptAnonymize!=='undefined'?BudilGptAnonymize:null;
@@ -19,9 +20,12 @@
   const Resolver=typeof CustomerResolveEntrypoint!=='undefined'?CustomerResolveEntrypoint:null;
   const Docs=typeof DocumentsBrain!=='undefined'?DocumentsBrain:null;
   const Payment=typeof PaymentBrain!=='undefined'?PaymentBrain:null;
+  const Profit=typeof ProfitBrain!=='undefined'?ProfitBrain:null;
   const Data=typeof Storage!=='undefined'?Storage:null;
   let session=Core?Core.createSession():null;
   let quoteDeps=null,focusedBefore=null,voice=null,exporting=false,pdfDone=false;
+  let pendingQuoteFields=null;
+  let pendingNewCustomer=null;
   const resultBox=$('budil-gpt-result'),statusBox=$('budil-gpt-status');
   function hide(id,yes){$(id).hidden=!!yes;}
   function status(message,error=false){
@@ -29,6 +33,9 @@
     statusBox.classList.toggle('budil-gpt-error',!!error);
   }
   function resetQuote(){
+    pendingQuoteFields=null;pendingNewCustomer=null;
+    hide('budil-gpt-customer-create',true);
+    $('budil-gpt-customer-create-preview').replaceChildren();
     if(Core)session=Core.createSession();
     quoteDeps=null;pdfDone=false;exporting=false;
     $('budil-gpt-pdf').disabled=false;
@@ -135,6 +142,16 @@
         ['カレンダー','Googleへの登録・変更なし']]);
       return status('作業予定の表示のみです。Googleの空き状況とは照合していません。');
     }
+    if(parsed.action==='profit.summary'){
+      title('今月の利益（Budil端末内・概算）');
+      item([['対象月',view.month],['当月の売上集計',yen(view.monthRevenue)],
+        ['当月の経費集計',yen(view.monthExpense)],
+        ['概算利益',yen(view.monthGrossProfit)],
+        ['確定売上',yen(view.confirmedRevenue)],
+        ['確定利益（紐付け済み経費反映）',yen(view.confirmedProfit)],
+        ['作業予定の利益見込み',yen(view.plannedForecastProfit)]]);
+      return status('既存ProfitBrainの計算結果です。月次実績・売上明細の差や未登録経費で変動します。確定申告用利益ではありません。');
+    }
     if(parsed.action==='receivables.summary'){
       const monthly=parsed.scope==='this_month_expected';
       title(monthly?'今月入金予定の未入金':'Budil端末内の未入金集計');
@@ -192,9 +209,86 @@
     if(session && session.stage!=='idle'){
       return status('進行中の見積を保持しています。顧客候補を選択するか、クリアして新しい指示を入力してください。',true);
     }
+    // A multi-turn input only gathers explicit missing fields. No access to
+    // Budil customer records occurs until user approval and a full quote.
+    if(pendingQuoteFields){
+      if(!Conversation)return status('見積の会話機能を利用できません。',true);
+      const follow=Conversation.reply(pendingQuoteFields,raw);
+      if(follow.cancelled){
+        pendingQuoteFields=null;status('見積の入力を中止しました。');return;
+      }
+      if(!follow.ok)return status('不足項目を確認してください（'+follow.code+'）。入力済みの項目は保持しています。',true);
+      if(follow.pending){
+        pendingQuoteFields=follow.fields;
+        status(follow.prompt);return;
+      }
+      if($('budil-gpt-consent').checked!==true)
+        return status('見積の顧客候補を探す前に、端末データの読取にチェックしてください。',true);
+      pendingQuoteFields=null;
+      const ready=follow.canonical;
+      const prepared=Anon.prepare(ready);
+      if(!prepared.ok)return status('見積の内容を確認できませんでした。',true);
+      try{
+        const localLeads=Data.getLeads();
+        quoteDeps={documentsBrain:Docs,customerResolver:Resolver,anonymizer:Anon,
+          localAccessConsent:true,localLeads};
+        const started=Core.startLocalParsed(session,ready,quoteDeps);
+        $('budil-gpt-consent').checked=false;
+        if(!started.ok){quoteDeps=null;return status(started.message||started.code,true);}
+        quoteCandidates(started);return;
+      }catch(_){
+        quoteDeps=null;return status('顧客候補を取得できません。',true);
+      }
+    }
     const parsed=Commands.parse(raw,{
       today:Commands.todayTokyo(),anonymizer:Anon
     });
+    if(!parsed.ok && Conversation){
+      const candidate=Conversation.start(raw);
+      if(candidate.ok){
+        if(candidate.pending){
+          pendingQuoteFields=candidate.fields;
+          status(candidate.prompt);
+          return;
+        }
+        const canonical=Anon.prepare(candidate.canonical);
+        if(canonical.ok){
+          if($('budil-gpt-consent').checked!==true)
+            return status('顧客候補を探す前に端末データの読取にチェックしてください。',true);
+          try{
+            const localLeads=Data.getLeads();
+            quoteDeps={documentsBrain:Docs,customerResolver:Resolver,anonymizer:Anon,
+              localAccessConsent:true,localLeads};
+            const started=Core.startLocalParsed(session,candidate.canonical,quoteDeps);
+            $('budil-gpt-consent').checked=false;
+            if(!started.ok){quoteDeps=null;return status(started.message||started.code,true);}
+            quoteCandidates(started);return;
+          }catch(_){quoteDeps=null;return status('顧客候補を取得できません。',true);}
+        }
+      }
+    }
+    if(parsed.ok && parsed.action==='customer.create.preview'){
+      if($('budil-gpt-consent').checked!==true)
+        return status('重複を確認するため、端末データの読取にチェックしてください。',true);
+      const fullName=parsed.request.name;
+      try{
+        const leads=Data.getLeads();
+        const duplicate=leads.some(c=>
+          Resolver.normalizeName(Resolver.leadDisplayName(c))===
+          Resolver.normalizeName(fullName));
+        $('budil-gpt-consent').checked=false;
+        if(duplicate)return status('同じ名前の顧客が登録済みです。誤登録防止のため追加しません。',true);
+        pendingNewCustomer=fullName;
+        const preview=$('budil-gpt-customer-create-preview');
+        preview.replaceChildren();
+        const box=node('div',undefined,'budil-gpt-item');
+        box.append(node('p','登録予定の氏名：'+fullName));
+        box.append(node('p','電話・住所は未入力。本人が登録を確定するまで保存しません。'));
+        preview.append(box);
+        hide('budil-gpt-customer-create',false);
+        return status('登録内容を確認してください。確定ボタンを押すまで保存しません。');
+      }catch(_){return status('顧客データの重複確認に失敗しました。',true);}
+    }
     if(!parsed.ok)return status('指示を確認してください（'+parsed.code+'）。元の下書きは変更していません。',true);
     if($('budil-gpt-consent').checked!==true)
       return status('端末内の顧客・帳票データを読む場合は、確認欄にチェックしてください。',true);
@@ -214,7 +308,7 @@
       return;
     }
     const gateway=Source.make({storage:Data,readonly:ReadOnly,
-      customerResolver:Resolver,paymentBrain:Payment});
+      customerResolver:Resolver,paymentBrain:Payment,profitBrain:Profit});
     const answer=gateway.query(parsed.request,true);
     queryResult(parsed,answer);
   }
@@ -366,7 +460,42 @@
   $('budil-gpt-readiness').addEventListener('click',checkGptReadiness);
   $('budil-gpt-close').addEventListener('click',close);
   $('budil-gpt-backdrop').addEventListener('click',close);
+
+  function confirmNewCustomer(){
+    const name=pendingNewCustomer;
+    if(!name||!Data||!Resolver||
+       typeof Data.addLead!=='function'||typeof Data.getLeads!=='function')
+      return status('承認待ちの顧客登録がありません。',true);
+    const btn=$('budil-gpt-customer-create-confirm');
+    btn.disabled=true;
+    try{
+      const leads=Data.getLeads();
+      if(leads.some(c=>Resolver.normalizeName(Resolver.leadDisplayName(c))===
+          Resolver.normalizeName(name))){
+        pendingNewCustomer=null;hide('budil-gpt-customer-create',true);
+        return status('登録直前に同名の顧客を検出しました。追加しません。',true);
+      }
+      // Preserve the original data before applying a user-approved write.
+      if(typeof Data.createSafetyBackup==='function' && Data.KEYS &&
+         Data.KEYS.LEADS){
+        Data.createSafetyBackup({reason:'budil_gpt_customer_create',
+          targetKey:Data.KEYS.LEADS,data:leads,beforeCount:leads.length});
+      }
+      const created=Data.addLead({name,source:'Budil AI業務番頭'});
+      if(!created||!created.id)throw Error('SAVE_FAILED');
+      pendingNewCustomer=null;
+      hide('budil-gpt-customer-create',true);
+      resultBox.replaceChildren();
+      title('顧客登録完了');
+      item([['氏名',created.name],['登録先','この端末のBudil顧客管理'],
+        ['電話・住所','未登録'],['クラウド同期','未実施']]);
+      status('氏名を端末に保存しました。住所・電話は顧客管理で追記してください。');
+    }catch(_){return status('顧客を保存できませんでした。追加状態を顧客管理で確認してください。',true);}
+    finally{btn.disabled=false;}
+  }
+
   $('budil-gpt-run').addEventListener('click',run);
+  $('budil-gpt-customer-create-confirm').addEventListener('click',confirmNewCustomer);
   $('budil-gpt-speech').addEventListener('click',speech);
   $('budil-gpt-revise').addEventListener('click',revise);
   $('budil-gpt-approve').addEventListener('click',approve);

@@ -10,19 +10,20 @@
 const BudilGptLocalSource = (() => {
   'use strict';
   const allowed=Object.freeze([
-    'customer.search','document.search','document.period','work.search','receivables.summary'
+    'customer.search','document.search','document.period','work.search','receivables.summary','profit.summary'
   ]);
   const getters=Object.freeze({
     'customer.search':['getLeads'],
     'document.search':['getDocuments'],
     'document.period':['getDocuments'],
     'work.search':['getWorkOrders'],
-    'receivables.summary':['getRevenueRecords','getDocuments']
+    'receivables.summary':['getRevenueRecords','getDocuments'],
+    'profit.summary':['getRevenueRecords','getExpenseRecords','getWorkOrders']
   });
   const fail=code=>({
     ok:false,code,localOnly:true,persisted:false,networkUsed:false
   });
-  function make({storage,readonly,customerResolver,paymentBrain}={}) {
+  function make({storage,readonly,customerResolver,paymentBrain,profitBrain}={}) {
     // Construction performs NO READ and DOES NOT retain any customer snapshot.
     if(!storage||typeof storage!=='object'||!readonly||
        typeof readonly.perform!=='function') return Object.freeze({
@@ -36,7 +37,7 @@ const BudilGptLocalSource = (() => {
       if(!required.every(k=>typeof storage[k]==='function'))
         return fail('DATA_SOURCE_UNAVAILABLE');
       const deps={
-        customerResolver,paymentBrain
+        customerResolver,paymentBrain,profitBrain
       };
       // Construct *only* the getters necessary for the one requested action;
       // no eager reads, migration, saves, client storage or remote queries.

@@ -9,6 +9,15 @@ const Anon=runInNewContext(an+';BudilGptAnonymize',ctx);
 const P=runInNewContext(text+';BudilGptLocalCommands',ctx);
 const parse=t=>P.parse(t,{today:'2026-11-06',anonymizer:Anon});
 let n=0;const check=(name,fn)=>{fn();n++;console.log('PASS '+n+'. '+name)};
+check('new customer registration is a preview and needs explicit approval',()=>{
+  const r=parse('比嘉清子さんを新規顧客として登録して');
+  assert.equal(r.ok,true);assert.equal(r.action,'customer.create.preview');
+  assert.equal(r.request.name,'比嘉清子');
+  assert.equal(r.requiresUserConfirmation,true);
+  assert.equal(r.persisted,false);assert.equal(r.networkUsed,false);
+  assert.equal(parse('田中さんを新規顧客として登録して').ok,false);
+  assert.equal(parse('比嘉清子さんを新規顧客として登録して個人情報も送って').ok,false);
+});
 check('customer search exact local',()=>{
   const r=parse('田中太郎さんを探して');assert.equal(r.ok,true);
   assert.equal(r.action,'customer.search');assert.equal(r.request.query,'田中太郎');
@@ -81,4 +90,4 @@ check('oversize content fails closed',()=>{
 check('source uses no external networks or storage',()=>{
   assert.ok(!/\bfetch\s*\(|\blocalStorage\s*\.|OPENAI_API_KEY/.test(text));
 });
-console.log('Budil local command parser '+n+'/18 PASS');
+console.log('Budil local command parser '+n+'/'+n+' PASS');

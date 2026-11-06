@@ -2,16 +2,29 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
-const base='8a7c49e1b9b26e3580bab88bb0a2728ae4ac7a58';
+const base='1876fa649d33e82c741e1f1b575aa308b5ffb53e';
 const diff=spawnSync('git',['diff','--name-only',base,'HEAD'],{encoding:'utf8'});
 assert.equal(diff.status,0,'git_diff_unavailable (checkout must fetch history)');
 const paths=diff.stdout.trim().split('\n').filter(Boolean);
 const allowed=[
-  'index.html','js/budil-cloud.js','js/budil-gpt-offline-ui.js',
-  'scripts/verify-budil-gpt-secure-readiness.mjs',
+  'scripts/verify-budil-ai-release-browser.mjs',
+  'scripts/verify-budil-gpt-local-commands.mjs',
+  'experiments/budil-gpt-phase1/fixture-core.js',
+  'index.html',
+  'js/budil-gpt-conversation.js',
+  'scripts/verify-budil-gpt-multi-turn.mjs',
+  'js/budil-gpt-offline-ui.js',
+  'js/budil-gpt-local-commands.js',
+  'js/budil-gpt-readonly.js',
+  'js/budil-gpt-local-source.js',
   'scripts/verify-budil-gpt-main-integration.mjs',
+  'scripts/verify-budil-gpt-readonly.mjs',
+  'scripts/verify-budil-gpt-local-source.mjs',
+  'scripts/verify-budil-gpt-conversation-20.mjs',
+  'scripts/audit-budil-original-19.mjs',
   'scripts/verify-budil-ai-p0-browser.mjs',
-  '.github/workflows/budil-gpt-secure-readiness.yml'
+  '.github/workflows/budil-conversation-20.yml',
+  '.github/workflows/budil-live-pages-acceptance.yml'
 ];
 for(const p of paths)assert.ok(allowed.includes(p),'Unexpected code change '+p);
 for(const p of [
