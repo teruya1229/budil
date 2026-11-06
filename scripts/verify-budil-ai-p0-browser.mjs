@@ -256,6 +256,29 @@ async function run() {
   assert.equal(await evaluate("Storage.getDocuments().length"),3);
   console.log("BUDIL_AI_P0_BROWSER_PASS: no lost drafts, no fake month search, zero saved writes");
 
+  // GPT integration: browser UI only, all network mocked. The response is
+  // supplied by the fictional fixture, never OpenAI, Supabase or user data.
+  await evaluate("window.__gptCalls=0;window.BudilCloud.interpretAnonymizedQuote=async function(raw){window.__gptCalls++;return {ok:true,verified:true,phase:'interpret_only',intent:{ok:true,phase:'interpret_only',input_mode:'anonymized',action:'estimate_create',customer_name:'お客様',service_name:'エアコン洗浄',quantity:2,total_yen:18000,tax_mode:'included',amount_scope:'total',needs_user_input:false,can_execute:false,requires_human_approval:true,persisted:false}}}");
+  await evaluate("document.getElementById('budil-gpt-input').value='田中太郎さんのエアコン洗浄2台を税込18,000円で見積して';document.getElementById('budil-gpt-interpret').click()");
+  assert.equal(await evaluate("window.__gptCalls"),0);
+  assert.ok((await evaluate("document.getElementById('budil-gpt-status').textContent")).includes('チェック'));
+  await evaluate("document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-interpret').click()");
+  assert.equal(await evaluate("window.__gptCalls"),0);
+  await evaluate("document.getElementById('budil-gpt-remote-consent').checked=true;document.getElementById('budil-gpt-interpret').click()");
+  for(let i=0;i<50;i++){
+    if(await evaluate("document.querySelectorAll('#budil-gpt-candidate-list button').length===2"))break;
+    await sleep(100);
+  }
+  assert.equal(await evaluate("window.__gptCalls"),1);
+  assert.equal(await evaluate("document.getElementById('budil-gpt-remote-consent').checked"),false);
+  assert.equal(await evaluate("document.querySelectorAll('#budil-gpt-candidate-list button').length"),2);
+  await evaluate("document.querySelectorAll('#budil-gpt-candidate-list button')[0].click()");
+  assert.ok((await evaluate("document.getElementById('budil-gpt-draft-preview').textContent")).includes('18,000円'));
+  assert.equal(await evaluate("Storage.getDocuments().length"),3);
+  await evaluate("document.getElementById('budil-gpt-clear').click()");
+  console.log("BUDIL_GPT_MOCK_BROWSER_PASS: separate consent, candidate selection, unsaved draft, no writes");
+
+
 
 }
 
