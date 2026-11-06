@@ -477,6 +477,64 @@
     });
   }
 
+
+  /**
+   * Explicit one-shot trial. The caller must obtain a separate send consent.
+   * No real customer name or records leave Budil; only Anonymize.wire fields.
+   * All outputs are revalidated locally before they are returned.
+   * The backend has independent default-off paid/anonymous gates.
+   */
+  function interpretAnonymizedQuote(original) {
+    var tool=typeof BudilGptAnonymize!=='undefined'?BudilGptAnonymize:null;
+    var cfg=getConfig();
+    if(!cfg || cfg.env!=='production') {
+      return Promise.resolve({ok:false,code:'gpt_origin_unavailable'});
+    }
+    if(!tool || typeof tool.prepare!=='function' ||
+       typeof tool.acceptsWire!=='function' ||
+       typeof tool.verifyResult!=='function') {
+      return Promise.resolve({ok:false,code:'anonymizer_unavailable'});
+    }
+    var safe=tool.prepare(original);
+    if(!safe.ok)return Promise.resolve({ok:false,code:safe.code});
+    if(!tool.acceptsWire(safe.wire)) {
+      return Promise.resolve({ok:false,code:'anonymized_wire_invalid'});
+    }
+    return getValidAccessToken().then(function(token){
+      if(!token.ok || !token.accessToken)
+        return {ok:false,code:CODE.NOT_SIGNED_IN};
+      return doFetch(cfg.url+'/functions/v1/budil-gpt-interpret',{
+        method:'POST',
+        headers:{
+          Authorization:'Bearer '+token.accessToken,
+          apikey:cfg.publishableKey,
+          'Content-Type':'application/json'
+        },
+        body:JSON.stringify(safe.wire),
+        timeoutMs:20000
+      }).then(function(r){
+        if(r.timeout)return {ok:false,code:CODE.TIMEOUT};
+        if(r.networkError)return {ok:false,code:CODE.NETWORK};
+        if(r.status===401)return {ok:false,code:CODE.UNAUTHORIZED};
+        if(r.status!==200 || !r.body || r.body.ok!==true)
+          return {ok:false,code:r.body && r.body.code || CODE.UNKNOWN};
+        if(r.body.input_mode!=='anonymized' ||
+           r.body.phase!=='interpret_only' ||
+           r.body.can_execute!==false ||
+           r.body.requires_human_approval!==true ||
+           r.body.persisted!==false)
+          return {ok:false,code:'unsafe_interpret_response'};
+        var verified=tool.verifyResult(original,r.body);
+        if(!verified.ok)return {ok:false,code:'model_result_mismatch'};
+        return {
+          ok:true,phase:'interpret_only',input_mode:'anonymized',
+          requiresHumanApproval:true,verified:true,
+          intent:r.body
+        };
+      });
+    });
+  }
+
   function isBackupInFlight() {
     return backupInFlight;
   }
@@ -494,6 +552,7 @@
     backupNow: backupNow,
     fetchLatest: fetchLatest,
     getGptReadiness: getGptReadiness,
+    interpretAnonymizedQuote: interpretAnonymizedQuote,
     isBackupInFlight: isBackupInFlight
   };
 })(typeof window !== 'undefined' ? window : globalThis);
