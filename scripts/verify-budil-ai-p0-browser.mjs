@@ -331,6 +331,24 @@ async function run() {
     await evaluate("document.getElementById('budil-gpt-clear').click()");
     console.log("BUDIL_CUSTOMER_APPROVAL_BROWSER_PASS: preview no writes, one explicit save, duplicate blocked");
 
+    await evaluate("window.__publicReadCalls=0;BudilCloud.interpretPiiFreeRead=async()=>{window.__publicReadCalls++;return {ok:true,verified:true,parsed:{ok:true,action:'document.period',periodLabel:'先月',document_type:'invoice',readOnly:true,networkUsed:true}}}");
+    await evaluate("document.getElementById('budil-gpt-input').value='先月の請求書を見せて';document.getElementById('budil-gpt-public-read').click()");
+    assert.equal(await evaluate("window.__publicReadCalls"),0);
+    await evaluate("document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-public-read').click()");
+    assert.equal(await evaluate("window.__publicReadCalls"),0);
+    await evaluate("document.getElementById('budil-gpt-public-consent').checked=true;document.getElementById('budil-gpt-public-read').click()");
+    for(let i=0;i<60;i++){
+      if(await evaluate("document.getElementById('budil-gpt-result').textContent.includes('先月の請求書')"))break;
+      await sleep(100);
+    }
+    assert.equal(await evaluate("window.__publicReadCalls"),1);
+    assert.equal(await evaluate("document.getElementById('budil-gpt-consent').checked"),false);
+    assert.equal(await evaluate("document.getElementById('budil-gpt-public-consent').checked"),false);
+    assert.equal(await evaluate("Storage.getDocuments().length"),3);
+    assert.ok((await evaluate("document.getElementById('budil-gpt-status').textContent")).includes('業務データは端末内'));
+    console.log("BUDIL_PUBLIC_READ_BROWSER_PASS: dual consent, GPT stub, private local report, no writes");
+
+
 
   }
 

@@ -12,6 +12,7 @@
   // Classic non-module Budil scripts expose lexical const bindings, not
   // necessarily window props. Test them directly, no eval/network access.
   const Commands=typeof BudilGptLocalCommands!=='undefined'?BudilGptLocalCommands:null;
+  const PublicRead=typeof BudilGptPublicRead!=='undefined'?BudilGptPublicRead:null;
   const Conversation=typeof BudilGptConversation!=='undefined'?BudilGptConversation:null;
   const Source=typeof BudilGptLocalSource!=='undefined'?BudilGptLocalSource:null;
   const ReadOnly=typeof BudilGptReadOnly!=='undefined'?BudilGptReadOnly:null;
@@ -51,6 +52,7 @@
     $('budil-gpt-consent').checked=false;
     $('budil-gpt-voice-consent').checked=false;
     $('budil-gpt-remote-consent').checked=false;
+    $('budil-gpt-public-consent').checked=false;
   }
   function open(){
     focusedBefore=document.activeElement;
@@ -60,7 +62,7 @@
   }
   function close(){
     if(voice){try{voice.abort();}catch(_){/* browser voice */}voice=null;}
-    readinessSeq++;interpretSeq++;resetVisible();shell.hidden=true;
+    readinessSeq++;interpretSeq++;publicReadSeq++;resetVisible();shell.hidden=true;
     if(focusedBefore&&typeof focusedBefore.focus==='function')focusedBefore.focus();
   }
   function node(tag,text,cls){
@@ -392,9 +394,13 @@
           ? '設定画面のクラウドバックアップでログインしてから、再度ご確認ください。'
           : 'GPT接続状態を確認できませんでした（'+code+'）。';
       }else{
-        output.textContent=result.ready
-          ? 'GPT基盤の設定は準備完了です。ただし自然言語業務操作はまだ有効化していません。'
-          : 'GPT基盤はまだ利用開始できません。APIキーや試験許可の設定状況を確認してください。';
+        output.textContent=result.readonlyReady
+          ? '匿名の集計質問をGPTで分類できます。外部送信と端末読取の同意が毎回必要です。'
+          : result.anonymizedReady
+          ? '匿名の見積指示GPT解析が使用可能です。集計質問のGPTはまだ無効です。'
+          : result.ready
+          ? 'GPT基盤は準備済みですが、会話解析の個別機能はまだ無効です。'
+          : 'GPTはまだ利用開始できません。APIキーや試験許可の設定状況を確認してください。';
       }
     }catch(_){
       if(seq===readinessSeq && !shell.hidden)
@@ -455,7 +461,53 @@
     }
   }
 
+  let publicReadBusy=false,publicReadSeq=0;
+  async function runPublicRead(){
+    if(publicReadBusy)return;
+    if(!PublicRead||!Commands||!Source||!ReadOnly||!Data||
+       typeof PublicRead.localRequest!=='function')
+      return status('集計質問の機能を読み込めません。',true);
+    if(session&&session.stage!=='idle')
+      return status('見積下書きや顧客候補を保持しています。別操作はクリアしてから実行してください。',true);
+    if($('budil-gpt-consent').checked!==true ||
+       $('budil-gpt-public-consent').checked!==true)
+      return status('端末データの読取と匿名質問の外部送信の両方にチェックしてください。',true);
+    const raw=$('budil-gpt-input').value;
+    const safe=PublicRead.prepare(raw);
+    if(!safe.ok)
+      return status('氏名などを含まない、未入金・利益・今月/先月の帳票集計質問だけが対象です。',true);
+    const cloud=window.BudilCloud;
+    if(!cloud||typeof cloud.interpretPiiFreeRead!=='function')
+      return status('GPT接続機能を利用できません。',true);
+    const button=$('budil-gpt-public-read');
+    const seq=++publicReadSeq;
+    publicReadBusy=true;button.disabled=true;
+    $('budil-gpt-consent').checked=false;
+    $('budil-gpt-public-consent').checked=false;
+    status('顧客情報を含まない質問文だけをGPTに送って分類しています。');
+    try{
+      const answer=await cloud.interpretPiiFreeRead(raw);
+      if(seq!==publicReadSeq||shell.hidden)return;
+      if(!answer||answer.ok!==true||answer.verified!==true)
+        return status('GPT分類できませんでした（'+(answer&&answer.code||'unavailable')+'）。端末のデータは変更していません。',true);
+      const parsed=answer.parsed;
+      const req=PublicRead.localRequest(parsed,Commands.todayTokyo());
+      if(!req.ok)return status('この質問はまだ端末内検索へ接続できません。',true);
+      const query={...parsed,request:req.request};
+      const gateway=Source.make({storage:Data,readonly:ReadOnly,
+        customerResolver:Resolver,paymentBrain:Payment,profitBrain:Profit});
+      queryResult(query,gateway.query(query.request,true));
+      status(statusBox.textContent+' ※質問文だけをGPTに送信。業務データは端末内で検索しました。');
+    }catch(_){
+      if(seq===publicReadSeq&&!shell.hidden)
+        status('GPT分類または端末検索に失敗しました。データ変更はしていません。',true);
+    }finally{
+      publicReadBusy=false;button.disabled=false;
+    }
+  }
+
   openButton.addEventListener('click',open);
+  $('budil-gpt-public-read').addEventListener('click',runPublicRead);
   $('budil-gpt-interpret').addEventListener('click',interpretQuoteWithGpt);
   $('budil-gpt-readiness').addEventListener('click',checkGptReadiness);
   $('budil-gpt-close').addEventListener('click',close);
