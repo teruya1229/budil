@@ -24,7 +24,9 @@ jobs:
       - name: Japanese commands and protected business modules
         run: |
           node --check js/budil-gpt-local-commands.js
+          node --check js/budil-gpt-readonly.js
           node scripts/verify-budil-gpt-conversation-20.mjs
+          node scripts/audit-budil-original-19.mjs
           node scripts/verify-budil-gpt-local-commands.mjs
           node scripts/verify-budil-ai-p0-contract.mjs
           node scripts/verify-budil-gpt-anonymize.mjs
