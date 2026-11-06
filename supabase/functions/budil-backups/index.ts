@@ -136,7 +136,7 @@ export default {
       error: membershipError,
     } = await ctx.supabaseAdmin
       .from("tenant_memberships")
-      .select("tenant_id")
+      .select("tenant_id, role")
       .eq("user_id", userId)
       .eq("status", "active")
       .limit(2);
@@ -150,6 +150,12 @@ export default {
       return jsonError(403, "active_membership_required", responseCors);
     }
 
+    // Restore payload contains all tenant data. Reading metadata and creating
+    // a new snapshot retain their existing membership permissions, while
+    // downloading a full payload is limited to the tenant owner.
+    if (isDownloadRoute && memberships[0].role !== "owner") {
+      return jsonError(403, "restore_owner_required", responseCors);
+    }
     const membershipTenantId = memberships[0].tenant_id;
 
     // 4. active tenant (server-derived only; client never supplies tenant_id/tenant_code)
