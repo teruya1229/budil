@@ -290,8 +290,16 @@ async function run(request: Request): Promise<Response> {
   let rawIntent: unknown;
   try { rawIntent = JSON.parse(resultText); }
   catch { return safeError(502, "gpt_invalid_json", corsHeaders); }
-  const validated = mode==="read_only_intent" ?
-    verifyReadOnlyIntent(input.input,rawIntent) : validateModelIntent(input.input, rawIntent);
+  if (mode==="read_only_intent") {
+    const readResult=verifyReadOnlyIntent(input.input,rawIntent);
+    if(!readResult.ok)return safeError(422,readResult.code||"read_validation_failed",corsHeaders);
+    return answer(200,{
+      ...readResult,phase:"interpret_only",input_mode:mode,
+      requires_human_approval:true,requires_local_consent:true,
+      persisted:false
+    },corsHeaders);
+  }
+  const validated = validateModelIntent(input.input,rawIntent);
   if (!validated.ok) return safeError(422, validated.code || "model_validation_failed", corsHeaders);
   if (mode === "anonymized" && (
     validated.action !== "estimate_create" ||
