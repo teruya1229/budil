@@ -1,0 +1,40 @@
+name: Budil Pages live post-deploy smoke
+on:
+  push:
+    branches:
+      - verify/budil-pages-live-20261106
+permissions:
+  contents: read
+jobs:
+  verify-public-url:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install PDF inspection and Japanese fonts
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils fonts-noto-cjk
+      - name: Verify chromium available
+        run: which google-chrome || which chromium
+      - name: Verify ACTUAL GitHub Pages 390px UI and unsaved PDF
+        env:
+          BUDIL_LIVE_URL: https://teruya1229.github.io/budil/
+          BUDIL_TEST_OUTPUT_DIR: ${{ runner.temp }}/budil-live-pages-proof
+        run: node scripts/verify-budil-ai-release-browser.mjs
+      - name: Save fictional-only screenshots and generated PDFs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: budil-live-pages-smoke-proof
+          path: |
+            ${{ runner.temp }}/budil-live-pages-proof/budil-release-390.png
+            ${{ runner.temp }}/budil-live-pages-proof/downloads/*.pdf
+          if-no-files-found: ignore
+          retention-days: 2
