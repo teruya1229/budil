@@ -343,6 +343,12 @@ async function run() {
   await evaluate("document.getElementById('budil-gpt-close').click()");
   assert.equal(await evaluate("document.getElementById('budil-gpt-shell').hidden"),true);
   assert.equal(await evaluate("document.getElementById('budil-gpt-input').value"),'');
+  await evaluate("localStorage.setItem('budil_leads',JSON.stringify([{id:'ci-fictional-1',name:'架空太郎',area:'南城市',isDemo:true}]))");
+  await evaluate("document.getElementById('budil-gpt-open').click()");
+  await evaluate("document.getElementById('budil-gpt-input').value='架空太郎さんを探して';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+  assert.equal(await evaluate("document.getElementById('budil-gpt-result').textContent.includes('顧客候補：1件')"),true);
+  assert.equal(await evaluate("document.getElementById('budil-gpt-consent').checked"),false);
+  console.log('PASS: actual Budil local customer query from isolated fictional Storage');
   console.log('PASS: actual Budil local data action requires consent and clears after close');
   console.log("BUDIL_GPT_BROWSER_E2E_PASS");
 
