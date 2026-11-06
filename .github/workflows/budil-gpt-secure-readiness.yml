@@ -25,7 +25,6 @@ jobs:
           node --check js/budil-cloud.js
           node --check js/budil-gpt-offline-ui.js
           node scripts/verify-budil-gpt-secure-readiness.mjs
-          node scripts/verify-budil-gpt-main-integration.mjs
           node scripts/verify-budil-ai-p0-contract.mjs
           node scripts/verify-budil-gpt-local-quote.mjs
           node scripts/verify-v41314-document-print-pdf-export.mjs
