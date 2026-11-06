@@ -27,6 +27,8 @@ const cases=[
 const rows=cases.map(([input,wanted],i)=>{
  const actual=parser.parse(input,{today:'2026-11-06',anonymizer:anon});
  let supported=actual.ok && actual.action===wanted;
+ if(wanted==='profit.current_month')
+   supported=actual.ok && actual.action==='profit.summary' && actual.scope==='current_month_estimate';
  if(wanted==='receivables.this_month')
    supported=actual.ok && actual.action==='receivables.summary' && actual.scope==='this_month_expected';
  if(wanted==='document.search.period')
@@ -36,4 +38,4 @@ const rows=cases.map(([input,wanted],i)=>{
 const count=rows.filter(x=>x.supported).length;
 console.log('BUDIL_ORIGINAL_AUDIT '+count+'/'+cases.length+' supported');
 for(const r of rows)console.log(String(r.no).padStart(2,'0')+' '+(r.supported?'PASS':'NOT_IMPLEMENTED')+' '+r.wanted+' -> '+r.actual);
-if(count<9)process.exitCode=1;
+if(count<10)process.exitCode=1;
