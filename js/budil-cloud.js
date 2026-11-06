@@ -3,8 +3,9 @@
  *
  * localStorageが正本のまま、既存 DataBackup.exportPayload() / validatePayload() を
  * そのまま再利用し、Supabase Edge Function `budil-backups` へ immutable snapshot を
- * 保存するだけの薄いクライアント。自動同期・自動復元・クラウドからの復元・
- * localStorage上書きは一切行わない（保存のみ）。
+ * 保存する薄いクライアント。認証済みユーザーの明示操作に限り最新
+ * スナップショットの取得を許可する（復元適用は別のローカル承認モジュール）。
+ * 自動同期・自動復元・勝手なlocalStorage上書きは行わない。
  *
  * 接続先はホスト名から固定判定する（query/hash/localStorage/画面入力での切替は不可）。
  * - https://teruya1229.github.io  -> production（既存BC Supabase Authを利用）
