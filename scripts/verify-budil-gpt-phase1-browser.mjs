@@ -324,6 +324,17 @@ async function run() {
   const shot=await cdp.command('Page.captureScreenshot',{format:'png'});
   if(shot.data)writeFileSync(join(workDir,'anonymized-mobile-390.png'),Buffer.from(shot.data,'base64'));
   console.log('PASS: anonymized quote A4 single-page PDF and 390px privacy view');
+  await cdp.command('Page.navigate',{url:'http://127.0.0.1:'+port+'/index.html'});
+  for(let i=0;i<100;i++){
+    if(await evaluate("document.readyState==='complete' && !!document.getElementById('budil-gpt-open')"))break;
+    await sleep(100);
+  }
+  assert.equal(await evaluate("document.getElementById('budil-gpt-shell').hidden"),true);
+  await evaluate("document.getElementById('budil-gpt-open').click()");
+  assert.equal(await evaluate("document.getElementById('budil-gpt-shell').hidden"),false);
+  const mainShot=await cdp.command('Page.captureScreenshot',{format:'png'});
+  if(mainShot.data)writeFileSync(join(workDir,'budil-live-panel-390.png'),Buffer.from(mainShot.data,'base64'));
+  console.log('PASS: actual Budil main menu opens local-first assistant panel at mobile width');
   console.log("BUDIL_GPT_BROWSER_E2E_PASS");
 
 }
