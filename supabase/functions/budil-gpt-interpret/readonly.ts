@@ -35,6 +35,16 @@ export function safeReadInstruction(raw:unknown){
   // No arbitrary paragraphs, instructions or person names.
   if(/[。\n]/.test(text)&&/[。]/.test(text.slice(0,-1)))
     return deny("read_multiple_instructions");
+  const flat=text.replace(/[　\\s]/g,"").replace(/[。？！!?]+$/u,"");
+  // Only bounded non-identifying business aggregates and bare weekday/time
+  // requests may go to GPT. This is deliberately NOT a generic privacy
+  // redactor: unknown sentences fail closed before any billable request.
+  const monthDocs=/^(?:今月|先月)の(?:見積書|請求書)(?:の?一覧|の?件数)?(?:を)?(?:教えて|見せて|探して|検索して|確認して|表示して|教えてください|見せてください|検索してください|表示してください|確認したい)?$/u;
+  const unpaid=/^(?:今月の|現在の)?(?:未入金|売掛)(?:合計|の合計|額|金額|の金額)?(?:(?:を)(?:教えて|見せて|確認して|教えてください|確認したい)|(?:はいくら(?:ですか)?))?$/u;
+  const profit=/^今月の利益(?:はいくら(?:ですか)?|(?:を)(?:教えて|見せて|確認して|教えてください|確認したい))?$/u;
+  const availability=/^(?:今週|来週)?(?:の)?[月火水木金土日]曜(?:日)?の?(?:午前|午後)?[０-９0-9]{1,2}時(?:[０-９0-9]{1,2}分)?(?:、)?(?:空いてる|空いていますか|空きある|空きはありますか|予約できる|予約可能ですか)?$/u;
+  if(![monthDocs,unpaid,profit,availability].some(re=>re.test(flat)))
+    return deny("read_topic_not_allowlisted");
   return {ok:true,input:text};
 }
 const dayCodes=["mon","tue","wed","thu","fri","sat","sun"];
