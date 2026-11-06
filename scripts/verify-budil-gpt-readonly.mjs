@@ -33,7 +33,28 @@ check('refuse request-provided tenant',()=>assert.equal(r.perform({action:'custo
 check('refuse array',()=>assert.equal(r.perform([],deps,true).ok,false));
 check('one exact customer requires selection',()=>{const o=query('customer.search','比嘉清子');assert.equal(o.view.candidates.length,1);assert.equal(o.view.requiresUserConfirmation,true);assert.equal(o.view.selectedCustomerId,null);privateSafe(o)});
 check('multiple same-name customers not auto-selected',()=>{const o=query('customer.search','田中太郎');assert.equal(o.view.candidates.length,2);assert.equal(o.view.requiresUserConfirmation,true)});
-check('partial name has no match',()=>assert.equal(query('customer.search','田中').view.candidateCount,0));
+check('surname lookup only offers masked candidates',()=>{
+  const o=query('customer.search','田中');
+  assert.equal(o.view.candidateCount,2);
+  assert.equal(o.view.status,'surname_suggestions');
+  assert.equal(o.view.requiresUserConfirmation,true);
+  assert.equal(o.view.selectedCustomerId,null);
+  assert.equal(o.view.candidates.length,2);
+  assert.equal(o.view.candidates[0].maskedPhone.endsWith('5678'),true);
+  assert.ok(!JSON.stringify(o.view).includes('09012345678'));
+  privateSafe(o);
+});
+check('bounded suggestions never return more than requested limit',()=>{
+  const o=query('customer.search','田中',{limit:1});
+  assert.equal(o.view.candidateCount,2);
+  assert.equal(o.view.status,'too_many');
+  assert.equal(o.view.candidates.length,0);
+  privateSafe(o);
+});
+check('one character and substring searches do not guess identities',()=>{
+  assert.equal(query('customer.search','田').view.candidateCount,0);
+  assert.equal(query('customer.search','太郎').view.candidateCount,0);
+});
 check('invalid and long query rejected',()=>{assert.equal(query('customer.search','田中'.repeat(80)).ok,false);assert.equal(query('customer.search','.*').view.candidateCount,0)});
 check('document only safe metadata',()=>{const o=query('document.search','比嘉清子');assert.equal(o.view.documents.length,2);assert.equal('memo' in o.view.documents[0],false);privateSafe(o)});
 check('document number and type exact',()=>{assert.equal(query('document.search','INV-01').view.documents.length,1);assert.equal(query('document.search','請求書').view.documents.length,2);assert.equal(query('document.search','請').view.documents.length,0)});
@@ -47,4 +68,4 @@ check('no implicit Storage dependency',()=>assert.equal(r.perform({action:'custo
 check('reader exception safe',()=>{const x=r.perform({action:'document.search',query:'比嘉清子'},{getDocuments(){throw Error('private content')}},true);assert.equal(x.code,'READ_UNAVAILABLE');assert.ok(!JSON.stringify(x).includes('private content'))});
 check('five read-only actions including bounded month search',()=>assert.deepEqual(Array.from(r.ACTIONS),['customer.search','document.search','document.period','work.search','receivables.summary']));
 check('no network or storage mutations in source',()=>assert.ok(!/(?:\bfetch\(|\blocalStorage\.|Storage\.(?:set|add|update|save|delete)|\.insert\(|\.upsert\(|\.update\(|\.delete\(|\.apply\()/.test(src('js/budil-gpt-readonly.js'))));
-console.log('Budil GPT local read-only adapter '+n+'/20 PASS');
+console.log('Budil GPT local read-only adapter '+n+'/'+n+' PASS');
