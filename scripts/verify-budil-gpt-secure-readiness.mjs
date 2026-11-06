@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const source=readFileSync('js/budil-cloud.js','utf8');
+const anonSource=readFileSync('js/budil-gpt-anonymize.js','utf8');
 const html=readFileSync('index.html','utf8');
 const ui=readFileSync('js/budil-gpt-offline-ui.js','utf8');
 let count=0;
@@ -28,7 +29,7 @@ function create(host='teruya1229.github.io',{loggedIn=true,status=200,body}={}){
     },
     AbortController,setTimeout,clearTimeout
   };
-  ctx.window=ctx;vm.runInNewContext(source,ctx);
+  ctx.window=ctx;vm.runInNewContext(anonSource,ctx);vm.runInNewContext(source,ctx);
   return {cloud:ctx.BudilCloud,calls,store};
 }
 await check('no eager network when loading the cloud client',async()=>{
@@ -83,4 +84,53 @@ await check('UI contains explicit probe with no auto-call',async()=>{
   assert.match(ui,/addEventListener\('click',checkGptReadiness\)/);
   assert.ok(!ui.includes('interpretAnonymizedQuote('));
 });
-console.log('BUDIL_GPT_READINESS '+count+'/7 PASS');
+
+await check('explicit GPT quote is sent anonymously as exactly two fields',async()=>{
+  const {cloud,calls}=create('teruya1229.github.io',{body:{
+    ok:true,phase:'interpret_only',input_mode:'anonymized',
+    action:'estimate_create',customer_name:'お客様',service_name:'エアコン洗浄',
+    quantity:2,total_yen:18000,tax_mode:'included',amount_scope:'total',
+    needs_user_input:false,can_execute:false,requires_human_approval:true,
+    persisted:false
+  }});
+  const r=await cloud.interpretAnonymizedQuote('比嘉清子さんのエアコン洗浄2台を税込18000円で見積して');
+  assert.equal(r.ok,true);assert.equal(r.verified,true);assert.equal(calls.length,1);
+  assert.equal(calls[0].init.method,'POST');
+  const body=JSON.parse(calls[0].init.body);
+  assert.deepEqual(Object.keys(body).sort(),['instruction','mode']);
+  assert.equal(body.mode,'anonymized');
+  assert.equal(body.instruction,'お客様のエアコン洗浄2台を税込18000円で見積して');
+  assert.ok(!calls[0].init.body.includes('比嘉'));
+  assert.ok(!JSON.stringify(r).includes('比嘉'));
+});
+await check('unsupported input is blocked before a network request',async()=>{
+  const {cloud,calls}=create();
+  const r=await cloud.interpretAnonymizedQuote('田中さんの住所と電話番号を検索して');
+  assert.equal(r.ok,false);assert.equal(calls.length,0);
+});
+await check('GPT hallucinated total is rejected locally',async()=>{
+  const {cloud,calls}=create('teruya1229.github.io',{body:{
+    ok:true,phase:'interpret_only',input_mode:'anonymized',
+    action:'estimate_create',customer_name:'お客様',service_name:'エアコン洗浄',
+    quantity:2,total_yen:20000,tax_mode:'included',amount_scope:'total',
+    needs_user_input:false,can_execute:false,requires_human_approval:true,
+    persisted:false
+  }});
+  const r=await cloud.interpretAnonymizedQuote('比嘉清子さんのエアコン洗浄2台を税込18000円で見積して');
+  assert.equal(r.ok,false);assert.equal(r.code,'model_result_mismatch');
+  assert.equal(calls.length,1);
+});
+await check('GPT login required without sending instruction',async()=>{
+  const {cloud,calls}=create('teruya1229.github.io',{loggedIn:false});
+  const r=await cloud.interpretAnonymizedQuote('比嘉清子さんのエアコン洗浄2台を税込18000円で見積して');
+  assert.equal(r.ok,false);assert.equal(calls.length,0);
+});
+await check('UI requires separate checkbox and has no auto-run',async()=>{
+  assert.match(html,/id="budil-gpt-remote-consent"/);
+  assert.match(html,/id="budil-gpt-interpret"/);
+  assert.match(ui,/addEventListener\('click',interpretQuoteWithGpt\)/);
+  assert.match(ui,/budil-gpt-consent'\)\.checked!==true/);
+  assert.match(ui,/budil-gpt-remote-consent'\)\.checked!==true/);
+});
+console.log('BUDIL_GPT_BRIDGE '+count+'/12 PASS');
+
