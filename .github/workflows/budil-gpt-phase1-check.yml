@@ -36,11 +36,19 @@ jobs:
       - name: Run 22 fictional-data regression tests
         shell: pwsh
         run: node scripts/verify-budil-gpt-phase1-fixture.mjs
+      - name: Verify additive-only index UI and original business modules
+        shell: pwsh
+        run: node scripts/verify-budil-gpt-main-integration.mjs
+      - name: Verify local business command parser and offline quote
+        shell: pwsh
+        run: |
+          node scripts/verify-budil-gpt-local-commands.mjs
+          node scripts/verify-budil-gpt-local-quote.mjs
       - name: Assert no production entrypoint or business calculations touched
         shell: pwsh
         run: |
           $changed = (git diff --name-only bf6d132a47aff26b3f38c5ef68f269b362c7f6ed HEAD) -split "`n"
-          $blocked = @('index.html','js/app.js','js/storage.js','js/documents-brain.js','js/revenue-brain.js','js/payment-brain.js')
+          $blocked = @('js/app.js','js/storage.js','js/documents-brain.js','js/revenue-brain.js','js/payment-brain.js','js/work-order-brain.js')
           foreach ($path in $changed) { if ($blocked -contains $path.Trim()) { throw "protected_file_changed:$path" } }
           Write-Host 'protected production code unchanged'
 
@@ -72,6 +80,9 @@ jobs:
           node scripts/verify-budil-gpt-readonly.mjs
           node --check js/budil-gpt-local-source.js
           node scripts/verify-budil-gpt-local-source.mjs
+          node scripts/verify-budil-gpt-local-commands.mjs
+          node --check js/budil-gpt-offline-ui.js
+          node scripts/verify-budil-gpt-main-integration.mjs
           node --check js/budil-gpt-anonymize.js
           node scripts/verify-budil-gpt-anonymize.mjs
           node scripts/verify-budil-gpt-local-quote.mjs
