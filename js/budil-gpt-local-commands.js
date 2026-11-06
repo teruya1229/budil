@@ -10,7 +10,7 @@ const BudilGptLocalCommands = (() => {
   const deny = code => Object.freeze({ok:false,code});
   const safeName = raw => {
     const name=String(raw||'').replace(/\s/g,'').replace(/(さん|様|御中)$/,'');
-    return NAME.test(name) && !/^お客様$/.test(name) ? name : '';
+    return NAME.test(name) && !/^(?:お客様|今月|先月|来月|先々月|今週|先週|来週|今年|去年|昨年|来年|今日|昨日|明日|今期|前期)$/.test(name) ? name : '';
   };
   function parse(raw, {today,anonymizer}={}) {
     if (typeof raw!=='string'||!raw.trim()||raw.length>220||
