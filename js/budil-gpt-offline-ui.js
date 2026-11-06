@@ -12,6 +12,7 @@
   // Classic non-module Budil scripts expose lexical const bindings, not
   // necessarily window props. Test them directly, no eval/network access.
   const Commands=typeof BudilGptLocalCommands!=='undefined'?BudilGptLocalCommands:null;
+  const Conversation=typeof BudilGptConversation!=='undefined'?BudilGptConversation:null;
   const Source=typeof BudilGptLocalSource!=='undefined'?BudilGptLocalSource:null;
   const ReadOnly=typeof BudilGptReadOnly!=='undefined'?BudilGptReadOnly:null;
   const Anon=typeof BudilGptAnonymize!=='undefined'?BudilGptAnonymize:null;
@@ -23,6 +24,7 @@
   const Data=typeof Storage!=='undefined'?Storage:null;
   let session=Core?Core.createSession():null;
   let quoteDeps=null,focusedBefore=null,voice=null,exporting=false,pdfDone=false;
+  let pendingQuoteFields=null;
   const resultBox=$('budil-gpt-result'),statusBox=$('budil-gpt-status');
   function hide(id,yes){$(id).hidden=!!yes;}
   function status(message,error=false){
@@ -30,6 +32,7 @@
     statusBox.classList.toggle('budil-gpt-error',!!error);
   }
   function resetQuote(){
+    pendingQuoteFields=null;
     if(Core)session=Core.createSession();
     quoteDeps=null;pdfDone=false;exporting=false;
     $('budil-gpt-pdf').disabled=false;
@@ -203,9 +206,64 @@
     if(session && session.stage!=='idle'){
       return status('進行中の見積を保持しています。顧客候補を選択するか、クリアして新しい指示を入力してください。',true);
     }
+    // A multi-turn input only gathers explicit missing fields. No access to
+    // Budil customer records occurs until user approval and a full quote.
+    if(pendingQuoteFields){
+      if(!Conversation)return status('見積の会話機能を利用できません。',true);
+      const follow=Conversation.reply(pendingQuoteFields,raw);
+      if(follow.cancelled){
+        pendingQuoteFields=null;status('見積の入力を中止しました。');return;
+      }
+      if(!follow.ok)return status('不足項目を確認してください（'+follow.code+'）。入力済みの項目は保持しています。',true);
+      if(follow.pending){
+        pendingQuoteFields=follow.fields;
+        status(follow.prompt);return;
+      }
+      if($('budil-gpt-consent').checked!==true)
+        return status('見積の顧客候補を探す前に、端末データの読取にチェックしてください。',true);
+      pendingQuoteFields=null;
+      const ready=follow.canonical;
+      const prepared=Anon.prepare(ready);
+      if(!prepared.ok)return status('見積の内容を確認できませんでした。',true);
+      try{
+        const localLeads=Data.getLeads();
+        quoteDeps={documentsBrain:Docs,customerResolver:Resolver,anonymizer:Anon,
+          localAccessConsent:true,localLeads};
+        const started=Core.startLocalParsed(session,ready,quoteDeps);
+        $('budil-gpt-consent').checked=false;
+        if(!started.ok){quoteDeps=null;return status(started.message||started.code,true);}
+        quoteCandidates(started);return;
+      }catch(_){
+        quoteDeps=null;return status('顧客候補を取得できません。',true);
+      }
+    }
     const parsed=Commands.parse(raw,{
       today:Commands.todayTokyo(),anonymizer:Anon
     });
+    if(!parsed.ok && Conversation){
+      const candidate=Conversation.start(raw);
+      if(candidate.ok){
+        if(candidate.pending){
+          pendingQuoteFields=candidate.fields;
+          status(candidate.prompt);
+          return;
+        }
+        const canonical=Anon.prepare(candidate.canonical);
+        if(canonical.ok){
+          if($('budil-gpt-consent').checked!==true)
+            return status('顧客候補を探す前に端末データの読取にチェックしてください。',true);
+          try{
+            const localLeads=Data.getLeads();
+            quoteDeps={documentsBrain:Docs,customerResolver:Resolver,anonymizer:Anon,
+              localAccessConsent:true,localLeads};
+            const started=Core.startLocalParsed(session,candidate.canonical,quoteDeps);
+            $('budil-gpt-consent').checked=false;
+            if(!started.ok){quoteDeps=null;return status(started.message||started.code,true);}
+            quoteCandidates(started);return;
+          }catch(_){quoteDeps=null;return status('顧客候補を取得できません。',true);}
+        }
+      }
+    }
     if(!parsed.ok)return status('指示を確認してください（'+parsed.code+'）。元の下書きは変更していません。',true);
     if($('budil-gpt-consent').checked!==true)
       return status('端末内の顧客・帳票データを読む場合は、確認欄にチェックしてください。',true);
