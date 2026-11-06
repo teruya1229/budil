@@ -17,10 +17,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install PDF inspection and Japanese fonts
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq poppler-utils fonts-noto-cjk
       - name: Verify chromium available
         run: which google-chrome || which chromium
       - name: Verify ACTUAL GitHub Pages 390px UI and unsaved PDF
