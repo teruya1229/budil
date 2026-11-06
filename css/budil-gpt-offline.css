@@ -1,0 +1,54 @@
+/* Budil×GPT local-first assistant, additive and namespaced. */
+.budil-gpt-launch {
+  display:flex; align-items:center; gap:9px; width:100%;
+  padding:11px 14px; border:1px solid rgba(99,132,202,.32);
+  border-radius:10px; background:linear-gradient(110deg,#172b4f,#244e70);
+  color:#fff; font:inherit; font-weight:650; text-align:left; cursor:pointer;
+  margin:6px 0 10px;
+}
+.budil-gpt-launch:hover,.budil-gpt-launch:focus-visible{outline:2px solid #60a5fa;outline-offset:2px}
+.budil-gpt-shell[hidden],.budil-gpt-shell [hidden]{display:none!important}
+.budil-gpt-shell{position:fixed;z-index:8000;inset:0;display:flex;align-items:center;justify-content:center;padding:12px}
+.budil-gpt-overlay{position:absolute;inset:0;background:rgba(4,12,28,.72)}
+.budil-gpt-dialog{
+  position:relative;z-index:1;background:#fff;color:#162437;
+  width:min(730px,100%);max-height:min(94dvh,850px);
+  overflow:auto; overscroll-behavior:contain; border-radius:18px;
+  padding:22px;box-shadow:0 24px 64px rgba(0,0,0,.3);
+  font-family:inherit; line-height:1.6;
+}
+.budil-gpt-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.budil-gpt-header h2{font-size:1.36rem;margin:0}
+.budil-gpt-tag{display:inline-block;background:#e8f3ff;color:#145aa4;font-size:.75rem;border-radius:100px;padding:2px 9px;font-weight:650}
+.budil-gpt-dialog p{margin:8px 0}
+.budil-gpt-muted{color:#52627a;font-size:.88rem}
+.budil-gpt-label{display:block;font-weight:650;margin:14px 0 5px}
+.budil-gpt-input{width:100%;max-width:100%;box-sizing:border-box;color:#111827;
+  background:#fff;border:1px solid #bac6d3;border-radius:9px;padding:12px;font:inherit;font-size:1rem}
+.budil-gpt-input:focus-visible{outline:2px solid #2563eb;outline-offset:1px}
+.budil-gpt-check{display:flex;gap:9px;align-items:flex-start;font-size:.9rem;line-height:1.5;margin-top:11px}
+.budil-gpt-check input{accent-color:#1f64b5;transform:scale(1.1);margin-top:4px;flex-shrink:0}
+.budil-gpt-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}
+.budil-gpt-btn{background:#1760b5;color:#fff;font:inherit;font-weight:650;
+  border:1px solid transparent;border-radius:9px;padding:10px 13px;cursor:pointer}
+.budil-gpt-btn-secondary{background:#fff;color:#1b416b;border-color:#98adbf}
+.budil-gpt-btn:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+.budil-gpt-btn:disabled{opacity:.55;cursor:not-allowed}
+.budil-gpt-close{min-width:40px;min-height:40px;font-size:1.3rem}
+.budil-gpt-status{margin-top:12px;background:#f2f7fc;border-radius:9px;padding:10px 12px;font-size:.95rem;white-space:pre-wrap}
+.budil-gpt-status.budil-gpt-error{background:#fff3f0;color:#a12d19}
+.budil-gpt-result{margin-top:12px}
+.budil-gpt-result h3{font-size:1.06rem;margin:10px 0}
+.budil-gpt-item{padding:11px;border:1px solid #ccd7e5;border-radius:9px;margin:7px 0;background:#fbfdff;overflow-wrap:anywhere}
+.budil-gpt-item dl{display:grid;grid-template-columns:minmax(70px,110px) 1fr;gap:3px 12px;margin:0}
+.budil-gpt-item dt{font-weight:600;color:#52627a}
+.budil-gpt-item dd{margin:0;min-width:0}
+.budil-gpt-divider{border:0;border-top:1px solid #d9e2eb;margin:16px 0}
+.budil-gpt-disclaimer{font-size:.81rem;color:#556478}
+@media(max-width:600px){
+ .budil-gpt-shell{align-items:flex-end;padding:0}
+ .budil-gpt-dialog{width:100%;max-height:96dvh;border-radius:18px 18px 0 0;padding:17px 15px 25px}
+ .budil-gpt-btn{min-height:44px}
+ .budil-gpt-actions .budil-gpt-btn{flex:1 1 130px}
+ .budil-gpt-dialog h2{font-size:1.2rem}
+}
