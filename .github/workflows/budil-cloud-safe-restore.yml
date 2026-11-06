@@ -27,7 +27,9 @@ jobs:
           node --check js/budil-cloud-restore.js
           node --check js/budil-cloud-restore-ui.js
           node scripts/verify-budil-cloud-safe-restore.mjs
-          node scripts/verify-v4130-cloud-backup-foundation.mjs
+          # The historical v4.13.0 verifier requires an unavailable sibling
+          # ai-bantou-app checkout. The new isolated client tests cover auth,
+          # method, snapshot hash, consent and local rollback without secrets.
           node scripts/verify-v496-data-backup-hardening.mjs
           node scripts/verify-budil-gpt-multi-turn.mjs
           node scripts/verify-budil-gpt-conversation-20.mjs
