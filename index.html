@@ -4098,9 +4098,14 @@
         <input type="checkbox" id="budil-gpt-consent">
         <span>この1回の操作で、端末内のBudil業務データを読み取ることを許可する</span>
       </label>
+      <label class="budil-gpt-check">
+        <input type="checkbox" id="budil-gpt-remote-consent">
+        <span>今回の見積指示から顧客名を除いた作業名・台数・金額・税区分を外部GPTに送信することを許可する（API利用料金が発生する場合あり）</span>
+      </label>
       <div class="budil-gpt-actions">
         <button type="button" id="budil-gpt-run" class="budil-gpt-btn">内容を確認して実行</button>
         <button type="button" id="budil-gpt-readiness" class="budil-gpt-btn budil-gpt-btn-secondary">GPT接続状態を確認（無料・読取のみ）</button>
+        <button type="button" id="budil-gpt-interpret" class="budil-gpt-btn budil-gpt-btn-secondary">GPTで見積指示を解析（承認制）</button>
         <button type="button" id="budil-gpt-clear" class="budil-gpt-btn budil-gpt-btn-secondary">入力をクリア</button>
       </div>
       <hr class="budil-gpt-divider">
@@ -4165,7 +4170,7 @@
   <script src="js/executive-brain.js?v=4.13.20"></script>
   <script src="js/card-ocr.js?v=4.13.20"></script>
   <script src="js/data-backup.js?v=4.13.20"></script>
-  <script src="js/budil-cloud.js?v=20261106b"></script>
+  <script src="js/budil-cloud.js?v=20261106c"></script>
   <script src="js/app.js?v=4.13.20"></script>
   <script src="js/customer-resolve-entrypoint.js?v=20261106a"></script>
   <script src="js/budil-gpt-readonly.js?v=20261106a"></script>
@@ -4173,6 +4178,6 @@
   <script src="js/budil-gpt-anonymize.js?v=20261106a"></script>
   <script src="js/budil-gpt-local-commands.js?v=20261106a"></script>
   <script src="experiments/budil-gpt-phase1/fixture-core.js?v=20261106a"></script>
-  <script src="js/budil-gpt-offline-ui.js?v=20261106b"></script>
+  <script src="js/budil-gpt-offline-ui.js?v=20261106c"></script>
 </body>
 </html>
