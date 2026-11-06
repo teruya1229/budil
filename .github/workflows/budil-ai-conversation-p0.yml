@@ -1,0 +1,84 @@
+name: Budil AI conversation P0 regression
+on:
+  push:
+    branches:
+      - fix/budil-ai-conversation-p0-20261106
+  pull_request:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  p0-unit-and-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - name: Checkout without changing user workspaces
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+          fetch-depth: 0
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check parser, read-only gateway and document compatibility
+        run: |
+          node --check js/budil-gpt-local-commands.js
+          node --check js/budil-gpt-readonly.js
+          node --check js/budil-gpt-local-source.js
+          node --check js/budil-gpt-offline-ui.js
+          node scripts/verify-budil-ai-p0-contract.mjs
+          node scripts/verify-budil-gpt-local-commands.mjs
+          node scripts/verify-budil-gpt-readonly.mjs
+          node scripts/verify-budil-gpt-local-source.mjs
+          node scripts/verify-budil-gpt-local-quote.mjs
+          node scripts/verify-v41314-document-print-pdf-export.mjs
+          node scripts/verify-v41315-pdf-origin-alignment.mjs
+      - name: Ensure Chrome and pdfinfo
+        run: |
+          which google-chrome || which chromium
+          if ! command -v pdfinfo >/dev/null 2>&1; then
+            sudo apt-get -y -qq install poppler-utils
+          fi
+      - name: End-to-end with isolated fictional profile
+        env:
+          BUDIL_TEST_OUTPUT_DIR: ${{ runner.temp }}/budil-p0-qa
+        run: node scripts/verify-budil-ai-p0-browser.mjs
+      - name: Preserve non-sensitive screenshot and A4 quote
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: budil-p0-fictional-chrome-qa
+          path: |
+            ${{ runner.temp }}/budil-p0-qa/budil-release-390.png
+            ${{ runner.temp }}/budil-p0-qa/downloads/*.pdf
+          if-no-files-found: ignore
+          retention-days: 3
+
+  windows-japanese:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate Windows Chrome Japanese text and P0 mobile workflow
+        env:
+          BUDIL_TEST_OUTPUT_DIR: ${{ runner.temp }}/budil-p0-windows
+        run: node scripts/verify-budil-ai-p0-browser.mjs
+      - name: Retain Japanese Windows artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: budil-p0-windows-390px-pdf
+          path: |
+            ${{ runner.temp }}/budil-p0-windows/budil-release-390.png
+            ${{ runner.temp }}/budil-p0-windows/downloads/*.pdf
+          if-no-files-found: ignore
+          retention-days: 3

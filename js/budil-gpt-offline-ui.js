@@ -103,6 +103,20 @@
       }
       return status('端末のBudil顧客だけを読み取りました。外部送信はしていません。');
     }
+    if(parsed.action==='document.period'){
+      title((parsed.periodLabel||view.month)+'の'+
+        (view.documentType==='invoice'?'請求書':'見積書')+'：'+
+        (view.count||0)+'件');
+      for(const d of view.documents||[]){
+        item([['種類',d.type==='invoice'?'請求書':'見積書'],
+          ['番号',d.number],['顧客',d.customerName],['合計',yen(d.total)],
+          ['発行日',d.issueDate],['状態',d.status]]);
+      }
+      if(view.tooMany)return status('該当が10件を超えました。先頭10件を表示しています。',true);
+      if(view.undatedCount)return status('発行日が未設定の帳票'+view.undatedCount+
+        '件は期間検索の対象外です。端末内の保存済み帳票だけを検索しました。');
+      return status('発行年月で検索しました。帳票の変更・外部送信はしていません。');
+    }
     if(parsed.action==='document.search'){
       if(view.tooMany)return status('帳票が10件を超えました。より具体的な条件で探してください。',true);
       const docs=(view.documents||[]).filter(d=>!parsed.filterType||d.type===parsed.filterType);
@@ -121,11 +135,21 @@
       return status('作業予定の表示のみです。Googleの空き状況とは照合していません。');
     }
     if(parsed.action==='receivables.summary'){
-      title('Budil端末内の未入金集計');
-      item([['未入金合計',yen(view.pendingTotal)],
+      const monthly=parsed.scope==='this_month_expected';
+      title(monthly?'今月入金予定の未入金':'Budil端末内の未入金集計');
+      item(monthly ? [
+        ['今月入金予定・未入金',yen(view.thisMonthExpected)],
+        ['未入金全体の合計',yen(view.pendingTotal)],
+        ['期日超過件数',view.overdueCount],
+        ['対象','保存済みレコードの入金予定月']
+      ] : [
+        ['未入金合計',yen(view.pendingTotal)],
         ['未入金件数',view.count],['期日超過件数',view.overdueCount],
-        ['入金判定','銀行明細による照合は行っていません']]);
-      return status('既存のPaymentBrainで集計。入金済みへの更新はしていません。');
+        ['入金判定','銀行明細による照合は行っていません']
+      ]);
+      return status(monthly?
+        '「今月分」は入金予定日が今月の未入金を意味します。銀行照合・入金確定はしていません。':
+        '既存のPaymentBrainで集計。入金済みへの更新はしていません。');
     }
     status('未対応の操作です。',true);
   }
@@ -149,17 +173,33 @@
     status('同姓同名の場合は地域を確認し、本人が顧客候補を選択してください。');
   }
   function run(){
-    resetQuote();resultBox.replaceChildren();
     if(!Commands||!Source||!ReadOnly||!Anon||!Core||!Resolver||!Docs||!Payment||!Data)
       return status('Budilの必要なモジュールが読み込まれていません。',true);
-    const parsed=Commands.parse($('budil-gpt-input').value,{
+    const raw=$('budil-gpt-input').value;
+    // Never discard a customer selection or an unsaved quote before deciding
+    // whether the next utterance is a correction to the existing draft.
+    if(session && session.stage==='draft'){
+      const change=Core.parseCorrection(raw);
+      if(!change.ok)return status('見積下書きは保持しています。修正は「金額を税込20,000円に変更」と入力してください。別の操作をする場合は「クリア」を押してください。',true);
+      const amended=Core.revise(session,raw,quoteDeps);
+      if(!amended.ok)return status((amended.message||amended.code)+'。元の見積下書きは保持しています。',true);
+      renderQuote('budil-gpt-draft-preview',amended.doc);
+      $('budil-gpt-consent').checked=false;
+      status('見積を'+yen(amended.doc.total)+'に修正しました。承認まで保存・発行しません。');
+      return;
+    }
+    if(session && session.stage!=='idle'){
+      return status('進行中の見積を保持しています。顧客候補を選択するか、クリアして新しい指示を入力してください。',true);
+    }
+    const parsed=Commands.parse(raw,{
       today:Commands.todayTokyo(),anonymizer:Anon
     });
-    if(!parsed.ok)return status('指示を確認してください（'+parsed.code+'）。下の例をご利用ください。',true);
+    if(!parsed.ok)return status('指示を確認してください（'+parsed.code+'）。元の下書きは変更していません。',true);
     if($('budil-gpt-consent').checked!==true)
       return status('端末内の顧客・帳票データを読む場合は、確認欄にチェックしてください。',true);
-    // Consent applies to ONE command. Clearing it prevents an unintentional
-    // follow-on read and blocks replay of the same operation.
+    // Clear results only after parsing and consent. Do not erase in-progress
+    // data when a command is unsupported or authorization was not given.
+    resultBox.replaceChildren();
     $('budil-gpt-consent').checked=false;
     if(parsed.action==='quote.draft'){
       try{

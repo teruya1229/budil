@@ -10,7 +10,7 @@ const BudilGptLocalCommands = (() => {
   const deny = code => Object.freeze({ok:false,code});
   const safeName = raw => {
     const name=String(raw||'').replace(/\s/g,'').replace(/(さん|様|御中)$/,'');
-    return NAME.test(name) && !/^お客様$/.test(name) ? name : '';
+    return NAME.test(name) && !/^(?:お客様|今月|先月|来月|先々月|今週|先週|来週|今年|去年|昨年|来年|今日|昨日|明日|今期|前期)$/.test(name) ? name : '';
   };
   function parse(raw, {today,anonymizer}={}) {
     if (typeof raw!=='string'||!raw.trim()||raw.length>220||
@@ -25,12 +25,30 @@ const BudilGptLocalCommands = (() => {
         requiresDocumentApproval:true,networkUsed:false
       });
     }
-    if (/^(?:現在の)?未入金(?:合計|の合計)?を(?:教えて|確認して|見せて)$/.test(text)) {
-      if(typeof today!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(today))
+    const unpaidAll=/^(?:現在の)?未入金(?:合計|の合計)?を(?:教えて|確認して|見せて)$/.test(text);
+    const unpaidMonth=/^今月の未入金(?:合計|の合計)?を(?:教えて|確認して|見せて)$/.test(text);
+    if (unpaidAll || unpaidMonth) {
+      if(typeof today!=='string'||!/^(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-\d{2}$/.test(today))
         return deny('DATE_REQUIRED');
       return Object.freeze({
         ok:true,action:'receivables.summary',request:{action:'receivables.summary',date:today},
+        scope:unpaidMonth?'this_month_expected':'all',
         readOnly:true,networkUsed:false
+      });
+    }
+    // A period is NOT a customer. Lookup issueDate in Budil's local documents.
+    const period=text.match(/^(今月|先月)の(見積書|請求書)を(?:探して|検索して|見せて)$/);
+    if(period){
+      if(typeof today!=='string'||!/^(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-\d{2}$/.test(today))
+        return deny('DATE_REQUIRED');
+      const [year,month]=today.split('-').map(Number);
+      const first=new Date(Date.UTC(year,month-1-(period[1]==='先月'?1:0),1));
+      const monthKey=first.getUTCFullYear()+'-'+String(first.getUTCMonth()+1).padStart(2,'0');
+      return Object.freeze({
+        ok:true,action:'document.period',
+        request:{action:'document.period',month:monthKey,
+          docType:period[2]==='見積書'?'estimate':'invoice',limit:10},
+        periodLabel:period[1],readOnly:true,networkUsed:false
       });
     }
     const document=text.match(/^(.+?)の(見積書|請求書)を(?:探して|検索して|見せて)$/);
