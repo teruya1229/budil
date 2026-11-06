@@ -122,7 +122,11 @@ async function run() {
   await cdp.command("Browser.setDownloadBehavior", {
     behavior: "allow", downloadPath: downloadDir
   });
-  const url="http://127.0.0.1:"+port+"/index.html";
+  const origin=process.env.BUDIL_LIVE_URL;
+  // Test ONLY the exact released public URL, never user sessions or another site.
+  if(origin && origin!=="https://teruya1229.github.io/budil/") throw Error("unexpected_live_url");
+  const url=origin ? origin+"?verified_sha=7ee3fef958041834dcc18d6d981fca5d456db53b"
+    : "http://127.0.0.1:"+port+"/index.html";
   await cdp.command("Page.navigate",{url});
   async function evaluate(expression) {
     const result=await cdp.command("Runtime.evaluate",{
