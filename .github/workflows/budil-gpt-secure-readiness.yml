@@ -1,0 +1,36 @@
+name: Budil GPT secure readiness acceptance
+on:
+  push:
+    branches:
+      - feat/budil-gpt-secure-bridge-20261106
+  pull_request:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  bridge-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and secure readiness tests
+        run: |
+          node --check js/budil-cloud.js
+          node --check js/budil-gpt-offline-ui.js
+          node scripts/verify-budil-gpt-secure-readiness.mjs
+          node scripts/verify-budil-gpt-main-integration.mjs
+          node scripts/verify-budil-ai-p0-contract.mjs
+          node scripts/verify-budil-gpt-local-quote.mjs
+          node scripts/verify-v41314-document-print-pdf-export.mjs
+          node scripts/verify-v41315-pdf-origin-alignment.mjs
+      - name: Chrome availability
+        run: which google-chrome || which chromium
+      - name: Isolated fictional Chrome regression
+        run: node scripts/verify-budil-ai-p0-browser.mjs
