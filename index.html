@@ -6,6 +6,7 @@
   <title>Budil - AI経営脳みそ</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="css/style.css?v=4.13.20">
+  <link rel="stylesheet" href="css/budil-gpt-offline.css?v=20261106a">
 </head>
 <body>
   <div class="app">
@@ -94,6 +95,9 @@
             </button>
             <button class="nav-item nav-item-main" data-view="follow-up">
               <span class="nav-icon">💬</span><span class="nav-label">フォロー</span>
+            </button>
+            <button type="button" id="budil-gpt-open" class="budil-gpt-launch" aria-haspopup="dialog" aria-controls="budil-gpt-shell">
+              <span aria-hidden="true">🎙️</span><span>AI業務番頭（ローカル先行版）</span>
             </button>
             <button class="nav-item nav-item-main" data-view="documents">
               <span class="nav-icon">📄</span><span class="nav-label">請求書・見積書</span>
@@ -4074,6 +4078,65 @@
 
   <div id="app-toast" class="app-toast" aria-live="polite"></div>
 
+  <!-- Budil×GPT local-first pilot: additive, hidden until explicitly opened.
+       No Cloud, customer data, invoice or calendar writes from this panel. -->
+  <div id="budil-gpt-shell" class="budil-gpt-shell" hidden>
+    <div id="budil-gpt-backdrop" class="budil-gpt-overlay" aria-hidden="true"></div>
+    <section class="budil-gpt-dialog" role="dialog" aria-modal="true" aria-labelledby="budil-gpt-heading">
+      <header class="budil-gpt-header">
+        <div>
+          <span class="budil-gpt-tag">ローカル先行版・未保存</span>
+          <h2 id="budil-gpt-heading">🎙️ AI業務番頭</h2>
+        </div>
+        <button type="button" id="budil-gpt-close" class="budil-gpt-btn budil-gpt-btn-secondary budil-gpt-close" aria-label="閉じる">×</button>
+      </header>
+      <p class="budil-gpt-muted">Budilに保存されている、この端末の顧客・帳票・作業予定・未入金を会話形式で確認できます。現在の解析は端末内の限定文法で、OpenAI APIには送信しません。</p>
+      <label class="budil-gpt-label" for="budil-gpt-input">やってほしいこと</label>
+      <textarea id="budil-gpt-input" class="budil-gpt-input" maxlength="220" rows="3" placeholder="例：田中太郎さんを探して"></textarea>
+      <p class="budil-gpt-disclaimer">入力例：田中太郎さんを探して ／ 田中太郎さんの請求書を探して ／ 田中太郎さんの作業予定を教えて ／ 未入金合計を教えて ／ 田中太郎さんのエアコン洗浄2台を税込18,000円で見積して</p>
+      <label class="budil-gpt-check">
+        <input type="checkbox" id="budil-gpt-consent">
+        <span>この1回の操作で、端末内のBudil業務データを読み取ることを許可する</span>
+      </label>
+      <div class="budil-gpt-actions">
+        <button type="button" id="budil-gpt-run" class="budil-gpt-btn">内容を確認して実行</button>
+        <button type="button" id="budil-gpt-clear" class="budil-gpt-btn budil-gpt-btn-secondary">入力をクリア</button>
+      </div>
+      <hr class="budil-gpt-divider">
+      <label class="budil-gpt-check">
+        <input type="checkbox" id="budil-gpt-voice-consent">
+        <span>ブラウザの音声認識を利用する（音声が外部サービスで処理される場合があります）</span>
+      </label>
+      <button type="button" id="budil-gpt-speech" class="budil-gpt-btn budil-gpt-btn-secondary">🎤 音声を文字入力</button>
+      <p id="budil-gpt-status" class="budil-gpt-status" role="status" aria-live="polite"></p>
+      <div id="budil-gpt-result" class="budil-gpt-result" aria-live="polite"></div>
+      <div id="budil-gpt-candidates" hidden>
+        <hr class="budil-gpt-divider">
+        <h3>顧客候補を本人が選択</h3>
+        <div id="budil-gpt-candidate-list" class="budil-gpt-actions"></div>
+      </div>
+      <div id="budil-gpt-draft" hidden>
+        <hr class="budil-gpt-divider">
+        <h3>見積の下書き（未発行）</h3>
+        <div id="budil-gpt-draft-preview"></div>
+        <label class="budil-gpt-label" for="budil-gpt-revision">金額の修正</label>
+        <input id="budil-gpt-revision" class="budil-gpt-input" maxlength="220" placeholder="金額を税込20,000円に変更">
+        <div class="budil-gpt-actions">
+          <button type="button" id="budil-gpt-revise" class="budil-gpt-btn budil-gpt-btn-secondary">下書きを修正</button>
+          <button type="button" id="budil-gpt-approve" class="budil-gpt-btn">この見積を承認</button>
+        </div>
+      </div>
+      <div id="budil-gpt-approved" hidden>
+        <hr class="budil-gpt-divider">
+        <h3>承認済み見積（まだ未発行）</h3>
+        <div id="budil-gpt-approved-preview"></div>
+        <button type="button" id="budil-gpt-pdf" class="budil-gpt-btn">見積PDFを端末に保存</button>
+      </div>
+      <p class="budil-gpt-disclaimer">この先行版は売上・顧客・予定を登録・変更しません。Googleカレンダーの空き確認や銀行照合も未実施です。PDFは本人承認後のみ出力します。</p>
+    </section>
+  </div>
+
+
   <script src="js/storage.js?v=4.13.20"></script>
   <script src="js/messages.js?v=4.13.20"></script>
   <script src="js/demand-brain.js?v=4.13.20"></script>
@@ -4102,5 +4165,12 @@
   <script src="js/data-backup.js?v=4.13.20"></script>
   <script src="js/budil-cloud.js?v=4.13.20"></script>
   <script src="js/app.js?v=4.13.20"></script>
+  <script src="js/customer-resolve-entrypoint.js?v=20261106a"></script>
+  <script src="js/budil-gpt-readonly.js?v=20261106a"></script>
+  <script src="js/budil-gpt-local-source.js?v=20261106a"></script>
+  <script src="js/budil-gpt-anonymize.js?v=20261106a"></script>
+  <script src="js/budil-gpt-local-commands.js?v=20261106a"></script>
+  <script src="experiments/budil-gpt-phase1/fixture-core.js?v=20261106a"></script>
+  <script src="js/budil-gpt-offline-ui.js?v=20261106a"></script>
 </body>
 </html>

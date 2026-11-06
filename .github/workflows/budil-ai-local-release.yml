@@ -1,0 +1,60 @@
+name: Budil AI local-first release candidate
+on:
+  push:
+    branches:
+      - release/budil-ai-local-first-20261106
+  pull_request:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout no-write release source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+          fetch-depth: 0
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Unit and preserved PDF tests
+        run: |
+          node --check js/budil-gpt-anonymize.js
+          node --check js/budil-gpt-local-source.js
+          node --check js/budil-gpt-local-commands.js
+          node --check js/budil-gpt-offline-ui.js
+          node --check experiments/budil-gpt-phase1/fixture-core.js
+          node scripts/verify-budil-gpt-anonymize.mjs
+          node scripts/verify-budil-gpt-readonly.mjs
+          node scripts/verify-budil-gpt-local-source.mjs
+          node scripts/verify-budil-gpt-local-commands.mjs
+          node scripts/verify-budil-gpt-local-quote.mjs
+          node scripts/verify-budil-gpt-main-integration.mjs
+          node scripts/verify-v41314-document-print-pdf-export.mjs
+          node scripts/verify-v41315-pdf-origin-alignment.mjs
+      - name: CJK fonts and PDF inspection
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk poppler-utils
+      - name: Confirm Chromium
+        run: which google-chrome || which chromium
+      - name: Actual Budil mobile assistant and PDF E2E
+        env:
+          BUDIL_TEST_OUTPUT_DIR: ${{ runner.temp }}/budil-local-release-qa
+        run: node scripts/verify-budil-ai-release-browser.mjs
+      - name: Upload isolated test proofs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: budil-ai-local-release-qa
+          path: |
+            ${{ runner.temp }}/budil-local-release-qa/budil-release-390.png
+            ${{ runner.temp }}/budil-local-release-qa/downloads/*.pdf
+          if-no-files-found: ignore
+          retention-days: 3
