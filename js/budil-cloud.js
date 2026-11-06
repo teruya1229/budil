@@ -435,6 +435,48 @@
     });
   }
 
+
+  /**
+   * Budil GPT readiness: authenticated GET only, never billable, no customer
+   * data, API key values or storage contents. Shares the existing backup
+   * login without exposing its access token to other frontend modules.
+   */
+  function getGptReadiness() {
+    var cfg = getConfig();
+    if (!cfg || cfg.env !== 'production') {
+      return Promise.resolve({ok:false,code:'gpt_origin_unavailable'});
+    }
+    return getValidAccessToken().then(function (token) {
+      if (!token.ok || !token.accessToken) {
+        return {ok:false,code:CODE.NOT_SIGNED_IN};
+      }
+      return doFetch(cfg.url + '/functions/v1/budil-gpt-interpret', {
+        method:'GET',
+        headers:{Authorization:'Bearer '+token.accessToken,apikey:cfg.publishableKey},
+        timeoutMs:12000
+      }).then(function (r) {
+        if(r.timeout)return {ok:false,code:CODE.TIMEOUT};
+        if(r.networkError)return {ok:false,code:CODE.NETWORK};
+        if(r.status===401)return {ok:false,code:CODE.UNAUTHORIZED};
+        if(r.status!==200 || !r.body || r.body.ok!==true ||
+           r.body.phase!=='readiness_only' ||
+           r.body.external_request_sent!==false ||
+           r.body.persisted!==false) {
+          return {ok:false,code:r.body && r.body.code || 'readiness_unavailable'};
+        }
+        return {
+          ok:true,phase:'readiness_only',
+          ready:r.body.ready===true,
+          enabled:r.body.enabled===true,
+          keyConfigured:r.body.key_configured===true,
+          modelSupported:r.body.model_supported===true,
+          anonymizedReady:r.body.anonymized_ready===true,
+          externalRequestSent:false,persisted:false
+        };
+      });
+    });
+  }
+
   function isBackupInFlight() {
     return backupInFlight;
   }
@@ -451,6 +493,7 @@
     logout: logout,
     backupNow: backupNow,
     fetchLatest: fetchLatest,
+    getGptReadiness: getGptReadiness,
     isBackupInFlight: isBackupInFlight
   };
 })(typeof window !== 'undefined' ? window : globalThis);
