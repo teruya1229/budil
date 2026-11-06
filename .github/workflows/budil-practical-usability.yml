@@ -1,0 +1,31 @@
+name: Budil practical usability audit (read-only)
+on:
+  push:
+    branches:
+      - audit/budil-realworld-usability-20261106
+permissions:
+  contents: read
+jobs:
+  usability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compare field-worker speech with released Budil parser
+        env:
+          BUDIL_AUDIT_DIR: ${{ runner.temp }}/budil-practical-audit
+        run: node scripts/audit-budil-realworld-usability.mjs
+      - name: Preserve complete audit results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: budil-usability-audit-report
+          path: ${{ runner.temp }}/budil-practical-audit/report.json
+          if-no-files-found: warn
+          retention-days: 7
