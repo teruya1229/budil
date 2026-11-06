@@ -286,6 +286,24 @@ async function run() {
   await evaluate("document.getElementById('budil-gpt-clear').click()");
   console.log("BUDIL_GPT_MOCK_BROWSER_PASS: separate consent, candidate selection, unsaved draft, no writes");
 
+  // Run new finance reader ONLY on the branch-local version; production
+  // verification remains pinned to currently deployed features.
+  if(!liveUrl){
+    await evaluate("localStorage.setItem('budil_revenue_records',JSON.stringify([{id:'fictional-revenue-profit',workDate:'2026-11-06',status:'確定',amount:18000,service:'エアコン洗浄',source:'直受け'}]))");
+    await evaluate("localStorage.setItem('budil_expense_records',JSON.stringify([{id:'fictional-expense-profit',date:'2026-11-06',amount:3000,category:'薬剤・材料'}]))");
+    await evaluate("document.getElementById('budil-gpt-input').value='今月の利益はいくら？';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+    const profitView=await evaluate("document.getElementById('budil-gpt-result').textContent");
+    assert.ok(profitView.includes('概算利益'),profitView);
+    assert.ok(profitView.includes('15,000円'),profitView);
+    assert.ok(profitView.includes('18,000円'),profitView);
+    const warning=await evaluate("document.getElementById('budil-gpt-status').textContent");
+    assert.ok(warning.includes('確定申告用利益ではありません'));
+    assert.equal(await evaluate("Storage.getRevenueRecords().length"),1);
+    assert.equal(await evaluate("Storage.getExpenseRecords().length"),1);
+    console.log("BUDIL_PROFIT_BROWSER_PASS: existing ProfitBrain, approximate month, no writes");
+  }
+
+
 
 
 }
