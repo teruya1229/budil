@@ -21,6 +21,7 @@ jobs:
         with:
           persist-credentials: false
           clean: false
+          fetch-depth: 0
       - name: Confirm checked-out development branch
         shell: pwsh
         run: |
@@ -61,6 +62,7 @@ jobs:
         with:
           persist-credentials: false
           clean: false
+          fetch-depth: 0
       - name: Node 22 (fixture only)
         uses: actions/setup-node@v4
         with:
