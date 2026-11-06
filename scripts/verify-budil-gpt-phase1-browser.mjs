@@ -360,6 +360,23 @@ async function run() {
   assert.equal(await evaluate("document.getElementById('budil-gpt-approved').hidden"),false);
   assert.equal(await evaluate("Storage.getDocuments().length"),0);
   console.log('PASS: actual Budil local fictional quote selection, 20k revision and approval without saving');
+  const beforeLivePdf=new Set(readdirSync(downloadDir).filter(n=>n.endsWith('.pdf')));
+  await evaluate("document.getElementById('budil-gpt-pdf').click()");
+  let livePdf='';
+  for(let i=0;i<220;i++){
+    const files=readdirSync(downloadDir).filter(n=>n.endsWith('.pdf')&&!beforeLivePdf.has(n));
+    if(files.length&&statSync(join(downloadDir,files[0])).size>5000){
+      livePdf=join(downloadDir,files[0]);break;
+    }
+    await sleep(100);
+  }
+  assert.ok(livePdf,'actual Budil main estimate PDF not downloaded');
+  const inspected=spawnSync('pdfinfo',[livePdf],{encoding:'utf8'});
+  assert.equal(inspected.status,0);
+  assert.equal(Number((inspected.stdout.match(/^Pages:\s+(\d+)/m)||[])[1]),1,
+    'local quote should fit within one A4 page');
+  assert.equal(await evaluate("Storage.getDocuments().length"),0);
+  console.log('PASS: actual Budil panel locally downloaded approved A4 estimate PDF with zero Storage writes');
   console.log('PASS: actual Budil local data action requires consent and clears after close');
   console.log("BUDIL_GPT_BROWSER_E2E_PASS");
 
