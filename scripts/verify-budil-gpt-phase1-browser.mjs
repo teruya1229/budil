@@ -349,6 +349,17 @@ async function run() {
   assert.equal(await evaluate("document.getElementById('budil-gpt-result').textContent.includes('顧客候補：1件')"),true);
   assert.equal(await evaluate("document.getElementById('budil-gpt-consent').checked"),false);
   console.log('PASS: actual Budil local customer query from isolated fictional Storage');
+  await evaluate("document.getElementById('budil-gpt-input').value='架空太郎さんのエアコン洗浄2台を税込18,000円で見積して';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+  assert.equal(await evaluate("document.querySelectorAll('#budil-gpt-candidate-list button').length"),1);
+  assert.equal(await evaluate("document.getElementById('budil-gpt-draft').hidden"),true);
+  await evaluate("document.querySelector('#budil-gpt-candidate-list button').click()");
+  assert.equal(await evaluate("document.getElementById('budil-gpt-draft-preview').textContent.includes('18,000円')"),true);
+  await evaluate("document.getElementById('budil-gpt-revision').value='金額を税込20,000円に変更';document.getElementById('budil-gpt-revise').click()");
+  assert.equal(await evaluate("document.getElementById('budil-gpt-draft-preview').textContent.includes('20,000円')"),true);
+  await evaluate("document.getElementById('budil-gpt-approve').click()");
+  assert.equal(await evaluate("document.getElementById('budil-gpt-approved').hidden"),false);
+  assert.equal(await evaluate("Storage.getDocuments().length"),0);
+  console.log('PASS: actual Budil local fictional quote selection, 20k revision and approval without saving');
   console.log('PASS: actual Budil local data action requires consent and clears after close');
   console.log("BUDIL_GPT_BROWSER_E2E_PASS");
 
