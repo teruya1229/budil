@@ -46,3 +46,30 @@ jobs:
           path: ${{ runner.temp }}/budil-practical-audit/report.json
           if-no-files-found: warn
           retention-days: 7
+
+  japanese-windows:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify Japanese Windows Chrome public Budil and PDF
+        env:
+          BUDIL_LIVE_URL: https://teruya1229.github.io/budil/
+          BUDIL_TEST_OUTPUT_DIR: ${{ runner.temp }}/budil-win-japanese-qa
+        run: node scripts/audit-budil-public-browser.mjs
+      - name: Preserve real Windows browser proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: budil-windows-japanese-qa
+          path: |
+            ${{ runner.temp }}/budil-win-japanese-qa/budil-release-390.png
+            ${{ runner.temp }}/budil-win-japanese-qa/downloads/*.pdf
+          if-no-files-found: ignore
+          retention-days: 5
