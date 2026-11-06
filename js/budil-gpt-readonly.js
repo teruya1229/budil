@@ -71,6 +71,33 @@ const BudilGptReadOnly = (() => {
     const leads=toArray(deps,'getLeads');
     if(!leads) return fail('DEPENDENCY_MISSING');
     const result=deps.customerResolver.resolve({name:request.query,limit:request.limit},{leads});
+    // Surname-only searches are read-only, bounded candidate suggestions,
+    // never identity matches. The canonical exact-ID resolver is unchanged.
+    // Only 2-4 Japanese characters qualify; no arbitrary substring matching.
+    if(result.status==='not_found' &&
+       /^[\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}]{2,4}$/u.test(request.query) &&
+       typeof deps.customerResolver.normalizeName==='function' &&
+       typeof deps.customerResolver.leadDisplayName==='function' &&
+       typeof deps.customerResolver.toCandidate==='function') {
+      const queryName=deps.customerResolver.normalizeName(request.query);
+      const suggestions=leads.filter(lead=>{
+        const name=deps.customerResolver.normalizeName(deps.customerResolver.leadDisplayName(lead));
+        return name.length>queryName.length && name.startsWith(queryName);
+      });
+      const tooMany=suggestions.length>request.limit;
+      const candidates=tooMany?[]:suggestions.map(lead=>({
+        ...deps.customerResolver.toCandidate(lead,'surname_suggestion'),
+        requiresUserConfirmation:true
+      }));
+      if(suggestions.length){
+        return ok(request.action,{
+          status:tooMany?'too_many':'surname_suggestions',
+          candidateCount:suggestions.length,candidates,
+          selectedCustomerId:null,requiresUserConfirmation:true
+        },receipt(request.action,tooMany?'too_many':'surname_suggestions',
+          suggestions.length,tooMany));
+      }
+    }
     const count=Number(result.candidateCount)||0;
     // Reuse the original Budil identity resolver. Do not "auto-confirm"
     // a single candidate matched by name.
