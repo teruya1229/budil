@@ -94,4 +94,32 @@ check('core has no implicit storage or network access',()=>{
  const code=read('experiments/budil-gpt-phase1/fixture-core.js');
  assert.equal(/\blocalStorage\s*\.|\bfetch\s*\(|Storage\.(?:get|save|update)/.test(code),false);
 });
-console.log('Budil GPT local anonymized quote '+n+'/18 PASS');
+check('offline quote requires local data consent',()=>{
+ const s=newSession();const r=C.startLocalParsed(s,raw,{...deps,localAccessConsent:false});
+ assert.equal(r.code,'LOCAL_CONSENT_REQUIRED');assert.equal(s.stage,'idle');
+});
+check('offline quote never trusts free form amount',()=>{
+ const s=newSession();const r=C.startLocalParsed(s,'田中太郎さんのエアコン洗浄2台を18000円で見積して',deps);
+ assert.equal(r.code,'LOCAL_INSTRUCTION_INVALID');assert.equal(s.stage,'idle');
+});
+check('offline quote resolves same-name leads without GPT',()=>{
+ const s=newSession();const r=C.startLocalParsed(s,raw,deps);
+ assert.equal(r.ok,true);assert.equal(r.code,'CANDIDATES');
+ assert.equal(s.stage,'candidate');assert.equal(s.kind,'local');
+ assert.equal(s.candidates.length,2);
+});
+check('offline quote allows human-selected local draft',()=>{
+ const s=newSession();C.startLocalParsed(s,raw,deps);
+ const selected=C.selectCustomer(s,'local-c001',deps);
+ assert.equal(selected.code,'DRAFT_READY');
+ assert.equal(selected.doc.customerName,'田中太郎');
+ assert.equal(selected.doc.total,18000);
+ assert.equal(selected.doc.status,'draft');
+ assert.equal(C.approve(s,1).code,'APPROVED_LOCAL_DRAFT');
+});
+check('offline quote never invokes GPT or writes Storage',()=>{
+ const source=read('experiments/budil-gpt-phase1/fixture-core.js');
+ const part=source.slice(source.indexOf('function startLocalParsed'),source.indexOf('function startAnonymized'));
+ assert.ok(!/\bfetch\s*\(|\bStorage\b|interpretFixture|openai|\.save\w*\(/i.test(part));
+});
+console.log('Budil GPT local anonymized quote '+n+'/23 PASS');
