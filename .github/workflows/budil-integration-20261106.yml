@@ -1,0 +1,40 @@
+name: Budil combined privacy and cloud restore acceptance
+on:
+  push:
+    branches: [feat/budil-integration-safe-20261106]
+permissions: {contents: read}
+jobs:
+  functions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false, clean: false}
+      - uses: denoland/setup-deno@v2
+        with: {deno-version: v2.x}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: |
+          deno check supabase/functions/budil-backups/index.ts
+          deno check supabase/functions/budil-gpt-interpret/index.ts
+          deno run --no-check scripts/verify-budil-gpt-readonly-privacy.ts
+          node scripts/verify-budil-cloud-safe-restore.mjs
+          node scripts/verify-budil-cloud-restore-server.mjs
+          node scripts/verify-budil-gpt-public-read.mjs
+          node scripts/verify-budil-gpt-secure-readiness.mjs
+          node scripts/verify-budil-gpt-conversation-20.mjs
+          node scripts/verify-v41314-document-print-pdf-export.mjs
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false, clean: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: |
+          if ! command -v pdfinfo >/dev/null 2>&1; then
+            sudo apt-get -y -qq install poppler-utils
+          fi
+          node scripts/verify-budil-ai-p0-browser.mjs
+          node scripts/verify-budil-cloud-restore-browser.mjs

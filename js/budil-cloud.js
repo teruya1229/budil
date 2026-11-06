@@ -513,6 +513,7 @@
           keyConfigured:r.body.key_configured===true,
           modelSupported:r.body.model_supported===true,
           anonymizedReady:r.body.anonymized_ready===true,
+          readonlyReady:r.body.readonly_ready===true,
           externalRequestSent:false,persisted:false
         };
       });
@@ -577,6 +578,40 @@
     });
   }
 
+  /**
+   * Explicit, opt-in PII-free read intent classifier. Only a finite whitelist
+   * of aggregate questions is sent. Outputs cannot perform business writes.
+   */
+  function interpretPiiFreeRead(raw) {
+    var gate=typeof BudilGptPublicRead!=='undefined'?BudilGptPublicRead:null;
+    if(!gate||typeof gate.prepare!=='function'||typeof gate.verify!=='function')
+      return Promise.resolve({ok:false,code:'public_read_gate_unavailable'});
+    var prepared=gate.prepare(raw);
+    if(!prepared.ok)return Promise.resolve({ok:false,code:prepared.code});
+    var cfg=getConfig();
+    if(!cfg||cfg.env!=='production')
+      return Promise.resolve({ok:false,code:'gpt_origin_unavailable'});
+    return getValidAccessToken().then(function(token){
+      if(!token.ok||!token.accessToken)return {ok:false,code:CODE.NOT_SIGNED_IN};
+      return doFetch(cfg.url+'/functions/v1/budil-gpt-interpret',{
+        method:'POST',
+        headers:{Authorization:'Bearer '+token.accessToken,
+          apikey:cfg.publishableKey,'Content-Type':'application/json'},
+        body:JSON.stringify(prepared.wire),timeoutMs:20000
+      }).then(function(r){
+        if(r.timeout)return {ok:false,code:CODE.TIMEOUT};
+        if(r.networkError)return {ok:false,code:CODE.NETWORK};
+        if(r.status===401)return {ok:false,code:CODE.UNAUTHORIZED};
+        if(r.status!==200||!r.body||r.body.ok!==true)
+          return {ok:false,code:r.body&&r.body.code||CODE.UNKNOWN};
+        var verified=gate.verify(raw,r.body);
+        if(!verified.ok)return {ok:false,code:verified.code||'model_result_mismatch'};
+        return {ok:true,phase:'interpret_only',verified:true,parsed:verified.parsed,
+          externalRequestSent:true,readOnly:true,persisted:false};
+      });
+    });
+  }
+
   function isBackupInFlight() {
     return backupInFlight;
   }
@@ -596,6 +631,7 @@
     fetchLatestPayload: fetchLatestPayload,
     getGptReadiness: getGptReadiness,
     interpretAnonymizedQuote: interpretAnonymizedQuote,
+    interpretPiiFreeRead: interpretPiiFreeRead,
     isBackupInFlight: isBackupInFlight
   };
 })(typeof window !== 'undefined' ? window : globalThis);

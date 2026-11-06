@@ -4107,7 +4107,7 @@
         </div>
         <button type="button" id="budil-gpt-close" class="budil-gpt-btn budil-gpt-btn-secondary budil-gpt-close" aria-label="閉じる">×</button>
       </header>
-      <p class="budil-gpt-muted">Budilに保存されている、この端末の顧客・帳票・作業予定・未入金を会話形式で確認できます。操作内容の解析は現在も端末内の限定文法です。GPT接続確認は既存ログインを使用した無課金の状態確認のみで、顧客情報や見積内容は送信しません。</p>
+      <p class="budil-gpt-muted">Budilに保存されている、この端末の顧客・帳票・作業予定・未入金を会話形式で確認できます。通常操作は端末内の限定文法で解析します。GPTは別途本人が許可した匿名化指示だけを分類し、顧客データや保存済み帳票は送信しません。GPT状態確認は無課金です。</p>
       <label class="budil-gpt-label" for="budil-gpt-input">やってほしいこと</label>
       <textarea id="budil-gpt-input" class="budil-gpt-input" maxlength="220" rows="3" placeholder="例：田中太郎さんを探して"></textarea>
       <p class="budil-gpt-disclaimer">入力例：田中太郎さんを探して ／ 田中太郎さんの請求書を探して ／ 田中太郎さんの作業予定を教えて ／ 未入金合計を教えて ／ 田中太郎さんのエアコン洗浄2台を税込18,000円で見積して</p>
@@ -4119,10 +4119,15 @@
         <input type="checkbox" id="budil-gpt-remote-consent">
         <span>今回の見積指示から顧客名を除いた作業名・台数・金額・税区分を外部GPTに送信することを許可する（API利用料金が発生する場合あり）</span>
       </label>
+      <label class="budil-gpt-check">
+        <input type="checkbox" id="budil-gpt-public-consent">
+        <span>今回の氏名・住所・電話を含まない集計質問を外部GPTへ送信する（料金が発生する場合あり）。顧客データ本体は送信しません。</span>
+      </label>
       <div class="budil-gpt-actions">
         <button type="button" id="budil-gpt-run" class="budil-gpt-btn">内容を確認して実行</button>
         <button type="button" id="budil-gpt-readiness" class="budil-gpt-btn budil-gpt-btn-secondary">GPT接続状態を確認（無料・読取のみ）</button>
         <button type="button" id="budil-gpt-interpret" class="budil-gpt-btn budil-gpt-btn-secondary">GPTで見積指示を解析（承認制）</button>
+        <button type="button" id="budil-gpt-public-read" class="budil-gpt-btn budil-gpt-btn-secondary">GPTで集計質問を解釈（匿名・承認制）</button>
         <button type="button" id="budil-gpt-clear" class="budil-gpt-btn budil-gpt-btn-secondary">入力をクリア</button>
       </div>
       <hr class="budil-gpt-divider">
@@ -4194,7 +4199,7 @@
   <script src="js/executive-brain.js?v=4.13.20"></script>
   <script src="js/card-ocr.js?v=4.13.20"></script>
   <script src="js/data-backup.js?v=4.13.20"></script>
-  <script src="js/budil-cloud.js?v=20261106restore1"></script>
+  <script src="js/budil-cloud.js?v=20261106m1"></script>
   <script src="js/budil-cloud-restore.js?v=20261106restore1"></script>
   <script src="js/app.js?v=4.13.20"></script>
   <script src="js/customer-resolve-entrypoint.js?v=20261106a"></script>
@@ -4202,9 +4207,10 @@
   <script src="js/budil-gpt-local-source.js?v=20261106a"></script>
   <script src="js/budil-gpt-anonymize.js?v=20261106a"></script>
   <script src="js/budil-gpt-local-commands.js?v=20261106a"></script>
+  <script src="js/budil-gpt-public-read.js?v=20261106m1"></script>
   <script src="js/budil-gpt-conversation.js?v=20261106d"></script>
   <script src="experiments/budil-gpt-phase1/fixture-core.js?v=20261106a"></script>
-  <script src="js/budil-gpt-offline-ui.js?v=20261106e"></script>
+  <script src="js/budil-gpt-offline-ui.js?v=20261106m1"></script>
   <script src="js/budil-cloud-restore-ui.js?v=20261106restore1"></script>
 </body>
 </html>
