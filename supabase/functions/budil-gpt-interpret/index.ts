@@ -316,7 +316,7 @@ async function run(request: Request): Promise<Response> {
     phase: "interpret_only",
     input_mode: mode,
     requires_human_approval: true,
-    requires_local_consent: mode==="read_only_intent",
+    requires_local_consent: false,
     persisted: false,
   }, corsHeaders);
 }
