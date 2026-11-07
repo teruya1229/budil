@@ -4165,6 +4165,17 @@
         <div id="budil-gpt-booking-orders" class="budil-gpt-actions"></div>
         <button type="button" id="budil-gpt-booking-save" class="budil-gpt-btn" hidden>確認した予約を端末に保存</button>
       </div>
+      <div id="budil-gpt-google-read" hidden>
+        <hr class="budil-gpt-divider">
+        <h3>Googleカレンダーの空き確認（読取専用）</h3>
+        <p>接続設定済みのカレンダーを本人操作で読み、時間の重なりだけを判定します。予定名・住所・顧客情報はここに表示しません。結果は照会時点のもので、予約登録や予定変更は行いません。</p>
+        <label class="budil-gpt-check">
+          <input type="checkbox" id="budil-gpt-google-consent">
+          <span>指定日のGoogleカレンダーを読取専用で照会することに同意します（顧客・見積データは送信しません）。</span>
+        </label>
+        <button type="button" id="budil-gpt-google-check" class="budil-gpt-btn budil-gpt-btn-secondary">Googleカレンダーの時間重複を確認</button>
+        <p id="budil-gpt-google-status" role="status" aria-live="polite"></p>
+      </div>
       <div id="budil-gpt-draft" hidden>
         <hr class="budil-gpt-divider">
         <h3>見積の下書き（未発行）</h3>
@@ -4259,7 +4270,7 @@
   <script src="js/executive-brain.js?v=4.13.20"></script>
   <script src="js/card-ocr.js?v=4.13.20"></script>
   <script src="js/data-backup.js?v=4.13.20"></script>
-  <script src="js/budil-cloud.js?v=20261106full1"></script>
+  <script src="js/budil-cloud.js?v=20261107google1"></script>
   <script src="js/budil-cloud-restore.js?v=20261106restore1"></script>
   <script src="js/app.js?v=4.13.20"></script>
   <script src="js/customer-resolve-entrypoint.js?v=20261106a"></script>
@@ -4269,12 +4280,12 @@
   <script src="js/budil-gpt-local-commands.js?v=20261106a"></script>
   <script src="js/budil-gpt-public-read.js?v=20261106m1"></script>
   <script src="js/budil-gpt-conversation.js?v=20261106d"></script>
-  <script src="js/budil-gpt-booking.js?v=20261106a"></script>
+  <script src="js/budil-gpt-booking.js?v=20261107google1"></script>
   <script src="js/invoice-structured-entrypoint.js?v=20261106a"></script>
   <script src="js/budil-gpt-invoice-lifecycle.js?v=20261107issue1"></script>
   <script src="js/budil-gpt-bank-reconcile.js?v=20261106a"></script>
   <script src="experiments/budil-gpt-phase1/fixture-core.js?v=20261106a"></script>
-  <script src="js/budil-gpt-offline-ui.js?v=20261107issue1"></script>
+  <script src="js/budil-gpt-offline-ui.js?v=20261107google1"></script>
   <script src="js/budil-cloud-restore-ui.js?v=20261106restore1"></script>
 </body>
 </html>
