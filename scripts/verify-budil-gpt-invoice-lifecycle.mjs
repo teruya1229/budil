@@ -84,7 +84,8 @@ assert.equal(issued.externalSendPerformed,false);
 assert.equal(documents[0].status,'issued');
 assert.equal(documents[0].paymentStatus,'pending');
 assert.equal(documents[0].paidAmount,0);
-assert.equal(documents[0].unpaidAmount,18000);
+assert.equal(documents[0].unpaidAmount,issue.preview.total,
+  'issue must preserve the exact tax-inclusive invoice total, never invent 18,000 yen');
 assert.equal(documents[1].status,'draft','original quote remains unchanged');
 assert.equal(life.applyIssue(issue,{storage,confirm:true,notSentAcknowledged:true}).code,'DOCUMENTS_CHANGED');
 assert.equal(life.prepareIssue(documents[0].id,storage).code,'INVOICE_NOT_DRAFT');
