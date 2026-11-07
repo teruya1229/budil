@@ -6,13 +6,13 @@
 
 ## CURRENT EVIDENCE
 - 統合PR: https://github.com/teruya1229/budil/pull/8
-- 2026-11-07 CIで実測済みコード: `2b0e9046e27057a7d01556f7fd2c00c0ed156b0e`（文書更新後の最新PR headとは異なる）
+- 2026-11-07 更新済み回帰実測: `fd6de97d76be13c3444a88d3eb24a7792e576031` で請求書確定画面の重複IDを修正。6ワークフローSUCCESS（統合CI https://github.com/teruya1229/budil/actions/runs/42359736246 でLinux/Windows Chrome実DOM検証・backend PASS）。
 - CI: https://github.com/teruya1229/budil/actions/runs/42349549802
   - business-and-backend / chrome-linux / chrome-windows が全て SUCCESS。
   - 古い20指示、PDF、ローカル版検査、クラウド復元、GPT基盤検査も SUCCESS。
   - 元の実務19例のうち**16/19が架空データ・Chrome操作のE2Eで検証済み**。残る #5, #6, #7 はGoogleの実予定参照・書込・変更。
 - 請求書: 金額と税区分の確認→作業完了/売上承認→請求下書き保存→本人による請求確定(`draft`→`issued`)→PDF確認と顧客送付は別操作→独立したCSV銀行入金照合。請求確定は顧客への送信も自動入金済み変更もしない。作業売上に紐づく請求書の銀行CSV自動更新は拒否。
-- Google: 既存のACTIVE `google_calendar` integrationと`schedule_blocks_list` read bindingを発見。既存の本番 `make-proxy` の読取専用ルートへ接続するフロント処理は**開発版のみ**追加。JWT以外の秘密情報を持たず、予定の開始/終了時刻だけをクライアントへ返す。個人情報・予定タイトルは外部GPTへ送らない。
+- Google: `google_calendar` integrationと`schedule_blocks_list` read bindingは**テスト専用A/Bの2テナントだけに存在**。実業務tenant `mi-bcs` はowner所属1件、ACTIVE Google integration/READ bindingどちらも0件（2026-11-07 Supabase本番READ実測）。フロントからの読取処理は**開発版のみ**追加。JWT以外の秘密情報を持たず、Google予定の開始/終了時刻のみクライアントへ返し、顧客情報/予定タイトルは外部GPTへ送らない。
 - Cloud: `budil-backups` に本番v3あり。PR内にはowner限定の最新バックアップ取得・SHA確認・手動復元・ロールバックを実装。未デプロイ・実JWTで未検証。
 - GPT: `budil-gpt-interpret` v1が本番にある。匿名集計の新モードはバックエンド未デプロイ・課金フラグOFF。CIは検証用のモック通信。
 
@@ -37,3 +37,11 @@
 
 ## ACCEPTANCE
 「見積→予約→作業完了→請求書発行→入金確認→複数端末復元」を本人が実データまたはテスト用アカウントの実接続で操作でき、外部送信や費用が意図どおりであると確認できたとき初めて完成を判定する。
+
+## 2026-11-07 OWNER CALENDAR DECISION / REAL CONNECTOR EVIDENCE (NOT DEPLOYED)
+- 本人は、ChatGPT Google Calendar連携でowner権限が確認できた**個人のprimaryカレンダー**を、Budilの業務予定先にすると「はい」と明示選択した。アカウント識別子は公開Gitリポジトリに書かず、既存の会社OSにverifiedで記録（公開資料では非表示）。家族カレンダー/祝日カレンダー、テスト用tenant A/Bを業務予定先に採用しない。
+- ChatGPTのGoogle Calendarコネクタで2026-11-07～10を読取（有効な予定3件）。**これはBudilのJWT→Edge→Google read E2Eの証明ではない。**
+- Supabase本番の既存 `make-proxy` v24 の `handle_schedule_blocks_list.ts` と `google_calendar_provider.ts` には、`primary` および従来のBC固定個人カレンダー識別子を明示拒否する `forbidden_calendar_id` ガードが存在。**DBにmi-bcs bindingを追加するだけでは読めない**。Google service-account token交換は `calendar.events.readonly` scopeで、これ自体はGoogle予定の登録・変更・削除を実行できない。
+- この拒否の背景は、過去の複数テナント向け実装で固定BCカレンダーへfallbackして他社の接続先を混同した問題に対する境界対策。多テナント共用側の禁止を一律解除することはしない。
+- 実装案（owner許可待ち）：①本人の主カレンダーと `mi-bcs` owner所属の紐付けを独立検証し、他tenantには適用されない**サーバー側限定スコープ**でアクセス許可を設計・テストする。②既存Google認証方式（OAuthまたは共有許可）の本人・アクセス範囲を検証し、本番秘密値は出力しない。③`schedule_blocks_list` の実JWT経路で開始/終了のみ返り、他tenant/非owner/任意calendarIdの強制変更が拒否されることを実測する。④本人に変更先・権限・影響を説明したうえで、架空予定1件だけをGoogleで作成→再読取→変更→削除し、重複防止/タイムゾーン/実機操作を検品する。
+- **未承認・未実施**：既存 `forbidden_calendar_id` ガード変更、Google ACL共有、Supabase本番のintegration/binding追加、Makeへの予約送信、実Google予定への書込、GPT有料通信、PR #8 mainマージ・公開。
