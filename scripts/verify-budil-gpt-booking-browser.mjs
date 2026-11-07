@@ -33,7 +33,17 @@ try{
   let port=0;
   for(let i=0;i<300;i++){
     const f=join(profile,'DevToolsActivePort');
-    if(existsSync(f)){port=Number(readFileSync(f,'utf8').split(/\r?\n/)[0]);if(port)break;}
+    try{
+      if(existsSync(f)){
+        const candidate=Number(readFileSync(f,'utf8').split(/\r?\n/)[0]);
+        if(candidate){port=candidate;break;}
+      }
+    }catch(e){
+      // Windows Chrome may hold DevToolsActivePort exclusively for a moment
+      // while initializing. Recheck rather than treating the transient
+      // sharing violation as a failed browser launch.
+      if(!e||!['EBUSY','EPERM','EACCES','ENOENT'].includes(e.code))throw e;
+    }
     if(chrome.exitCode!==null)throw Error('CHROME_EXITED');
     await sleep(100);
   }
