@@ -612,6 +612,58 @@
     });
   }
 
+
+  /**
+   * Existing make-proxy schedule_blocks_list READ only. The server derives
+   * tenant, calendar ID and timezone from its active binding. Never send
+   * customer or event PII, and never call Make's write/confirmed path.
+   */
+  function fetchScheduleBlocks(startDate,endDate) {
+    const validDate = value => {
+      if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
+      const date=new Date(value+'T00:00:00Z');
+      return Number.isFinite(date.getTime()) &&
+        date.toISOString().slice(0,10)===value;
+    };
+    if(!validDate(startDate)||!validDate(endDate)||startDate!==endDate)
+      return Promise.resolve({ok:false,code:'calendar_date_invalid'});
+    if(!isAvailable())return Promise.resolve({ok:false,code:CODE.DISABLED});
+    const cfg=getConfig();
+    if(!cfg || cfg.env!=='production')
+      return Promise.resolve({ok:false,code:'calendar_origin_unavailable'});
+    return getValidAccessToken().then(function(token){
+      if(!token.ok||!token.accessToken)return {ok:false,code:CODE.NOT_SIGNED_IN};
+      return doFetch(cfg.url+'/functions/v1/make-proxy',{
+        method:'POST',
+        headers:{Authorization:'Bearer '+token.accessToken,
+          apikey:cfg.publishableKey,'Content-Type':'application/json'},
+        body:JSON.stringify({operation:'schedule_blocks_list',
+          startDate:startDate,endDate:endDate}),
+        timeoutMs:25000
+      }).then(function(r){
+        if(r.timeout)return {ok:false,code:CODE.TIMEOUT};
+        if(r.networkError)return {ok:false,code:CODE.NETWORK};
+        if(r.status===401)return {ok:false,code:CODE.UNAUTHORIZED};
+        if(r.status!==200)
+          return {ok:false,code:r.body&&r.body.code||CODE.UNKNOWN};
+        if(!r.body||!Array.isArray(r.body.events)||r.body.events.length>1000)
+          return {ok:false,code:'calendar_response_invalid'};
+        const events=[];
+        for(const item of r.body.events){
+          if(!item||typeof item!=='object'||Array.isArray(item)||
+            typeof item.start!=='string'||typeof item.end!=='string'||
+            item.start.length>45||item.end.length>45)
+            return {ok:false,code:'calendar_response_invalid'};
+          // Strip event summary, address, calendar ID and any other private
+          // fields before returning to the UI or schedule-review module.
+          events.push({start:item.start,end:item.end});
+        }
+        return {ok:true,events,readOnly:true,calendarWritePerformed:false,
+          customerRecordsSent:false};
+      });
+    });
+  }
+
   function isBackupInFlight() {
     return backupInFlight;
   }
@@ -629,6 +681,7 @@
     backupNow: backupNow,
     fetchLatest: fetchLatest,
     fetchLatestPayload: fetchLatestPayload,
+    fetchScheduleBlocks: fetchScheduleBlocks,
     getGptReadiness: getGptReadiness,
     interpretAnonymizedQuote: interpretAnonymizedQuote,
     interpretPiiFreeRead: interpretPiiFreeRead,
