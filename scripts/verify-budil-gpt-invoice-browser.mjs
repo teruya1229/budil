@@ -38,8 +38,10 @@ const cases=`  await ev("localStorage.setItem('budil_leads',JSON.stringify([{id:
   assert.equal(await ev("document.getElementById('budil-gpt-status').textContent.includes('請求書の入力と承認が残っています')"),true);
   await ev("document.getElementById('budil-gpt-invoice-work-date').value='2026-11-06';document.getElementById('budil-gpt-invoice-amount').value='18000';document.getElementById('budil-gpt-invoice-tax').value='included';document.getElementById('budil-gpt-invoice-issue').value='2026-11-06';document.getElementById('budil-gpt-invoice-due').value='2026-12-06';document.getElementById('budil-gpt-invoice-method').value='bank_transfer';document.getElementById('budil-gpt-invoice-expected').value='2026-12-06';document.getElementById('budil-gpt-invoice-preview').click();document.getElementById('budil-gpt-invoice-confirm').click();document.getElementById('budil-gpt-invoice-confirm').click()");
   assert.equal(await ev('Storage.getDocuments().length'),1,'one invoice');
-  assert.equal(await ev("document.getElementById('budil-gpt-invoice-issue').hidden"),false,
+  assert.equal(await ev("document.getElementById('budil-gpt-invoice-issue-panel').hidden"),false,
     'saved invoice is presented for separate issue approval');
+  assert.equal(await ev("document.getElementById('budil-gpt-invoice-issue-panel').getClientRects().length > 0"),true,
+    'issue approval panel is actually rendered, not only a date input');
   await ev("document.getElementById('budil-gpt-invoice-issue-confirm').click()");
   assert.equal(await ev("Storage.getDocuments()[0].status"),'draft','issue needs separate acknowledgement');
   await ev("document.getElementById('budil-gpt-invoice-issue-ack').checked=true;document.getElementById('budil-gpt-invoice-issue-confirm').click()");
@@ -73,7 +75,7 @@ const cases=`  await ev("localStorage.setItem('budil_leads',JSON.stringify([{id:
   await ev("document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
   assert.equal(await ev("document.querySelectorAll('#budil-gpt-invoice-orders button').length"),1);
   await ev("document.querySelector('#budil-gpt-invoice-orders button').click()");
-  assert.equal(await ev("document.getElementById('budil-gpt-invoice-issue').hidden"),false);
+  assert.equal(await ev("document.getElementById('budil-gpt-invoice-issue-panel').hidden"),false);
   assert.equal(await ev("Storage.getDocuments()[0].status"),'draft');
   await ev("document.getElementById('budil-gpt-invoice-issue-ack').checked=true;document.getElementById('budil-gpt-invoice-issue-confirm').click()");
   assert.equal(await ev("Storage.getDocuments()[0].status"),'issued');

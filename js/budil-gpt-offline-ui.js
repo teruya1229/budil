@@ -335,7 +335,7 @@
   // The issuer changes only local draft status, never sends mail or marks payment.
   function resetInvoiceIssue(){
     invoiceIssuePrepared=null;
-    hide('budil-gpt-invoice-issue',true);
+    hide('budil-gpt-invoice-issue-panel',true);
     $('budil-gpt-invoice-issue-ack').checked=false;
     $('budil-gpt-invoice-issue-preview').replaceChildren();
   }
@@ -356,7 +356,7 @@
         '請求日 '+p.issueDate+' / 支払期限 '+p.dueDate,
         '確定はこの端末の帳票状態のみ。PDF保存・顧客送信は実行しません。'])
       box.append(node('p',row));
-    hide('budil-gpt-invoice-issue',false);
+    hide('budil-gpt-invoice-issue-panel',false);
     status('請求下書きの保存が完了しました。請求確定は別の確認操作が必要です。');
   }
   function startSavedInvoiceIssue(){
