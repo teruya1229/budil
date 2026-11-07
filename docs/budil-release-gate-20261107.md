@@ -6,7 +6,7 @@
 
 ## CURRENT EVIDENCE
 - 統合PR: https://github.com/teruya1229/budil/pull/8
-- 2026-11-07 PR head: `2b0e9046e27057a7d01556f7fd2c00c0ed156b0e`
+- 2026-11-07 CIで実測済みコード: `2b0e9046e27057a7d01556f7fd2c00c0ed156b0e`（文書更新後の最新PR headとは異なる）
 - CI: https://github.com/teruya1229/budil/actions/runs/42349549802
   - business-and-backend / chrome-linux / chrome-windows が全て SUCCESS。
   - 古い20指示、PDF、ローカル版検査、クラウド復元、GPT基盤検査も SUCCESS。
