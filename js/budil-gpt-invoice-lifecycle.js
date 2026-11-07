@@ -175,6 +175,81 @@ const BudilGptInvoiceLifecycle = (() => {
     }
     return {ok:true,invoice:prepared.documents[0],quote:prepared.documents[1] || null};
   }
-  return Object.freeze({stage,prepareCompletion,applyCompletion,prepareWork,prepareQuote,apply});
+
+  // "issued" means confirmed in this device, NOT emailed or delivered.
+  // This is separate from invoice draft creation and from any bank update.
+  function prepareIssue(documentId, storage) {
+    if (!storage || typeof storage.getDocuments !== 'function' ||
+        !documentId || typeof documentId !== 'string')
+      return fail('ISSUE_SOURCE_REQUIRED');
+    const documents=storage.getDocuments();
+    const matches=documents.filter(d=>d && String(d.id)===documentId);
+    if (matches.length!==1) return fail('INVOICE_NOT_UNIQUE');
+    const doc=matches[0];
+    if(doc.type!=='invoice' || doc.status!=='draft')return fail('INVOICE_NOT_DRAFT');
+    if(!String(doc.number||'').trim() || !String(doc.customerName||'').trim())
+      return fail('INVOICE_IDENTITY_REQUIRED');
+    if(documents.some(d=>d!==doc && d.type==='invoice' &&
+       String(d.number||'')===String(doc.number)))
+      return fail('INVOICE_NUMBER_DUPLICATE');
+    if(!date(doc.issueDate)||!date(doc.dueDate)||doc.dueDate<doc.issueDate ||
+       !date(doc.expectedPaymentDate)||doc.expectedPaymentDate>doc.dueDate)
+      return fail('INVOICE_DATES_INVALID');
+    if(doc.paymentMethod!=='bank_transfer' ||
+       !['pending','未入金'].includes(doc.paymentStatus) ||
+       !Number.isSafeInteger(doc.total)||doc.total<=0 ||
+       !Number.isSafeInteger(doc.tax)||doc.tax<0||doc.tax>doc.total ||
+       Number(doc.paidAmount||0)!==0 || !!doc.paidDate ||
+       (doc.unpaidAmount!=null && Number(doc.unpaidAmount)!==doc.total) ||
+       !!doc.bankMatch)
+      return fail('INVOICE_PAYMENT_OR_TOTAL_INVALID');
+    if(doc.sourceWorkOrderId){
+      const orders=storage.getWorkOrders();
+      const order=orders.find(w=>String(w.id)===String(doc.sourceWorkOrderId));
+      const rev=linkedRevenue({id:doc.sourceWorkOrderId},storage);
+      if(!order||order.status!=='completed'||!rev||
+         Number(rev.amount)!==doc.total)return fail('LINKED_WORK_OR_REVENUE_CHANGED');
+    }
+    return {ok:true,kind:'invoice-issue',documentId:doc.id,
+      sourceSnapshot:fingerprint(doc),documentsSnapshot:fingerprint(documents),
+      preview:{number:doc.number,customerName:doc.customerName,total:doc.total,
+        tax:doc.tax,issueDate:doc.issueDate,dueDate:doc.dueDate,
+        status:'draft',externalSendPerformed:false}};
+  }
+  function applyIssue(prepared,{storage,confirm,notSentAcknowledged}={}) {
+    if(!prepared||!prepared.ok||prepared.kind!=='invoice-issue'||
+       confirm!==true||notSentAcknowledged!==true)return fail('ISSUE_CONFIRM_REQUIRED');
+    if(!storage||typeof storage.getDocuments!=='function')return fail('ISSUE_STORAGE_MISSING');
+    const before=storage.getDocuments();
+    if(fingerprint(before)!==prepared.documentsSnapshot)return fail('DOCUMENTS_CHANGED');
+    const target=before.find(d=>String(d.id)===String(prepared.documentId));
+    if(!target||fingerprint(target)!==prepared.sourceSnapshot||target.status!=='draft')
+      return fail('INVOICE_CHANGED');
+    // Recheck linked work and financial totals immediately before writing.
+    const current=prepareIssue(prepared.documentId,storage);
+    if(!current.ok)return fail(current.code);
+    if(current.sourceSnapshot!==prepared.sourceSnapshot)return fail('INVOICE_CHANGED');
+    let backup;
+    try{backup=storage.createSafetyBackup({reason:'budil_gpt_invoice_issue',
+        targetKey:storage.KEYS.DOCUMENTS,targetId:target.id,
+        data:before,beforeCount:before.length});}
+    catch(_){return fail('BACKUP_FAILED');}
+    if(!backup||!backup.id)return fail('BACKUP_FAILED');
+    const next=before.map(d=>String(d.id)===String(target.id)
+       ? {...d,status:'issued',issuedAt:new Date().toISOString()}:d);
+    try{
+      storage.saveDocuments(next);
+      if(fingerprint(storage.getDocuments())!==fingerprint(next))
+        throw Error('READBACK_MISMATCH');
+    }catch(_){
+      try{storage.saveDocuments(before);}
+      catch(_){return fail('ROLLBACK_FAILED');}
+      return fail('SAVE_FAILED_ROLLED_BACK');
+    }
+    return {ok:true,status:'issued',documentId:target.id,
+      number:target.number,externalSendPerformed:false,
+      bankPaymentChanged:false};
+  }
+  return Object.freeze({stage,prepareCompletion,applyCompletion,prepareWork,prepareQuote,apply,prepareIssue,applyIssue});
 })();
 if(typeof module !== 'undefined' && module.exports) module.exports={BudilGptInvoiceLifecycle};
