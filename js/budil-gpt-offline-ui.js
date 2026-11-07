@@ -32,6 +32,7 @@
   let pendingQuoteFields=null;
   let pendingNewCustomer=null;
   let bookingDraft=null,bookingSaving=false;
+  let googleReadTarget=null,googleReadResult=null,googleReadBusy=false,googleReadSeq=0;
   let invoiceKind='',invoiceOrderId='',invoicePrepared=null,completionPrepared=null,invoiceSaving=false;
   let invoiceIssuePrepared=null;
   let bankPreview=null,bankBusy=false;
@@ -52,6 +53,7 @@
     for(const id of ['work-date','amount','tax','issue','due','method','expected'])
       $('budil-gpt-invoice-'+id).value='';
     bookingDraft=null;bookingSaving=false;
+    resetGoogleRead();
     hide('budil-gpt-booking',true);hide('budil-gpt-booking-fields',true);
     hide('budil-gpt-booking-save',true);
     $('budil-gpt-booking-preview').replaceChildren();
@@ -403,17 +405,76 @@
     }finally{invoiceSaving=false;btn.disabled=false;}
   }
 
+
+  function resetGoogleRead(){
+    googleReadSeq++;
+    googleReadTarget=null;googleReadResult=null;
+    hide('budil-gpt-google-read',true);
+    $('budil-gpt-google-consent').checked=false;
+    $('budil-gpt-google-status').textContent='';
+  }
+  function setGoogleReadTarget(date,startTime,endTime=''){
+    resetGoogleRead();
+    if(!Booking||!Booking.validDate(date)||!Booking.validTime(startTime)||
+       (endTime&&(!Booking.validTime(endTime)||endTime<=startTime)))return;
+    googleReadTarget={date,startTime,endTime};
+    hide('budil-gpt-google-read',false);
+    $('budil-gpt-google-status').textContent=
+      endTime?'Googleの照会範囲：'+date+' '+startTime+'〜'+endTime+
+        '（予約書込は行いません）':
+        'Googleの照会時刻：'+date+' '+startTime+'時点（予約書込は行いません）';
+  }
+  async function runGoogleRead(){
+    if(googleReadBusy||!googleReadTarget)return;
+    if($('budil-gpt-google-consent').checked!==true)
+      return status('Googleカレンダー読取の同意欄にチェックしてください。',true);
+    const cloud=window.BudilCloud;
+    if(!cloud||typeof cloud.fetchScheduleBlocks!=='function')
+      return status('Googleカレンダーの安全な読取処理が利用できません。',true);
+    const target={...googleReadTarget},key=JSON.stringify(target);
+    const seq=++googleReadSeq;
+    googleReadBusy=true;googleReadResult=null;
+    $('budil-gpt-google-consent').checked=false;
+    const button=$('budil-gpt-google-check');button.disabled=true;
+    $('budil-gpt-google-status').textContent='接続済みカレンダーの時間重複を確認中です。';
+    try{
+      const loaded=await cloud.fetchScheduleBlocks(target.date,target.date);
+      if(seq!==googleReadSeq||!googleReadTarget||
+         JSON.stringify(googleReadTarget)!==key)return;
+      if(!loaded||!loaded.ok)
+        return $('budil-gpt-google-status').textContent=
+          'Googleの読取を確認できません（'+String(loaded&&loaded.code||'unavailable')+
+          '）。端末内予定だけでは空き確定できません。';
+      const review=Booking.googleScheduleReview(loaded.events,target.date,
+        target.startTime,target.endTime);
+      if(!review.ok)
+        return $('budil-gpt-google-status').textContent=
+          'Google予定の日時を検証できません。空き不明として扱います（'+review.code+'）。';
+      googleReadResult={key,...review};
+      $('budil-gpt-google-status').textContent=review.hasConflict
+        ? 'Googleカレンダーに重なる予定が'+review.overlapCount+
+          '件あります。重複する予約の保存を停止します。'
+        : 'Googleカレンダーの指定'+(review.pointOnly?'時刻':'時間帯')+
+          'に重なる予定は照会時点で見つかりませんでした。予定の追加・変更は行っていません。';
+    }catch(_){
+      if(seq===googleReadSeq)$('budil-gpt-google-status').textContent=
+        'Google読取に失敗しました。空き確定ではありません。';
+    }finally{googleReadBusy=false;button.disabled=false;}
+  }
+
   function startBooking(intent){
     if(!Data||!Booking||typeof Data.getWorkOrders!=='function')return status('作業予定を読み取れません。',true);
     let orders;
     try{orders=Data.getWorkOrders();}catch(_){return status('作業予定を読み取れません。',true);}
     resultBox.replaceChildren();
+    resetGoogleRead();
     if(intent.action==='availability'){
       const review=Booking.scheduleReview(orders,intent.date,intent.startTime);
       if(!review.ok)return status('日時を確認できません。',true);
       title(intent.date+' '+intent.startTime+' の端末内予定');
       item([['重なる作業予定',review.overlaps.length+'件'],['時刻不明の予定',review.unknown.length+'件'],
         ['照合範囲','端末内予定のみ・Google Calendarの空き確定ではない']]);
+      setGoogleReadTarget(intent.date,intent.startTime);
       for(const w of [...review.overlaps,...review.unknown])item([['予定',w.customerName||'名称未設定'],
         ['日時',w.scheduledDate+' '+(w.startTime||'時刻未設定')+'〜'+(w.endTime||'')],['内容',w.serviceText||'未設定']]);
       return status(review.overlaps.length||review.unknown.length?'端末内に要確認の予定があります。':'端末内には重なる作業予定が見つかりません。Google Calendarは未確認です。');
@@ -451,6 +512,7 @@
     status('顧客名だけで変更対象を推測しません。正確な予定を選んでください。');
   }
   function renderBookingPreview(){
+    resetGoogleRead();
     const d=bookingDraft;if(!d)return;
     const box=$('budil-gpt-booking-preview');box.replaceChildren();
     const save=$('budil-gpt-booking-save');hide('budil-gpt-booking-save',true);
@@ -478,7 +540,8 @@
       bookingNote('変更対象と変更先を確認してください。');return;
     }
     hide('budil-gpt-booking-save',false);
-    status('重複なし。保存ボタンを押すまでは端末の予定を変更しません。');
+    setGoogleReadTarget(d.date,d.startTime,d.endTime);
+    status('端末内予定では重複なし。Googleカレンダーは必要に応じて読取確認してください。保存は別操作です。');
   }
   function continueBooking(){
     const d=bookingDraft;
@@ -500,6 +563,9 @@
     const d=bookingDraft,btn=$('budil-gpt-booking-save');
     bookingSaving=true;btn.disabled=true;
     try{
+      const googleKey=JSON.stringify({date:d.date,startTime:d.startTime,endTime:d.endTime||''});
+      if(googleReadResult&&googleReadResult.key===googleKey&&googleReadResult.hasConflict)
+        throw Error('GOOGLE_CALENDAR_CONFLICT');
       const orders=Data.getWorkOrders();
       const review=Booking.scheduleReview(orders,d.date,d.startTime,d.endTime,d.workOrderId);
       if(!review.ok||review.overlaps.length||review.unknown.length||Booking.isPast(d.date,d.startTime))throw Error('SCHEDULE_CHANGED');
@@ -534,6 +600,7 @@
       }
       if(!result||!result.id)throw Error('SAVE_FAILED');
       hide('budil-gpt-booking-save',true);bookingDraft=null;
+      resetGoogleRead();
       $('budil-gpt-booking-preview').replaceChildren(node('p','端末内の作業予定を保存しました。Google Calendarは未同期です。'));
       status('端末内の作業予定を保存しました。Google Calendarは未同期です。');
     }catch(e){
@@ -990,6 +1057,7 @@
   });
   $('budil-gpt-booking-continue').addEventListener('click',continueBooking);
   $('budil-gpt-booking-save').addEventListener('click',saveBooking);
+  $('budil-gpt-google-check').addEventListener('click',runGoogleRead);
   $('budil-gpt-customer-create-confirm').addEventListener('click',confirmNewCustomer);
   $('budil-gpt-speech').addEventListener('click',speech);
   $('budil-gpt-revise').addEventListener('click',revise);
