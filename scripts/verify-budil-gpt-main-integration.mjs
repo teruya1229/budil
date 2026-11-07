@@ -18,6 +18,7 @@ const allowed=new Set([
   "docs/budil-cloud-safe-restore-20261106.md",
   "docs/budil-local-bank-csv.md",
   "docs/budil-local-booking.md",
+  "docs/budil-release-gate-20261107.md",
   "docs/budil-local-invoice-lifecycle.md",
   "experiments/budil-gpt-phase1/fixture-core.js",
   "index.html",
