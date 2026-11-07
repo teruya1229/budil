@@ -39,6 +39,8 @@ storage.createSafetyBackup=backupMethod;
 const saved=life.apply(work,{storage,confirm:true});
 assert.equal(saved.ok,true,saved.code);
 assert.equal(saved.invoice.sourceWorkOrderId,'w1');
+assert.ok(typeof saved.invoice.id==='string' && saved.invoice.id.length>4,
+  'work-generated invoice must have a stable nonempty ID for subsequent issue/recovery');
 assert.equal(saved.invoice.paymentStatus,'pending');
 assert.equal(saved.invoice.total,18000);
 assert.equal(life.apply(work,{storage,confirm:true}).ok,false);
