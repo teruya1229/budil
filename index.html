@@ -4205,6 +4205,15 @@
         <div id="budil-gpt-invoice-preview-box"></div>
         <button type="button" id="budil-gpt-completion-confirm" class="budil-gpt-btn" hidden>この作業完了と売上を端末に保存</button>
         <button type="button" id="budil-gpt-invoice-confirm" class="budil-gpt-btn" hidden>この請求書を端末に保存</button>
+        <div id="budil-gpt-invoice-issue" hidden>
+          <h3>請求書の確定（端末内のみ・顧客には未送信）</h3>
+          <div id="budil-gpt-invoice-issue-preview"></div>
+          <label class="budil-gpt-check">
+            <input type="checkbox" id="budil-gpt-invoice-issue-ack">
+            <span>請求書の金額・宛名・請求日・支払期限を確認しました。確定後も顧客への送付とPDF確認は別途自分で行います。</span>
+          </label>
+          <button type="button" id="budil-gpt-invoice-issue-confirm" class="budil-gpt-btn">確認した請求書を「請求済み」に変更（送信なし）</button>
+        </div>
       </div>
       <div id="budil-gpt-bank" hidden>
         <hr class="budil-gpt-divider">
@@ -4262,10 +4271,10 @@
   <script src="js/budil-gpt-conversation.js?v=20261106d"></script>
   <script src="js/budil-gpt-booking.js?v=20261106a"></script>
   <script src="js/invoice-structured-entrypoint.js?v=20261106a"></script>
-  <script src="js/budil-gpt-invoice-lifecycle.js?v=20261106b"></script>
+  <script src="js/budil-gpt-invoice-lifecycle.js?v=20261107issue1"></script>
   <script src="js/budil-gpt-bank-reconcile.js?v=20261106a"></script>
   <script src="experiments/budil-gpt-phase1/fixture-core.js?v=20261106a"></script>
-  <script src="js/budil-gpt-offline-ui.js?v=20261106full1"></script>
+  <script src="js/budil-gpt-offline-ui.js?v=20261107issue1"></script>
   <script src="js/budil-cloud-restore-ui.js?v=20261106restore1"></script>
 </body>
 </html>
