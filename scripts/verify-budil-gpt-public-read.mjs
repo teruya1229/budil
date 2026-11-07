@@ -112,3 +112,42 @@ async function run(){
  console.log('BUDIL_PUBLIC_READ '+passed+'/'+passed+' PASS');
 }
 await run();
+
+async function verifyGoogleScheduleRead(){
+  const privateEvent={
+    id:'fictional-event-1',summary:'Fictional private client name',
+    location:'Fictional private address',
+    start:'2026-11-07T10:00:00+09:00',
+    end:'2026-11-07T11:00:00+09:00'
+  };
+  const a=setup({body:{events:[privateEvent]}});
+  const response=await a.cloud.fetchScheduleBlocks('2026-11-07','2026-11-07');
+  assert.equal(response.ok,true,response.code);
+  assert.equal(response.events.length,1);
+  assert.deepEqual(Object.keys(response.events[0]).sort(),['end','start']);
+  assert.equal(JSON.stringify(response).includes('private client'),false);
+  assert.equal(JSON.stringify(response).includes('private address'),false);
+  assert.equal(JSON.stringify(response).includes('fictional-event-1'),false);
+  assert.equal(response.calendarWritePerformed,false);
+  assert.equal(a.calls.length,1);
+  assert.equal(a.calls[0].init.method,'POST');
+  assert.ok(a.calls[0].url.endsWith('/functions/v1/make-proxy'));
+  assert.equal(a.calls[0].init.headers.Authorization,'Bearer fictional-test-token');
+  assert.deepEqual(Object.keys(JSON.parse(a.calls[0].init.body)).sort(),
+    ['endDate','operation','startDate']);
+  assert.equal(JSON.parse(a.calls[0].init.body).operation,'schedule_blocks_list');
+  const invalid=setup({body:{events:[privateEvent]}});
+  assert.equal((await invalid.cloud.fetchScheduleBlocks('2026-02-30','2026-02-30')).ok,false);
+  assert.equal((await invalid.cloud.fetchScheduleBlocks('2026-11-07','2026-11-08')).ok,false);
+  assert.equal(invalid.calls.length,0);
+  const unauthed=setup({logged:false});
+  assert.equal((await unauthed.cloud.fetchScheduleBlocks('2026-11-07','2026-11-07')).ok,false);
+  assert.equal(unauthed.calls.length,0);
+  const malformed=setup({body:{events:[{id:'no-time',summary:'private'}]}});
+  assert.equal((await malformed.cloud.fetchScheduleBlocks('2026-11-07','2026-11-07')).ok,false);
+  const stale=setup({host:'localhost'});
+  assert.equal((await stale.cloud.fetchScheduleBlocks('2026-11-07','2026-11-07')).ok,false);
+  assert.equal(stale.calls.length,0);
+  console.log('BUDIL_GOOGLE_SCHEDULE_READ_ONLY_PASS: tenant-server binding, no private fields, no writes');
+}
+await verifyGoogleScheduleRead();
