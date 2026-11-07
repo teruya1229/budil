@@ -89,6 +89,41 @@ const BudilGptBooking = (() => {
       w.scheduledDate===draft.date&&w.startTime===draft.startTime&&
       w.customerName===draft.customerName&&w.serviceText===draft.serviceText);
   }
-  return Object.freeze({parse,validDate,validTime,isPast,scheduleReview,duplicates});
+
+  // The server returns Google event start/end only (no customer/title fields
+  // are needed for the assistant). All-day end dates are exclusive.
+  function googleBound(value){
+    if(typeof value!=='string')return null;
+    const v=value.trim();
+    if(validDate(v)){
+      const ms=Date.parse(v+'T00:00:00+09:00');
+      return Number.isFinite(ms)?ms:null;
+    }
+    if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/u.test(v) ||
+       !validDate(v.slice(0,10)))return null;
+    const ms=Date.parse(v);
+    return Number.isFinite(ms)?ms:null;
+  }
+  function googleScheduleReview(events,date,startTime,endTime=''){
+    if(!Array.isArray(events)||events.length>1000||!validDate(date)||
+       !validTime(startTime)||(endTime&&(!validTime(endTime)||endTime<=startTime)))
+      return fail('GOOGLE_REVIEW_INPUT_INVALID');
+    const start=Date.parse(date+'T'+startTime+':00+09:00');
+    const end=endTime?Date.parse(date+'T'+endTime+':00+09:00'):start+60000;
+    if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)
+      return fail('GOOGLE_REVIEW_TIME_INVALID');
+    let overlapCount=0;
+    for(const event of events){
+      if(!event||typeof event!=='object'||Array.isArray(event))
+        return fail('GOOGLE_EVENT_UNVERIFIABLE');
+      const from=googleBound(event.start),to=googleBound(event.end);
+      if(from===null||to===null||to<=from)
+        return fail('GOOGLE_EVENT_UNVERIFIABLE');
+      if(start<to && from<end)overlapCount++;
+    }
+    return {ok:true,hasConflict:overlapCount>0,overlapCount,
+      reviewedCount:events.length,pointOnly:!endTime};
+  }
+  return Object.freeze({parse,validDate,validTime,isPast,scheduleReview,duplicates,googleScheduleReview});
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports={BudilGptBooking};
