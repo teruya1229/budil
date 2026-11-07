@@ -35,4 +35,23 @@ assert.equal(b.scheduleReview(work,today,'10:00','10:00').ok,false);
 assert.equal(b.scheduleReview(work,today,'10:00','11:00','a').overlaps.length,1);
 assert.equal(b.duplicates(work,{date:today,startTime:'09:00',customerName:'田中太郎',serviceText:'エアコン洗浄 2台'}).length,1);
 assert.equal(b.duplicates(work,{date:today,startTime:'09:00',customerName:'田中太郎',serviceText:'エアコン洗浄 2台'},'a').length,0);
+
+const googleEvents=[
+  {start:'2026-11-07T09:30:00+09:00',end:'2026-11-07T10:30:00+09:00'},
+  {start:'2026-11-08',end:'2026-11-09'} // all-day, exclusive end
+];
+assert.equal(b.googleScheduleReview(googleEvents,'2026-11-07','10:00').hasConflict,true);
+assert.equal(b.googleScheduleReview(googleEvents,'2026-11-07','10:00','11:00').overlapCount,1);
+assert.equal(b.googleScheduleReview(googleEvents,'2026-11-07','10:30','11:30').hasConflict,false,
+ 'an event ending at the exact booking start cannot overlap');
+assert.equal(b.googleScheduleReview(googleEvents,'2026-11-08','12:00','13:00').hasConflict,true,
+ 'all-day Google events block local Japanese calendar date');
+assert.equal(b.googleScheduleReview([], '2026-11-07','10:00','11:00').hasConflict,false);
+assert.equal(b.googleScheduleReview([{start:'not-a-time',end:'2026-11-07'}],
+  '2026-11-07','10:00').code,'GOOGLE_EVENT_UNVERIFIABLE');
+assert.equal(b.googleScheduleReview([{start:'2026-11-07T10:00:00',end:'2026-11-07T11:00:00'}],
+  '2026-11-07','10:00').ok,false,'timezone-less events must fail closed');
+assert.equal(b.googleScheduleReview(googleEvents,'2026-11-07','24:00').ok,false);
+console.log('BUDIL_GOOGLE_BUSY_REVIEW_FIXTURE_PASS');
+
 console.log('BUDIL_BOOKING_FIXTURE PASS');
