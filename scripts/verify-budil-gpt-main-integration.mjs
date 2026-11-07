@@ -63,7 +63,7 @@ const allowed=new Set([
 assert.ok(paths.length>0,'unexpected empty integration diff');
 for(const p of paths) {
   assert.ok(allowed.has(p),'Unexpected code change '+p);
-  assert.ok(!/(?:^|\\/)(?:\\.env|private|secrets?|credentials?|tokens?)(?:\\/|\\.|$)/i.test(p),
+  assert.ok(!/(?:^|\/)(?:\.env|private|secrets?|credentials?|tokens?)(?:\/|\.|$)/i.test(p),
     'Unsafe path in source diff '+p);
 }
 for(const p of [
@@ -92,7 +92,7 @@ for(const p of [
  'js/budil-gpt-public-read.js','js/budil-cloud-restore.js',
  'js/budil-cloud-restore-ui.js','js/budil-gpt-offline-ui.js'
 ]) assert.ok(html.includes('src="'+p+'?'),'Required script missing '+p);
-assert.ok(!/\\bfetch\\s*\\(|\\blocalStorage\\s*\\.|OPENAI_API_KEY|SUPABASE_SERVICE_ROLE_KEY/.test(ui),
+assert.ok(!/\bfetch\s*\(|\blocalStorage\s*\.|OPENAI_API_KEY|SUPABASE_SERVICE_ROLE_KEY/.test(ui),
  'UI cannot directly bypass cloud client or storage access layer');
 assert.ok(ui.includes("gateway.query(parsed.request,true)"),'Local read gateway missing');
 assert.ok(ui.includes("Data.getLeads()"),'Local customer resolver missing');
@@ -107,6 +107,6 @@ for(const marker of [
  'interpretPiiFreeRead: interpretPiiFreeRead',
  'fetchLatestPayload: fetchLatestPayload'
 ]) assert.ok(cloud.includes(marker),'Required cloud boundary missing '+marker);
-assert.ok(/src="js\\/budil-cloud\\.js\\?v=[^"]+"/.test(html),
+assert.ok(/src="js\/budil-cloud\.js\?v=[^"]+"/.test(html),
  'Versioned cloud bridge script missing');
 console.log('BUDIL_GPT_MAIN_SAFE_INTEGRATION_PASS files='+paths.length);
