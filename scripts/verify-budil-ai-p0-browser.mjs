@@ -331,6 +331,44 @@ async function run() {
     await evaluate("document.getElementById('budil-gpt-clear').click()");
     console.log("BUDIL_CUSTOMER_APPROVAL_BROWSER_PASS: preview no writes, one explicit save, duplicate blocked");
 
+    // Original user instruction #4: surname-only request cannot create an
+    // ambiguous customer until the user supplies a full name and confirms.
+    const beforeSurname=await evaluate("Storage.getLeads().length");
+    await evaluate("document.getElementById('budil-gpt-input').value='田中さんを新規顧客として登録して';document.getElementById('budil-gpt-run').click()");
+    assert.ok((await evaluate("document.getElementById('budil-gpt-status').textContent")).includes('フルネーム'));
+    assert.equal(await evaluate("Storage.getLeads().length"),beforeSurname);
+    await evaluate("document.getElementById('budil-gpt-input').value='山田清子です';document.getElementById('budil-gpt-run').click()");
+    assert.ok((await evaluate("document.getElementById('budil-gpt-status').textContent")).includes('田中'));
+    assert.equal(await evaluate("Storage.getLeads().length"),beforeSurname);
+    await evaluate("document.getElementById('budil-gpt-input').value='田中清子です';document.getElementById('budil-gpt-run').click()");
+    assert.equal(await evaluate("document.getElementById('budil-gpt-customer-create').hidden"),true);
+    assert.equal(await evaluate("Storage.getLeads().length"),beforeSurname);
+    await evaluate("document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+    assert.equal(await evaluate("document.getElementById('budil-gpt-customer-create').hidden"),false);
+    assert.equal(await evaluate("Storage.getLeads().length"),beforeSurname);
+    await evaluate("document.getElementById('budil-gpt-customer-create-confirm').click()");
+    assert.equal(await evaluate("Storage.getLeads().length"),beforeSurname+1);
+    assert.equal(await evaluate("Storage.getLeads().filter(x=>x.name==='田中清子').length"),1);
+    await evaluate("document.getElementById('budil-gpt-clear').click()");
+    // Original utterances #2 and #3 are actually executed in the UI, not
+    // credited by parser-only grammar assertions.
+    await evaluate("document.getElementById('budil-gpt-input').value='田中さんを探して';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+    assert.ok((await evaluate("document.getElementById('budil-gpt-result').textContent")).includes('田中清子'));
+    await evaluate("document.getElementById('budil-gpt-input').value='田中太郎を探して';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+    assert.ok((await evaluate("document.getElementById('budil-gpt-result').textContent")).includes('田中太郎'));
+    await evaluate("document.getElementById('budil-gpt-clear').click()");
+    // Original utterance #10: no tax basis; ask and carry answer forward.
+    await evaluate("document.getElementById('budil-gpt-input').value='田中さん、エアコン洗浄2台で18,000円の見積お願い';document.getElementById('budil-gpt-run').click()");
+    assert.ok((await evaluate("document.getElementById('budil-gpt-status').textContent")).includes('税込'));
+    await evaluate("document.getElementById('budil-gpt-input').value='税込';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+    assert.ok((await evaluate("document.querySelectorAll('#budil-gpt-candidate-list button').length"))>=2);
+    await evaluate("document.querySelector('#budil-gpt-candidate-list button').click()");
+    assert.ok((await evaluate("document.getElementById('budil-gpt-draft-preview').textContent")).includes('18,000円'));
+    assert.equal(await evaluate("Storage.getDocuments().length"),3);
+    await evaluate("document.getElementById('budil-gpt-clear').click()");
+    console.log("BUDIL_ORIGINAL_MISSING_4_BROWSER_PASS: surname full-name intake, real 2 search variants and tax follow-up, no silent writes");
+
+
     await evaluate("window.__publicReadCalls=0;BudilCloud.interpretPiiFreeRead=async()=>{window.__publicReadCalls++;return {ok:true,verified:true,parsed:{ok:true,action:'document.period',periodLabel:'先月',document_type:'invoice',readOnly:true,networkUsed:true}}}");
     await evaluate("document.getElementById('budil-gpt-input').value='先月の請求書を見せて';document.getElementById('budil-gpt-public-read').click()");
     assert.equal(await evaluate("window.__publicReadCalls"),0);
