@@ -56,6 +56,37 @@ assert.equal(life.apply(q,{storage,confirm:true,approvedQuote:approved}).ok,true
 assert.equal(documents.length,3);
 assert.equal(documents[0].sourceEstimateId,documents[1].id);
 assert.equal(documents[1].type,'estimate');
+
+assert.equal(life.prepareIssue(saved.invoice.id,storage).code,'LINKED_WORK_OR_REVENUE_CHANGED',
+  'linked work invoice cannot be issued while revenue consistency is unresolved');
+const issue=life.prepareIssue(documents[0].id,storage);
+assert.equal(issue.ok,true,issue.code);
+assert.equal(issue.preview.externalSendPerformed,false);
+assert.equal(life.applyIssue(issue,{storage,confirm:false,notSentAcknowledged:true}).code,'ISSUE_CONFIRM_REQUIRED');
+assert.equal(life.applyIssue(issue,{storage,confirm:true,notSentAcknowledged:false}).code,'ISSUE_CONFIRM_REQUIRED');
+assert.equal(documents[0].status,'draft');
+const beforeIssue=structuredClone(documents);
+documents[0]={...documents[0],total:25000};
+assert.equal(life.applyIssue(issue,{storage,confirm:true,notSentAcknowledged:true}).code,'DOCUMENTS_CHANGED');
+documents=beforeIssue;
+const issueBackup=storage.createSafetyBackup;
+storage.createSafetyBackup=()=>{throw Error('fictional quota');};
+assert.equal(life.applyIssue(issue,{storage,confirm:true,notSentAcknowledged:true}).code,'BACKUP_FAILED');
+storage.createSafetyBackup=issueBackup;
+throwWrite=true;
+assert.equal(life.applyIssue(issue,{storage,confirm:true,notSentAcknowledged:true}).code,'SAVE_FAILED_ROLLED_BACK');
+assert.equal(documents[0].status,'draft','write failure leaves invoice unissued');
+const issued=life.applyIssue(issue,{storage,confirm:true,notSentAcknowledged:true});
+assert.equal(issued.ok,true,issued.code);
+assert.equal(issued.externalSendPerformed,false);
+assert.equal(documents[0].status,'issued');
+assert.equal(documents[0].paymentStatus,'pending');
+assert.equal(documents[0].paidAmount,0);
+assert.equal(documents[0].unpaidAmount,18000);
+assert.equal(documents[1].status,'draft','original quote remains unchanged');
+assert.equal(life.applyIssue(issue,{storage,confirm:true,notSentAcknowledged:true}).code,'DOCUMENTS_CHANGED');
+assert.equal(life.prepareIssue(documents[0].id,storage).code,'INVOICE_NOT_DRAFT');
+
 const q2=life.prepareQuote({...approved,title:'second'},'c1',fields,{storage,documents:docs});
 assert.equal(q2.ok,true,q2.code);
 throwWrite=true;
