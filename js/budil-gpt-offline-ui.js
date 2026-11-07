@@ -33,6 +33,7 @@
   let pendingNewCustomer=null;
   let bookingDraft=null,bookingSaving=false;
   let invoiceKind='',invoiceOrderId='',invoicePrepared=null,completionPrepared=null,invoiceSaving=false;
+  let invoiceIssuePrepared=null;
   let bankPreview=null,bankBusy=false;
   const resultBox=$('budil-gpt-result'),statusBox=$('budil-gpt-status');
   function hide(id,yes){$(id).hidden=!!yes;}
@@ -44,6 +45,7 @@
     bankPreview=null;hide('budil-gpt-bank',true);
     $('budil-gpt-bank-results').replaceChildren();$('budil-gpt-bank-file').value='';
     invoiceKind='';invoiceOrderId='';invoicePrepared=null;completionPrepared=null;invoiceSaving=false;
+    resetInvoiceIssue();
     hide('budil-gpt-invoice',true);hide('budil-gpt-invoice-confirm',true);hide('budil-gpt-completion-confirm',true);
     $('budil-gpt-invoice-orders').replaceChildren();
     $('budil-gpt-invoice-preview-box').replaceChildren();
@@ -256,7 +258,7 @@
   }
   function previewInvoice(){
     if(!Invoice||!invoiceKind)return status('対象の作業または承認済み見積を選んでください。',true);
-    invoicePrepared=null;completionPrepared=null;hide('budil-gpt-invoice-confirm',true);hide('budil-gpt-completion-confirm',true);
+    invoicePrepared=null;completionPrepared=null;resetInvoiceIssue();hide('budil-gpt-invoice-confirm',true);hide('budil-gpt-completion-confirm',true);
     const fields=invoiceFields();let result;
     try{
       if(invoiceKind==='work'){
@@ -320,12 +322,87 @@
         approvedQuote:approved&&approved.ok?approved.doc:null});
       if(!result.ok)throw Error(result.code);
       invoicePrepared=null;hide('budil-gpt-invoice-confirm',true);
-      status('請求書の下書きを端末に保存しました。入金済みにはしていません。');
+      showInvoiceIssue(result.invoice.id);
     }catch(e){invoicePrepared=null;hide('budil-gpt-invoice-confirm',true);
       status(invoiceKind==='work'?'作業完了と売上は保存済みです。請求書は未作成で、承認待ちです（'+e.message+'）。内容を確認して再プレビューしてください。'
         :'保存を停止しました（'+e.message+'）。元データとバックアップを確認してください。',true);
     }finally{invoiceSaving=false;btn.disabled=false;}
   }
+
+  // The issuer changes only local draft status, never sends mail or marks payment.
+  function resetInvoiceIssue(){
+    invoiceIssuePrepared=null;
+    hide('budil-gpt-invoice-issue',true);
+    $('budil-gpt-invoice-issue-ack').checked=false;
+    $('budil-gpt-invoice-issue-preview').replaceChildren();
+  }
+  function showInvoiceIssue(documentId){
+    resetInvoiceIssue();
+    if(!Invoice||typeof Invoice.prepareIssue!=='function')
+      return status('請求書の確定機能を読み込めません。',true);
+    let preview;
+    try{preview=Invoice.prepareIssue(String(documentId),Data);}
+    catch(_){return status('請求書の内容を確認できませんでした。',true);}
+    if(!preview.ok)
+      return status('請求書は端末に保存済みですが、確定条件に不足があります（'+preview.code+'）。帳票管理で内容を点検してください。',true);
+    invoiceIssuePrepared=preview;
+    const p=preview.preview;
+    const box=$('budil-gpt-invoice-issue-preview');
+    for(const row of ['番号 '+p.number+' / '+p.customerName,
+        '合計 '+yen(p.total)+'（税 '+yen(p.tax)+'）',
+        '請求日 '+p.issueDate+' / 支払期限 '+p.dueDate,
+        '確定はこの端末の帳票状態のみ。PDF保存・顧客送信は実行しません。'])
+      box.append(node('p',row));
+    hide('budil-gpt-invoice-issue',false);
+    status('請求下書きの保存が完了しました。請求確定は別の確認操作が必要です。');
+  }
+  function startSavedInvoiceIssue(){
+    if(!Invoice||!Data) return status('請求書機能を利用できません。',true);
+    if(invoiceKind || (session && session.stage!=='idle'))
+      return status('進行中の作業をクリアしてから、請求書下書きを選んでください。',true);
+    if($('budil-gpt-consent').checked!==true)
+      return status('保存済み請求書を読む前に端末データの読取にチェックしてください。',true);
+    $('budil-gpt-consent').checked=false;
+    let drafts;
+    try{drafts=Data.getDocuments().filter(d=>d&&d.type==='invoice'&&d.status==='draft');}
+    catch(_){return status('請求下書きを取得できません。',true);}
+    if(!drafts.length)return status('端末に未確定の請求書下書きはありません。',true);
+    if(drafts.length>20)return status('請求下書きが20件を超えています。帳票管理で対象を絞ってください。',true);
+    invoiceKind='issue';
+    hide('budil-gpt-invoice',false);
+    hide('budil-gpt-invoice-confirm',true);
+    hide('budil-gpt-completion-confirm',true);
+    resetInvoiceIssue();
+    const list=$('budil-gpt-invoice-orders');list.replaceChildren();
+    for(const doc of drafts){
+      const b=node('button',(doc.number||'番号不明')+' / '+(doc.customerName||'宛名不明')+
+        ' / '+yen(doc.total)+' / '+(doc.issueDate||'請求日なし'),
+        'budil-gpt-btn budil-gpt-btn-secondary');
+      b.type='button';
+      b.addEventListener('click',()=>showInvoiceIssue(doc.id));
+      list.append(b);
+    }
+    status('確定する請求下書きを1件選んでください。内容を確認するまで状態は変更しません。');
+  }
+  function confirmInvoiceIssue(){
+    if(invoiceSaving||!invoiceIssuePrepared)return;
+    if($('budil-gpt-invoice-issue-ack').checked!==true)
+      return status('宛名・金額・日付と未送信であることを確認し、チェックしてください。',true);
+    invoiceSaving=true;const btn=$('budil-gpt-invoice-issue-confirm');btn.disabled=true;
+    try{
+      const result=Invoice.applyIssue(invoiceIssuePrepared,{
+        storage:Data,confirm:true,notSentAcknowledged:true
+      });
+      if(!result.ok)throw Error(result.code);
+      resetInvoiceIssue();
+      $('budil-gpt-invoice-orders').replaceChildren();
+      status('請求書 '+result.number+' を端末内で請求済みに変更しました。顧客には未送信です。帳票管理でPDFを確認し、必要な相手へ本人が送付してください。');
+    }catch(e){
+      resetInvoiceIssue();
+      status('請求確定を停止しました（'+e.message+'）。帳票管理で保存状態を点検してください。',true);
+    }finally{invoiceSaving=false;btn.disabled=false;}
+  }
+
   function startBooking(intent){
     if(!Data||!Booking||typeof Data.getWorkOrders!=='function')return status('作業予定を読み取れません。',true);
     let orders;
@@ -475,6 +552,8 @@
       hide('budil-gpt-bank',false);
       return status('CSVファイルと文字コード、口座の識別名を指定してプレビューしてください。');
     }
+    if(/^(?:請求書の下書き|保存済み請求書)を確定して[。！!]?$/u.test(raw))
+      return startSavedInvoiceIssue();
     if(/^その見積を請求書にして[。！!]?$/u.test(raw) && session && session.stage==='approved')
       return startQuoteInvoice();
     if(/^.+?の作業を完了にして請求書を作って[。！!]?$/u.test(raw))
@@ -920,9 +999,10 @@
   $('budil-gpt-invoice-preview').addEventListener('click',previewInvoice);
   $('budil-gpt-completion-confirm').addEventListener('click',saveCompletion);
   $('budil-gpt-invoice-confirm').addEventListener('click',saveInvoice);
+  $('budil-gpt-invoice-issue-confirm').addEventListener('click',confirmInvoiceIssue);
   for(const id of ['work-date','amount','tax','issue','due','method','expected'])
     $('budil-gpt-invoice-'+id).addEventListener('input',()=>{
-      invoicePrepared=null;completionPrepared=null;hide('budil-gpt-invoice-confirm',true);hide('budil-gpt-completion-confirm',true);
+      invoicePrepared=null;completionPrepared=null;resetInvoiceIssue();hide('budil-gpt-invoice-confirm',true);hide('budil-gpt-completion-confirm',true);
     });
   $('budil-gpt-clear').addEventListener('click',()=>{
     resetVisible();status('入力をクリアしました。');
