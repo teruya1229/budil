@@ -105,7 +105,10 @@ const BudilGptInvoiceLifecycle = (() => {
         tax:calc.tax,total:calc.total,taxSettings:calc.taxSettings,taxMode:'taxExcluded'});
       if (draft.total !== calc.total || draft.tax !== calc.tax) return fail('TAX_CALC_FAILED');
     } else if (entry.total !== Number(fields.amount)) return fail('TAX_CALC_FAILED');
-    const doc = {...draft,issueDate:fields.issueDate,dueDate:fields.dueDate,
+    // Structured entrypoint returns id:'' for its own addDocument() path.
+    // This local lifecycle uses saveDocuments() directly, so assign a stable
+    // unique ID before presenting and saving the draft.
+    const doc = {...draft,id:'doc-' + deps.storage.generateId(),issueDate:fields.issueDate,dueDate:fields.dueDate,
       expectedPaymentDate:fields.expectedPaymentDate,sourceWorkOrderId:order.id,
       workDate:fields.workDate,localLifecycleKey:'work-order:' + order.id,
       status:'draft',paymentMethod:'bank_transfer',paymentStatus:'pending',
