@@ -604,7 +604,9 @@
       $('budil-gpt-booking-preview').replaceChildren(node('p','端末内の作業予定を保存しました。Google Calendarは未同期です。'));
       status('端末内の作業予定を保存しました。Google Calendarは未同期です。');
     }catch(e){
-      hide('budil-gpt-booking-save',true);
+      // Keep the save control available for a fresh, explicit Google recheck;
+      // a busy result itself always prevents this save from changing data.
+      if(e.message!=='GOOGLE_CALENDAR_CONFLICT')hide('budil-gpt-booking-save',true);
       status('保存を停止しました（'+e.message+'）。最新の予定を確認してからやり直してください。',true);
     }finally{bookingSaving=false;btn.disabled=false;}
   }
