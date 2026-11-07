@@ -38,6 +38,15 @@ const cases=`  await ev("localStorage.setItem('budil_leads',JSON.stringify([{id:
   assert.equal(await ev("document.getElementById('budil-gpt-status').textContent.includes('請求書の入力と承認が残っています')"),true);
   await ev("document.getElementById('budil-gpt-invoice-work-date').value='2026-11-06';document.getElementById('budil-gpt-invoice-amount').value='18000';document.getElementById('budil-gpt-invoice-tax').value='included';document.getElementById('budil-gpt-invoice-issue').value='2026-11-06';document.getElementById('budil-gpt-invoice-due').value='2026-12-06';document.getElementById('budil-gpt-invoice-method').value='bank_transfer';document.getElementById('budil-gpt-invoice-expected').value='2026-12-06';document.getElementById('budil-gpt-invoice-preview').click();document.getElementById('budil-gpt-invoice-confirm').click();document.getElementById('budil-gpt-invoice-confirm').click()");
   assert.equal(await ev('Storage.getDocuments().length'),1,'one invoice');
+  assert.equal(await ev("document.getElementById('budil-gpt-invoice-issue').hidden"),false,
+    'saved invoice is presented for separate issue approval');
+  await ev("document.getElementById('budil-gpt-invoice-issue-confirm').click()");
+  assert.equal(await ev("Storage.getDocuments()[0].status"),'draft','issue needs separate acknowledgement');
+  await ev("document.getElementById('budil-gpt-invoice-issue-ack').checked=true;document.getElementById('budil-gpt-invoice-issue-confirm').click()");
+  assert.equal(await ev("Storage.getDocuments()[0].status"),'issued');
+  assert.equal(await ev("Storage.getDocuments()[0].paymentStatus"),'pending');
+  assert.equal(await ev("Storage.getDocuments()[0].paidAmount"),0);
+
   assert.equal(await ev("Storage.getDocuments()[0].paymentStatus"),'pending');
   assert.equal(await ev("Storage.getDocuments()[0].sourceWorkOrderId"),'w1');
   assert.equal(await ev("Storage.getWorkOrders().find(w=>w.id==='w2').status"),'confirmed');
@@ -51,6 +60,27 @@ const cases=`  await ev("localStorage.setItem('budil_leads',JSON.stringify([{id:
   assert.equal(await ev('Storage.getDocuments().length'),1);
   await ev("document.getElementById('budil-gpt-invoice-confirm').click()");
   assert.equal(await ev('Storage.getDocuments().length'),3,'quote and invoice in one document write');
+  assert.equal(await ev("Storage.getDocuments()[0].status"),'draft',
+    'quote invoice remains a draft until separate issue');
+  await cmd('Page.reload',{ignoreCache:true});
+  for(let i=0;i<150;i++){
+    if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-open')"))break;
+    await sleep(100);
+  }
+  await ev("document.getElementById('budil-gpt-open').click();document.getElementById('budil-gpt-input').value='請求書の下書きを確定して';document.getElementById('budil-gpt-run').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-invoice').hidden"),true,
+    'reloaded client must ask for consent before listing invoices');
+  await ev("document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+  assert.equal(await ev("document.querySelectorAll('#budil-gpt-invoice-orders button').length"),1);
+  await ev("document.querySelector('#budil-gpt-invoice-orders button').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-invoice-issue').hidden"),false);
+  assert.equal(await ev("Storage.getDocuments()[0].status"),'draft');
+  await ev("document.getElementById('budil-gpt-invoice-issue-ack').checked=true;document.getElementById('budil-gpt-invoice-issue-confirm').click()");
+  assert.equal(await ev("Storage.getDocuments()[0].status"),'issued');
+  assert.equal(await ev("Storage.getDocuments()[0].paymentStatus"),'pending');
+  assert.equal(await ev('Storage.getDocuments().length'),3,'no duplicate invoices');
+  console.log('BUDIL_INVOICE_ISSUE_BROWSER_PASS: separate confirmation and restore from reload; no remote send');
+
   assert.equal(await ev("Storage.getDocuments()[0].sourceEstimateId===Storage.getDocuments()[1].id"),true);
   assert.equal(await ev("Storage.getDocuments()[0].tax===Storage.getDocuments()[1].tax"),true);
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true);
