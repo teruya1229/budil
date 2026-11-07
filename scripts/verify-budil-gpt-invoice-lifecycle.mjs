@@ -6,6 +6,7 @@ for(const [file,name] of [
   ['js/payment-brain.js','PaymentBrain'],
   ['js/documents-brain.js','DocumentsBrain'],
   ['js/invoice-structured-entrypoint.js','InvoiceStructuredEntrypoint'],
+  ['js/budil-gpt-bank-reconcile.js','BudilGptBankReconcile'],
   ['js/budil-gpt-invoice-lifecycle.js','BudilGptInvoiceLifecycle']
 ])context[name]=runInNewContext(readFileSync(file,'utf8')+';'+name,context);
 const {DocumentsBrain:docs,InvoiceStructuredEntrypoint:entry,BudilGptInvoiceLifecycle:life}=context;
@@ -89,6 +90,30 @@ assert.equal(documents[0].unpaidAmount,issue.preview.total,
 assert.equal(documents[1].status,'draft','original quote remains unchanged');
 assert.equal(life.applyIssue(issue,{storage,confirm:true,notSentAcknowledged:true}).code,'DOCUMENTS_CHANGED');
 assert.equal(life.prepareIssue(documents[0].id,storage).code,'INVOICE_NOT_DRAFT');
+
+const bank=context.BudilGptBankReconcile;
+const deposit={id:'TX-ISSUED-001',date:'2026-11-08',
+  amount:documents[0].total,
+  description:documents[0].number+' '+documents[0].customerName};
+const bankRows=bank.candidates([deposit],storage.getDocuments(),'fixture-only-account',
+  context.PaymentBrain,storage.getRevenueRecords());
+assert.equal(bankRows.length,1);
+assert.equal(bankRows[0].candidates.length,1,
+  'only separately issued invoice is eligible for bank CSV matching');
+assert.equal(bankRows[0].candidates[0].id,documents[0].id);
+const bankArgs={deposit,invoiceId:documents[0].id,source:'fixture-only-account',
+  storage,payment:context.PaymentBrain};
+assert.equal(bank.apply(bankArgs).code,'CONFIRM_REQUIRED');
+assert.equal(documents[0].paymentStatus,'pending','bank preview does not mark invoice paid');
+assert.equal(bank.apply({...bankArgs,confirm:true}).ok,true);
+assert.equal(documents[0].paymentStatus,'paid');
+assert.equal(documents[0].unpaidAmount,0);
+assert.equal(documents[0].paidAmount,deposit.amount);
+assert.equal(documents[0].bankMatch.transactionId,'TX-ISSUED-001');
+assert.equal(bank.apply({...bankArgs,confirm:true}).ok,false,'same deposit cannot settle twice');
+assert.equal(documents[1].type,'estimate','payment must not alter original estimate');
+console.log('BUDIL_INVOICE_TO_BANK_ISSUED_LIFECYCLE_PASS');
+
 
 const q2=life.prepareQuote({...approved,title:'second'},'c1',fields,{storage,documents:docs});
 assert.equal(q2.ok,true,q2.code);
