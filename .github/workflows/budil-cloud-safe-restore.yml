@@ -1,0 +1,74 @@
+name: Budil cloud safe restore acceptance
+on:
+  push:
+    branches:
+      - feat/budil-cloud-safe-restore-20261106
+  pull_request:
+    branches:
+      - main
+      - feat/budil-conversation-acceptance-20261106
+permissions:
+  contents: read
+jobs:
+  snapshot-restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Safe cloud recovery and existing business regressions
+        run: |
+          node --check js/budil-cloud.js
+          node --check js/budil-cloud-restore.js
+          node --check js/budil-cloud-restore-ui.js
+          node scripts/verify-budil-cloud-safe-restore.mjs
+          node scripts/verify-budil-cloud-restore-server.mjs
+          # The historical v4.13.0 verifier requires an unavailable sibling
+          # ai-bantou-app checkout. The new isolated client tests cover auth,
+          # method, snapshot hash, consent and local rollback without secrets.
+          # v4.9.6 hardening script hardcodes the retired v4.10.10
+          # version header; current v4.13.20 data shape is covered by
+          # the live DataBackup contract and dedicated SHA rollback test.
+          node scripts/verify-budil-gpt-multi-turn.mjs
+          node scripts/verify-budil-gpt-conversation-20.mjs
+          node scripts/verify-v41314-document-print-pdf-export.mjs
+          node scripts/verify-v41315-pdf-origin-alignment.mjs
+
+  chrome-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: PDF page inspection available
+        run: |
+          if ! command -v pdfinfo >/dev/null 2>&1; then
+            sudo apt-get -y -qq install poppler-utils
+          fi
+      - name: Exercise Budil assistant in isolated Chrome with fictional data
+        run: |
+          node scripts/verify-budil-ai-p0-browser.mjs
+          node scripts/verify-budil-cloud-restore-browser.mjs
+  edge-typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Typecheck authenticated backup endpoint
+        run: deno check supabase/functions/budil-backups/index.ts

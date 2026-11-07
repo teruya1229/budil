@@ -15,7 +15,12 @@ const BudilGptLocalCommands = (() => {
   function parse(raw, {today,anonymizer}={}) {
     if (typeof raw!=='string'||!raw.trim()||raw.length>220||
         /[\x00-\x1f]/.test(raw)) return deny('INPUT_INVALID');
-    const text=raw.replace(/[　\s]+/g,'').trim();
+    const text=raw.replace(/[　\s]+/g,'').trim()
+      .replace(/[。．！!？?]+$/u,'');
+    // Bounded conversational variants only. Never treat arbitrary prose as
+    // a command; every accepted sentence still must full-match a known read.
+    const readVerb='(?:教えて|確認して|見せて|教えてください|確認してください|見せてください|確認したい)';
+    const searchVerb='(?:探して|検索して|見せて|探してください|検索してください|見せてください|一覧を見せて|一覧を出して|確認して|確認したい)';
     // Quote drafts are parsed on-device and never activate external GPT.
     if (anonymizer && typeof anonymizer.prepare==='function') {
       const quote=anonymizer.prepare(raw);
@@ -25,8 +30,33 @@ const BudilGptLocalCommands = (() => {
         requiresDocumentApproval:true,networkUsed:false
       });
     }
-    const unpaidAll=/^(?:現在の)?未入金(?:合計|の合計)?を(?:教えて|確認して|見せて)$/.test(text);
-    const unpaidMonth=/^今月の未入金(?:合計|の合計)?を(?:教えて|確認して|見せて)$/.test(text);
+    const endAnchor=String.fromCharCode(36);
+    // Customer creation is never automatic. This is a preview-only intent;
+    // the UI performs exact-name duplicate rechecks and a separate approve.
+    const newCustomer=text.match(/^([一-龯々ぁ-んァ-ヶA-Za-z・ー]{3,32})(?:さん|様)を新規顧客として登録して$/u);
+    const newName=newCustomer ? newCustomer[1].replace(/(さん|様)$/,'') : '';
+    if(newCustomer && newName.length>=3 && !/(?:秘密|メモ|個人情報|削除|変更)/.test(newName)){
+      return Object.freeze({
+        ok:true,action:'customer.create.preview',
+        request:{name:newName},readOnly:false,persisted:false,
+        requiresUserConfirmation:true,networkUsed:false
+      });
+    }
+
+    const profitMonthly=new RegExp('^今月の利益(?:はいくら(?:ですか)?|を'+readVerb+')'+endAnchor).test(text);
+    if(profitMonthly){
+      if(typeof today!=='string'||!/^(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-\d{2}$/.test(today))
+        return deny('DATE_REQUIRED');
+      return Object.freeze({
+        ok:true,action:'profit.summary',
+        request:{action:'profit.summary',date:today},
+        scope:'current_month_estimate',readOnly:true,networkUsed:false
+      });
+    }
+    const unpaidAll=new RegExp('^(?:現在の)?未入金(?:合計|の合計|額|の金額)?を'+readVerb+endAnchor).test(text) ||
+      new RegExp('^(?:現在の)?未入金(?:合計|の合計|額|の金額)?はいくら(?:ですか)?'+endAnchor).test(text);
+    const unpaidMonth=new RegExp('^今月の未入金(?:合計|の合計|額|の金額)?を'+readVerb+endAnchor).test(text) ||
+      new RegExp('^今月の未入金(?:合計|の合計|額|の金額)?はいくら(?:ですか)?'+endAnchor).test(text);
     if (unpaidAll || unpaidMonth) {
       if(typeof today!=='string'||!/^(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-\d{2}$/.test(today))
         return deny('DATE_REQUIRED');
@@ -37,7 +67,7 @@ const BudilGptLocalCommands = (() => {
       });
     }
     // A period is NOT a customer. Lookup issueDate in Budil's local documents.
-    const period=text.match(/^(今月|先月)の(見積書|請求書)を(?:探して|検索して|見せて)$/);
+    const period=text.match(new RegExp('^(今月|先月)の(見積書|請求書)(?:を'+searchVerb+'|一覧(?:を見せて|を出して|を確認して))'+endAnchor));
     if(period){
       if(typeof today!=='string'||!/^(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-\d{2}$/.test(today))
         return deny('DATE_REQUIRED');
@@ -51,7 +81,7 @@ const BudilGptLocalCommands = (() => {
         periodLabel:period[1],readOnly:true,networkUsed:false
       });
     }
-    const document=text.match(/^(.+?)の(見積書|請求書)を(?:探して|検索して|見せて)$/);
+    const document=text.match(new RegExp('^(.+?)の(見積書|請求書)を'+searchVerb+endAnchor));
     if (document) {
       const name=safeName(document[1]);
       if(!name)return deny('NAME_INVALID');
@@ -62,7 +92,7 @@ const BudilGptLocalCommands = (() => {
         readOnly:true,networkUsed:false
       });
     }
-    const work=text.match(/^(.+?)の作業予定を(?:教えて|探して|検索して|見せて)$/);
+    const work=text.match(new RegExp('^(.+?)の作業予定を(?:'+readVerb+'|探して|検索して|探してください|検索してください)'+endAnchor));
     if(work){
       const name=safeName(work[1]);if(!name)return deny('NAME_INVALID');
       return Object.freeze({
@@ -70,7 +100,8 @@ const BudilGptLocalCommands = (() => {
         readOnly:true,networkUsed:false
       });
     }
-    const customer=text.match(/^(.+?)(?:さん|様)を(?:探して|検索して)$/);
+    const customer=text.match(new RegExp('^(.+?)(?:さん|様)を(?:探して|検索して|探してください|検索してください|見せて|確認して)'+endAnchor)) ||
+      text.match(new RegExp('^([一-龯々]{2,6})を(?:探して|検索して|探してください|検索してください|見せて|確認して)'+endAnchor));
     if(customer){
       const name=safeName(customer[1]);if(!name)return deny('NAME_INVALID');
       return Object.freeze({

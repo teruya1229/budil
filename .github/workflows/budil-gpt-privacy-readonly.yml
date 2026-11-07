@@ -1,0 +1,59 @@
+name: Budil GPT privacy-first read-only contract
+on:
+  push:
+    branches:
+      - feat/budil-gpt-privacy-first-readonly-20261106
+  pull_request:
+    branches:
+      - feat/budil-conversation-acceptance-20261106
+permissions:
+  contents: read
+jobs:
+  privacy-and-edge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Typecheck Edge Function and its imported helpers
+        run: deno check supabase/functions/budil-gpt-interpret/index.ts
+      - name: PII-safe read-only intent and adversarial contract
+        run: deno run --no-check scripts/verify-budil-gpt-readonly-privacy.ts
+      - name: Original GPT quote and PDF regressions
+        run: |
+          node --check js/budil-gpt-public-read.js
+          node --check js/budil-cloud.js
+          node --check js/budil-gpt-offline-ui.js
+          node scripts/verify-budil-gpt-public-read.mjs
+          node scripts/verify-budil-gpt-anonymize.mjs
+          node scripts/verify-budil-gpt-secure-readiness.mjs
+          node scripts/verify-budil-gpt-conversation-20.mjs
+          node scripts/verify-budil-ai-p0-contract.mjs
+          node scripts/verify-v41314-document-print-pdf-export.mjs
+
+  browser-consent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: PDF inspection dependency
+        run: |
+          if ! command -v pdfinfo >/dev/null 2>&1; then
+            sudo apt-get -y -qq install poppler-utils
+          fi
+      - name: Isolated fictional Chrome E2E
+        run: node scripts/verify-budil-ai-p0-browser.mjs

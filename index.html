@@ -3548,7 +3548,7 @@
 
         <h2 class="backup-section-heading">クラウドバックアップ</h2>
         <div id="cloud-backup-card" class="card card-wide card-cloud-backup">
-          <p class="data-mgmt-desc">ローカルバックアップとは別に、Budilアカウントでログインしてクラウドへも保存できます。保存のみの機能で、クラウドからの復元・自動同期・自動バックアップは行いません。復元はローカルバックアップのみです。</p>
+          <p class="data-mgmt-desc">ローカルバックアップとは別に、Budilアカウントでログインしてクラウドへも保存できます。保存と、本人確認付きの最新クラウドバックアップの手動復元に対応します。自動同期・自動バックアップは行いません。</p>
           <p id="cloud-backup-conn-status" class="cloud-backup-line">接続先: —</p>
           <p id="cloud-backup-login-status" class="cloud-backup-line">ログイン状態: —</p>
           <p id="cloud-backup-last" class="cloud-backup-line">最終クラウドバックアップ: —</p>
@@ -3570,6 +3570,23 @@
             <button type="button" id="btn-cloud-backup" class="btn btn-primary hidden" disabled>クラウドへバックアップ</button>
           </div>
           <p id="cloud-backup-result" class="cloud-backup-result" aria-live="polite"></p>
+          <div id="cloud-restore-section" class="cloud-restore-section">
+            <h3>クラウドから安全に復元（手動）</h3>
+            <p class="data-mgmt-desc">別端末で保存した最新のクラウドデータを確認できます。自動同期ではありません。復元すると対象のローカルデータが上書きされるため、先に現在の端末のバックアップを保存してください。</p>
+            <div class="data-mgmt-actions">
+              <button type="button" id="btn-cloud-restore-preview" class="btn btn-secondary hidden" disabled>クラウドの最新データを確認</button>
+              <button type="button" id="btn-cloud-restore-download" class="btn btn-secondary" disabled>この端末のバックアップJSONを保存</button>
+            </div>
+            <p id="cloud-restore-summary" class="cloud-backup-result" role="status" aria-live="polite"></p>
+            <label class="form-check" for="cloud-restore-saved">
+              <input type="checkbox" id="cloud-restore-saved" disabled>
+              <span>この端末のバックアップJSONが保存できたことを確認しました</span>
+            </label>
+            <div class="data-mgmt-actions">
+              <button type="button" id="btn-cloud-restore-apply" class="btn btn-primary" disabled>確認したクラウドデータをこの端末へ復元</button>
+              <button type="button" id="btn-cloud-restore-reload" class="btn btn-secondary hidden">復元後の画面を再読み込み</button>
+            </div>
+          </div>
         </div>
 
         <div class="card card-wide card-test-data">
@@ -4085,7 +4102,7 @@
     <section class="budil-gpt-dialog" role="dialog" aria-modal="true" aria-labelledby="budil-gpt-heading">
       <header class="budil-gpt-header">
         <div>
-          <span class="budil-gpt-tag">ローカル先行版・未保存</span>
+          <span class="budil-gpt-tag">本人承認制・端末内優先</span>
           <h2 id="budil-gpt-heading">🎙️ AI業務番頭</h2>
         </div>
         <button type="button" id="budil-gpt-close" class="budil-gpt-btn budil-gpt-btn-secondary budil-gpt-close" aria-label="閉じる">×</button>
@@ -4093,7 +4110,7 @@
       <p class="budil-gpt-muted">Budilに保存されている、この端末の顧客・帳票・作業予定・未入金を会話形式で確認できます。操作内容の解析は現在も端末内の限定文法です。GPT接続確認は既存ログインを使用した無課金の状態確認のみで、顧客情報や見積内容は送信しません。</p>
       <label class="budil-gpt-label" for="budil-gpt-input">やってほしいこと</label>
       <textarea id="budil-gpt-input" class="budil-gpt-input" maxlength="220" rows="3" placeholder="例：田中太郎さんを探して"></textarea>
-      <p class="budil-gpt-disclaimer">入力例：田中太郎さんを探して ／ 田中太郎さんの請求書を探して ／ 田中太郎さんの作業予定を教えて ／ 未入金合計を教えて ／ 田中太郎さんのエアコン洗浄2台を税込18,000円で見積して</p>
+      <p class="budil-gpt-disclaimer">入力例：田中太郎さんを探して ／ 金曜日の午前10時、空いてる？ ／ 金曜日の10時に田中さんのエアコン洗浄2台を予約して。18,000円で見積書も作って ／ 田中さんの予約を土曜日に変更して</p>
       <label class="budil-gpt-check">
         <input type="checkbox" id="budil-gpt-consent">
         <span>この1回の操作で、端末内のBudil業務データを読み取ることを許可する</span>
@@ -4102,10 +4119,15 @@
         <input type="checkbox" id="budil-gpt-remote-consent">
         <span>今回の見積指示から顧客名を除いた作業名・台数・金額・税区分を外部GPTに送信することを許可する（API利用料金が発生する場合あり）</span>
       </label>
+      <label class="budil-gpt-check">
+        <input type="checkbox" id="budil-gpt-public-consent">
+        <span>今回の氏名・住所・電話を含まない集計質問を外部GPTへ送信する（料金が発生する場合あり）。顧客データ本体は送信しません。</span>
+      </label>
       <div class="budil-gpt-actions">
         <button type="button" id="budil-gpt-run" class="budil-gpt-btn">内容を確認して実行</button>
         <button type="button" id="budil-gpt-readiness" class="budil-gpt-btn budil-gpt-btn-secondary">GPT接続状態を確認（無料・読取のみ）</button>
         <button type="button" id="budil-gpt-interpret" class="budil-gpt-btn budil-gpt-btn-secondary">GPTで見積指示を解析（承認制）</button>
+        <button type="button" id="budil-gpt-public-read" class="budil-gpt-btn budil-gpt-btn-secondary">GPTで集計質問を解釈（匿名・承認制）</button>
         <button type="button" id="budil-gpt-clear" class="budil-gpt-btn budil-gpt-btn-secondary">入力をクリア</button>
       </div>
       <hr class="budil-gpt-divider">
@@ -4117,10 +4139,42 @@
       <p id="budil-gpt-status" class="budil-gpt-status" role="status" aria-live="polite"></p>
       <p id="budil-gpt-readiness-status" class="budil-gpt-status" role="status" aria-live="polite"></p>
       <div id="budil-gpt-result" class="budil-gpt-result" aria-live="polite"></div>
+      <div id="budil-gpt-customer-create" hidden>
+        <hr class="budil-gpt-divider">
+        <h3>新規顧客の登録前確認</h3>
+        <div id="budil-gpt-customer-create-preview"></div>
+        <p class="budil-gpt-disclaimer">登録するのは氏名のみです。電話・住所は後から顧客管理で追加してください。すでに同名の顧客がいる場合は登録しません。</p>
+        <button type="button" id="budil-gpt-customer-create-confirm" class="budil-gpt-btn">この顧客を登録する（端末に保存）</button>
+      </div>
       <div id="budil-gpt-candidates" hidden>
         <hr class="budil-gpt-divider">
         <h3>顧客候補を本人が選択</h3>
         <div id="budil-gpt-candidate-list" class="budil-gpt-actions"></div>
+      </div>
+      <div id="budil-gpt-booking" hidden>
+        <hr class="budil-gpt-divider">
+        <h3>端末内の予約確認</h3>
+        <div id="budil-gpt-booking-preview"></div>
+        <div id="budil-gpt-booking-fields" hidden>
+          <label class="budil-gpt-label" for="budil-gpt-booking-tax">指定金額は税込・税抜のどちらですか？</label>
+          <select id="budil-gpt-booking-tax" class="budil-gpt-input"><option value="">選択してください</option><option value="included">税込</option><option value="excluded">税抜</option></select>
+          <label class="budil-gpt-label" for="budil-gpt-booking-end">終了時刻（例 12:00）</label>
+          <input id="budil-gpt-booking-end" class="budil-gpt-input" type="time">
+          <button type="button" id="budil-gpt-booking-continue" class="budil-gpt-btn">顧客候補と重複を確認</button>
+        </div>
+        <div id="budil-gpt-booking-orders" class="budil-gpt-actions"></div>
+        <button type="button" id="budil-gpt-booking-save" class="budil-gpt-btn" hidden>確認した予約を端末に保存</button>
+      </div>
+      <div id="budil-gpt-google-read" hidden>
+        <hr class="budil-gpt-divider">
+        <h3>Googleカレンダーの空き確認（読取専用）</h3>
+        <p>接続設定済みのカレンダーを本人操作で読み、時間の重なりだけを判定します。予定名・住所・顧客情報はここに表示しません。結果は照会時点のもので、予約登録や予定変更は行いません。</p>
+        <label class="budil-gpt-check">
+          <input type="checkbox" id="budil-gpt-google-consent">
+          <span>指定日のGoogleカレンダーを読取専用で照会することに同意します（顧客・見積データは送信しません）。</span>
+        </label>
+        <button type="button" id="budil-gpt-google-check" class="budil-gpt-btn budil-gpt-btn-secondary">Googleカレンダーの時間重複を確認</button>
+        <p id="budil-gpt-google-status" role="status" aria-live="polite"></p>
       </div>
       <div id="budil-gpt-draft" hidden>
         <hr class="budil-gpt-divider">
@@ -4138,8 +4192,54 @@
         <h3>承認済み見積（まだ未発行）</h3>
         <div id="budil-gpt-approved-preview"></div>
         <button type="button" id="budil-gpt-pdf" class="budil-gpt-btn">見積PDFを端末に保存</button>
+        <button type="button" id="budil-gpt-quote-invoice" class="budil-gpt-btn budil-gpt-btn-secondary">この見積から請求書を準備</button>
       </div>
-      <p class="budil-gpt-disclaimer">この先行版は売上・顧客・予定を登録・変更しません。Googleカレンダーの空き確認や銀行照合も未実施です。PDFは本人承認後のみ出力します。</p>
+      <div id="budil-gpt-invoice" hidden>
+        <hr class="budil-gpt-divider">
+        <h3>請求書の確認</h3>
+        <div id="budil-gpt-invoice-orders" class="budil-gpt-actions"></div>
+        <label class="budil-gpt-label" for="budil-gpt-invoice-work-date">実際の作業日（作業予定から作る場合）</label>
+        <input id="budil-gpt-invoice-work-date" class="budil-gpt-input" type="date">
+        <label class="budil-gpt-label" for="budil-gpt-invoice-amount">実際の税込金額（作業予定から作る場合）</label>
+        <input id="budil-gpt-invoice-amount" class="budil-gpt-input" type="number" min="1" step="1">
+        <label class="budil-gpt-label" for="budil-gpt-invoice-tax">金額の税区分</label>
+        <select id="budil-gpt-invoice-tax" class="budil-gpt-input"><option value="">選択してください</option><option value="included">税込</option><option value="excluded">税抜</option></select>
+        <label class="budil-gpt-label" for="budil-gpt-invoice-issue">請求日</label>
+        <input id="budil-gpt-invoice-issue" class="budil-gpt-input" type="date">
+        <label class="budil-gpt-label" for="budil-gpt-invoice-due">支払期限</label>
+        <input id="budil-gpt-invoice-due" class="budil-gpt-input" type="date">
+        <label class="budil-gpt-label" for="budil-gpt-invoice-method">支払方法</label>
+        <select id="budil-gpt-invoice-method" class="budil-gpt-input"><option value="">選択してください</option><option value="bank_transfer">銀行振込</option></select>
+        <label class="budil-gpt-label" for="budil-gpt-invoice-expected">入金予定日</label>
+        <input id="budil-gpt-invoice-expected" class="budil-gpt-input" type="date">
+        <button type="button" id="budil-gpt-invoice-preview" class="budil-gpt-btn">請求書をプレビュー</button>
+        <div id="budil-gpt-invoice-preview-box"></div>
+        <button type="button" id="budil-gpt-completion-confirm" class="budil-gpt-btn" hidden>この作業完了と売上を端末に保存</button>
+        <button type="button" id="budil-gpt-invoice-confirm" class="budil-gpt-btn" hidden>この請求書を端末に保存</button>
+        <div id="budil-gpt-invoice-issue-panel" hidden>
+          <h3>請求書の確定（端末内のみ・顧客には未送信）</h3>
+          <div id="budil-gpt-invoice-issue-preview"></div>
+          <label class="budil-gpt-check">
+            <input type="checkbox" id="budil-gpt-invoice-issue-ack">
+            <span>請求書の金額・宛名・請求日・支払期限を確認しました。確定後も顧客への送付とPDF確認は別途自分で行います。</span>
+          </label>
+          <button type="button" id="budil-gpt-invoice-issue-confirm" class="budil-gpt-btn">確認した請求書を「請求済み」に変更（送信なし）</button>
+        </div>
+      </div>
+      <div id="budil-gpt-bank" hidden>
+        <hr class="budil-gpt-divider">
+        <h3>銀行明細CSVと請求書の照合</h3>
+        <p>端末上のCSVを選択してください。明細は外部送信・保存しません。列名は日付、摘要、入金額＋出金額、任意の取引IDに対応します。入出金区分＋金額も利用できます。</p>
+        <label class="budil-gpt-label" for="budil-gpt-bank-source">金融機関・口座の識別名（再取込の重複判定用）</label>
+        <input id="budil-gpt-bank-source" class="budil-gpt-input" autocomplete="off">
+        <label class="budil-gpt-label" for="budil-gpt-bank-encoding">CSV文字コード</label>
+        <select id="budil-gpt-bank-encoding" class="budil-gpt-input"><option value="utf-8">UTF-8</option><option value="shift_jis">Shift_JIS</option></select>
+        <label class="budil-gpt-label" for="budil-gpt-bank-file">銀行明細CSV</label>
+        <input id="budil-gpt-bank-file" class="budil-gpt-input" type="file" accept=".csv,text/csv">
+        <button type="button" id="budil-gpt-bank-preview" class="budil-gpt-btn">端末内で照合プレビュー</button>
+        <div id="budil-gpt-bank-results"></div>
+      </div>
+      <p class="budil-gpt-disclaimer">予約は端末内の作業予定だけを照合します。Google Calendarの空き確定ではありません。予約の保存・変更はプレビュー後の明示操作のみです。銀行照合は選択したCSVだけで行います。PDFは本人承認後のみ出力します。</p>
     </section>
   </div>
 
@@ -4170,14 +4270,22 @@
   <script src="js/executive-brain.js?v=4.13.20"></script>
   <script src="js/card-ocr.js?v=4.13.20"></script>
   <script src="js/data-backup.js?v=4.13.20"></script>
-  <script src="js/budil-cloud.js?v=20261106c"></script>
+  <script src="js/budil-cloud.js?v=20261107google1"></script>
+  <script src="js/budil-cloud-restore.js?v=20261106restore1"></script>
   <script src="js/app.js?v=4.13.20"></script>
   <script src="js/customer-resolve-entrypoint.js?v=20261106a"></script>
   <script src="js/budil-gpt-readonly.js?v=20261106a"></script>
   <script src="js/budil-gpt-local-source.js?v=20261106a"></script>
   <script src="js/budil-gpt-anonymize.js?v=20261106a"></script>
   <script src="js/budil-gpt-local-commands.js?v=20261106a"></script>
+  <script src="js/budil-gpt-public-read.js?v=20261106m1"></script>
+  <script src="js/budil-gpt-conversation.js?v=20261106d"></script>
+  <script src="js/budil-gpt-booking.js?v=20261107google1"></script>
+  <script src="js/invoice-structured-entrypoint.js?v=20261106a"></script>
+  <script src="js/budil-gpt-invoice-lifecycle.js?v=20261107issue1"></script>
+  <script src="js/budil-gpt-bank-reconcile.js?v=20261106a"></script>
   <script src="experiments/budil-gpt-phase1/fixture-core.js?v=20261106a"></script>
-  <script src="js/budil-gpt-offline-ui.js?v=20261106c"></script>
+  <script src="js/budil-gpt-offline-ui.js?v=20261107google1"></script>
+  <script src="js/budil-cloud-restore-ui.js?v=20261106restore1"></script>
 </body>
 </html>
