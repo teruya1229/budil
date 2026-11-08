@@ -44,16 +44,17 @@ const BudilGptReadOnly = (() => {
     requiresConsent: true, view, modelReceipt: summary
   });
   const verify = (request) => {
-    if (!object(request) || !exactKeys(request, ['action','query','limit','date','month','docType','customerId'])) return null;
+    if (!object(request) || !exactKeys(request, ['action','query','limit','date','month','docType','customerId','offset'])) return null;
     const action = str(request.action, 40);
     if (!ACTIONS.includes(action)) return null;
     const limit = request.limit == null ? MAX_RESULTS : request.limit;
     if (!Number.isInteger(limit) || limit < 1 || limit > MAX_RESULTS) return null;
     if (action === 'customer.timeline.detail') {
-      if(!exactKeys(request,['action','customerId','limit']) ||
+      if(!exactKeys(request,['action','customerId','limit','offset']) ||
          !str(request.customerId,120) ||
          /[\x00-\x1f]/.test(request.customerId))return null;
-      return {action,customerId:request.customerId,limit};
+      if(request.offset != null && (!Number.isInteger(request.offset) || request.offset<0 || request.offset>1000))return null;
+      return {action,customerId:request.customerId,limit,offset:request.offset||0};
     }
     if (action === 'receivables.summary' || action === 'profit.summary') {
       if(!exactKeys(request,['action','date']) || !validDate(request.date)) return null;
@@ -177,7 +178,7 @@ const BudilGptReadOnly = (() => {
         status:'',amount:null});
     }
     records.sort((a,b)=>b.date.localeCompare(a.date));
-    const chosen=records.slice(0,request.limit);
+    const chosen=records.slice(request.offset,request.offset+request.limit);
     const name=deps.customerResolver&&
       typeof deps.customerResolver.leadDisplayName==='function'
       ?deps.customerResolver.leadDisplayName(lead)
@@ -187,8 +188,8 @@ const BudilGptReadOnly = (() => {
       customerTypeMajor:validText(lead.customerTypeMajor,80),
       customerTypeMinor:validText(lead.customerTypeMinor,80),
       customerMemo:validText(lead.customerMemo,4000),
-      recordCount:records.length,records:chosen,
-      hasMore:records.length>chosen.length,
+      recordCount:records.length,records:chosen,offset:request.offset,
+      hasMore:records.length>request.offset+chosen.length,
       linkedWorkCount:linkedWorks.length,
       linkedRevenueCount:linkedRevenues.length,
       // No name-only backfilling of legacy records.
