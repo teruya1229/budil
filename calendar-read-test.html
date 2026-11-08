@@ -17,6 +17,14 @@
     .muted {color:#526276}
     label {display:block;font-weight:600;margin:18px 0 10px}
     input[type=date] {font:inherit;padding:12px;border-radius:8px;border:1px solid #92a2b3;width:100%;max-width:210px}
+    input[type=email],input[type=password] {font:inherit;padding:12px;border-radius:8px;border:1px solid #92a2b3;width:100%;min-height:45px;background:#fff}
+    .login-panel {padding:16px;border:1px solid #c9d9df;border-radius:12px;background:#f8fbfc;margin:18px 0}
+    .login-panel[hidden] {display:none}
+    .login-panel h2 {font-size:1.13rem;margin:0 0 8px}
+    .login-panel label {margin:12px 0 7px}
+    .login-panel button {margin-top:14px}
+    #login-result {min-height:1.5em;margin:10px 0 0}
+    button:focus-visible,input:focus-visible {outline:3px solid #1d798c;outline-offset:2px}
     .consent {display:flex;gap:10px;align-items:flex-start;font-weight:500}
     .consent input {margin-top:5px}
     button {font:inherit;font-weight:700;color:#fff;background:#115e71;border:none;border-radius:8px;padding:14px 20px;cursor:pointer;max-width:100%}
@@ -31,13 +39,25 @@
 <main><section class="sheet">
   <h1>Googleカレンダー 実読取チェック</h1>
   <p class="muted">Budil×GPTの公開前後の確認用ページです。<strong>予定を読むだけ</strong>で、Googleへの登録・変更・削除、Budilの顧客データ変更は行いません。予定名・場所・顧客情報は表示しません。</p>
-  <p>このページは認証済みの本人用Googleカレンダー設定を、既存のBudilサーバーが照会します。Budilのログインは先に<a href="./index.html">同じタブのBudil本体</a>で行ってください。新しいタブでは端末のログイン状態が引き継がれない場合があります。</p>
-  <p id="auth-status" role="status" class="muted">端末のログイン状態を確認中…</p>
+  <p>このページは既存のBudilサーバーを使い、本人に許可されたGoogleカレンダーの予定時刻を照会します。別タブから開いた場合はログインが引き継がれないため、<strong>この画面だけでBudilにログイン</strong>できるようにしています。</p>
+  <p id="auth-status" role="status" class="muted">Budilのログイン状態を確認中…</p>
+  <section id="login-panel" class="login-panel" aria-labelledby="login-heading" hidden>
+    <h2 id="login-heading">Budilアカウントにログイン</h2>
+    <p class="muted">既存Budilの「クラウドバックアップ」と同じ認証です。<strong>Googleのパスワードを入力する画面ではありません。</strong>ログイン後も、別途「読取のみ実行」を押すまで予定は取得しません。</p>
+    <form id="login-form">
+      <label for="login-email">Budilのメールアドレス</label>
+      <input id="login-email" type="email" name="username" autocomplete="username" maxlength="254" required>
+      <label for="login-password">Budilのパスワード</label>
+      <input id="login-password" type="password" name="password" autocomplete="current-password" maxlength="512" required>
+      <button id="login-button" type="submit">Budilにログイン</button>
+    </form>
+    <p id="login-result" role="status" aria-live="polite"></p>
+  </section>
   <label for="calendar-date">確認する日（日本時間）</label>
   <input type="date" id="calendar-date" value="2026-11-08" min="2025-01-01" max="2035-12-31" required>
   <p class="muted"><small>比較区間は選んだ日の09:00〜09:15（JST）。予定全体の件数も確認します。</small></p>
   <label class="consent"><input type="checkbox" id="read-consent"><span>この1回に限り、本人のGoogleカレンダーの予定時刻を読み取ることを許可します（登録・変更はしません）</span></label>
-  <button type="button" id="read-button">読取のみ実行</button>
+  <button type="button" id="read-button" disabled>読取のみ実行</button>
   <div class="result" role="status" aria-live="polite" id="read-result">未実行。ボタンを押すまで外部照会は行いません。</div>
   <p class="muted"><small>読み取った予定情報は端末に保存せず、ページにも残しません。成功時は件数と時間重複数のみ表示します。この画面で外部GPTにデータを送信しません。</small></p>
   <a href="./index.html">Budil本体へ戻る</a>
@@ -52,7 +72,14 @@
   const consent=byId('read-consent');
   const dateInput=byId('calendar-date');
   const authStatus=byId('auth-status');
+  const loginPanel=byId('login-panel');
+  const loginForm=byId('login-form');
+  const loginEmail=byId('login-email');
+  const loginPassword=byId('login-password');
+  const loginButton=byId('login-button');
+  const loginResult=byId('login-result');
   let inFlight=false;
+  let loginInFlight=false;
   const validDate=value=>{
     if(typeof value!=='string'||!(/^\d{4}-\d{2}-\d{2}$/.test(value)))return false;
     const ms=Date.parse(value+'T00:00:00Z');
@@ -64,15 +91,59 @@
     authStatus.textContent='接続用モジュールがありません。Budilを更新してください。';
     return;
   }
-  Promise.resolve(calendar.whenReady()).then(()=>{
+  function renderAuthState(){
     const state=calendar.getAuthState();
-    authStatus.textContent=state.signedIn
-      ?'このタブにBudilのログイン情報があります。認証は読取実行時に再確認します。'
-      :'Budilに未ログインです。同じタブでBudil本体にログインしてから戻ってください。';
-  }).catch(()=>{authStatus.textContent='ログイン状態を確認できませんでした。';});
+    const signedIn=!!(state&&state.available&&state.signedIn);
+    authStatus.textContent=signedIn
+      ?'Budilログイン済みです。読取許可のチェックを入れ、下のボタンで確認できます。'
+      :'Budilに未ログインです。下のログイン欄から、このタブで認証してください。';
+    loginPanel.hidden=signedIn;
+    button.disabled=!signedIn||inFlight;
+    return signedIn;
+  }
+  Promise.resolve(calendar.whenReady()).then(renderAuthState)
+    .catch(()=>{authStatus.textContent='ログイン状態を確認できませんでした。';});
+  loginForm.addEventListener('submit',async event=>{
+    event.preventDefault();
+    if(loginInFlight||inFlight)return;
+    const email=loginEmail.value.trim();
+    const password=loginPassword.value;
+    loginPassword.value='';
+    if(!email||!password){
+      loginResult.textContent='Budilのメールアドレスとパスワードを入力してください。';
+      return;
+    }
+    loginInFlight=true;
+    loginButton.disabled=true;
+    loginResult.textContent='Budilアカウントを確認中…';
+    try{
+      // Reuse the existing Budil Auth path. Never expose, log, or cache passwords.
+      const auth=await calendar.login(email,password);
+      if(auth&&auth.ok===true){
+        loginEmail.value='';
+        consent.checked=false;
+        loginResult.textContent='Budilにログインできました。次に読取許可を確認してください。';
+        renderAuthState();
+      }else{
+        loginResult.textContent='Budilにログインできませんでした。Budilのメールアドレスとパスワードを確認してください。';
+        renderAuthState();
+      }
+    }catch(_){
+      loginResult.textContent='Budil認証の通信に失敗しました。接続状態を確認してください。';
+      renderAuthState();
+    }finally{
+      loginInFlight=false;
+      loginButton.disabled=false;
+      loginPassword.value='';
+    }
+  });
   button.addEventListener('click',async()=>{
-    if(inFlight)return;
+    if(inFlight||loginInFlight)return;
     result.textContent='未実行';
+    if(!renderAuthState()){
+      result.textContent='先にこのページでBudilへログインしてください。';
+      return;
+    }
     if(!consent.checked) {
       result.textContent='読取許可のチェックを入れてください。';
       return;
@@ -92,7 +163,8 @@
          response.calendarWritePerformed!==false||!Array.isArray(response.events)){
         const code=String(response&&response.code||'read_failed');
         const safeCode=/^[a-z0-9_-]{1,65}$/i.test(code)?code:'read_failed';
-        result.textContent='予定の読取は完了していません（'+safeCode+'）。Budilのログイン状態とカレンダーの共有設定を確認してください。';
+        result.textContent='予定の読取は完了していません（'+safeCode+'）。認証またはGoogleカレンダー共有設定を確認してください。';
+        renderAuthState();
         return;
       }
       const start=Date.parse(date+'T09:00:00+09:00');
@@ -111,7 +183,7 @@
     } catch(_) {
       result.textContent='予定の読取に失敗しました。詳細はBudilの接続状態を確認してください。';
     } finally {
-      inFlight=false;button.disabled=false;dateInput.disabled=false;
+      inFlight=false;dateInput.disabled=false;renderAuthState();
     }
   });
 })();

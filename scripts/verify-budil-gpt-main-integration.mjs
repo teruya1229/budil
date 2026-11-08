@@ -4,11 +4,17 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
-const base='1876fa649d33e82c741e1f1b575aa308b5ffb53e';
+// Compare the PR against current main, not the November 6 release ancestor.
+// A stale fixed base incorrectly flagged unrelated, already-published CI files.
+const baseline=spawnSync('git',['merge-base','HEAD','origin/main'],{encoding:'utf8'});
+assert.equal(baseline.status,0,'current_main_merge_base_unavailable');
+const base=baseline.stdout.trim();
+assert.match(base,/^[a-f0-9]{40}$/,'invalid_merge_base');
 const diff=spawnSync('git',['diff','--name-only',base,'HEAD'],{encoding:'utf8'});
 assert.equal(diff.status,0,'git_diff_unavailable (checkout must fetch history)');
 const paths=diff.stdout.trim().split('\n').filter(Boolean);
 const allowed=new Set([
+  ".github/workflows/budil-ai-conversation-p0.yml",
   ".github/workflows/budil-cloud-safe-restore.yml",
   ".github/workflows/budil-conversation-20.yml",
   ".github/workflows/budil-gpt-privacy-readonly.yml",
