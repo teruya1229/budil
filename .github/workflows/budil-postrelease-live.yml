@@ -1,0 +1,40 @@
+name: Budil production Pages smoke and isolated Chrome acceptance
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-pages-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Wait for public HTML and JS version, without user session
+        run: node scripts/verify-budil-live-published.mjs
+      - name: Ensure PDF inspection dependency
+        run: |
+          if ! command -v pdfinfo >/dev/null 2>&1; then
+            sudo apt-get -y -qq install poppler-utils
+          fi
+      - name: Real public URL, disposable Chrome 390px, fictional local fixture
+        env:
+          BUDIL_LIVE_VERIFY_URL: https://teruya1229.github.io/budil/
+          BUDIL_TEST_OUTPUT_DIR: /tmp/budil-postrelease
+        run: node scripts/verify-budil-ai-p0-browser.mjs
+      - name: Preserve only fictional test screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: budil-postrelease-390
+          path: /tmp/budil-postrelease/budil-release-390.png
+          if-no-files-found: ignore
+          retention-days: 3
