@@ -158,18 +158,40 @@
             }
             const d=detail.view;
             title(d.customerName+' 様の登録情報・履歴');
-            item([['顧客タイプ',([d.customerTypeMajor,d.customerTypeMinor].filter(Boolean).join(' / '))||'未登録'],
+            const typeLabels={A:'安心重視型',B:'仕上がり重視型',C:'効率重視型',
+              D:'防御型合理モード',E:'監査型',F:'確認安心型'};
+            const typeLabel=k=>k?(typeLabels[k]?k+'：'+typeLabels[k]:k):'';
+            item([['顧客タイプ',([typeLabel(d.customerTypeMajor),typeLabel(d.customerTypeMinor)].filter(Boolean).join(' / '))||'未登録'],
               ['現場環境・対応メモ',d.customerMemo||'未登録'],
               ['紐付け済み作業',String(d.linkedWorkCount)+'件'],
               ['紐付け済み売上',String(d.linkedRevenueCount)+'件'],
               ['履歴総件数',String(d.recordCount)+'件']]);
-            for(const h of d.records||[]){
-              item([['区分',h.kind],['日付',h.date||'日付未設定'],
-                ['内容',h.label||'未登録'],['メモ',h.note||'なし'],
-                ['状態',h.status||'—'],
-                ['金額',h.amount==null?'—':yen(h.amount)]]);
-            }
-            if(d.hasMore)resultBox.append(node('p','直近10件を表示しています。詳細な過去記録は顧客管理でも確認できます。'));
+            const showPage=page=>{
+              for(const h of page.records||[]){
+                item([['区分',h.kind],['日付',h.date||'日付未設定'],
+                  ['内容',h.label||'未登録'],['メモ',h.note||'なし'],
+                  ['状態',h.status||'—'],
+                  ['金額',h.amount==null?'—':yen(h.amount)]]);
+              }
+              if(page.hasMore){
+                const more=node('button','過去の履歴をさらに10件表示',
+                  'budil-gpt-btn budil-gpt-btn-secondary');
+                more.type='button';
+                more.addEventListener('click',()=>{
+                  more.disabled=true;
+                  const next=source.query({action:'customer.timeline.detail',
+                    customerId:c.customerId,limit:10,offset:page.offset+page.records.length},true);
+                  if(!next.ok){
+                    more.disabled=false;
+                    return status('過去の履歴を読み取れません（'+next.code+'）。',true);
+                  }
+                  more.remove();
+                  showPage(next.view);
+                });
+                resultBox.append(more);
+              }
+            };
+            showPage(d);
             status('既存の顧客・作業・売上記録を端末内で表示しました。外部GPTへの送信や保存・変更はしていません。名前だけで未紐付けの履歴は推測しません。');
           }catch(_){
             resultBox.replaceChildren();
