@@ -16,7 +16,7 @@ assert.ok(!/localStorage\.(?:setItem|clear|removeItem)/.test(html));
 assert.ok(!/getAccessToken|refresh_token|access_token|authorization\s*:/.test(match[1]));
 assert.ok(!/\bfetch\s*\(|XMLHttpRequest|navigator\.sendBeacon/.test(match[1]));
 
-function harness(fetchScheduleBlocks,auth={signedIn:true},login=async()=>({ok:true})) {
+function harness(fetchScheduleBlocks,auth={available:true,signedIn:true},login=async()=>({ok:true})) {
   const names=['read-button','read-result','read-consent','calendar-date','auth-status','login-panel','login-form','login-email','login-password','login-button','login-result'];
   const elements=Object.fromEntries(names.map(name=>[name,{
     textContent:'',checked:false,value:name==='calendar-date'?'2026-11-08':'',
