@@ -30,6 +30,7 @@ jobs:
           deno check supabase/functions/budil-backups/index.ts
           deno check supabase/functions/budil-gpt-interpret/index.ts
           deno run --no-check scripts/verify-budil-gpt-readonly-privacy.ts
+          node scripts/verify-budil-calendar-read-test.mjs
           node scripts/verify-budil-gpt-booking.mjs
           node scripts/verify-budil-gpt-invoice-lifecycle.mjs
           node scripts/verify-budil-gpt-combined-lifecycle.mjs
