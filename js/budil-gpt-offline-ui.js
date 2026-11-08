@@ -130,6 +130,56 @@
       return status('端末内検索ができません：'+(answer&&answer.code||'READ_UNAVAILABLE'),true);
     }
     const view=answer.view||{};
+    if(parsed.action==='customer.timeline'){
+      title('顧客候補：'+(view.candidateCount||0)+'件（選択後に履歴を表示）');
+      if(view.status==='too_many')
+        return status('候補が多すぎます。フルネームを指定して再検索してください。',true);
+      if(!(view.candidates||[]).length)
+        return status('該当する顧客がありません。名前を詳しく指定してください。',true);
+      for(const c of view.candidates){
+        const card=node('div',undefined,'budil-gpt-item');
+        const summary=node('p',c.displayName+' / '+(c.municipality||'地域未登録'));
+        card.append(summary);
+        const button=node('button','このお客様の記録を表示','budil-gpt-btn budil-gpt-btn-secondary');
+        button.type='button';
+        button.addEventListener('click',()=>{
+          // An explicit customer choice is a second local read consent. Do
+          // not infer identity from a surname or disclose notes before click.
+          button.disabled=true;
+          try{
+            const source=Source.make({storage:Data,readonly:ReadOnly,
+              customerResolver:Resolver,paymentBrain:Payment,profitBrain:Profit});
+            const detail=source.query({action:'customer.timeline.detail',
+              customerId:c.customerId,limit:10},true);
+            resultBox.replaceChildren();
+            if(!detail.ok) {
+              status('顧客情報を取得できません（'+detail.code+'）。',true);
+              return;
+            }
+            const d=detail.view;
+            title(d.customerName+' 様の登録情報・履歴');
+            item([['顧客タイプ',([d.customerTypeMajor,d.customerTypeMinor].filter(Boolean).join(' / '))||'未登録'],
+              ['現場環境・対応メモ',d.customerMemo||'未登録'],
+              ['紐付け済み作業',String(d.linkedWorkCount)+'件'],
+              ['紐付け済み売上',String(d.linkedRevenueCount)+'件'],
+              ['履歴総件数',String(d.recordCount)+'件']]);
+            for(const h of d.records||[]){
+              item([['区分',h.kind],['日付',h.date||'日付未設定'],
+                ['内容',h.label||'未登録'],['メモ',h.note||'なし'],
+                ['状態',h.status||'—'],
+                ['金額',h.amount==null?'—':yen(h.amount)]]);
+            }
+            if(d.hasMore)resultBox.append(node('p','直近10件を表示しています。詳細な過去記録は顧客管理でも確認できます。'));
+            status('既存の顧客・作業・売上記録を端末内で表示しました。外部GPTへの送信や保存・変更はしていません。名前だけで未紐付けの履歴は推測しません。');
+          }catch(_){
+            resultBox.replaceChildren();
+            status('端末内の顧客履歴を読み取れませんでした。',true);
+          }
+        });
+        card.append(button);resultBox.append(card);
+      }
+      return status('対象のお客様を選択すると、登録済みの顧客タイプ・現場環境メモ・作業履歴が表示されます。');
+    }
     if(parsed.action==='customer.search'){
       title('顧客候補：'+(view.candidateCount||0)+'件（自動確定しません）');
       if(view.candidateCount>10)return status('候補が多いため、さらに具体的な名前で検索してください。',true);
