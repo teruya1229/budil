@@ -10,10 +10,12 @@
 const BudilGptLocalSource = (() => {
   'use strict';
   const allowed=Object.freeze([
-    'customer.search','document.search','document.period','work.search','receivables.summary','profit.summary'
+    'customer.search','customer.timeline','customer.timeline.detail','document.search','document.period','work.search','receivables.summary','profit.summary'
   ]);
   const getters=Object.freeze({
     'customer.search':['getLeads'],
+    'customer.timeline':['getLeads'],
+    'customer.timeline.detail':['getLeads','getWorkOrders','getRevenueRecords','getReceptionIntakes'],
     'document.search':['getDocuments'],
     'document.period':['getDocuments'],
     'work.search':['getWorkOrders'],
