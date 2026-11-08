@@ -106,6 +106,26 @@ check('unknown IDs, spoofed claims and incomplete data fail closed',()=>{
    customerResolver:c
  },true).code,'DEPENDENCY_MISSING');
 });
+check('customer history allows deliberate bounded paging only',()=>{
+ const lead=leads[0];
+ const previous=lead.activityLogs;
+ lead.activityLogs=Array.from({length:18},(_,i)=>({
+   date:'2026-11-'+String(i+1).padStart(2,'0'),title:'点検記録'+i,memo:'架空記録'+i
+ }));
+ const first=r.perform({action:'customer.timeline.detail',customerId:'fixture1',limit:10},deps,true);
+ assert.equal(first.ok,true);
+ assert.equal(first.view.records.length,10);
+ assert.equal(first.view.hasMore,true);
+ const next=r.perform({action:'customer.timeline.detail',customerId:'fixture1',limit:10,offset:10},deps,true);
+ assert.equal(next.ok,true);
+ assert.equal(next.view.offset,10);
+ assert.equal(next.view.records.length,10);
+ assert.equal(next.view.hasMore,true);
+ assert.equal(r.perform({action:'customer.timeline.detail',customerId:'fixture1',offset:-1},deps,true).code,'INVALID_INPUT');
+ assert.equal(r.perform({action:'customer.timeline.detail',customerId:'fixture1',limit:100},deps,true).code,'INVALID_INPUT');
+ privateSafe(next);
+ lead.activityLogs=previous;
+});
 check('impossible date refused',()=>assert.equal(r.perform({action:'receivables.summary',date:'2026-02-30'},deps,true).ok,false));
 check('payment brain aggregate only',()=>{const o=r.perform({action:'receivables.summary',date:'2026-11-05'},deps,true);assert.equal(o.ok,true);assert.equal(o.view.pendingTotal,20000);assert.equal(o.view.count,1);assert.equal(o.view.paidStatusChanged,false);privateSafe(o)});
 check('profit uses existing calculator and exposes only aggregate',()=>{
