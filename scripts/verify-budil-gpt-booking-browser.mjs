@@ -142,7 +142,22 @@ try{
   await ev("document.getElementById('budil-gpt-clear').click();document.getElementById('budil-gpt-input').value='2099-11-08の10時に田中さんのエアコン洗浄2台を予約して。18,000円で見積書も作って';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click();document.getElementById('budil-gpt-booking-tax').value='included';document.getElementById('budil-gpt-booking-end').value='12:00';document.getElementById('budil-gpt-booking-continue').click();document.querySelector('#budil-gpt-candidate-list button').click()");
   assert.equal(await ev("document.getElementById('budil-gpt-booking-save').hidden"),true,'time conflict blocks write');
   assert.equal(await ev('Storage.getWorkOrders().length'),3);
+  // Customer history entry point must be usable in the actual 390px dialog.
+  // Every record is fictional, linked by exact lead ID and stays in Chrome.
+  await ev("Storage.updateLead('f1',{customerTypeMajor:'A',customerTypeMinor:'F',customerMemo:'現場天井高め・駐車は裏側',activityLogs:[{date:'2099-11-05',title:'連絡',memo:'養生を準備'}]});Storage.addWorkOrder({leadId:'f1',customerName:'田中太郎',status:'completed',scheduledDate:'2099-11-04',serviceText:'現場点検',memo:'二階の室外機'});Storage.addWorkOrder({leadId:'f2',customerName:'田中花子',status:'completed',scheduledDate:'2099-11-03',serviceText:'他のお客様の洗浄',memo:'他人だけのメモ'})");
+  await ev("document.getElementById('budil-gpt-clear').click();document.getElementById('budil-gpt-input').value='田中さんの現場環境を教えて';document.getElementById('budil-gpt-run').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-status').textContent.includes('確認欄')"),true,'consent before customer lookup');
+  await ev("document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+  assert.equal(await ev("document.querySelectorAll('#budil-gpt-result button').length"),2,'namesake candidates need selection');
+  assert.equal(await ev("document.getElementById('budil-gpt-result').textContent.includes('現場天井高め')"),false,'private note not shown before selection');
+  await ev("document.querySelector('#budil-gpt-result button').click()");
+  const historyView=await ev("document.getElementById('budil-gpt-result').textContent");
+  assert.ok(historyView.includes('現場天井高め'),'selected customer field memo shown');
+  assert.ok(historyView.includes('現場点検'),'exact-linked work history shown');
+  assert.ok(historyView.includes('養生を準備'),'activity log shown');
+  assert.ok(!historyView.includes('他人だけのメモ'),'other customer notes hidden');
   assert.equal(await ev("document.documentElement.scrollWidth<=innerWidth+2"),true);
+
   await ev("document.getElementById('budil-gpt-booking').scrollIntoView({block:'start'})");
   const shot=await cmd('Page.captureScreenshot',{format:'png'});
   if(process.env.BUDIL_TEST_OUTPUT_DIR)writeFileSync(join(output,'budil-booking-390.png'),Buffer.from(shot.data,'base64'));
