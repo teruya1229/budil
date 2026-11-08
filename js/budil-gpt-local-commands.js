@@ -81,6 +81,22 @@ const BudilGptLocalCommands = (() => {
         periodLabel:period[1],readOnly:true,networkUsed:false
       });
     }
+    // Existing customer asset memo and linked job history are READ on this
+    // device, never sent to GPT. Name lookup only suggests candidates; the
+    // operator explicitly selects an exact customer ID before any details.
+    const record=text.match(new RegExp('^(.+?)(?:さん|様)?の(過去の作業履歴|過去の作業|作業履歴|施工履歴|対応履歴|訪問履歴|作業実績|顧客タイプ|お客様タイプ|現場環境|作業環境|現場の環境|注意点|顧客メモ|お客様メモ|顧客情報|お客様情報|登録情報)(?:を(?:'+readVerb+'|'+searchVerb+'|出して|一覧で見せて)|は(?:何|どう|どんな感じ)(?:ですか)?)'+endAnchor)) ||
+      text.match(new RegExp('^(.+?)(?:さん|様)の(履歴|メモ|環境|タイプ)(?:を(?:'+readVerb+'|'+searchVerb+'|出して))'+endAnchor));
+    const recordAbout=!record&&text.match(/^(.+?)(?:さん|様)ってどんな(?:お客さん|お客様)(?:ですか)?$/u);
+    if(record||recordAbout){
+      const name=safeName((record||recordAbout)[1]);
+      if(!name)return deny('NAME_INVALID');
+      const topic=record?record[2]:'顧客情報';
+      return Object.freeze({
+        ok:true,action:'customer.timeline',
+        request:{action:'customer.timeline',query:name,limit:10},
+        recordTopic:topic,readOnly:true,networkUsed:false
+      });
+    }
     const document=text.match(new RegExp('^(.+?)の(見積書|請求書)を'+searchVerb+endAnchor));
     if (document) {
       const name=safeName(document[1]);
