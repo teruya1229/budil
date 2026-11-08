@@ -9,6 +9,7 @@ const diff=spawnSync('git',['diff','--name-only',base,'HEAD'],{encoding:'utf8'})
 assert.equal(diff.status,0,'git_diff_unavailable (checkout must fetch history)');
 const paths=diff.stdout.trim().split('\n').filter(Boolean);
 const allowed=new Set([
+  ".github/workflows/budil-ai-conversation-p0.yml",
   ".github/workflows/budil-cloud-safe-restore.yml",
   ".github/workflows/budil-conversation-20.yml",
   ".github/workflows/budil-gpt-privacy-readonly.yml",
