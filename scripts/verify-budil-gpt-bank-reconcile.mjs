@@ -1,0 +1,54 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url);
+const {BudilGptBankReconcile:B}=require('../js/budil-gpt-bank-reconcile.js');
+const payment={migratePaymentStatus:s=>s,buildPaidPatch:(total,date)=>({paymentStatus:'paid',paidDate:date,paidAmount:total,unpaidAmount:0})};
+const base='取引日,入金額,出金額,摘要,取引ID\n';
+const row='2026年11月7日,"18,000",,"田中太郎\n請求書 INV-1",TX-1\n';
+const parsed=B.parse(base+row+'2026/11/08,,500,引出し,TX-2\n');
+assert(parsed.ok);assert.equal(parsed.deposits.length,1);assert.equal(parsed.rejected[0].code,'NOT_EXPLICIT_CREDIT');
+assert.equal(parsed.deposits[0].description,'田中太郎\n請求書 INV-1');
+const docs=[{id:'i1',type:'invoice',status:'issued',paymentMethod:'bank_transfer',paymentStatus:'pending',total:18000,paidAmount:0,
+  issueDate:'2026-11-06',dueDate:'2026-12-06',number:'INV-1',customerName:'田中太郎'}];
+assert.equal(B.candidates(parsed.deposits,docs,'demo-account',payment)[0].confidence,'高');
+assert.equal(B.parse(base+'2026/11/07,18000,500,田中太郎,TX-3').deposits.length,0);
+assert.equal(B.parse('日付,金額,摘要\n2026/11/07,18000,田中太郎').code,'HEADERS_REQUIRED');
+assert.equal(B.parse(base+row+row).code,'DUPLICATE_TRANSACTION_ID');
+assert.equal(B.parse(base+'2026/11/07,9000,,田中太郎,TX-4').deposits[0].amount,9000);
+assert.equal(B.candidates([{...parsed.deposits[0],amount:9000}],docs,'demo-account',payment)[0].candidates.length,0);
+// A stale pending label must not override evidence that this invoice was already settled.
+assert.equal(B.candidates(parsed.deposits,[{...docs[0],unpaidAmount:0}],'demo-account',payment)[0].candidates.length,0);
+assert.equal(B.candidates(parsed.deposits,[{...docs[0],paidDate:'2026-11-07'}],'demo-account',payment)[0].candidates.length,0);
+assert.equal(B.candidates(parsed.deposits,[{...docs[0],bankMatch:{source:'demo-account',transactionId:'TX-OLD'}}],'demo-account',payment)[0].candidates.length,0);
+assert.equal(B.candidates(parsed.deposits,[{...docs[0],paymentStatus:'partial'}],'demo-account',payment)[0].candidates.length,0);
+assert.equal(B.candidates(parsed.deposits,[{...docs[0],paymentStatus:'unknown'}],'demo-account',payment)[0].candidates.length,0);
+assert.equal(B.candidates(parsed.deposits,[{...docs[0],paymentMethod:'cash'}],'demo-account',payment)[0].candidates.length,0);
+assert.equal(B.parse(base+'2026/02/30,18000,,田中太郎,TX-5').deposits.length,0);
+assert.equal(B.parse(base+'2026/11/07,=SUM(1+1),,田中太郎,TX-5').deposits.length,0);
+assert.equal(B.parse(base+'2026/11/07,18000,,=HYPERLINK(1),TX-5').deposits[0].description,'=HYPERLINK(1)');
+assert.equal(B.parse(base+'2026/11/07,18000,,田中太郎,').deposits[0].id,'');
+assert.throws(()=>new TextDecoder('utf-8',{fatal:true}).decode(Uint8Array.of(0x82,0xa0)));
+assert.equal(B.parse('日付,入金額,摘要\n2026/11/07,18000,田中太郎').deposits.length,1);
+assert.equal(B.parse('日付,入出金区分,金額,摘要\n2026/11/07,出金,18000,田中太郎').deposits.length,0);
+const ambiguousDeposit={...parsed.deposits[0],description:'田中太郎 INV-1'};
+assert.equal(B.candidates([ambiguousDeposit],[...docs,{...docs[0],id:'i2',number:'INV-2'}],'demo-account',payment)[0].candidates.length,2);
+let list=structuredClone(docs),backups=0;
+const storage={KEYS:{DOCUMENTS:'documents'},getDocuments:()=>structuredClone(list),getRevenueRecords:()=>[],
+  createSafetyBackup:()=>{backups++;return {id:'backup'};},saveDocuments:next=>{list=structuredClone(next);}};
+const args={deposit:parsed.deposits[0],invoiceId:'i1',source:'demo-account',storage,payment};
+assert.equal(B.apply(args).code,'CONFIRM_REQUIRED');assert.equal(backups,0);
+assert.equal(B.apply({...args,deposit:{...args.deposit,id:''},confirm:true}).code,'TRANSACTION_ID_REQUIRED');
+assert.equal(B.apply({...args,deposit:ambiguousDeposit,storage:{...storage,getDocuments:()=>[...docs,{...docs[0],id:'i2',number:'INV-2'}]},confirm:true}).code,'MATCH_CHANGED_OR_AMBIGUOUS');
+assert.equal(B.apply({...args,storage:{...storage,getRevenueRecords:()=>[{linkedDocumentId:'i1'}]},confirm:true}).code,'LINKED_REVENUE_REQUIRES_MANUAL_UPDATE');
+assert.equal(B.apply({...args,storage:{...storage,getDocuments:()=>[{...docs[0],unpaidAmount:0}]},confirm:true}).code,'MATCH_CHANGED_OR_AMBIGUOUS');
+assert.equal(B.apply({...args,storage:{...storage,createSafetyBackup:()=>{throw Error('fictional quota');}},confirm:true}).code,'BACKUP_FAILED');
+assert.equal(list[0].paymentStatus,'pending');
+let failOnce=true,rollbackDocs=structuredClone(docs);
+const rollbackStorage={...storage,getDocuments:()=>structuredClone(rollbackDocs),saveDocuments:next=>{
+  if(failOnce){failOnce=false;throw Error('fictional quota');}rollbackDocs=structuredClone(next);}};
+assert.equal(B.apply({...args,storage:rollbackStorage,confirm:true}).code,'SAVE_FAILED_ROLLED_BACK');
+assert.equal(rollbackDocs[0].paymentStatus,'pending');
+assert.equal(B.apply({...args,confirm:true}).ok,true);assert.equal(list[0].paymentStatus,'paid');
+assert.equal(list[0].paidDate,'2026-11-07');assert.equal(backups,2);
+assert.equal(B.apply({...args,confirm:true}).ok,false);
+console.log('BUDIL_BANK_CSV_UNIT_PASS');

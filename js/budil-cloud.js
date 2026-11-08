@@ -3,8 +3,9 @@
  *
  * localStorageが正本のまま、既存 DataBackup.exportPayload() / validatePayload() を
  * そのまま再利用し、Supabase Edge Function `budil-backups` へ immutable snapshot を
- * 保存するだけの薄いクライアント。自動同期・自動復元・クラウドからの復元・
- * localStorage上書きは一切行わない（保存のみ）。
+ * 保存する薄いクライアント。認証済みユーザーの明示操作に限り最新
+ * スナップショットの取得を許可する（復元適用は別のローカル承認モジュール）。
+ * 自動同期・自動復元・勝手なlocalStorage上書きは行わない。
  *
  * 接続先はホスト名から固定判定する（query/hash/localStorage/画面入力での切替は不可）。
  * - https://teruya1229.github.io  -> production（既存BC Supabase Authを利用）
@@ -437,6 +438,47 @@
 
 
   /**
+   * Explicit authenticated download of the latest immutable snapshot.
+   * This NEVER restores or writes local data; caller must validate the
+   * content hash and seek a separate human approval before import.
+   */
+  function fetchLatestPayload() {
+    if (!isAvailable()) return Promise.resolve({ ok:false, code:CODE.DISABLED });
+    var cfg = getConfig();
+    return getValidAccessToken().then(function(tokenResult) {
+      if(!tokenResult.ok || !tokenResult.accessToken)
+        return {ok:false,code:CODE.NOT_SIGNED_IN};
+      return doFetch(cfg.url+'/functions/v1/budil-backups/latest/payload',{
+        method:'GET',
+        headers:{Authorization:'Bearer '+tokenResult.accessToken,
+          apikey:cfg.publishableKey},
+        timeoutMs:25000
+      }).then(function(result){
+        if(result.timeout)return {ok:false,code:CODE.TIMEOUT};
+        if(result.networkError)return {ok:false,code:CODE.NETWORK};
+        if(result.status===401)return {ok:false,code:CODE.UNAUTHORIZED};
+        if(result.status!==200 || !result.body || result.body.ok!==true)
+          return {ok:false,code:result.body && result.body.code || CODE.UNKNOWN};
+        const latest=result.body.latest;
+        if(latest===null)return {ok:true,latest:null};
+        if(!latest || typeof latest!=='object' || Array.isArray(latest) ||
+           typeof latest.snapshotId!=='string' ||
+           !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/.test(latest.snapshotId) ||
+           typeof latest.contentHash!=='string' ||
+           !/^[0-9a-f]{64}$/.test(latest.contentHash) ||
+           !latest.payload || typeof latest.payload!=='object' ||
+           Array.isArray(latest.payload))
+          return {ok:false,code:'invalid_snapshot_response'};
+        return {ok:true,latest:{
+          snapshotId:latest.snapshotId,createdAt:String(latest.createdAt||''),
+          appVersion:String(latest.appVersion||''),
+          contentHash:latest.contentHash,payload:latest.payload
+        }};
+      });
+    });
+  }
+
+  /**
    * Budil GPT readiness: authenticated GET only, never billable, no customer
    * data, API key values or storage contents. Shares the existing backup
    * login without exposing its access token to other frontend modules.
@@ -471,6 +513,7 @@
           keyConfigured:r.body.key_configured===true,
           modelSupported:r.body.model_supported===true,
           anonymizedReady:r.body.anonymized_ready===true,
+          readonlyReady:r.body.readonly_ready===true,
           externalRequestSent:false,persisted:false
         };
       });
@@ -535,6 +578,92 @@
     });
   }
 
+  /**
+   * Explicit, opt-in PII-free read intent classifier. Only a finite whitelist
+   * of aggregate questions is sent. Outputs cannot perform business writes.
+   */
+  function interpretPiiFreeRead(raw) {
+    var gate=typeof BudilGptPublicRead!=='undefined'?BudilGptPublicRead:null;
+    if(!gate||typeof gate.prepare!=='function'||typeof gate.verify!=='function')
+      return Promise.resolve({ok:false,code:'public_read_gate_unavailable'});
+    var prepared=gate.prepare(raw);
+    if(!prepared.ok)return Promise.resolve({ok:false,code:prepared.code});
+    var cfg=getConfig();
+    if(!cfg||cfg.env!=='production')
+      return Promise.resolve({ok:false,code:'gpt_origin_unavailable'});
+    return getValidAccessToken().then(function(token){
+      if(!token.ok||!token.accessToken)return {ok:false,code:CODE.NOT_SIGNED_IN};
+      return doFetch(cfg.url+'/functions/v1/budil-gpt-interpret',{
+        method:'POST',
+        headers:{Authorization:'Bearer '+token.accessToken,
+          apikey:cfg.publishableKey,'Content-Type':'application/json'},
+        body:JSON.stringify(prepared.wire),timeoutMs:20000
+      }).then(function(r){
+        if(r.timeout)return {ok:false,code:CODE.TIMEOUT};
+        if(r.networkError)return {ok:false,code:CODE.NETWORK};
+        if(r.status===401)return {ok:false,code:CODE.UNAUTHORIZED};
+        if(r.status!==200||!r.body||r.body.ok!==true)
+          return {ok:false,code:r.body&&r.body.code||CODE.UNKNOWN};
+        var verified=gate.verify(raw,r.body);
+        if(!verified.ok)return {ok:false,code:verified.code||'model_result_mismatch'};
+        return {ok:true,phase:'interpret_only',verified:true,parsed:verified.parsed,
+          externalRequestSent:true,readOnly:true,persisted:false};
+      });
+    });
+  }
+
+
+  /**
+   * Existing make-proxy schedule_blocks_list READ only. The server derives
+   * tenant, calendar ID and timezone from its active binding. Never send
+   * customer or event PII, and never call Make's write/confirmed path.
+   */
+  function fetchScheduleBlocks(startDate,endDate) {
+    const validDate = value => {
+      if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
+      const date=new Date(value+'T00:00:00Z');
+      return Number.isFinite(date.getTime()) &&
+        date.toISOString().slice(0,10)===value;
+    };
+    if(!validDate(startDate)||!validDate(endDate)||startDate!==endDate)
+      return Promise.resolve({ok:false,code:'calendar_date_invalid'});
+    if(!isAvailable())return Promise.resolve({ok:false,code:CODE.DISABLED});
+    const cfg=getConfig();
+    if(!cfg || cfg.env!=='production')
+      return Promise.resolve({ok:false,code:'calendar_origin_unavailable'});
+    return getValidAccessToken().then(function(token){
+      if(!token.ok||!token.accessToken)return {ok:false,code:CODE.NOT_SIGNED_IN};
+      return doFetch(cfg.url+'/functions/v1/make-proxy',{
+        method:'POST',
+        headers:{Authorization:'Bearer '+token.accessToken,
+          apikey:cfg.publishableKey,'Content-Type':'application/json'},
+        body:JSON.stringify({operation:'schedule_blocks_list',
+          startDate:startDate,endDate:endDate}),
+        timeoutMs:25000
+      }).then(function(r){
+        if(r.timeout)return {ok:false,code:CODE.TIMEOUT};
+        if(r.networkError)return {ok:false,code:CODE.NETWORK};
+        if(r.status===401)return {ok:false,code:CODE.UNAUTHORIZED};
+        if(r.status!==200)
+          return {ok:false,code:r.body&&r.body.code||CODE.UNKNOWN};
+        if(!r.body||!Array.isArray(r.body.events)||r.body.events.length>1000)
+          return {ok:false,code:'calendar_response_invalid'};
+        const events=[];
+        for(const item of r.body.events){
+          if(!item||typeof item!=='object'||Array.isArray(item)||
+            typeof item.start!=='string'||typeof item.end!=='string'||
+            item.start.length>45||item.end.length>45)
+            return {ok:false,code:'calendar_response_invalid'};
+          // Strip event summary, address, calendar ID and any other private
+          // fields before returning to the UI or schedule-review module.
+          events.push({start:item.start,end:item.end});
+        }
+        return {ok:true,events,readOnly:true,calendarWritePerformed:false,
+          customerRecordsSent:false};
+      });
+    });
+  }
+
   function isBackupInFlight() {
     return backupInFlight;
   }
@@ -551,8 +680,11 @@
     logout: logout,
     backupNow: backupNow,
     fetchLatest: fetchLatest,
+    fetchLatestPayload: fetchLatestPayload,
+    fetchScheduleBlocks: fetchScheduleBlocks,
     getGptReadiness: getGptReadiness,
     interpretAnonymizedQuote: interpretAnonymizedQuote,
+    interpretPiiFreeRead: interpretPiiFreeRead,
     isBackupInFlight: isBackupInFlight
   };
 })(typeof window !== 'undefined' ? window : globalThis);

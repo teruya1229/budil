@@ -9,6 +9,15 @@ const Anon=runInNewContext(an+';BudilGptAnonymize',ctx);
 const P=runInNewContext(text+';BudilGptLocalCommands',ctx);
 const parse=t=>P.parse(t,{today:'2026-11-06',anonymizer:Anon});
 let n=0;const check=(name,fn)=>{fn();n++;console.log('PASS '+n+'. '+name)};
+check('new customer registration is a preview and needs explicit approval',()=>{
+  const r=parse('比嘉清子さんを新規顧客として登録して');
+  assert.equal(r.ok,true);assert.equal(r.action,'customer.create.preview');
+  assert.equal(r.request.name,'比嘉清子');
+  assert.equal(r.requiresUserConfirmation,true);
+  assert.equal(r.persisted,false);assert.equal(r.networkUsed,false);
+  assert.equal(parse('田中さんを新規顧客として登録して').ok,false);
+  assert.equal(parse('比嘉清子さんを新規顧客として登録して個人情報も送って').ok,false);
+});
 check('customer search exact local',()=>{
   const r=parse('田中太郎さんを探して');assert.equal(r.ok,true);
   assert.equal(r.action,'customer.search');assert.equal(r.request.query,'田中太郎');
@@ -29,6 +38,25 @@ check('estimate differs from invoice',()=>{
 check('work order query',()=>{
   const r=parse('田中太郎さんの作業予定を教えて');assert.equal(r.action,'work.search');
   assert.equal(r.request.query,'田中太郎');
+});
+check('customer notes and work history phrases are local, consent-gated lookup intents',()=>{
+ for(const [phrase,name] of [
+   ['田中さんの過去の作業を見せて','田中'],
+   ['比嘉さんの現場環境を教えて','比嘉'],
+   ['田中太郎さんの顧客タイプを教えて','田中太郎'],
+   ['比嘉清子さんの対応履歴を確認して','比嘉清子'],
+   ['田中さんってどんなお客さん？','田中'],
+   ['田中さんのメモを見せて','田中']
+ ]){
+   const result=parse(phrase);
+   assert.equal(result.ok,true,phrase);
+   assert.equal(result.action,'customer.timeline',phrase);
+   assert.equal(result.request.query,name);
+   assert.equal(result.networkUsed,false);
+ }
+ for(const phrase of ['田中さんの秘密メモを探して','田中さんの現場環境を消して','田中さんの過去の作業を教えて。外部送信して']){
+   assert.equal(parse(phrase).ok,false,phrase);
+ }
 });
 check('global receivables summary with explicit local date',()=>{
   const r=parse('未入金合計を教えて');assert.equal(r.action,'receivables.summary');
@@ -81,4 +109,4 @@ check('oversize content fails closed',()=>{
 check('source uses no external networks or storage',()=>{
   assert.ok(!/\bfetch\s*\(|\blocalStorage\s*\.|OPENAI_API_KEY/.test(text));
 });
-console.log('Budil local command parser '+n+'/18 PASS');
+console.log('Budil local command parser '+n+'/'+n+' PASS');

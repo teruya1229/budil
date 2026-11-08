@@ -86,12 +86,20 @@ function createCdp(wsUrl) {
   });
 }
 async function run() {
-  server = createServer((req, res) => {
-    try { getFile(new URL(req.url, "http://localhost").pathname, res); }
-    catch { res.writeHead(500); res.end("error"); }
-  });
-  await new Promise((resolveOpen) => server.listen(0, "127.0.0.1", resolveOpen));
-  const port = server.address().port;
+  // Optional production verification still uses a disposable Chrome profile.
+  // Never use an existing user's browser or persistent Budil data.
+  const liveUrl=process.env.BUDIL_LIVE_VERIFY_URL || '';
+  if(liveUrl && liveUrl!=='https://teruya1229.github.io/budil/')
+    throw new Error('live_origin_not_allowlisted');
+  let port=0;
+  if(!liveUrl){
+    server=createServer((req,res)=>{
+      try { getFile(new URL(req.url, "http://localhost").pathname,res); }
+      catch { res.writeHead(500);res.end("error"); }
+    });
+    await new Promise((resolveOpen)=>server.listen(0,"127.0.0.1",resolveOpen));
+    port=server.address().port;
+  }
   chrome = spawn(browser, [
     "--headless=new", "--disable-gpu", "--disable-dev-shm-usage",
     "--no-first-run", "--no-default-browser-check", "--no-sandbox",
@@ -101,7 +109,7 @@ async function run() {
 
   const activePortFile = join(userDataDir, "DevToolsActivePort");
   let remotePort = 0;
-  for (let i = 0; i < 120; i++) {
+  for (let i = 0; i < 300; i++) {
     if (existsSync(activePortFile)) {
       remotePort = Number(readFileSync(activePortFile, "utf8").split(/\r?\n/)[0]);
       if (remotePort) break;
@@ -122,7 +130,7 @@ async function run() {
   await cdp.command("Browser.setDownloadBehavior", {
     behavior: "allow", downloadPath: downloadDir
   });
-  const url="http://127.0.0.1:"+port+"/index.html";
+  const url=liveUrl || ("http://127.0.0.1:"+port+"/index.html");
   await cdp.command("Page.navigate",{url});
   async function evaluate(expression) {
     const result=await cdp.command("Runtime.evaluate",{
@@ -277,6 +285,111 @@ async function run() {
   assert.equal(await evaluate("Storage.getDocuments().length"),3);
   await evaluate("document.getElementById('budil-gpt-clear').click()");
   console.log("BUDIL_GPT_MOCK_BROWSER_PASS: separate consent, candidate selection, unsaved draft, no writes");
+
+  // Run new finance reader ONLY on the branch-local version; production
+  // verification remains pinned to currently deployed features.
+  if(!liveUrl){
+    await evaluate("localStorage.setItem('budil_revenue_records',JSON.stringify([{id:'fictional-revenue-profit',workDate:'2026-11-06',status:'確定',amount:18000,service:'エアコン洗浄',source:'直受け'}]))");
+    await evaluate("localStorage.setItem('budil_expense_records',JSON.stringify([{id:'fictional-expense-profit',date:'2026-11-06',amount:3000,category:'薬剤・材料'}]))");
+    await evaluate("document.getElementById('budil-gpt-input').value='今月の利益はいくら？';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+    const profitView=await evaluate("document.getElementById('budil-gpt-result').textContent");
+    assert.ok(profitView.includes('概算利益'),profitView);
+    assert.ok(profitView.includes('15,000円'),profitView);
+    assert.ok(profitView.includes('18,000円'),profitView);
+    const warning=await evaluate("document.getElementById('budil-gpt-status').textContent");
+    assert.ok(warning.includes('確定申告用利益ではありません'));
+    assert.equal(await evaluate("Storage.getRevenueRecords().length"),1);
+    assert.equal(await evaluate("Storage.getExpenseRecords().length"),1);
+    console.log("BUDIL_PROFIT_BROWSER_PASS: existing ProfitBrain, approximate month, no writes");
+
+    await evaluate("document.getElementById('budil-gpt-input').value='田中さんのエアコン洗浄2台で見積を作って';document.getElementById('budil-gpt-run').click()");
+    assert.ok((await evaluate("document.getElementById('budil-gpt-status').textContent")).includes('合計金額'));
+    await evaluate("document.getElementById('budil-gpt-input').value='18,000円';document.getElementById('budil-gpt-run').click()");
+    assert.ok((await evaluate("document.getElementById('budil-gpt-status').textContent")).includes('税込'));
+    await evaluate("document.getElementById('budil-gpt-input').value='税込';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+    assert.equal(await evaluate("document.querySelectorAll('#budil-gpt-candidate-list button').length"),2);
+    await evaluate("document.querySelectorAll('#budil-gpt-candidate-list button')[0].click()");
+    assert.ok((await evaluate("document.getElementById('budil-gpt-draft-preview').textContent")).includes('18,000円'));
+    assert.equal(await evaluate("Storage.getDocuments().length"),3);
+    await evaluate("document.getElementById('budil-gpt-clear').click()");
+    console.log("BUDIL_MULTI_TURN_BROWSER_PASS: missing price/tax, two-turn followups, consent, no persisted writes");
+
+    const oldCustomerCount=await evaluate("Storage.getLeads().length");
+    await evaluate("document.getElementById('budil-gpt-input').value='比嘉清子さんを新規顧客として登録して';document.getElementById('budil-gpt-run').click()");
+    assert.equal(await evaluate("document.getElementById('budil-gpt-customer-create').hidden"),true);
+    assert.equal(await evaluate("Storage.getLeads().length"),oldCustomerCount);
+    await evaluate("document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+    assert.equal(await evaluate("document.getElementById('budil-gpt-customer-create').hidden"),false);
+    assert.equal(await evaluate("Storage.getLeads().length"),oldCustomerCount);
+    await evaluate("document.getElementById('budil-gpt-customer-create-confirm').click()");
+    assert.equal(await evaluate("Storage.getLeads().length"),oldCustomerCount+1);
+    assert.equal(await evaluate("Storage.getLeads().filter(x=>x.name==='比嘉清子').length"),1);
+    assert.ok((await evaluate("document.getElementById('budil-gpt-status').textContent")).includes('氏名を端末に保存'));
+    await evaluate("document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+    assert.equal(await evaluate("Storage.getLeads().length"),oldCustomerCount+1);
+    assert.ok((await evaluate("document.getElementById('budil-gpt-status').textContent")).includes('同じ名前'));
+    await evaluate("document.getElementById('budil-gpt-clear').click()");
+    console.log("BUDIL_CUSTOMER_APPROVAL_BROWSER_PASS: preview no writes, one explicit save, duplicate blocked");
+
+    // Original user instruction #4: surname-only request cannot create an
+    // ambiguous customer until the user supplies a full name and confirms.
+    const beforeSurname=await evaluate("Storage.getLeads().length");
+    await evaluate("document.getElementById('budil-gpt-input').value='田中さんを新規顧客として登録して';document.getElementById('budil-gpt-run').click()");
+    assert.ok((await evaluate("document.getElementById('budil-gpt-status').textContent")).includes('フルネーム'));
+    assert.equal(await evaluate("Storage.getLeads().length"),beforeSurname);
+    await evaluate("document.getElementById('budil-gpt-input').value='山田清子です';document.getElementById('budil-gpt-run').click()");
+    assert.ok((await evaluate("document.getElementById('budil-gpt-status').textContent")).includes('田中'));
+    assert.equal(await evaluate("Storage.getLeads().length"),beforeSurname);
+    await evaluate("document.getElementById('budil-gpt-input').value='田中清子です';document.getElementById('budil-gpt-run').click()");
+    assert.equal(await evaluate("document.getElementById('budil-gpt-customer-create').hidden"),true);
+    assert.equal(await evaluate("Storage.getLeads().length"),beforeSurname);
+    await evaluate("document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+    assert.equal(await evaluate("document.getElementById('budil-gpt-customer-create').hidden"),false);
+    assert.equal(await evaluate("Storage.getLeads().length"),beforeSurname);
+    await evaluate("document.getElementById('budil-gpt-customer-create-confirm').click()");
+    assert.equal(await evaluate("Storage.getLeads().length"),beforeSurname+1);
+    assert.equal(await evaluate("Storage.getLeads().filter(x=>x.name==='田中清子').length"),1);
+    await evaluate("document.getElementById('budil-gpt-clear').click()");
+    // Original utterances #2 and #3 are actually executed in the UI, not
+    // credited by parser-only grammar assertions.
+    await evaluate("document.getElementById('budil-gpt-input').value='田中さんを探して';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+    assert.ok((await evaluate("document.getElementById('budil-gpt-result').textContent")).includes('田中清子'));
+    await evaluate("document.getElementById('budil-gpt-input').value='田中太郎を探して';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+    assert.ok((await evaluate("document.getElementById('budil-gpt-result').textContent")).includes('田中太郎'));
+    await evaluate("document.getElementById('budil-gpt-clear').click()");
+    // Original utterance #10: no tax basis; ask and carry answer forward.
+    await evaluate("document.getElementById('budil-gpt-input').value='田中さん、エアコン洗浄2台で18,000円の見積お願い';document.getElementById('budil-gpt-run').click()");
+    assert.ok((await evaluate("document.getElementById('budil-gpt-status').textContent")).includes('税込'));
+    await evaluate("document.getElementById('budil-gpt-input').value='税込';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+    assert.ok((await evaluate("document.querySelectorAll('#budil-gpt-candidate-list button').length"))>=2);
+    await evaluate("document.querySelector('#budil-gpt-candidate-list button').click()");
+    assert.ok((await evaluate("document.getElementById('budil-gpt-draft-preview').textContent")).includes('18,000円'));
+    assert.equal(await evaluate("Storage.getDocuments().length"),3);
+    await evaluate("document.getElementById('budil-gpt-clear').click()");
+    console.log("BUDIL_ORIGINAL_MISSING_4_BROWSER_PASS: surname full-name intake, real 2 search variants and tax follow-up, no silent writes");
+
+
+    await evaluate("window.__publicReadCalls=0;BudilCloud.interpretPiiFreeRead=async()=>{window.__publicReadCalls++;return {ok:true,verified:true,parsed:{ok:true,action:'document.period',periodLabel:'先月',document_type:'invoice',readOnly:true,networkUsed:true}}}");
+    await evaluate("document.getElementById('budil-gpt-input').value='先月の請求書を見せて';document.getElementById('budil-gpt-public-read').click()");
+    assert.equal(await evaluate("window.__publicReadCalls"),0);
+    await evaluate("document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-public-read').click()");
+    assert.equal(await evaluate("window.__publicReadCalls"),0);
+    await evaluate("document.getElementById('budil-gpt-public-consent').checked=true;document.getElementById('budil-gpt-public-read').click()");
+    for(let i=0;i<60;i++){
+      if(await evaluate("document.getElementById('budil-gpt-result').textContent.includes('先月の請求書')"))break;
+      await sleep(100);
+    }
+    assert.equal(await evaluate("window.__publicReadCalls"),1);
+    assert.equal(await evaluate("document.getElementById('budil-gpt-consent').checked"),false);
+    assert.equal(await evaluate("document.getElementById('budil-gpt-public-consent').checked"),false);
+    assert.equal(await evaluate("Storage.getDocuments().length"),3);
+    assert.ok((await evaluate("document.getElementById('budil-gpt-status').textContent")).includes('業務データは端末内'));
+    console.log("BUDIL_PUBLIC_READ_BROWSER_PASS: dual consent, GPT stub, private local report, no writes");
+
+
+
+  }
+
 
 
 
