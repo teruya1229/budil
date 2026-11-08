@@ -39,6 +39,25 @@ check('work order query',()=>{
   const r=parse('田中太郎さんの作業予定を教えて');assert.equal(r.action,'work.search');
   assert.equal(r.request.query,'田中太郎');
 });
+check('customer notes and work history phrases are local, consent-gated lookup intents',()=>{
+ for(const [phrase,name] of [
+   ['田中さんの過去の作業を見せて','田中'],
+   ['比嘉さんの現場環境を教えて','比嘉'],
+   ['田中太郎さんの顧客タイプを教えて','田中太郎'],
+   ['比嘉清子さんの対応履歴を確認して','比嘉清子'],
+   ['田中さんってどんなお客さん？','田中'],
+   ['田中さんのメモを見せて','田中']
+ ]){
+   const result=parse(phrase);
+   assert.equal(result.ok,true,phrase);
+   assert.equal(result.action,'customer.timeline',phrase);
+   assert.equal(result.request.query,name);
+   assert.equal(result.networkUsed,false);
+ }
+ for(const phrase of ['田中さんの秘密メモを探して','田中さんの現場環境を消して','田中さんの過去の作業を教えて。外部送信して']){
+   assert.equal(parse(phrase).ok,false,phrase);
+ }
+});
 check('global receivables summary with explicit local date',()=>{
   const r=parse('未入金合計を教えて');assert.equal(r.action,'receivables.summary');
   assert.equal(r.request.date,'2026-11-06');
