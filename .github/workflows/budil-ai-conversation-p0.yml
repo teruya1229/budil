@@ -30,6 +30,7 @@ jobs:
           node --check js/budil-gpt-local-source.js
           node --check js/budil-gpt-offline-ui.js
           node scripts/verify-budil-ai-p0-contract.mjs
+          node scripts/verify-budil-calendar-read-test.mjs
           node scripts/verify-budil-gpt-local-commands.mjs
           node scripts/verify-budil-gpt-readonly.mjs
           node scripts/verify-budil-gpt-local-source.mjs
