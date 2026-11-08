@@ -60,6 +60,52 @@ check('document only safe metadata',()=>{const o=query('document.search','比嘉
 check('document number and type exact',()=>{assert.equal(query('document.search','INV-01').view.documents.length,1);assert.equal(query('document.search','請求書').view.documents.length,2);assert.equal(query('document.search','請').view.documents.length,0)});
 check('too many documents does not reveal partial list',()=>{const o=query('document.search','比嘉清子',{limit:1});assert.equal(o.view.tooMany,true);assert.equal(o.view.documents.length,0);privateSafe(o)});
 check('work metadata excludes private address',()=>{const o=query('work.search','比嘉清子');assert.equal(o.view.workOrders.length,1);assert.equal('address' in o.view.workOrders[0],false);privateSafe(o)});
+check('customer history demands explicit selection of an exact ID',()=>{
+ const found=query('customer.timeline','田中');
+ assert.equal(found.ok,true);
+ assert.equal(found.view.candidateCount,2);
+ assert.equal(found.view.selectedCustomerId,null);
+ assert.equal('customerMemo' in found.view,false);
+ privateSafe(found);
+ const denied=r.perform({action:'customer.timeline.detail',customerId:'fixture1',limit:10},deps,false);
+ assert.equal(denied.code,'LOCAL_CONSENT_REQUIRED');
+});
+check('customer history includes only linked jobs and existing asset fields',()=>{
+ const original=leads[0];
+ original.customerTypeMajor='A';
+ original.customerTypeMinor='F';
+ original.customerMemo='現場は駐車不可、室外機高所';
+ original.activityLogs=[{date:'2026-11-04',title:'現場連絡',memo:'養生を優先'}];
+ original.salesHistory=[{at:'2026-11-05T10:00:00Z',type:'電話',note:'工事日調整'}];
+ work.push({id:'work-linked',customerName:'別名表記',leadId:'fixture1',scheduledDate:'2026-11-03',serviceText:'エアコン洗浄',status:'completed',memo:'天井高い'});
+ work.push({id:'work-same-name',customerName:'田中太郎',leadId:'fixture2',scheduledDate:'2026-11-02',memo:'他人の作業'});
+ deps.getReceptionIntakes=()=>[{id:'intake-1',relatedLeadId:'fixture1'}];
+ work.push({id:'work-intake',customerName:'同名でなくてもよい',intakeId:'intake-1',scheduledDate:'2026-11-01',serviceText:'配管点検'});
+ deps.getRevenueRecords=()=>[{id:'rev-linked',leadId:'fixture1',workDate:'2026-10-20',service:'洗浄',amount:19000,memo:'実施済'},
+   {id:'rev-other',leadId:'fixture2',workDate:'2026-11-03',service:'他人の売上',amount:40000}];
+ const result=r.perform({action:'customer.timeline.detail',customerId:'fixture1',limit:10},deps,true);
+ assert.equal(result.ok,true);
+ assert.equal(result.view.customerTypeMajor,'A');
+ assert.equal(result.view.customerTypeMinor,'F');
+ assert.ok(result.view.customerMemo.includes('駐車不可'));
+ assert.equal(result.view.linkedWorkCount,2);
+ assert.equal(result.view.linkedRevenueCount,1);
+ assert.equal(result.view.recordCount,5);
+ assert.ok(result.view.records.some(x=>x.label==='エアコン洗浄'));
+ assert.ok(result.view.records.some(x=>x.label==='配管点検'));
+ assert.ok(result.view.records.some(x=>x.label==='洗浄'));
+ assert.ok(!JSON.stringify(result.view.records).includes('他人の作業'));
+ assert.ok(!JSON.stringify(result.view.records).includes('他人の売上'));
+ privateSafe(result);
+});
+check('unknown IDs, spoofed claims and incomplete data fail closed',()=>{
+ assert.equal(r.perform({action:'customer.timeline.detail',customerId:'missing'},deps,true).code,'CUSTOMER_NOT_FOUND');
+ assert.equal(r.perform({action:'customer.timeline.detail',customerId:'fixture1',tenant_id:'x'},deps,true).code,'INVALID_INPUT');
+ assert.equal(r.perform({action:'customer.timeline.detail',customerId:'fixture1'},{
+   getLeads:()=>leads,getWorkOrders:()=>work,getRevenueRecords:()=>[],
+   customerResolver:c
+ },true).code,'DEPENDENCY_MISSING');
+});
 check('impossible date refused',()=>assert.equal(r.perform({action:'receivables.summary',date:'2026-02-30'},deps,true).ok,false));
 check('payment brain aggregate only',()=>{const o=r.perform({action:'receivables.summary',date:'2026-11-05'},deps,true);assert.equal(o.ok,true);assert.equal(o.view.pendingTotal,20000);assert.equal(o.view.count,1);assert.equal(o.view.paidStatusChanged,false);privateSafe(o)});
 check('profit uses existing calculator and exposes only aggregate',()=>{
@@ -76,6 +122,6 @@ check('relative date refused',()=>assert.equal(r.perform({action:'receivables.su
 check('unexpected filter refused',()=>assert.equal(r.perform({action:'receivables.summary',date:'2026-11-05',query:'田中'},deps,true).ok,false));
 check('no implicit Storage dependency',()=>assert.equal(r.perform({action:'customer.search',query:'比嘉清子'},{customerResolver:c},true).code,'DEPENDENCY_MISSING'));
 check('reader exception safe',()=>{const x=r.perform({action:'document.search',query:'比嘉清子'},{getDocuments(){throw Error('private content')}},true);assert.equal(x.code,'READ_UNAVAILABLE');assert.ok(!JSON.stringify(x).includes('private content'))});
-check('five read-only actions including bounded month search',()=>assert.deepEqual(Array.from(r.ACTIONS),['customer.search','document.search','document.period','work.search','receivables.summary','profit.summary']));
+check('five read-only actions including bounded month search',()=>assert.deepEqual(Array.from(r.ACTIONS),['customer.search','customer.timeline','customer.timeline.detail','document.search','document.period','work.search','receivables.summary','profit.summary']));
 check('no network or storage mutations in source',()=>assert.ok(!/(?:\bfetch\(|\blocalStorage\.|Storage\.(?:set|add|update|save|delete)|\.insert\(|\.upsert\(|\.update\(|\.delete\(|\.apply\()/.test(src('js/budil-gpt-readonly.js'))));
 console.log('Budil GPT local read-only adapter '+n+'/'+n+' PASS');
