@@ -22,3 +22,11 @@
 - 終日・日付不明・複数日・時刻不明の既存予定は自動で「空き」と判断しない。
 - 検証：`scripts/verify-budil-gpt-booking.mjs`、`scripts/verify-budil-gpt-public-read.mjs`、`scripts/verify-budil-gpt-booking-browser.mjs`。
 - 統合開発ブランチのみで、実JWT・本番カレンダーへの読取およびiPhone/Android実機の最終受入は未確認。
+
+## 2026-11-10: PCローカルGoogleカレンダー照合（最小移植）
+
+- Budil内GPTの既存「Google予定を確認」から、同じWindows PCで稼働する既存 `calendar-sync-worker` の `POST http://127.0.0.1:43821/busy` を利用する。日付1件だけを送信し、サーバーからは開始・終了時刻だけを受け取る。
+- 予定名・場所・説明・顧客情報・Supabase JWT・秘密鍵はブラウザからローカルAPIへ送信しない。取得した時刻は予約候補の重複判定にのみ使い、勝手にGoogle予定やBudil業務データを書き換えない。
+- PC上のカレンダー連携が停止している、認証失敗、時刻不正、対象カレンダー不明の場合は、Google側の空き状況が確認できなかったと表示し、空き確定扱いにしない。
+- AI番頭のスマホ単体アプリと既存Make/受付/写真解析には一切変更を加えない。Budilの補助画面も追加しない。
+- 実機検品は、workerの新 `/busy` をPCで稼働させ、承認済みのGoogle予定1件（2026-11-08 09:00〜09:15 JST）で重複判定が一致することを確認する。CIの架空予定PASSを実機完成と混同しない。
