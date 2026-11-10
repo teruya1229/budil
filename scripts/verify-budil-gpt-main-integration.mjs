@@ -48,6 +48,7 @@ const allowed=new Set([
   "scripts/verify-budil-cloud-restore-browser.mjs",
   "scripts/verify-budil-cloud-restore-server.mjs",
   "scripts/verify-budil-local-busy.mjs",
+  "scripts/verify-budil-live-published.mjs",
   "scripts/verify-budil-calendar-read-test.mjs",
   "scripts/verify-budil-cloud-safe-restore.mjs",
   "scripts/verify-budil-gpt-bank-browser.mjs",

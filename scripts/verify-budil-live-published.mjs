@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 const origin='https://teruya1229.github.io/budil/';
 const fingerprint=String(process.env.GITHUB_SHA||'').slice(0,12);
 const pages=[
-  {path:'',label:'Budil index',markers:['id="budil-gpt-open"','js/budil-gpt-offline-ui.js?v=20261108history1']},
+  {path:'',label:'Budil index',markers:['id="budil-gpt-open"','js/budil-gpt-offline-ui.js?v=']},
   {path:'js/budil-gpt-offline-ui.js',label:'GPT UI',markers:["customer.timeline.detail","googleReadTarget"]},
   {path:'js/budil-cloud.js',label:'Authenticated calendar bridge',markers:['function fetchScheduleBlocks','schedule_blocks_list']},
   {path:'calendar-read-test.html',label:'Read-only test page',markers:['calendar-check-controller','read-consent','09:00〜09:15','id="login-form"','calendar.login(email,password)']},
