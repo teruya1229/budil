@@ -514,10 +514,17 @@
       const loaded=await cloud.fetchLocalScheduleBlocks(target.date,target.date);
       if(seq!==googleReadSeq||!googleReadTarget||
          JSON.stringify(googleReadTarget)!==key)return;
-      if(!loaded||!loaded.ok)
+      if(!loaded||!loaded.ok){
+        const code=String(loaded&&loaded.code||'unavailable');
+        const guidance=code==='local_calendar_unavailable'
+          ? 'PCのカレンダー連携が起動しているか、Chromeでこのサイトの「ローカルネットワーク／ループバックへのアクセス」が許可されているか確認してください。'
+          : code==='local_calendar_timeout'
+            ? 'PCのカレンダー連携が応答しません。接続状態を確認してください。'
+            : 'PCのカレンダー連携を確認してください。';
         return $('budil-gpt-google-status').textContent=
-          'Googleの読取を確認できません（'+String(loaded&&loaded.code||'unavailable')+
-          '）。PCのカレンダー連携を確認してください。空き確定にはしません。';
+          'Googleの読取を確認できません（'+code+'）。'+guidance+
+          'Googleの空き確定にはしません。';
+      }
       const review=Booking.googleScheduleReview(loaded.events,target.date,
         target.startTime,target.endTime);
       if(!review.ok)
