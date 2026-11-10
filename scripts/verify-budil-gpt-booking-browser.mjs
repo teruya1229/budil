@@ -78,7 +78,7 @@ try{
   await ev("document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
   assert.equal(await ev("document.getElementById('budil-gpt-result').textContent.includes('Google Calendarの空き確定ではない')"),true);
   assert.equal(await ev("document.getElementById('budil-gpt-google-read').hidden"),false);
-  await ev("window.__googleCalls=0;BudilCloud.fetchScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,events:[{id:'private-1',summary:'fictional private client',location:'private address',start:'2099-11-06T09:30:00+09:00',end:'2099-11-06T10:15:00+09:00'}]}};document.getElementById('budil-gpt-google-check').click()");
+  await ev("window.__googleCalls=0;BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,events:[{id:'private-1',summary:'fictional private client',location:'private address',start:'2099-11-06T09:30:00+09:00',end:'2099-11-06T10:15:00+09:00'}]}};document.getElementById('budil-gpt-google-check').click()");
   assert.equal(await ev('window.__googleCalls'),0,'Google must not be read before consent');
   await ev("document.getElementById('budil-gpt-google-consent').checked=true;document.getElementById('budil-gpt-google-check').click()");
   for(let i=0;i<50;i++){
@@ -115,7 +115,7 @@ try{
   await ev("document.getElementById('budil-gpt-booking-save').click()");
   assert.equal(await ev('Storage.getWorkOrders().length'),0,'Google conflict blocks local tentative save');
   assert.equal(await ev("document.getElementById('budil-gpt-status').textContent.includes('GOOGLE_CALENDAR_CONFLICT')"),true);
-  await ev("BudilCloud.fetchScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,events:[]}};document.getElementById('budil-gpt-google-consent').checked=true;document.getElementById('budil-gpt-google-check').click()");
+  await ev("BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,events:[]}};document.getElementById('budil-gpt-google-consent').checked=true;document.getElementById('budil-gpt-google-check').click()");
   for(let i=0;i<50;i++){
     if(await ev("document.getElementById('budil-gpt-google-status').textContent.includes('見つかりませんでした')"))break;
     await sleep(100);

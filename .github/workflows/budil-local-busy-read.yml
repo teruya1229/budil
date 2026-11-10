@@ -1,0 +1,30 @@
+name: Budil GPT desktop calendar busy read regression
+on:
+  push:
+    branches:
+      - feat/budil-local-busy-read-20261110
+  pull_request:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  local-calendar:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check local desktop calendar read security
+        run: |
+          node scripts/verify-budil-local-busy.mjs
+          node scripts/verify-budil-gpt-booking.mjs
+          node scripts/verify-budil-gpt-local-commands.mjs

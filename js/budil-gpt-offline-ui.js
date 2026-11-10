@@ -502,7 +502,7 @@
     if($('budil-gpt-google-consent').checked!==true)
       return status('Googleカレンダー読取の同意欄にチェックしてください。',true);
     const cloud=window.BudilCloud;
-    if(!cloud||typeof cloud.fetchScheduleBlocks!=='function')
+    if(!cloud||typeof cloud.fetchLocalScheduleBlocks!=='function')
       return status('Googleカレンダーの安全な読取処理が利用できません。',true);
     const target={...googleReadTarget},key=JSON.stringify(target);
     const seq=++googleReadSeq;
@@ -511,13 +511,13 @@
     const button=$('budil-gpt-google-check');button.disabled=true;
     $('budil-gpt-google-status').textContent='接続済みカレンダーの時間重複を確認中です。';
     try{
-      const loaded=await cloud.fetchScheduleBlocks(target.date,target.date);
+      const loaded=await cloud.fetchLocalScheduleBlocks(target.date,target.date);
       if(seq!==googleReadSeq||!googleReadTarget||
          JSON.stringify(googleReadTarget)!==key)return;
       if(!loaded||!loaded.ok)
         return $('budil-gpt-google-status').textContent=
           'Googleの読取を確認できません（'+String(loaded&&loaded.code||'unavailable')+
-          '）。端末内予定だけでは空き確定できません。';
+          '）。PCのカレンダー連携を確認してください。空き確定にはしません。';
       const review=Booking.googleScheduleReview(loaded.events,target.date,
         target.startTime,target.endTime);
       if(!review.ok)

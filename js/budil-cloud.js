@@ -664,6 +664,50 @@
     });
   }
 
+  /**
+   * Budil desktop-only availability read: existing local calendar-sync-worker.
+   * Never transfers a Supabase JWT, customer, calendarId, or event private fields.
+   * No fallback to an unverified cloud calendar on connection failures.
+   */
+  function fetchLocalScheduleBlocks(startDate,endDate) {
+    const valid=value=>{
+      if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
+      const time=Date.parse(value+'T00:00:00Z');
+      return Number.isFinite(time)&&new Date(time).toISOString().slice(0,10)===value;
+    };
+    if(!valid(startDate)||!valid(endDate)||startDate!==endDate)
+      return Promise.resolve({ok:false,code:'calendar_date_invalid'});
+    if(resolveEnvironment()!=='production')
+      return Promise.resolve({ok:false,code:'calendar_origin_unavailable'});
+    return doFetch('http://127.0.0.1:43821/busy',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({date:startDate}),timeoutMs:15000
+    }).then(r=>{
+      if(r.timeout)return {ok:false,code:'local_calendar_timeout'};
+      if(r.networkError||r.status===0)return {ok:false,code:'local_calendar_unavailable'};
+      if(r.status!==200)return {ok:false,code:'local_calendar_'+
+        (typeof r.body?.code==='string'&&/^[a-z_]{1,45}$/.test(r.body.code)?r.body.code:'error')};
+      const payload=r.body;
+      if(!payload||payload.ok!==true||payload.readOnly!==true||
+        payload.calendarWritePerformed!==false||!Array.isArray(payload.events)||
+        payload.events.length>1000)return {ok:false,code:'calendar_response_invalid'};
+      const events=[];
+      for(const item of payload.events){
+        if(!item||typeof item!=='object'||Array.isArray(item)||
+          Object.keys(item).length!==2||
+          typeof item.start!=='string'||typeof item.end!=='string'||
+          item.start.length>45||item.end.length>45||
+          !Number.isFinite(Date.parse(item.start))||
+          !Number.isFinite(Date.parse(item.end))||
+          Date.parse(item.end)<=Date.parse(item.start))
+          return {ok:false,code:'calendar_response_invalid'};
+        events.push({start:item.start,end:item.end});
+      }
+      return {ok:true,events,readOnly:true,calendarWritePerformed:false,
+        customerRecordsSent:false,source:'pc_local_calendar'};
+    });
+  }
+
   function isBackupInFlight() {
     return backupInFlight;
   }
@@ -682,6 +726,7 @@
     fetchLatest: fetchLatest,
     fetchLatestPayload: fetchLatestPayload,
     fetchScheduleBlocks: fetchScheduleBlocks,
+    fetchLocalScheduleBlocks: fetchLocalScheduleBlocks,
     getGptReadiness: getGptReadiness,
     interpretAnonymizedQuote: interpretAnonymizedQuote,
     interpretPiiFreeRead: interpretPiiFreeRead,
