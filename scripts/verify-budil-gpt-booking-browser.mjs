@@ -73,22 +73,34 @@ try{
   await ev("localStorage.setItem('budil_leads',JSON.stringify([{id:'f1',name:'田中太郎',area:'南城市'},{id:'f2',name:'田中花子',area:'八重瀬町'}]));localStorage.setItem('budil_work_orders','[]')");
   await ev("document.getElementById('budil-gpt-open').click()");
   await ev("window.__reads=0;const old=Storage.getWorkOrders;Storage.getWorkOrders=function(){window.__reads++;return old.apply(this,arguments)}");
-  await ev("document.getElementById('budil-gpt-input').value='2099-11-06の10時、空いてる？';document.getElementById('budil-gpt-run').click()");
-  assert.equal(await ev('window.__reads'),0,'consent before read');
+  await ev("window.__googleCalls=0;BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,events:[{id:'private-1',summary:'fictional private client',location:'private address',start:'2026-11-08T08:30:00+09:00',end:'2026-11-08T09:15:00+09:00'}]}};document.getElementById('budil-gpt-input').value='2026年11月8日の9時は空いてる？';document.getElementById('budil-gpt-run').click()");
+  assert.equal(await ev('window.__reads'),0,'consent before local read');
+  assert.equal(await ev('window.__googleCalls'),0,'no Google request without consent');
+  assert.equal(await ev("document.getElementById('budil-gpt-consent').parentElement.textContent.includes('Google予定の時刻情報も読取専用')"),true);
   await ev("document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
-  assert.equal(await ev("document.getElementById('budil-gpt-result').textContent.includes('Google Calendarの空き確定ではない')"),true);
-  assert.equal(await ev("document.getElementById('budil-gpt-google-read').hidden"),false);
-  await ev("window.__googleCalls=0;BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,events:[{id:'private-1',summary:'fictional private client',location:'private address',start:'2099-11-06T09:30:00+09:00',end:'2099-11-06T10:15:00+09:00'}]}};document.getElementById('budil-gpt-google-check').click()");
-  assert.equal(await ev('window.__googleCalls'),0,'Google must not be read before consent');
-  await ev("document.getElementById('budil-gpt-google-consent').checked=true;document.getElementById('budil-gpt-google-check').click()");
   for(let i=0;i<50;i++){
     if(await ev("document.getElementById('budil-gpt-google-status').textContent.includes('重なる予定')"))break;
     await sleep(100);
   }
-  assert.equal(await ev('window.__googleCalls'),1);
-  assert.equal(await ev("document.getElementById('budil-gpt-google-status').textContent.includes('重なる予定')"),true);
+  assert.equal(await ev('window.__googleCalls'),1,'one consent and one button, one Google request');
+  assert.equal(await ev("document.getElementById('budil-gpt-google-status').textContent.includes('重なる予定が1件')"),true);
   assert.equal(await ev("document.getElementById('budil-gpt-google-status').textContent.includes('private client')"),false);
-  assert.equal(await ev("document.getElementById('budil-gpt-google-consent').checked"),false);
+  assert.equal(await ev("document.getElementById('budil-gpt-google-consent-row').hidden"),true);
+  assert.equal(await ev("document.getElementById('budil-gpt-google-check').hidden"),true);
+  assert.equal(await ev("document.getElementById('budil-gpt-consent').checked"),false);
+  assert.equal(await ev('Storage.getWorkOrders().length'),0,'availability must not save work');
+  await ev("document.getElementById('budil-gpt-run').click()");
+  assert.equal(await ev('window.__googleCalls'),1,'second click without new consent cannot read Google');
+  await ev("document.getElementById('budil-gpt-clear').click();BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:false,code:'local_calendar_unavailable'}};document.getElementById('budil-gpt-input').value='2026年11月8日の9時は空いてる？';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+  for(let i=0;i<50;i++){
+    if(await ev("document.getElementById('budil-gpt-google-status').textContent.includes('空き確定にはしません')"))break;
+    await sleep(100);
+  }
+  assert.equal(await ev("document.getElementById('budil-gpt-google-status').textContent.includes('空き確定にはしません')"),true,'connection failure is not availability');
+  assert.equal(await ev('Storage.getWorkOrders().length'),0);
+  await ev("document.getElementById('budil-gpt-clear').click();BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,events:[{start:'2099-11-06T09:30:00+09:00',end:'2099-11-06T10:15:00+09:00'}]}}");
+  assert.equal(await ev("document.getElementById('budil-gpt-google-check').hidden"),false,'booking Google check remains available');
+  assert.equal(await ev("document.getElementById('budil-gpt-google-consent-row').hidden"),false,'booking Google consent remains available');
 
   const beforeBookingRead=await ev('window.__reads');
   await ev("document.getElementById('budil-gpt-input').value='2099-11-06の10時に田中さんのエアコン洗浄2台を予約して。18,000円で見積書も作って';document.getElementById('budil-gpt-run').click()");
