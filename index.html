@@ -4113,7 +4113,7 @@
       <p class="budil-gpt-disclaimer">入力例：田中太郎さんを探して ／ 金曜日の午前10時、空いてる？ ／ 金曜日の10時に田中さんのエアコン洗浄2台を予約して。18,000円で見積書も作って ／ 田中さんの予約を土曜日に変更して</p>
       <label class="budil-gpt-check">
         <input type="checkbox" id="budil-gpt-consent">
-        <span>この1回の操作で、端末内のBudil業務データを読み取ることを許可する</span>
+        <span>この1回の操作で、端末内のBudil業務データを読み取ることを許可する。空き確認のときだけ、Google予定の時刻情報も読取専用で照合することを許可する（予定の書込み・予約保存はしません）</span>
       </label>
       <label class="budil-gpt-check">
         <input type="checkbox" id="budil-gpt-remote-consent">
@@ -4169,7 +4169,7 @@
         <hr class="budil-gpt-divider">
         <h3>Googleカレンダーの空き確認（読取専用）</h3>
         <p>接続設定済みのカレンダーを本人操作で読み、時間の重なりだけを判定します。予定名・住所・顧客情報はここに表示しません。結果は照会時点のもので、予約登録や予定変更は行いません。</p>
-        <label class="budil-gpt-check">
+        <label id="budil-gpt-google-consent-row" class="budil-gpt-check">
           <input type="checkbox" id="budil-gpt-google-consent">
           <span>指定日のGoogleカレンダーを読取専用で照会することに同意します（顧客・見積データは送信しません）。</span>
         </label>
@@ -4285,7 +4285,7 @@
   <script src="js/budil-gpt-invoice-lifecycle.js?v=20261107issue1"></script>
   <script src="js/budil-gpt-bank-reconcile.js?v=20261106a"></script>
   <script src="experiments/budil-gpt-phase1/fixture-core.js?v=20261106a"></script>
-  <script src="js/budil-gpt-offline-ui.js?v=20261110busy1"></script>
+  <script src="js/budil-gpt-offline-ui.js?v=20261111oneclick1"></script>
   <script src="js/budil-cloud-restore-ui.js?v=20261106restore1"></script>
 </body>
 </html>
