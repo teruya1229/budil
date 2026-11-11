@@ -29,7 +29,10 @@ const allowed=new Set([
   "docs/budil-local-invoice-lifecycle.md",
   "experiments/budil-gpt-phase1/fixture-core.js",
   "calendar-read-test.html",
+  ".github/workflows/budil-gcal-contract.yml",
   "index.html",
+  "js/budil-gpt-calendar-preview.js",
+  "scripts/verify-budil-gcal-compact-browser.mjs",
   "js/budil-cloud-restore-ui.js",
   "js/budil-cloud-restore.js",
   "js/budil-cloud.js",
@@ -74,7 +77,9 @@ const allowed=new Set([
 ]);
 assert.ok(paths.length>0,'unexpected empty integration diff');
 for(const p of paths) {
-  assert.ok(allowed.has(p),'Unexpected code change '+p);
+  const isolatedCalendarCandidate = /^experiments\/budil-gcal-write-sandbox\/(?:atomic-ledger|booking-command|booking-preview|calendar-route|existing-read-booking|fakes|google-calendar-http|production-call-adapter|transaction|verify|verify-extra)\.(?:cjs|js)$/.test(p) ||
+    p==='experiments/budil-gcal-write-sandbox/schema-proposal.sql';
+  assert.ok(allowed.has(p)||isolatedCalendarCandidate,'Unexpected code change '+p);
   assert.ok(!/(?:^|\/)(?:\.env|private|secrets?|credentials?|tokens?)(?:\/|\.|$)/i.test(p),
     'Unsafe path in source diff '+p);
 }
