@@ -12,7 +12,8 @@ function mount({hostname='teruya1229.github.io',response=null,error=null}={}){
    sessionStorage:{getItem(){return null},setItem(){throw Error('unexpected session write')},removeItem(){}}
  };
  const fetch=async(url,options)=>{
-   seen.push({url,method:options.method,headers:options.headers,body:options.body});
+   seen.push({url,method:options.method,headers:options.headers,body:options.body,
+     targetAddressSpace:options.targetAddressSpace});
    if(error)throw error;
    const value=response??{ok:true,readOnly:true,calendarWritePerformed:false,
      events:[{...fakeEvent}]};
