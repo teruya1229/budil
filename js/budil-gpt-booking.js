@@ -14,6 +14,11 @@ const BudilGptBooking = (() => {
   function dateFor(label,today) {
     if (!validDate(today)) return '';
     if (validDate(label)) return label;
+    const japanese = String(label).match(/^(20\d\d)年(\d{1,2})月(\d{1,2})日$/u);
+    if (japanese) {
+      const iso = japanese[1]+'-'+japanese[2].padStart(2,'0')+'-'+japanese[3].padStart(2,'0');
+      return validDate(iso) ? iso : '';
+    }
     if (!(label in weekdays)) return '';
     const base = new Date(today+'T00:00:00Z');
     const offset = (weekdays[label]-base.getUTCDay()+7)%7;
@@ -27,13 +32,13 @@ const BudilGptBooking = (() => {
     if (ampm==='午後') { if(h<1||h>12)return ''; if(h<12)h+=12; }
     return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
   }
-  const day='(20\\d\\d-\\d\\d-\\d\\d|[日月火水木金土]曜日)';
+  const day='(20\\d\\d-\\d\\d-\\d\\d|20\\d\\d年\\d{1,2}月\\d{1,2}日|[日月火水木金土]曜日)';
   const clock='(午前|午後)?([0-9]{1,2})時(?:([0-9]{1,2})分)?';
   function parse(raw,today) {
     if(typeof raw!=='string'||!raw.trim()||raw.length>220||/[\x00-\x1f]/.test(raw))return fail('INPUT_INVALID');
     const s=raw.replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xfee0))
       .replace(/[　\s]/g,'').replace(/[，]/g,',').replace(/[？?。]+$/,'');
-    let m=s.match(new RegExp('^'+day+'の'+clock+'[、,]?空いてる(?:でしょうか|かな|の)?$'));
+    let m=s.match(new RegExp('^'+day+'の'+clock+'[、,]?(?:は)?空いてる(?:でしょうか|かな|の)?$'));
     if(m) {
       const date=dateFor(m[1],today), startTime=time(m[3],m[4],m[2]);
       if(!date)return fail('DATE_INVALID');if(!startTime)return fail('TIME_INVALID');
