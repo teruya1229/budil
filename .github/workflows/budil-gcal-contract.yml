@@ -5,11 +5,19 @@ on:
       - feat/budil-calendar-write-sandbox-20261111
     paths:
       - experiments/budil-gcal-write-sandbox/**
+      - js/budil-gpt-calendar-preview.js
+      - js/budil-gpt-offline-ui.js
+      - index.html
+      - scripts/verify-budil-gcal-compact-browser.mjs
       - .github/workflows/budil-gcal-contract.yml
   pull_request:
     branches: [main]
     paths:
       - experiments/budil-gcal-write-sandbox/**
+      - js/budil-gpt-calendar-preview.js
+      - js/budil-gpt-offline-ui.js
+      - index.html
+      - scripts/verify-budil-gcal-compact-browser.mjs
 permissions:
   contents: read
 jobs:
@@ -45,3 +53,9 @@ jobs:
           node scripts/verify-budil-gpt-booking.mjs
           node scripts/verify-budil-gpt-local-commands.mjs
           node scripts/verify-budil-local-busy.mjs
+          node --check js/budil-gpt-calendar-preview.js
+          node --check js/budil-gpt-offline-ui.js
+      - name: Browser verify 390px compact booking and reschedule (no writes)
+        shell: bash
+        run: |
+          node scripts/verify-budil-gcal-compact-browser.mjs
