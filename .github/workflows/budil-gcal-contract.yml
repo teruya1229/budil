@@ -1,0 +1,47 @@
+name: Budil calendar offline contract regression
+on:
+  push:
+    branches:
+      - feat/budil-calendar-write-sandbox-20261111
+    paths:
+      - experiments/budil-gcal-write-sandbox/**
+      - .github/workflows/budil-gcal-contract.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - experiments/budil-gcal-write-sandbox/**
+permissions:
+  contents: read
+jobs:
+  isolated-contract:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify candidate syntax and fixture-free production adapter
+        shell: bash
+        run: |
+          node --check experiments/budil-gcal-write-sandbox/transaction.cjs
+          node --check experiments/budil-gcal-write-sandbox/calendar-route.cjs
+          node --check experiments/budil-gcal-write-sandbox/production-call-adapter.cjs
+          node --check experiments/budil-gcal-write-sandbox/booking-command.cjs
+      - name: Run isolated 90-case contract suite
+        shell: bash
+        run: |
+          node experiments/budil-gcal-write-sandbox/verify.cjs
+          node experiments/budil-gcal-write-sandbox/verify-extra.cjs
+      - name: Check existing published Budil booking logic
+        shell: bash
+        run: |
+          node scripts/verify-budil-gpt-booking.mjs
+          node scripts/verify-budil-gpt-local-commands.mjs
+          node scripts/verify-budil-local-busy.mjs
