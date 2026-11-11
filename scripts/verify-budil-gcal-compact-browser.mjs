@@ -182,7 +182,7 @@ try{
   assert.equal(await ev("document.getElementById('budil-gpt-booking').hidden"),true,'original booking panel not confused');
   const beforeCompact=await ev('Storage.getWorkOrders().length');
   await ev("document.getElementById('budil-gpt-calendar-preview-run').click()");
-  assert.equal(await ev("document.getElementById('budil-gpt-calendar-result').textContent.includes('CUSTOMER_SELECTION_REQUIRED')"),true,'explicit customer selection required');
+  assert.equal(await ev("document.getElementById('budil-gpt-calendar-result').textContent.includes('TIME_INVALID')"),true,'explicit end time required before preview');
   await ev("document.getElementById('budil-gpt-calendar-name').value='田中';document.getElementById('budil-gpt-calendar-find').click()");
   assert.equal(await ev("document.querySelectorAll('#budil-gpt-calendar-candidates button').length"),2,'two customer candidates');
   await ev("document.querySelector('#budil-gpt-calendar-candidates button').click();document.getElementById('budil-gpt-calendar-end').value='12:00';document.getElementById('budil-gpt-calendar-preview-run').click()");
