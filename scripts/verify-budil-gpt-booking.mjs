@@ -5,6 +5,13 @@ const availability=b.parse('金曜日の午前10時、空いてる？',today);
 assert.deepEqual([availability.ok,availability.action,availability.date,availability.startTime],
   [true,'availability',today,'10:00']);
 assert.equal(b.parse('2026-11-07の13時30分、空いてる？',today).startTime,'13:30');
+assert.deepEqual(b.parse('2026年11月8日の9時は空いてる？','2026-11-11'),
+  {ok:true,action:'availability',date:'2026-11-08',startTime:'09:00'});
+assert.equal(b.parse('２０２６年１１月８日の９時は空いてる？','2026-11-11').date,'2026-11-08');
+for(const date of ['2026年2月29日','2026年11月31日','2026年13月8日'])
+  assert.equal(b.parse(date+'の9時は空いてる？','2026-11-11').code,'DATE_INVALID');
+assert.equal(b.parse('2026年11月8日の24時は空いてる？','2026-11-11').code,'TIME_INVALID');
+assert.equal(b.parse('2026年11月8日の9時は空いてる？送信して','2026-11-11').code,'UNSUPPORTED_COMMAND');
 const booking=b.parse('金曜日の10時に田中さんのエアコン洗浄2台を予約して。18,000円で見積書も作って',today);
 assert.deepEqual([booking.ok,booking.action,booking.quantity,booking.amount,booking.tax],
   [true,'booking',2,18000,null]);
