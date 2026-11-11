@@ -144,6 +144,7 @@
       headers: (options && options.headers) || {},
       body: options && options.body != null ? options.body : undefined
     };
+    if (options && options.targetAddressSpace === 'loopback') init.targetAddressSpace = 'loopback';
     if (controller) init.signal = controller.signal;
     return fetch(url, init)
       .then(function (resp) {
@@ -681,7 +682,8 @@
       return Promise.resolve({ok:false,code:'calendar_origin_unavailable'});
     return doFetch('http://127.0.0.1:43821/busy',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({date:startDate}),timeoutMs:15000
+      body:JSON.stringify({date:startDate}),timeoutMs:15000,
+      targetAddressSpace:'loopback'
     }).then(r=>{
       if(r.timeout)return {ok:false,code:'local_calendar_timeout'};
       if(r.networkError||r.status===0)return {ok:false,code:'local_calendar_unavailable'};

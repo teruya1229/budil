@@ -12,7 +12,8 @@ function mount({hostname='teruya1229.github.io',response=null,error=null}={}){
    sessionStorage:{getItem(){return null},setItem(){throw Error('unexpected session write')},removeItem(){}}
  };
  const fetch=async(url,options)=>{
-   seen.push({url,method:options.method,headers:options.headers,body:options.body});
+   seen.push({url,method:options.method,headers:options.headers,body:options.body,
+     targetAddressSpace:options.targetAddressSpace});
    if(error)throw error;
    const value=response??{ok:true,readOnly:true,calendarWritePerformed:false,
      events:[{...fakeEvent}]};
@@ -30,6 +31,7 @@ assert.equal(out.customerRecordsSent,false);
 assert.equal(out.source,'pc_local_calendar');
 assert.equal(p.seen.length,1);
 assert.equal(p.seen[0].url,'http://127.0.0.1:43821/busy');
+assert.equal(p.seen[0].targetAddressSpace,'loopback','production busy read declares Chrome loopback address space');
 assert.deepEqual(Object.keys(p.seen[0].headers),['Content-Type']);
 assert.deepEqual(JSON.parse(p.seen[0].body),{date:'2026-11-08'});
 assert.equal(JSON.stringify(p.seen[0]).includes('Bearer'),false);
