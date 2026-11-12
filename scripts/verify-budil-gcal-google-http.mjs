@@ -51,7 +51,8 @@ await test('create on fixed calendar and readback',async()=>{const x=make();cons
  assert.equal(JSON.parse(x.calls[0].body).attendees,undefined);
 });
 await test('reschedule is PATCH same ID with If-Match',async()=>{const x=make();await x.provider.create(cid,payload);
- const changed={...payload,start:'2099-11-12T10:00:00+09:00',end:'2099-11-12T11:00:00+09:00'};
+ const {eventId:omitEventId,...baseUpdate}=payload;
+ const changed={...baseUpdate,start:'2099-11-12T10:00:00+09:00',end:'2099-11-12T11:00:00+09:00'};
  const r=await x.provider.update(cid,eventId,changed,{ifMatch:'"etag1"'});
  assert.equal(r.eventId,eventId);assert.equal(r.etag,'"etag2"');
  const read=await x.provider.get(cid,eventId);assert.equal(read.start,changed.start);

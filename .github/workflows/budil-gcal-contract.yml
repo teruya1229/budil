@@ -11,6 +11,7 @@ on:
       - scripts/verify-budil-gcal-compact-browser.mjs
       - supabase/functions/budil-calendar-write/**
       - scripts/verify-budil-gcal-write-auth.mjs
+      - scripts/verify-budil-gcal-google-http.mjs
       - .github/workflows/budil-gcal-contract.yml
   pull_request:
     branches: [main]
@@ -60,6 +61,7 @@ jobs:
           node --check supabase/functions/budil-calendar-write/authority.mjs
           node --check supabase/functions/budil-calendar-write/handler.mjs
           node scripts/verify-budil-gcal-write-auth.mjs
+          node scripts/verify-budil-gcal-google-http.mjs
       - name: Browser verify 390px compact booking and reschedule (no writes)
         shell: bash
         run: |
