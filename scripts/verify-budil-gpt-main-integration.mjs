@@ -15,6 +15,7 @@ assert.equal(diff.status,0,'git_diff_unavailable (checkout must fetch history)')
 const paths=diff.stdout.trim().split('\n').filter(Boolean);
 const allowed=new Set([
   ".github/workflows/budil-local-busy-read.yml",
+  ".github/workflows/budil-gpt-workdate-multiround.yml",
   ".github/workflows/budil-ai-conversation-p0.yml",
   ".github/workflows/budil-cloud-safe-restore.yml",
   ".github/workflows/budil-conversation-20.yml",
@@ -60,6 +61,8 @@ const allowed=new Set([
   "scripts/verify-budil-gpt-invoice-browser.mjs",
   "scripts/verify-budil-gpt-invoice-lifecycle.mjs",
   "scripts/verify-budil-gpt-local-commands.mjs",
+  "scripts/verify-budil-gpt-work-date.mjs",
+  "scripts/verify-budil-gpt-work-date-browser.mjs",
   "scripts/verify-budil-gpt-local-source.mjs",
   "scripts/verify-budil-gpt-main-integration.mjs",
   "scripts/verify-budil-gpt-multi-turn.mjs",

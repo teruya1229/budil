@@ -9,7 +9,7 @@
 const BudilGptReadOnly = (() => {
   'use strict';
   const ACTIONS = Object.freeze([
-    'customer.search', 'customer.timeline', 'customer.timeline.detail', 'document.search', 'document.period', 'work.search', 'receivables.summary', 'profit.summary'
+    'customer.search', 'customer.timeline', 'customer.timeline.detail', 'document.search', 'document.period', 'work.search', 'work.date', 'receivables.summary', 'profit.summary'
   ]);
   const MAX_RESULTS = 10;
   const BAD_INPUT = 'INVALID_INPUT';
@@ -55,6 +55,10 @@ const BudilGptReadOnly = (() => {
          /[\x00-\x1f]/.test(request.customerId))return null;
       if(request.offset != null && (!Number.isInteger(request.offset) || request.offset<0 || request.offset>1000))return null;
       return {action,customerId:request.customerId,limit,offset:request.offset||0};
+    }
+    if(action==='work.date'){
+      if(!exactKeys(request,['action','date','limit'])||!validDate(request.date))return null;
+      return {action,date:request.date,limit};
     }
     if (action === 'receivables.summary' || action === 'profit.summary') {
       if(!exactKeys(request,['action','date']) || !validDate(request.date)) return null;
@@ -285,6 +289,28 @@ const BudilGptReadOnly = (() => {
     return ok(request.action,{count:matching.length,tooMany,workOrders:view},
       receipt(request.action,matching.length?'matched':'not_found',matching.length,tooMany));
   };
+  // Date schedule listing is local only and never proves Google availability.
+  const workDate = (request,deps) => {
+    const orders=toArray(deps,'getWorkOrders');
+    if(!orders)return fail('DEPENDENCY_MISSING');
+    const matches=orders.filter(order=>object(order) &&
+      (order.scheduledDate===request.date ||
+       (validDate(order.scheduledDate)&&validDate(order.scheduledEndDate) &&
+        order.scheduledDate<=request.date&&request.date<=order.scheduledEndDate)));
+    const count=matches.length,tooMany=count>request.limit;
+    const records=matches.slice(0,request.limit).map(order=>({
+      workOrderId:String(order.id||'').slice(0,120),
+      customerName:String(order.customerName||'').slice(0,120),
+      scheduledDate:request.date,
+      startTime:/^([01]\d|2[0-3]):[0-5]\d$/.test(order.startTime||'')?order.startTime:'',
+      endTime:/^([01]\d|2[0-3]):[0-5]\d$/.test(order.endTime||'')?order.endTime:'',
+      status:String(order.status||'').slice(0,80),
+      calendarWritePerformed:false
+    }));
+    return ok(request.action,{date:request.date,count,tooMany,workOrders:records,
+      googleCalendarChecked:false,calendarAvailabilityUnknown:true},
+      receipt(request.action,count?'matched':'not_found',count,tooMany));
+  };
   const receivables = (request,deps) => {
     const revenues=toArray(deps,'getRevenueRecords');
     const docs=toArray(deps,'getDocuments');
@@ -314,6 +340,7 @@ const BudilGptReadOnly = (() => {
       if(normalized.action==='document.search')return document(normalized,deps);
       if(normalized.action==='document.period')return documentPeriod(normalized,deps);
       if(normalized.action==='work.search')return work(normalized,deps);
+      if(normalized.action==='work.date')return workDate(normalized,deps);
       if(normalized.action==='receivables.summary')return receivables(normalized,deps);
       if(normalized.action==='profit.summary')return profit(normalized,deps);
     } catch(_) { return fail('READ_UNAVAILABLE'); }

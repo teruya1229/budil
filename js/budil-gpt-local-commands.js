@@ -12,6 +12,27 @@ const BudilGptLocalCommands = (() => {
     const name=String(raw||'').replace(/\s/g,'').replace(/(さん|様|御中)$/,'');
     return NAME.test(name) && !/^(?:お客様|今月|先月|来月|先々月|今週|先週|来週|今年|去年|昨年|来年|今日|昨日|明日|今期|前期)$/.test(name) ? name : '';
   };
+  // Strict date-only local work lookup; no Google or other network call.
+  const validWorkDate=(year,month,day)=>{
+    if(year<1900||year>2099||month<1||month>12||day<1||day>31)return false;
+    const d=new Date(Date.UTC(year,month-1,day));
+    return d.getUTCFullYear()===year&&d.getUTCMonth()+1===month&&d.getUTCDate()===day;
+  };
+  const workDateFromPhrase=(phrase,today)=>{
+    const tm=typeof today==='string'&&today.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const validToday=!!tm&&validWorkDate(+tm[1],+tm[2],+tm[3]);
+    if(/^(今日|昨日|明日)$/.test(phrase)){
+      if(!validToday)return null;
+      const d=new Date(Date.UTC(+tm[1],+tm[2]-1,+tm[3]+(phrase==='昨日'?-1:phrase==='明日'?1:0)));
+      return d.toISOString().slice(0,10);
+    }
+    const match=phrase.match(/^(?:(\d{4})[-/])?(\d{1,2})(?:[-/]|月)(\d{1,2})日?$/u);
+    if(!match)return '';
+    if(!match[1]&&!validToday)return null;
+    const y=match[1]?+match[1]:+tm[1],m=+match[2],d=+match[3];
+    if(!validWorkDate(y,m,d))return '';
+    return String(y).padStart(4,'0')+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+  };
   function parse(raw, {today,anonymizer}={}) {
     if (typeof raw!=='string'||!raw.trim()||raw.length>220||
         /[\x00-\x1f]/.test(raw)) return deny('INPUT_INVALID');
@@ -31,6 +52,16 @@ const BudilGptLocalCommands = (() => {
       });
     }
     const endAnchor=String.fromCharCode(36);
+    const datedWork=text.match(/^(今日|昨日|明日|(?:\d{4}[-/])?\d{1,2}(?:[-/]|月)\d{1,2}日?)の(?:作業)?予定(?:を|は)?(?:教えて|教えてください|確認して|確認してください|見せて|見せてください|検索して|検索してください|探して|探してください|[?？])?$/u);
+    if(datedWork){
+      const date=workDateFromPhrase(datedWork[1],today);
+      if(date===null)return deny('DATE_REQUIRED');
+      if(!date)return deny('DATE_INVALID');
+      return Object.freeze({ok:true,action:'work.date',
+        request:{action:'work.date',date,limit:10},
+        interpretedDate:date,readOnly:true,networkUsed:false});
+    }
+
     // Customer creation is never automatic. This is a preview-only intent;
     // the UI performs exact-name duplicate rechecks and a separate approve.
     const newCustomer=text.match(/^([一-龯々ぁ-んァ-ヶA-Za-z・ー]{3,32})(?:さん|様)を新規顧客として登録して$/u);
