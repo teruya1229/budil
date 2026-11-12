@@ -38,6 +38,8 @@ const allowed=new Set([
   "scripts/verify-budil-gcal-write-token.mjs",
   "scripts/verify-budil-gcal-server-integration.mjs",
   "scripts/verify-budil-gcal-write-busy.mjs",
+  "scripts/verify-budil-gcal-ledger.mjs",
+  "supabase/functions/budil-calendar-write/ledger.mjs",
   "supabase/functions/budil-calendar-write/google-write-token.mjs",
   "supabase/functions/budil-calendar-write/google-write-events.mjs",
   "supabase/functions/budil-calendar-write/authority.mjs",

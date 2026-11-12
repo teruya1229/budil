@@ -15,6 +15,7 @@ on:
       - scripts/verify-budil-gcal-write-token.mjs
       - scripts/verify-budil-gcal-server-integration.mjs
       - scripts/verify-budil-gcal-write-busy.mjs
+      - scripts/verify-budil-gcal-ledger.mjs
       - .github/workflows/budil-gcal-contract.yml
   pull_request:
     branches: [main]
@@ -69,6 +70,8 @@ jobs:
           node scripts/verify-budil-gcal-write-token.mjs
           node scripts/verify-budil-gcal-server-integration.mjs
           node scripts/verify-budil-gcal-write-busy.mjs
+          node --check supabase/functions/budil-calendar-write/ledger.mjs
+          node scripts/verify-budil-gcal-ledger.mjs
       - name: Browser verify 390px compact booking and reschedule (no writes)
         shell: bash
         run: |
