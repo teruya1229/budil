@@ -39,6 +39,8 @@ const allowed=new Set([
   "js/budil-gpt-calendar-link.js",
   "scripts/verify-budil-gcal-local-link.mjs",
   "scripts/verify-budil-gcal-test-cleanup.mjs",
+  "scripts/verify-budil-gcal-credential-diagnostic.mjs",
+  "supabase/functions/budil-calendar-write/diagnostic.mjs",
   "scripts/verify-budil-gcal-compact-browser.mjs",
   "scripts/verify-budil-gcal-write-auth.mjs",
   "scripts/verify-budil-gcal-google-http.mjs",
