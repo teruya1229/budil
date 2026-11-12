@@ -22,6 +22,19 @@ test('exact names are redacted before API',()=>{
  const result=G.verify(model('customer.timeline',{query:'顧客A'}),p.aliases);
  assert.equal(result.ok,true);assert.equal(result.request.query,'田中太郎');
 });
+test('surname-only lookup is locally anonymized and candidate based',()=>{
+ const p=G.prepare('田中さんの過去の作業を教えて',leads);
+ assert.equal(p.ok,true);assert.ok(!p.message.includes('田中'));
+ assert.equal(p.aliases['顧客A'],'田中');
+ const plan=G.verify(model('customer.timeline',{query:'顧客A'}),p.aliases);
+ assert.equal(plan.request.query,'田中');
+});
+test('customer aliases remain stable over conversational turns',()=>{
+ const first=G.prepare('田中太郎さんの履歴を見せて',leads);
+ const next=G.prepare('その田中太郎さんの予定も',leads,first.aliases);
+ assert.equal(first.ok,true);assert.equal(next.ok,true);
+ assert.equal(next.aliases['顧客A'],'田中太郎');
+});
 test('unknown honorific name is masked too',()=>{
  const p=G.prepare('新里一郎さんの予定を教えて',[]);
  assert.equal(p.ok,true);assert.ok(!p.message.includes('新里一郎'));
