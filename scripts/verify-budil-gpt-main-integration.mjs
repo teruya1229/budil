@@ -14,6 +14,7 @@ const diff=spawnSync('git',['diff','--name-only',base,'HEAD'],{encoding:'utf8'})
 assert.equal(diff.status,0,'git_diff_unavailable (checkout must fetch history)');
 const paths=diff.stdout.trim().split('\n').filter(Boolean);
 const allowed=new Set([
+  ".github/workflows/budil-gpt-real-chat.yml",
   ".github/workflows/budil-local-busy-read.yml",
   ".github/workflows/budil-gpt-workdate-multiround.yml",
   ".github/workflows/budil-ai-conversation-p0.yml",
@@ -38,6 +39,8 @@ const allowed=new Set([
   "js/budil-gpt-booking.js",
   "js/budil-gpt-conversation.js",
   "js/budil-gpt-invoice-lifecycle.js",
+  "js/budil-gpt-chat.js",
+  "js/budil-gpt-chat-ui.js",
   "js/budil-gpt-local-commands.js",
   "js/budil-gpt-local-source.js",
   "js/budil-gpt-offline-ui.js",
@@ -60,6 +63,8 @@ const allowed=new Set([
   "scripts/verify-budil-gpt-conversation-20.mjs",
   "scripts/verify-budil-gpt-invoice-browser.mjs",
   "scripts/verify-budil-gpt-invoice-lifecycle.mjs",
+  "scripts/verify-budil-gpt-chat.mjs",
+  "scripts/verify-budil-gpt-chat-browser.mjs",
   "scripts/verify-budil-gpt-local-commands.mjs",
   "scripts/verify-budil-gpt-work-date.mjs",
   "scripts/verify-budil-gpt-work-date-browser.mjs",
@@ -72,6 +77,7 @@ const allowed=new Set([
   "supabase/functions/budil-backups/helpers.ts",
   "supabase/functions/budil-backups/index.ts",
   "supabase/functions/budil-gpt-interpret/helpers.ts",
+  "supabase/functions/budil-gpt-chat/index.ts",
   "supabase/functions/budil-gpt-interpret/index.ts",
   "supabase/functions/budil-gpt-interpret/readonly.ts"
 ]);
