@@ -858,7 +858,13 @@
     }
     if(parsed.ok && parsed.action==='customer.create.preview')
       return stageNewCustomerName(parsed.request.name);
-    if(!parsed.ok)return status('指示を確認してください（'+parsed.code+'）。元の下書きは変更していません。',true);
+    if(!parsed.ok){
+      if(parsed.code==='INPUT_INVALID')
+        return status('入力を確認してください。複数行の指示は1件ずつ入力してください（例：11/11の予定）。元の下書きは変更していません。',true);
+      if(parsed.code==='DATE_INVALID')
+        return status('日付が正しくありません。月・日を確認してください（例：11/11の予定）。元の下書きは変更していません。',true);
+      return status('まだ対応していない指示です（'+parsed.code+'）。予定照会の例：11/11の予定、今日の予定、明日の予定。元の下書きは変更していません。',true);
+    }
     if($('budil-gpt-consent').checked!==true)
       return status('端末内の顧客・帳票データを読む場合は、確認欄にチェックしてください。',true);
     // Clear results only after parsing and consent. Do not erase in-progress

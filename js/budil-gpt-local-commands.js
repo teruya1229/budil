@@ -34,9 +34,13 @@ const BudilGptLocalCommands = (() => {
     return String(y).padStart(4,'0')+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
   };
   function parse(raw, {today,anonymizer}={}) {
-    if (typeof raw!=='string'||!raw.trim()||raw.length>220||
-        /[\x00-\x1f]/.test(raw)) return deny('INPUT_INVALID');
-    const text=raw.replace(/[　\s]+/g,'').trim()
+    // Textareas commonly append a final newline; allow boundary whitespace
+    // while rejecting embedded control characters and compound instructions.
+    if (typeof raw!=='string'||!raw.trim()||raw.length>220) return deny('INPUT_INVALID');
+    const cleanedRaw=raw.trim();
+    if (/[\x00-\x1f\x7f]/.test(cleanedRaw)) return deny('INPUT_INVALID');
+    const text=cleanedRaw.replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xfee0))
+      .replace(/／/g,'/').replace(/[　\s]+/g,'')
       .replace(/[。．！!？?]+$/u,'');
     // Bounded conversational variants only. Never treat arbitrary prose as
     // a command; every accepted sentence still must full-match a known read.
@@ -52,7 +56,7 @@ const BudilGptLocalCommands = (() => {
       });
     }
     const endAnchor=String.fromCharCode(36);
-    const datedWork=text.match(/^(今日|昨日|明日|(?:\d{4}[-/])?\d{1,2}(?:[-/]|月)\d{1,2}日?)の(?:作業)?予定(?:を|は)?(?:教えて|教えてください|確認して|確認してください|見せて|見せてください|検索して|検索してください|探して|探してください|[?？])?$/u);
+    const datedWork=text.match(/^(今日|昨日|明日|(?:\d{4}[-/])?\d{1,2}(?:[-/]|月)\d{1,2}日?)(?:(?:の|に|は)?(?:作業)?予定(?:を|は)?(?:教えて(?:ください)?|確認して(?:ください)?|見せて(?:ください)?|検索して(?:ください)?|探して(?:ください)?|ある(?:の|かな|か|？)?|ありますか|入ってる(?:の|かな|か)?|入っていますか|何(?:ですか)?)?|は何か(?:作業)?予定ある(?:の|かな|か)?)$/u);
     if(datedWork){
       const date=workDateFromPhrase(datedWork[1],today);
       if(date===null)return deny('DATE_REQUIRED');
