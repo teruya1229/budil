@@ -7,7 +7,7 @@
 const BASE='https://www.googleapis.com/calendar/v3/calendars/';
 const eid=/^[0-9a-v]{65}$/;
 const etag=/^"[^"\r\n]{1,256}"$/;
-const iso=/^20\d\d-\d\d-\d\dT(?:[01]\d|2[0-3]):[0-5]\d:\d\d(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/;
+const iso=/^20\d\d-\d\d-\d\dT(?:[01]\d|2[0-3]):[0-5]\d:\d\d(?:\.\d{1,3})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/;
 const err=(code,status=0)=>Object.assign(new Error(code),{code,status});
 const ts=x=>typeof x==='string'&&iso.test(x)&&Number.isFinite(Date.parse(x));
 function validateEvent(payload,includeId){
@@ -140,7 +140,7 @@ export class GoogleWriteEvents {
           typeof from!=='string'||typeof to!=='string'||
           !((ts(from)||/^\d{4}-\d\d-\d\d$/.test(from))&&
             (ts(to)||/^\d{4}-\d\d-\d\d$/.test(to)))||
-          Date.parse(from)>Date.parse(to))
+          Date.parse(from)>=Date.parse(to))
           return {ok:false,code:'BUSY_UNVERIFIED'};
         collected.push({eventId,start:from,end:to});
         if(collected.length>1250)return {ok:false,code:'BUSY_TOO_MANY_EVENTS'};
