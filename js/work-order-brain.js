@@ -60,6 +60,15 @@ const WorkOrderBrain = {
       actualRevenueId: String(item.actualRevenueId || '').trim(),
       memo: String(item.memo || '').trim(),
       calendarAdded: item.calendarAdded === true,
+      // Preserve verified Google event identity across Storage.updateWorkOrder
+      // normalization and JSON persistence. Never infer synced=true from an ID.
+      calendarEventId: String(item.calendarEventId || '').trim().slice(0, 1024),
+      calendarEtag: String(item.calendarEtag || '').trim().slice(0, 300),
+      calendarTargetId: String(item.calendarTargetId || '').trim().slice(0, 254),
+      calendarEventSource: ['transaction', 'imported'].includes(item.calendarEventSource)
+        ? item.calendarEventSource : '',
+      calendarSyncStatus: ['unsynced', 'pending', 'indeterminate', 'verified'].includes(item.calendarSyncStatus)
+        ? item.calendarSyncStatus : 'unsynced',
       completedAt: String(item.completedAt || '').trim(),
       createdAt: item.createdAt || now,
       updatedAt: item.updatedAt || now,
