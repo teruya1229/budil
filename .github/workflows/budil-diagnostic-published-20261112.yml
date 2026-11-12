@@ -1,0 +1,29 @@
+name: Isolated published Budil diagnostic Chrome acceptance
+on:
+  push:
+    branches:
+      - qa/budil-diagnostic-published-20261112
+permissions:
+  contents: read
+jobs:
+  public-chrome:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Inspect live HTTP content for the actual published feature
+        shell: bash
+        run: |
+          set -euo pipefail
+          node -e "fetch('https://teruya1229.github.io/budil/',{cache:'no-store'}).then(async r=>{if(r.status!==200)throw Error('PUBLIC_HTTP_'+r.status);const s=await r.text();if(!s.includes('id=\"budil-gpt-calendar-diagnostic\"')||!s.includes('v=20261112caldiag2'))throw Error('PUBLISHED_SOURCE_NOT_UPDATED');console.log('BUDIL_DIAGNOSTIC_PUBLISHED_HTTP_PASS')})"
+      - name: Test real public page in disposable Chrome at 390px
+        run: node scripts/verify-budil-diagnostic-live-chrome.mjs
