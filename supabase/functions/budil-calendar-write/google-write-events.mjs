@@ -22,7 +22,9 @@ function validateEvent(payload,includeId){
     Object.keys(m).sort().join(',')!=='ownerId,tenantId,workOrderId'||
     Object.values(m).some(x=>typeof x!=='string'||x.length<3||x.length>256))
     throw err('EVENT_METADATA_INVALID');
-  return {id:includeId?payload.eventId:undefined,summary:'BCサービス 作業予定',
+  return {id:includeId?payload.eventId:undefined,
+    summary:/^test-budil-calendar-[0-9a-f-]{36}$/.test(m.workOrderId)?
+      '【開発テスト】BCサービス 予約確認（自動削除予定）':'BCサービス 作業予定',
     start:{dateTime:payload.start,timeZone:'Asia/Tokyo'},
     end:{dateTime:payload.end,timeZone:'Asia/Tokyo'},
     extendedProperties:{private:{...m}}};
@@ -78,6 +80,7 @@ export class GoogleWriteEvents {
     if(response.status===401||response.status===403)throw err('GOOGLE_AUTH_DENIED',response.status);
     if(method==='GET'&&response.status===404)return null;
     if(response.status===429)throw err('RATE_LIMITED',429);
+    if(method==='DELETE'&&response.status===204)return {deleted:true};
     if(response.status>=500)throw err('OUTCOME_UNKNOWN',response.status);
     if(![200,201].includes(response.status))throw err('GOOGLE_REJECTED',response.status);
     let parsed;try{parsed=await response.json();}catch{throw err('OUTCOME_UNKNOWN');}
@@ -185,5 +188,34 @@ export class GoogleWriteEvents {
     const normalized=normalize(response,this.calendarId);
     if(!normalized)throw err('UPDATE_UNVERIFIED');
     return normalized;
+  }
+  /**
+   * Delete ONLY an explicitly proven synthetic integration-test event.
+   * Context (tenant/owner/order) MUST be computed by the authorized server;
+   * never bind these values from request JSON. Not mounted in any live route.
+   */
+  async deleteVerifiedTestEvent(calendarId,eventId,
+    {tenantId,ownerId,workOrderId,expectedEtag,expectedStart,expectedEnd}={}){
+    this.assertTarget(calendarId,eventId);
+    const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if(!uuid.test(tenantId||'')||!uuid.test(ownerId||'')||
+      !/^test-budil-calendar-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(workOrderId||'')||
+      !etag.test(expectedEtag||'')||!ts(expectedStart)||!ts(expectedEnd)||
+      Date.parse(expectedStart)>=Date.parse(expectedEnd))
+      throw err('TEST_DELETE_AUTHORITY_INVALID');
+    const existing=await this.get(calendarId,eventId);
+    if(existing===null)return {deleted:false,absent:true,readbackVerified:true};
+    if(existing.calendarId!==this.calendarId||existing.eventId!==eventId||
+      existing.etag!==expectedEtag||existing.start!==expectedStart||
+      existing.end!==expectedEnd||
+      existing.metadata.tenantId!==tenantId||existing.metadata.ownerId!==ownerId||
+      existing.metadata.workOrderId!==workOrderId)
+      throw err('TEST_DELETE_EVENT_MISMATCH');
+    const result=await this.request('DELETE',
+      this.events+'/'+eventId+'?sendUpdates=none',{ifMatch:expectedEtag});
+    if(result?.deleted!==true)throw err('TEST_DELETE_OUTCOME_UNKNOWN');
+    const after=await this.get(calendarId,eventId);
+    if(after!==null)throw err('TEST_DELETE_READBACK_UNVERIFIED');
+    return {deleted:true,readbackVerified:true,eventId,calendarId:this.calendarId};
   }
 }
