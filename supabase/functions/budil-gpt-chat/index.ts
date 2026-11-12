@@ -74,7 +74,7 @@ export default {async fetch(request:Request):Promise<Response>{
   if(!Array.isArray(memberships)||memberships.length!==1)return bad(403,"active_membership_required",origin);
   const {data:tenant,error:tenantError}=await admin.from("tenants").select("id").eq("id",memberships[0].tenant_id).eq("status","active").maybeSingle();
   if(tenantError||!tenant?.id)return bad(403,"active_tenant_required",origin);
-  const enabled=Deno.env.get("BUDIL_GPT_CHAT_ENABLED")==="true"&&Deno.env.get("BUDIL_GPT_ENABLED")==="true";
+  const enabled=Deno.env.get("BUDIL_GPT_CHAT_ENABLED")==="true";
   const key=Deno.env.get("OPENAI_API_KEY");
   const model=Deno.env.get("BUDIL_GPT_MODEL")||"gpt-4.1-mini";
   const supported=["gpt-4.1-mini","gpt-5-mini"].includes(model);
