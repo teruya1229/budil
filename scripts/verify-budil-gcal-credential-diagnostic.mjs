@@ -94,7 +94,7 @@ await test('missing secret stays unknown',async()=>{
  assert.equal((await x.run()).code,'SECRET_NOT_READY');assert.equal(x.calls.google,0);
 });
 await test('malformed JSON never reaches Google',async()=>{
- const x=fixture();x.setJson('{invalid json');
+ const x=fixture();x.setJson('{invalid json'+'x'.repeat(120));
  assert.equal((await x.run()).code,'SECRET_JSON_INVALID');assert.equal(x.calls.oauth,0);
 });
 await test('wrong service account identity cannot sign',async()=>{
