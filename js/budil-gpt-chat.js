@@ -54,6 +54,9 @@ const BudilGptChat=(()=>{
       });
     if(/[\p{Script=Han}]{2,12}(?:さん|様)/u.test(message.replace(/顧客[A-H](?:さん|様)?/g,'')))
       return deny('SENSITIVE_INPUT');
+    // If the alias limit is reached, never send leftover known names.
+    if(names.some(name=>name.length>=3&&message.includes(name)))
+      return deny('SENSITIVE_INPUT');
     if(/(?:https?:\/\/|www\.|@|(?:\d{2,4}-){2}\d{3,4})/i.test(message))
       return deny('SENSITIVE_INPUT');
     return {ok:true,message,aliases};
