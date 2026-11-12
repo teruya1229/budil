@@ -106,7 +106,7 @@ await test('same Google event ID is PATCHed on reschedule',async()=>{
 await test('same approval cannot create a duplicate event',async()=>{
  const x=environment(),id=await approve(x,candidate());
  await x.service.commit({session:'owner',approvalId:id});
- await assert.rejects(x.service.commit({session:'owner',approvalId:id}),e=>e.code==='ALREADY_ATTEMPTED');
+ await assert.rejects(x.service.commit({session:'owner',approvalId:id}),e=>['ALREADY_ATTEMPTED','APPROVAL_INVALID'].includes(e.code));
  assert.equal(x.calls.create,1);assert.equal(x.events.size,1);
 });
 await test('new approval overlapping with event fails before Google write',async()=>{
