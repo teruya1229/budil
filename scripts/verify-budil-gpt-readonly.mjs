@@ -142,6 +142,6 @@ check('relative date refused',()=>assert.equal(r.perform({action:'receivables.su
 check('unexpected filter refused',()=>assert.equal(r.perform({action:'receivables.summary',date:'2026-11-05',query:'田中'},deps,true).ok,false));
 check('no implicit Storage dependency',()=>assert.equal(r.perform({action:'customer.search',query:'比嘉清子'},{customerResolver:c},true).code,'DEPENDENCY_MISSING'));
 check('reader exception safe',()=>{const x=r.perform({action:'document.search',query:'比嘉清子'},{getDocuments(){throw Error('private content')}},true);assert.equal(x.code,'READ_UNAVAILABLE');assert.ok(!JSON.stringify(x).includes('private content'))});
-check('five read-only actions including bounded month search',()=>assert.deepEqual(Array.from(r.ACTIONS),['customer.search','customer.timeline','customer.timeline.detail','document.search','document.period','work.search','receivables.summary','profit.summary']));
+check('read-only actions include bounded work date search',()=>assert.deepEqual(Array.from(r.ACTIONS),['customer.search','customer.timeline','customer.timeline.detail','document.search','document.period','work.search','work.date','receivables.summary','profit.summary']));
 check('no network or storage mutations in source',()=>assert.ok(!/(?:\bfetch\(|\blocalStorage\.|Storage\.(?:set|add|update|save|delete)|\.insert\(|\.upsert\(|\.update\(|\.delete\(|\.apply\()/.test(src('js/budil-gpt-readonly.js'))));
 console.log('Budil GPT local read-only adapter '+n+'/'+n+' PASS');
