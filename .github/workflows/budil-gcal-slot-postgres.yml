@@ -6,6 +6,7 @@ on:
       - docs/sql/budil-calendar-write-slots-proposal.sql
       - scripts/sql/verify-budil-calendar-slots.sql
       - .github/workflows/budil-gcal-slot-postgres.yml
+      - scripts/verify-budil-calendar-slot-race.mjs
   pull_request:
     branches: [main]
     paths:
@@ -54,3 +55,6 @@ jobs:
       - name: Verify exclusion, tenant isolation, reschedule transaction and RLS
         shell: bash
         run: psql -v ON_ERROR_STOP=1 -f scripts/sql/verify-budil-calendar-slots.sql
+      - name: Race two real PostgreSQL sessions against the exclusion constraint
+        shell: bash
+        run: node scripts/verify-budil-calendar-slot-race.mjs
