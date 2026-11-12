@@ -81,7 +81,7 @@ try{
   await ev("document.getElementById('budil-gpt-clear').click();document.getElementById('budil-gpt-input').value='2026-11-10の予定教えて';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
   assert.equal(await ev("document.getElementById('budil-gpt-status').textContent.includes('空き確定ではありません')"),true);
   // Repeat the user journey with spoken-style and fullwidth input.
-  for(const phrase of ['１１／１１の予定','11月11日は何か予定ある？','11/11に予定入ってる？']){
+  for(const phrase of ['11/11の予定','１１／１１の予定','11月11日は何か予定ある？','11/11に予定入ってる？']){
     await ev("document.getElementById('budil-gpt-clear').click()");
     await ev("document.getElementById('budil-gpt-input').value="+JSON.stringify(phrase)+";document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
     const text=await ev("document.getElementById('budil-gpt-result').textContent");
