@@ -1,0 +1,58 @@
+name: Budil work-date multi-round acceptance
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  local-contract:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and local contract round 1
+        run: |
+          node --check js/budil-gpt-local-commands.js
+          node --check js/budil-gpt-local-source.js
+          node --check js/budil-gpt-readonly.js
+          node --check js/budil-gpt-offline-ui.js
+          node scripts/verify-budil-gpt-work-date.mjs
+          node scripts/verify-budil-gpt-local-commands.mjs
+          node scripts/verify-budil-gpt-readonly.mjs
+          node scripts/verify-budil-gpt-local-source.mjs
+      - name: Independent regression round 2
+        run: |
+          node scripts/verify-budil-gpt-work-date.mjs
+          node scripts/verify-budil-gpt-conversation-20.mjs
+          node scripts/verify-budil-gpt-local-quote.mjs
+          node scripts/verify-budil-calendar-read-test.mjs
+  chrome-fixture:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: User-input fixture in Chrome 390px and 320px round 1
+        run: node scripts/verify-budil-gpt-work-date-browser.mjs
+      - name: Independent Chrome fixture rerun round 2
+        run: node scripts/verify-budil-gpt-work-date-browser.mjs
