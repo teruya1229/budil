@@ -1,0 +1,63 @@
+name: Budil calendar deployed endpoint denied-access smoke
+on:
+  push:
+    branches:
+      - feat/budil-calendar-write-sandbox-20261111
+    paths:
+      - .github/workflows/budil-calendar-edge-deny-smoke.yml
+      - supabase/functions/budil-calendar-write/diagnostic.mjs
+      - supabase/functions/budil-calendar-write/diagnostic-route.mjs
+permissions:
+  contents: read
+jobs:
+  no-credentials-no-write:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Check deployed URL rejects unauthenticated write
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://xvrrlwlgoxbrkhlfyznx.supabase.co/functions/v1/budil-calendar-write/commit"
+          status="$(curl --silent --show-error --max-time 20 --output /dev/null --write-out '%{http_code}' \
+            --request POST \
+            --header 'Origin: https://teruya1229.github.io' \
+            --header 'Content-Type: application/json' \
+            --data '{}' "$endpoint")"
+          echo "BUDIL_CALENDAR_EDGE_UNAUTH_HTTP_STATUS=$status"
+          case "$status" in
+            401|403) echo 'PASS: live unauthenticated calendar-write request denied';;
+            *) echo "FAIL: expected 401/403, got $status"; exit 1;;
+          esac
+      - name: Check foreign-origin request cannot create an event
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://xvrrlwlgoxbrkhlfyznx.supabase.co/functions/v1/budil-calendar-write/commit"
+          status="$(curl --silent --show-error --max-time 20 --output /dev/null --write-out '%{http_code}' \
+            --request POST \
+            --header 'Origin: https://unregistered.invalid' \
+            --header 'Content-Type: application/json' \
+            --data '{}' "$endpoint")"
+          echo "BUDIL_CALENDAR_EDGE_FOREIGN_ORIGIN_HTTP_STATUS=$status"
+          case "$status" in
+            401|403) echo 'PASS: unregistered origin rejected';;
+            *) echo "FAIL: expected 401/403, got $status"; exit 1;;
+          esac
+      - name: Check deployed diagnostic denies anonymous and foreign-origin requests
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://xvrrlwlgoxbrkhlfyznx.supabase.co/functions/v1/budil-calendar-write/diagnostic"
+          for origin in "https://teruya1229.github.io" "https://unregistered.invalid"; do
+            status="$(curl --silent --show-error --max-time 20 --output /dev/null --write-out '%{http_code}' \
+              --request POST \
+              --header "Origin: $origin" \
+              --header 'Content-Type: application/json' \
+              --data '{}' "$endpoint")"
+            echo "BUDIL_CALENDAR_DIAGNOSTIC_ANON_HTTP_STATUS=$status"
+            case "$status" in
+              401|403) echo 'PASS: anonymous diagnostic denied';;
+              *) echo "FAIL: expected 401/403, got $status"; exit 1;;
+            esac
+          done

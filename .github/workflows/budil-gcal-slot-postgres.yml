@@ -1,0 +1,60 @@
+name: Budil calendar slot exclusion - isolated PostgreSQL
+on:
+  push:
+    branches: [feat/budil-calendar-write-sandbox-20261111]
+    paths:
+      - docs/sql/budil-calendar-write-slots-proposal.sql
+      - scripts/sql/verify-budil-calendar-slots.sql
+      - .github/workflows/budil-gcal-slot-postgres.yml
+      - scripts/verify-budil-calendar-slot-race.mjs
+  pull_request:
+    branches: [main]
+    paths:
+      - docs/sql/budil-calendar-write-slots-proposal.sql
+      - scripts/sql/verify-budil-calendar-slots.sql
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-exclusion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: temporary-test-password
+          POSTGRES_DB: budil_calendar_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d budil_calendar_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: temporary-test-password
+      PGDATABASE: budil_calendar_test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Create isolated tenant fixture and simulated Supabase roles
+        shell: bash
+        run: |
+          psql -v ON_ERROR_STOP=1 -c 'CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN;'
+          psql -v ON_ERROR_STOP=1 -c 'CREATE TABLE public.tenants(id uuid PRIMARY KEY);'
+      - name: Apply proposed schema ONLY to disposable service container
+        shell: bash
+        run: psql -v ON_ERROR_STOP=1 -f docs/sql/budil-calendar-write-slots-proposal.sql
+      - name: Verify exclusion, tenant isolation, reschedule transaction and RLS
+        shell: bash
+        run: psql -v ON_ERROR_STOP=1 -f scripts/sql/verify-budil-calendar-slots.sql
+      - name: Race two real PostgreSQL sessions against the exclusion constraint
+        shell: bash
+        run: node scripts/verify-budil-calendar-slot-race.mjs

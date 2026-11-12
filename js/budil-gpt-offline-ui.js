@@ -24,6 +24,7 @@
   const Profit=typeof ProfitBrain!=='undefined'?ProfitBrain:null;
   const Data=typeof Storage!=='undefined'?Storage:null;
   const Booking=typeof BudilGptBooking!=='undefined'?BudilGptBooking:null;
+  const CalendarPreview=typeof BudilGptCalendarPreview!=='undefined'?BudilGptCalendarPreview:null;
   const Invoice=typeof BudilGptInvoiceLifecycle!=='undefined'?BudilGptInvoiceLifecycle:null;
   const Bank=typeof BudilGptBankReconcile!=='undefined'?BudilGptBankReconcile:null;
   const Completion=typeof WorkCompletionBrain!=='undefined'?WorkCompletionBrain:null;
@@ -33,6 +34,7 @@
   let pendingNewCustomer=null;
   let pendingCustomerSurname='';
   let bookingDraft=null,bookingSaving=false;
+  let calendarIntent=null,calendarCustomer=null,calendarOrder=null,calendarReviewed=null;
   let googleReadTarget=null,googleReadResult=null,googleReadBusy=false,googleReadSeq=0;
   let invoiceKind='',invoiceOrderId='',invoicePrepared=null,completionPrepared=null,invoiceSaving=false;
   let invoiceIssuePrepared=null;
@@ -54,6 +56,12 @@
     for(const id of ['work-date','amount','tax','issue','due','method','expected'])
       $('budil-gpt-invoice-'+id).value='';
     bookingDraft=null;bookingSaving=false;
+    calendarIntent=null;calendarCustomer=null;calendarOrder=null;calendarReviewed=null;
+    hide('budil-gpt-calendar-sandbox',true);
+    $('budil-gpt-calendar-result').replaceChildren();
+    $('budil-gpt-calendar-candidates').replaceChildren();
+    $('budil-gpt-calendar-name').value='';$('budil-gpt-calendar-end').value='';
+    $('budil-gpt-calendar-google-consent').checked=false;
     resetGoogleRead();
     hide('budil-gpt-booking',true);hide('budil-gpt-booking-fields',true);
     hide('budil-gpt-booking-save',true);
@@ -79,6 +87,7 @@
     $('budil-gpt-voice-consent').checked=false;
     $('budil-gpt-remote-consent').checked=false;
     $('budil-gpt-public-consent').checked=false;
+    $('budil-gpt-calendar-diagnostic-status').textContent='';
   }
   function open(){
     focusedBefore=document.activeElement;
@@ -88,7 +97,7 @@
   }
   function close(){
     if(voice){try{voice.abort();}catch(_){/* browser voice */}voice=null;}
-    readinessSeq++;interpretSeq++;publicReadSeq++;resetVisible();shell.hidden=true;
+    readinessSeq++;calendarDiagnosticSeq++;interpretSeq++;publicReadSeq++;resetVisible();shell.hidden=true;
     if(focusedBefore&&typeof focusedBefore.focus==='function')focusedBefore.focus();
   }
   function node(tag,text,cls){
@@ -542,7 +551,7 @@
         if(availabilityConsent)status(message,true);
         return $('budil-gpt-google-status').textContent=message;
       }
-      googleReadResult={key,...review};
+      googleReadResult={key,...review,checkedAtMs:Date.now()};
       if(availabilityConsent)status(review.hasConflict?'Google予定に重なる時刻が見つかりました。空きではありません。':'Google予定に重なる時刻は照会時点で見つかりませんでした。端末内予定の結果も確認してください。');
       $('budil-gpt-google-status').textContent=review.hasConflict
         ? 'Googleカレンダーに重なる予定が'+review.overlapCount+
@@ -559,8 +568,134 @@
       if(seq===googleReadSeq){
         googleReadBusy=false;button.disabled=false;
         if(availabilityConsent)$('budil-gpt-run').disabled=false;
+        if(calendarIntent&&calendarReviewed)showCalendarSummary();
       }
     }
+  }
+
+  function startCalendarPreview(intent){
+    if(!CalendarPreview||!Data||!Booking)return status('予約確認の機能を利用できません。',true);
+    calendarIntent=intent;calendarCustomer=null;calendarOrder=null;calendarReviewed=null;
+    resultBox.replaceChildren();
+    hide('budil-gpt-booking',true);hide('budil-gpt-calendar-sandbox',false);
+    $('budil-gpt-calendar-candidates').replaceChildren();
+    $('budil-gpt-calendar-result').replaceChildren();
+    $('budil-gpt-calendar-end').value='';
+    $('budil-gpt-calendar-google-consent').checked=false;
+    $('budil-gpt-calendar-name').value=intent.customerName||'';
+    hide('budil-gpt-calendar-customer-row',intent.action==='reschedule');
+    $('budil-gpt-calendar-request').textContent=
+      (intent.action==='booking'?'予約':'日時変更')+'：'+intent.date+' '+intent.startTime+
+      '開始'+(intent.serviceText?' / '+intent.serviceText:'')+
+      (intent.customerName?' / '+intent.customerName+'さん':'');
+    if(Booking.isPast(intent.date,intent.startTime)){
+      calendarIntent=null;hide('budil-gpt-calendar-sandbox',true);
+      return status('過去の時刻は予約・変更できません。',true);
+    }
+    if(intent.action==='reschedule'){
+      const orders=Data.getWorkOrders().filter(w=>w&&String(w.id||'')&&
+        ['tentative','confirmed'].includes(w.status)&&!w.candidateMeta&&!w.isAllDay&&
+        (!w.scheduledEndDate||w.scheduledEndDate===w.scheduledDate)&&
+        (!intent.customerName||(w.customerName||'').startsWith(intent.customerName)));
+      if(orders.length>20){
+        calendarIntent=null;return status('対象が20件を超えるため、顧客のフルネームを指定してください。',true);
+      }
+      if(!orders.length)return status('端末内に変更対象がありません。登録済みの作業予定を確認してください。',true);
+      const list=$('budil-gpt-calendar-candidates');
+      orders.forEach(w=>{
+        const button=node('button',w.customerName+' / '+w.scheduledDate+' '+(w.startTime||'?')+
+          '〜'+(w.endTime||'?')+' / '+w.serviceText,'budil-gpt-btn budil-gpt-btn-secondary');
+        button.type='button';
+        button.addEventListener('click',()=>{
+          calendarOrder={id:String(w.id),explicitlySelected:true};
+          list.replaceChildren(node('p','変更対象を選択：'+w.customerName+' / '+w.scheduledDate+
+            ' / '+w.serviceText));
+          resetGoogleRead();calendarReviewed=null;
+          $('budil-gpt-calendar-result').replaceChildren();
+          status('変更対象を選択しました。終了時刻を指定して内容を確認してください。');
+        });
+        list.append(button);
+      });
+      return status('変更対象を1件選択してください。保存は行いません。');
+    }
+    status('顧客候補を検索し、本人が対象を選択してください。作業時間は自動推測しません。');
+  }
+  function findCalendarCustomer(){
+    if(!calendarIntent||calendarIntent.action!=='booking')return;
+    const query=$('budil-gpt-calendar-name').value.normalize('NFKC').trim();
+    const list=$('budil-gpt-calendar-candidates');list.replaceChildren();
+    calendarCustomer=null;calendarReviewed=null;resetGoogleRead();
+    $('budil-gpt-calendar-result').replaceChildren();
+    if(query.length<2)return status('顧客名は2文字以上で検索してください。',true);
+    const rows=Data.getLeads().filter(l=>{
+      const name=Resolver.leadDisplayName(l);
+      return typeof name==='string'&&name.includes(query) &&
+        (!calendarIntent.customerName||name===calendarIntent.customerName);
+    }).slice(0,11);
+    if(rows.length>10)return status('候補が10件を超えました。氏名を詳しく入力してください。',true);
+    if(!rows.length)return status('一致する登録済み顧客がありません。顧客管理を確認してください。',true);
+    rows.forEach(lead=>{
+      const name=Resolver.leadDisplayName(lead);
+      const button=node('button',name+' / 顧客ID '+String(lead.id||''),'budil-gpt-btn budil-gpt-btn-secondary');
+      button.type='button';
+      button.addEventListener('click',()=>{
+        calendarCustomer={id:String(lead.id||''),name,explicitlySelected:true};
+        list.replaceChildren(node('p','顧客を選択：'+name));
+        calendarReviewed=null;resetGoogleRead();
+        $('budil-gpt-calendar-result').replaceChildren();
+        status('顧客を選択しました。終了時刻を指定して確認してください。');
+      });
+      list.append(button);
+    });
+    status('同姓同名の候補を区別して、顧客を1件選択してください。');
+  }
+  function showCalendarSummary(){
+    const box=$('budil-gpt-calendar-result');box.replaceChildren();
+    if(!calendarIntent||!calendarReviewed)return;
+    const r=calendarReviewed;
+    const line=text=>box.append(node('p',text));
+    line('未保存プレビュー：'+r.customerName+' / '+r.date+' '+
+      r.startTime+'〜'+r.endTime+' / '+r.serviceText);
+    if(r.action==='reschedule')line('変更対象の作業予定ID：'+r.workOrderId+
+      ' / Google予定ID：'+(r.eventId||'未同期または未記録'));
+    line('端末内の時間重複：なし（確認時点）');
+    const key=JSON.stringify({date:r.date,startTime:r.startTime,endTime:r.endTime});
+    const g=googleReadResult&&googleReadResult.key===key&&
+      Number.isSafeInteger(googleReadResult.checkedAtMs)&&
+      Date.now()-googleReadResult.checkedAtMs<120000?googleReadResult:null;
+    if(g){
+      line(g.hasConflict?'Google予定と重複：'+g.overlapCount+'件（予約禁止）':
+        'Google予定の重複なし（照会時点のみ・予約確定ではありません）');
+    }else{
+      line('Google予定：未確認または照会失敗。空きと判断できません。');
+    }
+    line('Google登録・予定変更・Budil作業予定保存：未実施。実書込は現在無効です。');
+  }
+  function reviewCalendarPreview(){
+    if(!calendarIntent||!CalendarPreview)return;
+    const endTime=$('budil-gpt-calendar-end').value;
+    const reviewed=CalendarPreview.review(calendarIntent,{
+      orders:Data.getWorkOrders(),selectedCustomer:calendarCustomer,
+      selectedOrder:calendarOrder,endTime,bookingBrain:Booking
+    });
+    calendarReviewed=null;resetGoogleRead();
+    const box=$('budil-gpt-calendar-result');box.replaceChildren();
+    if(!reviewed.ok){
+      box.append(node('p','確認停止：'+reviewed.code+
+        (reviewed.code==='LOCAL_CONFLICT'?'（時間重複 '+reviewed.overlapCount+
+        '件、時刻不明 '+reviewed.unknownCount+'件）':'')));
+      return status('予約内容を確認できません。顧客・変更対象・終了時刻・他の予定を見直してください。',true);
+    }
+    calendarReviewed=reviewed;
+    showCalendarSummary();
+    if($('budil-gpt-calendar-google-consent').checked!==true)
+      return status('端末内の重複なし。Google照会は未実施です。予約は保存していません。');
+    $('budil-gpt-calendar-google-consent').checked=false;
+    setGoogleReadTarget(reviewed.date,reviewed.startTime,reviewed.endTime);
+    hide('budil-gpt-google-consent-row',true);
+    hide('budil-gpt-google-check',true);
+    status('端末内重複なし。Googleカレンダーの時間重複を照会しています。');
+    return runGoogleRead(true);
   }
 
   function startBooking(intent){
@@ -747,7 +882,7 @@
     if(/^.+?の作業を完了にして請求書を作って[。！!]?$/u.test(raw))
       return startWorkInvoice(raw);
     if(invoiceKind)return status('請求書の確認中です。入力をクリアしてから別の操作を始めてください。',true);
-    if(bookingDraft)return status('予約の確認中です。候補を選ぶか「入力をクリア」で開始し直してください。',true);
+    if(bookingDraft||calendarIntent)return status('予約の確認中です。別の操作は「入力をクリア」してから始めてください。',true);
     if(Booking){
       const booking=Booking.parse(raw,Commands.todayTokyo());
       if(booking.ok){
@@ -757,6 +892,19 @@
       }
       if(booking.code!=='UNSUPPORTED_COMMAND'&&booking.code!=='INPUT_INVALID'&&
          /予約|空いてる/.test(raw))return status('予約指示を確認してください（'+booking.code+'）。',true);
+    }
+    if(CalendarPreview){
+      const compact=CalendarPreview.parse(raw,Commands.todayTokyo());
+      if(compact.ok){
+        if(session&&session.stage!=='idle')
+          return status('見積下書きが残っています。入力をクリアしてから予約を確認してください。',true);
+        if($('budil-gpt-consent').checked!==true)
+          return status('端末内の顧客と予定を読む前に確認欄にチェックしてください。',true);
+        $('budil-gpt-consent').checked=false;
+        return startCalendarPreview(compact);
+      }
+      if(compact.code!=='UNSUPPORTED_COMMAND'&&compact.code!=='INPUT_INVALID'&&
+         /予約|変更して/.test(raw))return status('予約の日時を確認してください（'+compact.code+'）。',true);
     }
     // Never discard a customer selection or an unsaved quote before deciding
     // whether the next utterance is a correction to the existing draft.
@@ -973,6 +1121,45 @@
   }
 
 
+
+  // Explicit user click; isolated from calendar writes and local records.
+  let calendarDiagnosticBusy=false,calendarDiagnosticSeq=0;
+  async function checkCalendarWriteDiagnostic(){
+    if(calendarDiagnosticBusy)return;
+    const output=$('budil-gpt-calendar-diagnostic-status');
+    const button=$('budil-gpt-calendar-diagnostic');
+    const cloud=window.BudilCloud;
+    if(!cloud||typeof cloud.diagnoseCalendarWriteCredential!=='function'){
+      output.textContent='Google登録権限の診断機能は利用できません。';return;
+    }
+    const seq=++calendarDiagnosticSeq;
+    calendarDiagnosticBusy=true;button.disabled=true;
+    output.textContent='Google登録用アカウントを確認しています。予定は変更しません。';
+    try{
+      const result=await cloud.diagnoseCalendarWriteCredential();
+      if(seq!==calendarDiagnosticSeq||shell.hidden)return;
+      const code=result&&result.code||'unavailable';
+      if(result&&result.ok===true&&code==='GOOGLE_EVENTS_READ_OK'&&
+         result.calendarWritePerformed===false&&result.writeEnabled===false)
+        output.textContent='Google登録用アカウントの認証と対象カレンダーの読取に成功しました。予定は変更していません。書込機能はまだOFFです。';
+      else if(['not_signed_in','unauthorized','OWNER_AUTH_REQUIRED'].includes(code))
+        output.textContent='クラウドバックアップにログインしてから再度ご確認ください。予定は変更していません。';
+      else if(['ACTIVE_OWNER_REQUIRED','TENANT_NOT_AUTHORIZED'].includes(code))
+        output.textContent='BCサービスのオーナー権限でのログインが必要です。予定は変更していません。';
+      else if(code==='calendar_diagnostic_origin_unavailable')
+        output.textContent='この診断はBudil本番ページでのみ実行できます。予定は変更していません。';
+      else{
+        const label=typeof code==='string'&&/^[A-Z_]{3,48}$/.test(code)?'（'+code+'）':'';
+        output.textContent='Google登録権限を確認できませんでした'+label+'。予定は変更していません。';
+      }
+    }catch(_){
+      if(seq===calendarDiagnosticSeq&&!shell.hidden)
+        output.textContent='診断通信に失敗しました。予定は変更していません。';
+    }finally{
+      calendarDiagnosticBusy=false;button.disabled=false;
+    }
+  }
+
   let interpretBusy=false,interpretSeq=0;
   async function interpretQuoteWithGpt(){
     if(interpretBusy)return;
@@ -1127,6 +1314,7 @@
   $('budil-gpt-public-read').addEventListener('click',runPublicRead);
   $('budil-gpt-interpret').addEventListener('click',interpretQuoteWithGpt);
   $('budil-gpt-readiness').addEventListener('click',checkGptReadiness);
+  $('budil-gpt-calendar-diagnostic').addEventListener('click',checkCalendarWriteDiagnostic);
   $('budil-gpt-close').addEventListener('click',close);
   $('budil-gpt-backdrop').addEventListener('click',close);
 
@@ -1196,6 +1384,14 @@
     bankPreview=null;$('budil-gpt-bank-results').replaceChildren();
   });
   $('budil-gpt-booking-continue').addEventListener('click',continueBooking);
+  $('budil-gpt-calendar-find').addEventListener('click',findCalendarCustomer);
+  $('budil-gpt-calendar-preview-run').addEventListener('click',reviewCalendarPreview);
+  for(const id of ['name','end'])$('budil-gpt-calendar-'+id).addEventListener('input',()=>{
+    calendarCustomer=id==='name'?null:calendarCustomer;
+    calendarReviewed=null;resetGoogleRead();
+    $('budil-gpt-calendar-result').replaceChildren();
+    if(id==='name')$('budil-gpt-calendar-candidates').replaceChildren();
+  });
   $('budil-gpt-booking-save').addEventListener('click',saveBooking);
   $('budil-gpt-google-check').addEventListener('click',()=>runGoogleRead());
   $('budil-gpt-customer-create-confirm').addEventListener('click',confirmNewCustomer);

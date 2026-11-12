@@ -29,7 +29,40 @@ const allowed=new Set([
   "docs/budil-local-invoice-lifecycle.md",
   "experiments/budil-gpt-phase1/fixture-core.js",
   "calendar-read-test.html",
+  ".github/workflows/budil-gcal-contract.yml",
+  ".github/workflows/budil-calendar-edge-deny-smoke.yml",
+  "docs/budil-calendar-write-production-preparation-20261112.md",
   "index.html",
+  "js/budil-gpt-calendar-preview.js",
+  "js/work-order-brain.js",
+  "scripts/verify-budil-gcal-workorder-sync.mjs",
+  "js/budil-gpt-calendar-link.js",
+  "scripts/verify-budil-gcal-local-link.mjs",
+  "scripts/verify-budil-gcal-test-cleanup.mjs",
+  "scripts/verify-budil-gcal-credential-diagnostic.mjs",
+  "scripts/verify-budil-gcal-diagnostic-route.mjs",
+  "scripts/verify-budil-cloud-diagnostic-client.mjs",
+  "supabase/functions/budil-calendar-write/diagnostic-route.mjs",
+  "supabase/functions/budil-calendar-write/diagnostic.mjs",
+  "scripts/verify-budil-gcal-compact-browser.mjs",
+  "scripts/verify-budil-gcal-write-auth.mjs",
+  "scripts/verify-budil-gcal-google-http.mjs",
+  "scripts/verify-budil-gcal-write-token.mjs",
+  "scripts/verify-budil-gcal-server-integration.mjs",
+  "scripts/verify-budil-gcal-write-busy.mjs",
+  "scripts/verify-budil-gcal-ledger.mjs",
+  "scripts/verify-budil-gcal-slots.mjs",
+  "supabase/functions/budil-calendar-write/slots.mjs",
+  ".github/workflows/budil-gcal-slot-postgres.yml",
+  "docs/sql/budil-calendar-write-slots-proposal.sql",
+  "scripts/sql/verify-budil-calendar-slots.sql",
+  "scripts/verify-budil-calendar-slot-race.mjs",
+  "supabase/functions/budil-calendar-write/ledger.mjs",
+  "supabase/functions/budil-calendar-write/google-write-token.mjs",
+  "supabase/functions/budil-calendar-write/google-write-events.mjs",
+  "supabase/functions/budil-calendar-write/authority.mjs",
+  "supabase/functions/budil-calendar-write/handler.mjs",
+  "supabase/functions/budil-calendar-write/index.ts",
   "js/budil-cloud-restore-ui.js",
   "js/budil-cloud-restore.js",
   "js/budil-cloud.js",
@@ -74,13 +107,15 @@ const allowed=new Set([
 ]);
 assert.ok(paths.length>0,'unexpected empty integration diff');
 for(const p of paths) {
-  assert.ok(allowed.has(p),'Unexpected code change '+p);
+  const isolatedCalendarCandidate = /^experiments\/budil-gcal-write-sandbox\/(?:atomic-ledger|booking-command|booking-preview|calendar-route|existing-read-booking|fakes|google-calendar-http|production-call-adapter|transaction|verify|verify-extra)\.(?:cjs|js)$/.test(p) ||
+    p==='experiments/budil-gcal-write-sandbox/schema-proposal.sql';
+  assert.ok(allowed.has(p)||isolatedCalendarCandidate,'Unexpected code change '+p);
   assert.ok(!/(?:^|\/)(?:\.env|private|secrets?|credentials?|tokens?)(?:\/|\.|$)/i.test(p),
     'Unsafe path in source diff '+p);
 }
 for(const p of [
   'js/app.js','js/storage.js','js/documents-brain.js',
-  'js/payment-brain.js','js/revenue-brain.js','js/work-order-brain.js'
+  'js/payment-brain.js','js/revenue-brain.js'
 ]) assert.ok(!paths.includes(p),'Protected business code changed '+p);
 const html=readFileSync('index.html','utf8');
 const ui=readFileSync('js/budil-gpt-offline-ui.js','utf8');

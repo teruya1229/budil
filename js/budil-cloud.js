@@ -522,6 +522,50 @@
   }
 
 
+
+  /**
+   * Diagnostic only. The existing BudilCloud login sends its JWT directly
+   * to the authorized Supabase Edge Function; it is never exposed to the UI.
+   * No customer/event body, and no Google calendar write action.
+   */
+  function diagnoseCalendarWriteCredential(){
+    var cfg=getConfig();
+    if(!cfg||cfg.env!=='production')
+      return Promise.resolve({ok:false,code:'calendar_diagnostic_origin_unavailable'});
+    return getValidAccessToken().then(function(token){
+      if(!token.ok||!token.accessToken)return {ok:false,code:CODE.NOT_SIGNED_IN};
+      return doFetch(cfg.url+'/functions/v1/budil-calendar-write/diagnostic',{
+        method:'POST',
+        headers:{Authorization:'Bearer '+token.accessToken,
+          apikey:cfg.publishableKey,'Content-Type':'application/json'},
+        body:'{}',timeoutMs:30000
+      }).then(function(r){
+        if(r.timeout)return {ok:false,code:CODE.TIMEOUT};
+        if(r.networkError)return {ok:false,code:CODE.NETWORK};
+        if(r.status===401)return {ok:false,code:CODE.UNAUTHORIZED};
+        if(![200,403,503].includes(r.status))
+          return {ok:false,code:'calendar_diagnostic_unavailable'};
+        var body=r.body;
+        if(!body||typeof body!=='object'||Array.isArray(body)||
+           body.writeEnabled!==false||body.calendarWritePerformed!==false)
+          return {ok:false,code:'calendar_diagnostic_response_invalid'};
+        var stage=body.stage,code=body.code;
+        if(!['owner','binding','secret','oauth','calendar_read','boundary'].includes(stage)||
+           typeof code!=='string'||!/^[A-Z_]{3,48}$/.test(code))
+          return {ok:false,code:'calendar_diagnostic_response_invalid'};
+        if(r.status===200){
+          if(body.ok===true&&stage==='calendar_read'&&code==='GOOGLE_EVENTS_READ_OK')
+            return {ok:true,stage:'calendar_read',code:'GOOGLE_EVENTS_READ_OK',
+              writeEnabled:false,calendarWritePerformed:false};
+          return {ok:false,code:'calendar_diagnostic_response_invalid'};
+        }
+        if(body.ok!==false)return {ok:false,code:'calendar_diagnostic_response_invalid'};
+        return {ok:false,stage:stage,code:code,
+          writeEnabled:false,calendarWritePerformed:false};
+      });
+    });
+  }
+
   /**
    * Explicit one-shot trial. The caller must obtain a separate send consent.
    * No real customer name or records leave Budil; only Anonymize.wire fields.
@@ -730,6 +774,7 @@
     fetchScheduleBlocks: fetchScheduleBlocks,
     fetchLocalScheduleBlocks: fetchLocalScheduleBlocks,
     getGptReadiness: getGptReadiness,
+    diagnoseCalendarWriteCredential: diagnoseCalendarWriteCredential,
     interpretAnonymizedQuote: interpretAnonymizedQuote,
     interpretPiiFreeRead: interpretPiiFreeRead,
     isBackupInFlight: isBackupInFlight
