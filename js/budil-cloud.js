@@ -484,6 +484,54 @@
    * data, API key values or storage contents. Shares the existing backup
    * login without exposing its access token to other frontend modules.
    */
+  // Actual GPT conversation, separate from legacy keyword interpreters.
+  // JWT stays encapsulated here; no local business records are sent.
+  function getGptChatReadiness(){
+    var cfg=getConfig();
+    if(!cfg||cfg.env!=='production')return Promise.resolve({ok:false,code:'gpt_origin_unavailable'});
+    return getValidAccessToken().then(function(token){
+      if(!token.ok||!token.accessToken)return {ok:false,code:CODE.NOT_SIGNED_IN};
+      return doFetch(cfg.url+'/functions/v1/budil-gpt-chat',{
+        method:'GET',
+        headers:{Authorization:'Bearer '+token.accessToken,apikey:cfg.publishableKey},
+        timeoutMs:12000
+      }).then(function(r){
+        if(r.timeout)return {ok:false,code:CODE.TIMEOUT};
+        if(r.networkError)return {ok:false,code:CODE.NETWORK};
+        if(r.status!==200||!r.body||r.body.ok!==true)
+          return {ok:false,code:r.body&&r.body.code||'chat_unavailable'};
+        return {ok:true,ready:r.body.ready===true,enabled:r.body.enabled===true,
+          keyConfigured:r.body.key_configured===true,
+          modelSupported:r.body.model_supported===true,externalRequestSent:false};
+      });
+    });
+  }
+  function sendGptChat(message,history,today){
+    if(typeof message!=='string'||!message.trim()||message.length>550||
+       !Array.isArray(history)||history.length>8||
+       typeof today!=='string'||!/^\\d{4}-\\d{2}-\\d{2}$/.test(today))
+      return Promise.resolve({ok:false,code:'chat_input_invalid'});
+    var cfg=getConfig();
+    if(!cfg||cfg.env!=='production')return Promise.resolve({ok:false,code:'gpt_origin_unavailable'});
+    return getValidAccessToken().then(function(token){
+      if(!token.ok||!token.accessToken)return {ok:false,code:CODE.NOT_SIGNED_IN};
+      return doFetch(cfg.url+'/functions/v1/budil-gpt-chat',{
+        method:'POST',
+        headers:{Authorization:'Bearer '+token.accessToken,apikey:cfg.publishableKey,
+          'Content-Type':'application/json'},
+        body:JSON.stringify({message:message,history:history,today:today}),
+        timeoutMs:23000
+      }).then(function(r){
+        if(r.timeout)return {ok:false,code:CODE.TIMEOUT};
+        if(r.networkError)return {ok:false,code:CODE.NETWORK};
+        if(r.status===401)return {ok:false,code:CODE.UNAUTHORIZED};
+        if(r.status!==200||!r.body||r.body.ok!==true)
+          return {ok:false,code:r.body&&r.body.code||'chat_unavailable'};
+        return r.body;
+      });
+    });
+  }
+
   function getGptReadiness() {
     var cfg = getConfig();
     if (!cfg || cfg.env !== 'production') {
@@ -773,6 +821,8 @@
     fetchScheduleBlocks: fetchScheduleBlocks,
     fetchLocalScheduleBlocks: fetchLocalScheduleBlocks,
     getGptReadiness: getGptReadiness,
+    getGptChatReadiness: getGptChatReadiness,
+    sendGptChat: sendGptChat,
     diagnoseCalendarWriteCredential: diagnoseCalendarWriteCredential,
     interpretAnonymizedQuote: interpretAnonymizedQuote,
     interpretPiiFreeRead: interpretPiiFreeRead,
