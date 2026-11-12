@@ -37,6 +37,7 @@ const allowed=new Set([
   "scripts/verify-budil-gcal-google-http.mjs",
   "scripts/verify-budil-gcal-write-token.mjs",
   "scripts/verify-budil-gcal-server-integration.mjs",
+  "scripts/verify-budil-gcal-write-busy.mjs",
   "supabase/functions/budil-calendar-write/google-write-token.mjs",
   "supabase/functions/budil-calendar-write/google-write-events.mjs",
   "supabase/functions/budil-calendar-write/authority.mjs",
