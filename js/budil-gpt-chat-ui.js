@@ -65,6 +65,33 @@
   for(const line of rows.slice(0,13))div.append(node('p',line));
   if(v.tooMany||v.hasMore)div.append(node('p','結果の一部のみ表示しています。'));
   historyBox.append(div);
+  if(action==='customer.timeline'&&result.ok===true&&Array.isArray(v.candidates)){
+   for(const c of v.candidates.slice(0,10)){
+    if(!c.customerId)continue;
+    const select=node('button','この顧客の履歴を確認：'+String(c.displayName||'候補'),
+      'budil-gpt-btn budil-gpt-btn-secondary');
+    select.type='button';
+    select.addEventListener('click',()=>{
+     select.disabled=true;
+     const source=Source.make({storage:Data,readonly:ReadOnly,
+       customerResolver:Resolver,paymentBrain:Payment,profitBrain:Profit});
+     const detail=source.query({action:'customer.timeline.detail',
+       customerId:String(c.customerId),limit:10},true);
+     const card=node('div',undefined,'budil-gpt-chat-local');
+     if(!detail.ok)card.append(node('p','紐付け済みの履歴を取得できませんでした。'));
+     else {
+      const d=detail.view;
+      card.append(node('strong',String(d.customerName||'選択した顧客')+'の作業・連絡履歴'));
+      card.append(node('p','紐付け作業：'+String(d.linkedWorkCount||0)+'件'));
+      for(const h of d.records||[])
+       card.append(node('p',[h.date,h.kind,h.label,h.status].filter(Boolean).join(' ／ ')));
+      card.append(node('p','氏名だけで未紐付け記録を推測していません。GPTへの顧客データ送信なし。'));
+     }
+     historyBox.append(card);
+    });
+    historyBox.append(select);
+   }
+  }
  }
  async function send(){
   if(busy)return;
