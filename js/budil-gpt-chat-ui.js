@@ -105,7 +105,7 @@
   const raw=$('budil-gpt-input').value;
   let leads;
   try{leads=Data.getLeads()}catch{return note('顧客情報の匿名化に必要な端末データを読み取れません。',true)}
-  const prepared=Chat.prepare(raw,leads);
+  const prepared=Chat.prepare(raw,leads,aliasMap);
   if(!prepared.ok)return note('この文章は外部送信できません（'+prepared.code+'）。住所・電話等を除き、1件ずつ入力してください。',true);
   for(const [k,v] of Object.entries(prepared.aliases)){
    if(aliasMap[k]&&aliasMap[k]!==v)return note('別の顧客を同じ呼称で参照しないため、会話をリセットしてください。',true);
