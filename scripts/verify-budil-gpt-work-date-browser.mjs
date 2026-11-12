@@ -67,7 +67,7 @@ try{
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true);
   await ev("localStorage.setItem('budil_work_orders',JSON.stringify([{id:'fake-w1',customerName:'架空一郎',scheduledDate:'2026-11-11',startTime:'09:00',status:'confirmed'},{id:'fake-w2',customerName:'架空二郎',scheduledDate:'2026-11-11',status:'planned'},{id:'fake-w3',customerName:'別日',scheduledDate:'2026-11-12',status:'planned'}]));document.getElementById('budil-gpt-open').click()");
   await ev("window.__dateReads=0;window.__dateNetwork=0;window.__dateWrites=0;const oldWorkRead=Storage.getWorkOrders;Storage.getWorkOrders=function(){window.__dateReads++;return oldWorkRead.apply(this,arguments)};const oldFetch=window.fetch;window.fetch=function(){window.__dateNetwork++;return oldFetch.apply(this,arguments)}");
-  await ev("document.getElementById('budil-gpt-input').value='2026-11-11の予定教えて';document.getElementById('budil-gpt-run').click()");
+  await ev("document.getElementById('budil-gpt-input').value='11/11の予定\\n';document.getElementById('budil-gpt-run').click()");
   assert.equal(await ev('window.__dateReads'),0,'consent gate before local reads');
   await ev("document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
   const result=await ev("document.getElementById('budil-gpt-result').textContent");
@@ -80,6 +80,15 @@ try{
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true);
   await ev("document.getElementById('budil-gpt-clear').click();document.getElementById('budil-gpt-input').value='2026-11-10の予定教えて';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
   assert.equal(await ev("document.getElementById('budil-gpt-status').textContent.includes('空き確定ではありません')"),true);
+  // Repeat the user journey with spoken-style and fullwidth input.
+  for(const phrase of ['１１／１１の予定','11月11日は何か予定ある？','11/11に予定入ってる？']){
+    await ev("document.getElementById('budil-gpt-clear').click()");
+    await ev("document.getElementById('budil-gpt-input').value="+JSON.stringify(phrase)+";document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+    const text=await ev("document.getElementById('budil-gpt-result').textContent");
+    assert.ok(text.includes('2026-11-11')&&text.includes('架空一郎')&&text.includes('架空二郎'),phrase);
+    assert.equal(await ev("document.getElementById('budil-gpt-status').textContent.includes('Google Calendarは照合していません')"),true,phrase);
+    assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true,phrase);
+  }
   console.log('PASS '+width+'px: consent, two fictional appointments, no Google/extra reads, no overflow, unknown availability');
  }
  console.log('BUDIL_WORK_DATE_BROWSER_PASS');
