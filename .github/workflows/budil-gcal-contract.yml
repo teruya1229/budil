@@ -22,6 +22,7 @@ on:
       - scripts/verify-budil-gcal-test-cleanup.mjs
       - scripts/verify-budil-gcal-credential-diagnostic.mjs
       - scripts/verify-budil-gcal-diagnostic-route.mjs
+      - scripts/verify-budil-cloud-diagnostic-client.mjs
       - js/budil-gpt-calendar-link.js
       - js/work-order-brain.js
       - .github/workflows/budil-gcal-contract.yml
@@ -89,6 +90,7 @@ jobs:
           node scripts/verify-budil-gcal-credential-diagnostic.mjs
           node --check supabase/functions/budil-calendar-write/diagnostic-route.mjs
           node scripts/verify-budil-gcal-diagnostic-route.mjs
+          node scripts/verify-budil-cloud-diagnostic-client.mjs
       - name: Browser verify 390px compact booking and reschedule (no writes)
         shell: bash
         run: |
