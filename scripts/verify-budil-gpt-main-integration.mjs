@@ -34,6 +34,8 @@ const allowed=new Set([
   "js/budil-gpt-calendar-preview.js",
   "js/work-order-brain.js",
   "scripts/verify-budil-gcal-workorder-sync.mjs",
+  "js/budil-gpt-calendar-link.js",
+  "scripts/verify-budil-gcal-local-link.mjs",
   "scripts/verify-budil-gcal-compact-browser.mjs",
   "scripts/verify-budil-gcal-write-auth.mjs",
   "scripts/verify-budil-gcal-google-http.mjs",
