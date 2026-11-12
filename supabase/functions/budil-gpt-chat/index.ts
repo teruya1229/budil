@@ -113,6 +113,8 @@ export default {async fetch(request:Request):Promise<Response>{
   });
   if(rateError)return bad(503,"rate_limit_unavailable",origin);
   if(count===null)return bad(429,"rate_limit_exceeded",origin);
+  if(!Number.isInteger(Number(count))||Number(count)<1||Number(count)>3)
+   return bad(503,"rate_limit_unverifiable",origin);
   // A separate tenant/user daily budget avoids unattended cost growth.
   const dayStart=new Date();dayStart.setUTCHours(0,0,0,0);
   const {data:dailyCount,error:dailyError}=await admin.rpc("try_consume_tenant_operation_rate_limit",{
@@ -121,6 +123,8 @@ export default {async fetch(request:Request):Promise<Response>{
   });
   if(dailyError)return bad(503,"daily_limit_unavailable",origin);
   if(dailyCount===null)return bad(429,"daily_limit_exceeded",origin);
+  if(!Number.isInteger(Number(dailyCount))||Number(dailyCount)<1||Number(dailyCount)>60)
+   return bad(503,"daily_limit_unverifiable",origin);
   const instructions=[
    "あなたはBCサービスのBudil内で働く日本語GPT業務アシスタント。",
    "ユーザーと自然に会話し、あいまいな意図は追加質問する。応答は簡潔で実用的に。",
