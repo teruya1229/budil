@@ -101,6 +101,10 @@ export default {async fetch(request:Request):Promise<Response>{
   for(const item of [msg,...history.map(h=>h.content)]){
    if(/[\w.+-]+@[\w.-]+\.[a-z]{2,}|(?:\+81|0)\d[\d\s-]{8,}|(?:住所|電話番号|口座番号|〒|パスワード|APIキー|秘密鍵|振込先)/iu.test(item))
      return bad(400,"sensitive_input_rejected",origin);
+   // Block unmasked honorific names even when the browser privacy guard fails.
+   const withoutAliases=item.replace(/顧客[A-H](?:さん|様)?|お客様/g,"");
+   if(/[一-龯々]{2,10}(?:さん|様)/u.test(withoutAliases))
+     return bad(400,"unmasked_customer_rejected",origin);
   }
   const minute=new Date();minute.setUTCSeconds(0,0);
   const {data:count,error:rateError}=await admin.rpc("try_consume_tenant_operation_rate_limit",{
@@ -109,6 +113,14 @@ export default {async fetch(request:Request):Promise<Response>{
   });
   if(rateError)return bad(503,"rate_limit_unavailable",origin);
   if(count===null)return bad(429,"rate_limit_exceeded",origin);
+  // A separate tenant/user daily budget avoids unattended cost growth.
+  const dayStart=new Date();dayStart.setUTCHours(0,0,0,0);
+  const {data:dailyCount,error:dailyError}=await admin.rpc("try_consume_tenant_operation_rate_limit",{
+   p_tenant_id:tenant.id,p_user_id:userId,p_operation:"budil.gpt.chat.v1.daily",
+   p_window_start:dayStart.toISOString(),p_max_requests:60
+  });
+  if(dailyError)return bad(503,"daily_limit_unavailable",origin);
+  if(dailyCount===null)return bad(429,"daily_limit_exceeded",origin);
   const instructions=[
    "あなたはBCサービスのBudil内で働く日本語GPT業務アシスタント。",
    "ユーザーと自然に会話し、あいまいな意図は追加質問する。応答は簡潔で実用的に。",
