@@ -79,6 +79,7 @@
     $('budil-gpt-voice-consent').checked=false;
     $('budil-gpt-remote-consent').checked=false;
     $('budil-gpt-public-consent').checked=false;
+    $('budil-gpt-calendar-diagnostic-status').textContent='';
   }
   function open(){
     focusedBefore=document.activeElement;
@@ -88,7 +89,7 @@
   }
   function close(){
     if(voice){try{voice.abort();}catch(_){/* browser voice */}voice=null;}
-    readinessSeq++;interpretSeq++;publicReadSeq++;resetVisible();shell.hidden=true;
+    readinessSeq++;calendarDiagnosticSeq++;interpretSeq++;publicReadSeq++;resetVisible();shell.hidden=true;
     if(focusedBefore&&typeof focusedBefore.focus==='function')focusedBefore.focus();
   }
   function node(tag,text,cls){
@@ -973,6 +974,44 @@
   }
 
 
+  // Explicit user click; isolated from calendar writes and local records.
+  let calendarDiagnosticBusy=false,calendarDiagnosticSeq=0;
+  async function checkCalendarWriteDiagnostic(){
+    if(calendarDiagnosticBusy)return;
+    const output=$('budil-gpt-calendar-diagnostic-status');
+    const button=$('budil-gpt-calendar-diagnostic');
+    const cloud=window.BudilCloud;
+    if(!cloud||typeof cloud.diagnoseCalendarWriteCredential!=='function'){
+      output.textContent='Google登録権限の診断機能は利用できません。';return;
+    }
+    const seq=++calendarDiagnosticSeq;
+    calendarDiagnosticBusy=true;button.disabled=true;
+    output.textContent='Google登録用アカウントを確認しています。予定は変更しません。';
+    try{
+      const result=await cloud.diagnoseCalendarWriteCredential();
+      if(seq!==calendarDiagnosticSeq||shell.hidden)return;
+      const code=result&&result.code||'unavailable';
+      if(result&&result.ok===true&&code==='GOOGLE_EVENTS_READ_OK'&&
+         result.calendarWritePerformed===false&&result.writeEnabled===false)
+        output.textContent='Google登録用アカウントの認証と対象カレンダーの読取に成功しました。予定は変更していません。書込機能はまだOFFです。';
+      else if(['not_signed_in','unauthorized','OWNER_AUTH_REQUIRED'].includes(code))
+        output.textContent='クラウドバックアップにログインしてから再度ご確認ください。予定は変更していません。';
+      else if(['ACTIVE_OWNER_REQUIRED','TENANT_NOT_AUTHORIZED'].includes(code))
+        output.textContent='BCサービスのオーナー権限でのログインが必要です。予定は変更していません。';
+      else if(code==='calendar_diagnostic_origin_unavailable')
+        output.textContent='この診断はBudil本番ページでのみ実行できます。予定は変更していません。';
+      else{
+        const label=typeof code==='string'&&/^[A-Z_]{3,48}$/.test(code)?'（'+code+'）':'';
+        output.textContent='Google登録権限を確認できませんでした'+label+'。予定は変更していません。';
+      }
+    }catch(_){
+      if(seq===calendarDiagnosticSeq&&!shell.hidden)
+        output.textContent='診断通信に失敗しました。予定は変更していません。';
+    }finally{
+      calendarDiagnosticBusy=false;button.disabled=false;
+    }
+  }
+
   let interpretBusy=false,interpretSeq=0;
   async function interpretQuoteWithGpt(){
     if(interpretBusy)return;
@@ -1127,6 +1166,7 @@
   $('budil-gpt-public-read').addEventListener('click',runPublicRead);
   $('budil-gpt-interpret').addEventListener('click',interpretQuoteWithGpt);
   $('budil-gpt-readiness').addEventListener('click',checkGptReadiness);
+  $('budil-gpt-calendar-diagnostic').addEventListener('click',checkCalendarWriteDiagnostic);
   $('budil-gpt-close').addEventListener('click',close);
   $('budil-gpt-backdrop').addEventListener('click',close);
 
