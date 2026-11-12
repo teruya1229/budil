@@ -96,6 +96,7 @@ try{
   assert.equal(await ev("document.getElementById('budil-gpt-calendar-diagnostic-status').textContent"),'');
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true,'diagnostic button fits 390px');
 
+  await ev('window.__reads=0'); // Reset the existing no-consent local-read counter after the isolated diagnostic checks.
   await ev("window.__googleCalls=0;BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,events:[{id:'private-1',summary:'fictional private client',location:'private address',start:'2026-11-08T08:30:00+09:00',end:'2026-11-08T09:15:00+09:00'}]}};document.getElementById('budil-gpt-input').value='2026年11月8日の9時は空いてる？';document.getElementById('budil-gpt-run').click()");
   assert.equal(await ev('window.__reads'),0,'consent before local read');
   assert.equal(await ev('window.__googleCalls'),0,'no Google request without consent');
