@@ -117,6 +117,22 @@
   finally{busy=false;button.disabled=false;}
  }
  button.addEventListener('click',send);
+
+ const readyButton=$('budil-gpt-chat-readiness');
+ if(readyButton)readyButton.addEventListener('click',async()=>{
+  const Cloud=window.BudilCloud;
+  if(!Cloud||typeof Cloud.getGptChatReadiness!=='function')
+    return note('GPT会話の接続機能が読み込まれていません。',true);
+  readyButton.disabled=true;note('GPT会話の接続状態を確認しています。AIへの有料リクエストは送りません。');
+  try{
+   const r=await Cloud.getGptChatReadiness();
+   if(!r||r.ok!==true)return note('GPTの接続確認に失敗しました（'+(r&&r.code||'unavailable')+'）。',true);
+   note(r.ready?'GPT会話の認証・設定は準備済みです。実際のGPT応答は送信して確認してください。':
+     'GPT会話はまだ有効化されていません。本番APIの有効化・課金設定は管理者承認後に行います。',!r.ready);
+  }catch(_){note('GPTの接続状態を確認できませんでした。',true)}
+  finally{readyButton.disabled=false;}
+ });
+
  clear.addEventListener('click',()=>{
   seq++;sanitizedHistory=[];aliasMap=Object.create(null);
   historyBox.replaceChildren();$('budil-gpt-chat-consent').checked=false;
