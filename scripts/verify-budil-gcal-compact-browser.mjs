@@ -73,6 +73,29 @@ try{
   await ev("localStorage.setItem('budil_leads',JSON.stringify([{id:'f1',name:'田中太郎',area:'南城市'},{id:'f2',name:'田中花子',area:'八重瀬町'}]));localStorage.setItem('budil_work_orders','[]')");
   await ev("document.getElementById('budil-gpt-open').click()");
   await ev("window.__reads=0;const old=Storage.getWorkOrders;Storage.getWorkOrders=function(){window.__reads++;return old.apply(this,arguments)}");
+  assert.equal(await ev("document.querySelectorAll('#budil-gpt-calendar-diagnostic').length"),1);
+  assert.equal(await ev("document.querySelectorAll('#budil-gpt-calendar-diagnostic-status').length"),1);
+  await ev("window.__diagnosticCalls=0;BudilCloud.diagnoseCalendarWriteCredential=async()=>{window.__diagnosticCalls++;await new Promise(r=>setTimeout(r,60));return {ok:true,code:'GOOGLE_EVENTS_READ_OK',calendarWritePerformed:false,writeEnabled:false}}");
+  assert.equal(await ev('window.__diagnosticCalls'),0,'no automatic diagnostic');
+  await ev("document.getElementById('budil-gpt-calendar-diagnostic').click();document.getElementById('budil-gpt-calendar-diagnostic').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-calendar-diagnostic').disabled"),true,'diagnostic double click lock');
+  for(let i=0;i<30;i++){
+    if(await ev("document.getElementById('budil-gpt-calendar-diagnostic-status').textContent.includes('認証と対象カレンダーの読取に成功')"))break;
+    await sleep(50);
+  }
+  assert.equal(await ev('window.__diagnosticCalls'),1,'one diagnostic click');
+  assert.equal(await ev("document.getElementById('budil-gpt-calendar-diagnostic-status').textContent.includes('書込機能はまだOFF')"),true);
+  assert.equal(await ev('Storage.getWorkOrders().length'),0,'diagnostic cannot write local booking');
+  await ev("BudilCloud.diagnoseCalendarWriteCredential=async()=>({ok:false,code:'not_signed_in'});document.getElementById('budil-gpt-calendar-diagnostic').click()");
+  for(let i=0;i<30;i++){
+    if(await ev("document.getElementById('budil-gpt-calendar-diagnostic-status').textContent.includes('クラウドバックアップにログイン')"))break;
+    await sleep(50);
+  }
+  assert.equal(await ev("document.getElementById('budil-gpt-calendar-diagnostic-status').textContent.includes('ログイン')"),true);
+  await ev("document.getElementById('budil-gpt-clear').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-calendar-diagnostic-status').textContent"),'');
+  assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true,'diagnostic button fits 390px');
+
   await ev("window.__googleCalls=0;BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,events:[{id:'private-1',summary:'fictional private client',location:'private address',start:'2026-11-08T08:30:00+09:00',end:'2026-11-08T09:15:00+09:00'}]}};document.getElementById('budil-gpt-input').value='2026年11月8日の9時は空いてる？';document.getElementById('budil-gpt-run').click()");
   assert.equal(await ev('window.__reads'),0,'consent before local read');
   assert.equal(await ev('window.__googleCalls'),0,'no Google request without consent');
