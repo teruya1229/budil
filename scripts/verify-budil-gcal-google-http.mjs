@@ -66,7 +66,7 @@ await test('client title injection impossible',async()=>{const x=make();await as
 await test('custom metadata refused',async()=>{const x=make();await assert.rejects(x.provider.create(cid,{...payload,metadata:{...metadata,userId:'fake'}}));assert.equal(x.calls.length,0)});
 await test('If-Match required for updates',async()=>{const x=make();await assert.rejects(x.provider.update(cid,eventId,payload,{}));assert.equal(x.calls.length,0)});
 await test('409 is collision not replayed',async()=>{const x=make();x.setFault('409');await assert.rejects(x.provider.create(cid,payload),e=>e.code==='DUPLICATE_EVENT_ID');assert.equal(x.calls.length,1)});
-await test('412 is conflict not retried',async()=>{const x=make();x.setFault('412');await assert.rejects(x.provider.update(cid,eventId,payload,{ifMatch:'"etag1"'}),e=>e.code==='ETAG_CONFLICT');assert.equal(x.calls.length,1)});
+await test('412 is conflict not retried',async()=>{const x=make();x.setFault('412');await assert.rejects(x.provider.update(cid,eventId,(()=>{const {eventId,...body}=payload;return body;})(),{ifMatch:'"etag1"'}),e=>e.code==='ETAG_CONFLICT');assert.equal(x.calls.length,1)});
 await test('403 is denied',async()=>{const x=make();x.setFault('403');await assert.rejects(x.provider.create(cid,payload),e=>e.code==='GOOGLE_AUTH_DENIED');assert.equal(x.calls.length,1)});
 await test('503 is indeterminate no retry',async()=>{const x=make();x.setFault('503');await assert.rejects(x.provider.create(cid,payload),e=>e.code==='OUTCOME_UNKNOWN');assert.equal(x.calls.length,1)});
 await test('network loss is unknown no retry',async()=>{const x=make();x.setFault('timeout');await assert.rejects(x.provider.create(cid,payload),e=>e.code==='OUTCOME_UNKNOWN');assert.equal(x.calls.length,1)});
