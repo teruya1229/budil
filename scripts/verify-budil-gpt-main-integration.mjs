@@ -40,6 +40,8 @@ const allowed=new Set([
   "scripts/verify-budil-gcal-local-link.mjs",
   "scripts/verify-budil-gcal-test-cleanup.mjs",
   "scripts/verify-budil-gcal-credential-diagnostic.mjs",
+  "scripts/verify-budil-gcal-diagnostic-route.mjs",
+  "supabase/functions/budil-calendar-write/diagnostic-route.mjs",
   "supabase/functions/budil-calendar-write/diagnostic.mjs",
   "scripts/verify-budil-gcal-compact-browser.mjs",
   "scripts/verify-budil-gcal-write-auth.mjs",
