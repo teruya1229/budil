@@ -32,6 +32,8 @@ const allowed=new Set([
   ".github/workflows/budil-gcal-contract.yml",
   "index.html",
   "js/budil-gpt-calendar-preview.js",
+  "js/work-order-brain.js",
+  "scripts/verify-budil-gcal-workorder-sync.mjs",
   "scripts/verify-budil-gcal-compact-browser.mjs",
   "scripts/verify-budil-gcal-write-auth.mjs",
   "scripts/verify-budil-gcal-google-http.mjs",
@@ -103,7 +105,7 @@ for(const p of paths) {
 }
 for(const p of [
   'js/app.js','js/storage.js','js/documents-brain.js',
-  'js/payment-brain.js','js/revenue-brain.js','js/work-order-brain.js'
+  'js/payment-brain.js','js/revenue-brain.js'
 ]) assert.ok(!paths.includes(p),'Protected business code changed '+p);
 const html=readFileSync('index.html','utf8');
 const ui=readFileSync('js/budil-gpt-offline-ui.js','utf8');

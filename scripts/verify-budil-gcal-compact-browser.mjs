@@ -210,6 +210,18 @@ try{
   assert.equal(await ev('Storage.getWorkOrders().length'),beforeCompact);
   assert.equal(await ev('window.__googleCalls'),beforeGoogle+1,'local conflict blocks Google read');
   assert.equal(await ev("document.documentElement.scrollWidth<=innerWidth+2"),true,'390px compact booking no horizontal overflow');
+
+  // Real Storage serialization roundtrip in disposable Chrome.
+  const syncFixture="Storage.addWorkOrder({id:'fictional-sync-1',customerName:'Fictional Sync',serviceText:'Fictional service',scheduledDate:'2099-11-25',startTime:'10:00',endTime:'11:00',status:'confirmed',calendarAdded:false})";
+  await ev(syncFixture);
+  await ev("Storage.updateWorkOrder('fictional-sync-1',{calendarEventId:'b'+'a'.repeat(64),calendarEtag:'\\\"etag-1\\\"',calendarTargetId:'fictional-calendar@example.com',calendarEventSource:'transaction',calendarSyncStatus:'verified',calendarAdded:true})");
+  assert.equal(await ev("Storage.getWorkOrders().find(w=>w.id==='fictional-sync-1').calendarEventId"),'b'+'a'.repeat(64));
+  assert.equal(await ev("Storage.getWorkOrders().find(w=>w.id==='fictional-sync-1').calendarSyncStatus"),'verified');
+  await ev("Storage.updateWorkOrder('fictional-sync-1',{scheduledDate:'2099-11-26',calendarEtag:'\\\"etag-2\\\"'})");
+  assert.equal(await ev("Storage.getWorkOrders().find(w=>w.id==='fictional-sync-1').calendarEventId"),'b'+'a'.repeat(64));
+  assert.equal(await ev("Storage.getWorkOrders().find(w=>w.id==='fictional-sync-1').scheduledDate"),'2099-11-26');
+  console.log('BUDIL_CALENDAR_WORKORDER_STORAGE_CHROME PASS');
+
   console.log('BUDIL_COMPACT_CALENDAR_CHROME_390 PASS');
 
   console.log('BUDIL_BOOKING_CHROME_390_WINDOWS PASS');
