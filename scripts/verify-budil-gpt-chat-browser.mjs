@@ -99,6 +99,25 @@ try{
   assert.equal(await ev('window.__chatCalls'),1,'exactly one mocked GPT call');
   assert.equal(await ev('window.__dateNetwork'),0,'mocked GPT and local read cause no external requests');
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true);
+  // A second natural-language turn must retain sanitized context. The model
+  // can propose a change, but it can never write it directly.
+  await ev("BudilCloud.sendGptChat=async function(msg,history,today){window.__chatCalls++;window.__historyLength=history.length;return {ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'予約変更案を確認してください。まだ保存しません。',action:'proposal',query:'',date:'',month:'',docType:'none',needs_confirmation:true}}");
+  await ev("document.getElementById('budil-gpt-input').value='じゃあその予定を変更したい';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-chat-consent').checked=true;document.getElementById('budil-gpt-chat-send').click()");
+  for(let i=0;i<50;i++){
+    if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('予約変更案を確認')"))break;
+    await sleep(100);
+  }
+  assert.equal(await ev('window.__chatCalls'),2,'two actual chat interactions');
+  assert.equal(await ev('window.__historyLength'),2,'conversation context is carried into turn two');
+  assert.ok((await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('予約・帳票・顧客データは変更していません'));
+  assert.equal(await ev('window.__dateNetwork'),0,'no network after mocked proposal');
+  await ev("BudilCloud.getGptChatReadiness=async function(){return {ok:true,ready:false,enabled:false}};document.getElementById('budil-gpt-chat-readiness').click()");
+  for(let i=0;i<20;i++){
+    if(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('有効化されていません')"))break;
+    await sleep(100);
+  }
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('有効化されていません')"),true);
+
   await ev("document.getElementById('budil-gpt-chat-clear').click()");
   assert.equal(await ev("document.getElementById('budil-gpt-chat-history').textContent"),'');
   console.log('PASS '+width+'px: real GPT plan/consent/local execution, fictional data, zero network');
