@@ -30,6 +30,8 @@ const allowed=new Set([
   "experiments/budil-gpt-phase1/fixture-core.js",
   "calendar-read-test.html",
   ".github/workflows/budil-gcal-contract.yml",
+  ".github/workflows/budil-calendar-edge-deny-smoke.yml",
+  "docs/budil-calendar-write-production-preparation-20261112.md",
   "index.html",
   "js/budil-gpt-calendar-preview.js",
   "js/work-order-brain.js",
