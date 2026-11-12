@@ -235,6 +235,18 @@
         ['発行日',d.issueDate],['状態',d.status]]);
       return status('この操作では帳票の変更・発行・外部送信をしていません。');
     }
+    if(parsed.action==='work.date'){
+      title('Budil端末内の作業予定：'+view.date+'（'+(view.count||0)+'件）');
+      for(const w of view.workOrders||[]){
+        item([['顧客',w.customerName],['日付',w.scheduledDate],
+          ['時間',[w.startTime,w.endTime].filter(Boolean).join('〜')||'未登録'],
+          ['状態',w.status],['Google Calendar','未照合']]);
+      }
+      if(view.tooMany)return status('該当する作業予定が10件を超えます。最初の10件のみ表示しました。Google予定は未照合です。');
+      return status(view.count?
+        'Budil端末内の作業予定のみ表示しました。Google Calendarは照合していません。':
+        'Budil端末内に該当予定は見つかりません。Google Calendarは未照合のため、空き確定ではありません。');
+    }
     if(parsed.action==='work.search'){
       if(view.tooMany)return status('予定が多いため、顧客名を詳しく指定してください。',true);
       title('作業予定：'+(view.workOrders||[]).length+'件');
