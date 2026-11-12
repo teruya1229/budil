@@ -84,6 +84,79 @@ export class GoogleWriteEvents {
     if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw err('OUTCOME_UNKNOWN');
     return parsed;
   }
+  /**
+   * Fresh server-side busy snapshot (one JST day) for the same explicit
+   * calendar binding. Never trusts a client-provided busy list.
+   * All pages must be read; failure is UNKNOWN, not an empty schedule.
+   */
+  async busy(calendarId,date,nowMs=Date.now()){
+    this.assertTarget(calendarId);
+    const validDate=typeof date==='string'&&/^20\d\d-\d\d-\d\d$/.test(date)&&
+      new Date(date+'T00:00:00Z').toISOString().slice(0,10)===date;
+    if(!validDate||!Number.isSafeInteger(nowMs))return {ok:false,code:'BUSY_INPUT_INVALID'};
+    const start=Date.parse(date+'T00:00:00+09:00');
+    const next=new Date(Date.parse(date+'T00:00:00Z')+86400000)
+      .toISOString().slice(0,10);
+    const end=Date.parse(next+'T00:00:00+09:00');
+    if(!Number.isFinite(start)||!Number.isFinite(end))return {ok:false,code:'BUSY_INPUT_INVALID'};
+    const collected=[],seenTokens=new Set();
+    let pageToken='';
+    for(let page=0;page<6;page++){
+      const url=new URL(this.events);
+      url.searchParams.set('timeMin',new Date(start).toISOString());
+      url.searchParams.set('timeMax',new Date(end).toISOString());
+      url.searchParams.set('singleEvents','true');
+      url.searchParams.set('showDeleted','false');
+      url.searchParams.set('maxResults','250');
+      url.searchParams.set('fields','nextPageToken,items(id,status,start,end)');
+      if(pageToken)url.searchParams.set('pageToken',pageToken);
+      let token;
+      try{token=await this.tokenForRequest();}
+      catch{return {ok:false,code:'BUSY_TOKEN_UNAVAILABLE'};}
+      if(typeof token!=='string'||token.length<8||/\s/.test(token))
+        return {ok:false,code:'BUSY_TOKEN_UNAVAILABLE'};
+      const controller=new AbortController();
+      const timer=setTimeout(()=>controller.abort(),this.timeoutMs);
+      let response;
+      try{response=await this.fetcher(url.toString(),{
+        method:'GET',headers:{Authorization:'Bearer '+token,Accept:'application/json'},
+        cache:'no-store',redirect:'error',signal:controller.signal
+      });}
+      catch{return {ok:false,code:'BUSY_UNVERIFIED'};}
+      finally{clearTimeout(timer);}
+      if(!response||response.status!==200)return {ok:false,code:'BUSY_UNVERIFIED'};
+      let data;
+      try{data=await response.json();}
+      catch{return {ok:false,code:'BUSY_UNVERIFIED'};}
+      if(!data||!Array.isArray(data.items)||data.items.length>250)
+        return {ok:false,code:'BUSY_UNVERIFIED'};
+      for(const e of data.items){
+        if(!e||typeof e!=='object'||Array.isArray(e))
+          return {ok:false,code:'BUSY_UNVERIFIED'};
+        if(e.status==='cancelled')continue;
+        const eventId=e.id,from=e.start?.dateTime||e.start?.date,
+          to=e.end?.dateTime||e.end?.date;
+        if(typeof eventId!=='string'||eventId.length<1||eventId.length>1024||
+          typeof from!=='string'||typeof to!=='string'||
+          !((ts(from)||/^\d{4}-\d\d-\d\d$/.test(from))&&
+            (ts(to)||/^\d{4}-\d\d-\d\d$/.test(to)))||
+          Date.parse(from)>Date.parse(to))
+          return {ok:false,code:'BUSY_UNVERIFIED'};
+        collected.push({eventId,start:from,end:to});
+        if(collected.length>1250)return {ok:false,code:'BUSY_TOO_MANY_EVENTS'};
+      }
+      const nextToken=data.nextPageToken||'';
+      if(typeof nextToken!=='string'||nextToken.length>2000)
+        return {ok:false,code:'BUSY_UNVERIFIED'};
+      if(!nextToken){
+        return {ok:true,readOnly:true,calendarWritePerformed:false,
+          customerRecordsSent:false,date,checkedAtMs:nowMs,events:collected};
+      }
+      if(seenTokens.has(nextToken))return {ok:false,code:'BUSY_UNVERIFIED'};
+      seenTokens.add(nextToken);pageToken=nextToken;
+    }
+    return {ok:false,code:'BUSY_PAGE_LIMIT'};
+  }
   async create(calendarId,payload){
     this.assertTarget(calendarId);
     const body=validateEvent(payload,true);
