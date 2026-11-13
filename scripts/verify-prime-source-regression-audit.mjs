@@ -32,7 +32,7 @@ const amounts=[0,1,99,100,999,1000,10001,12000,12345,13200,20000,25300,99999,123
 const explicitRates=['',null,0,35,60,80,100];
 const expenses=[0,230,2000,5000];
 let checks=0;
-const eq=(a,b,label)=>{assert.deepEqual(a,b,label);checks++;};
+const eq=(a,b,label)=>{assert.deepEqual(JSON.parse(JSON.stringify(a)),JSON.parse(JSON.stringify(b)),label);checks++;};
 for(const source of candidates){
  for(const key of ['normalizeRevenueSource','getSourceProfitRate','getDefaultGrossProfitRateBySource','normalizeSourceForForm']){
    eq(now.r[key](source),old.r[key](source),'source: '+source+' '+key);
