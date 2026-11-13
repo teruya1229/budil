@@ -4107,7 +4107,7 @@
         </div>
         <button type="button" id="budil-gpt-close" class="budil-gpt-btn budil-gpt-btn-secondary budil-gpt-close" aria-label="閉じる">×</button>
       </header>
-      <p class="budil-gpt-muted">Budilに保存されている、この端末の顧客・帳票・作業予定・未入金を会話形式で確認できます。操作内容の解析は現在も端末内の限定文法です。GPT接続確認は既存ログインを使用した無課金の状態確認のみで、顧客情報や見積内容は送信しません。</p>
+      <p class="budil-gpt-muted">Budil内でGPTと自然な日本語で会話し、必要な端末内の業務データを確認できます。GPT機能は別途サーバー設定が有効な場合のみ動作します。名前は送信前に伏せ、読取・送信には本人の同意が必要です。予約・請求などの変更はGPTだけでは実行しません。</p>
       <label class="budil-gpt-label" for="budil-gpt-input">やってほしいこと</label>
       <textarea id="budil-gpt-input" class="budil-gpt-input" maxlength="220" rows="3" placeholder="例：田中さんの作業履歴を見せて／比嘉さんの現場環境を教えて"></textarea>
       <p class="budil-gpt-disclaimer">入力例：田中太郎さんを探して ／ 金曜日の午前10時、空いてる？ ／ 金曜日の10時に田中さんのエアコン洗浄2台を予約して。18,000円で見積書も作って ／ 田中さんの予約を土曜日に変更して</p>
@@ -4123,8 +4123,14 @@
         <input type="checkbox" id="budil-gpt-public-consent">
         <span>今回の氏名・住所・電話を含まない集計質問を外部GPTへ送信する（料金が発生する場合あり）。顧客データ本体は送信しません。</span>
       </label>
+      <label class="budil-gpt-check">
+        <input type="checkbox" id="budil-gpt-chat-consent">
+        <span>GPT会話に使う今回の文章を、顧客名を伏せた上で外部AIに送信することを許可する（API利用料金が発生する場合あり）。端末の顧客記録・請求情報は送信しません。</span>
+      </label>
       <div class="budil-gpt-actions">
-        <button type="button" id="budil-gpt-run" class="budil-gpt-btn">内容を確認して実行</button>
+        <button type="button" id="budil-gpt-chat-send" class="budil-gpt-btn">GPTに相談・業務を確認</button>
+        <button type="button" id="budil-gpt-chat-readiness" class="budil-gpt-btn budil-gpt-btn-secondary">GPT会話の利用状態を確認（無料）</button>
+        <button type="button" id="budil-gpt-run" class="budil-gpt-btn budil-gpt-btn-secondary">従来の定型操作</button>
         <button type="button" id="budil-gpt-readiness" class="budil-gpt-btn budil-gpt-btn-secondary">GPT接続状態を確認（無料・読取のみ）</button>
         <button type="button" id="budil-gpt-calendar-diagnostic" class="budil-gpt-btn budil-gpt-btn-secondary">Google登録権限を診断（予定変更なし）</button>
         <button type="button" id="budil-gpt-interpret" class="budil-gpt-btn budil-gpt-btn-secondary">GPTで見積指示を解析（承認制）</button>
@@ -4140,6 +4146,9 @@
       <p id="budil-gpt-status" class="budil-gpt-status" role="status" aria-live="polite"></p>
       <p id="budil-gpt-readiness-status" class="budil-gpt-status" role="status" aria-live="polite"></p>
       <p id="budil-gpt-calendar-diagnostic-status" class="budil-gpt-status" role="status" aria-live="polite"></p>
+      <p id="budil-gpt-chat-status" class="budil-gpt-status" role="status" aria-live="polite"></p>
+      <div id="budil-gpt-chat-history" class="budil-gpt-result" aria-live="polite" style="max-height:360px;overflow:auto"></div>
+      <button type="button" id="budil-gpt-chat-clear" class="budil-gpt-btn budil-gpt-btn-secondary">GPT会話をリセット</button>
       <div id="budil-gpt-result" class="budil-gpt-result" aria-live="polite"></div>
       <div id="budil-gpt-customer-create" hidden>
         <hr class="budil-gpt-divider">
@@ -4272,7 +4281,7 @@
   <script src="js/executive-brain.js?v=4.13.20"></script>
   <script src="js/card-ocr.js?v=4.13.20"></script>
   <script src="js/data-backup.js?v=4.13.20"></script>
-  <script src="js/budil-cloud.js?v=20261112caldiag2"></script>
+  <script src="js/budil-cloud.js?v=20261112chat1"></script>
   <script src="js/budil-cloud-restore.js?v=20261106restore1"></script>
   <script src="js/app.js?v=4.13.20"></script>
   <script src="js/customer-resolve-entrypoint.js?v=20261106a"></script>
@@ -4281,6 +4290,7 @@
   <script src="js/budil-gpt-anonymize.js?v=20261106a"></script>
   <script src="js/budil-gpt-local-commands.js?v=20261112workdate1"></script>
   <script src="js/budil-gpt-public-read.js?v=20261106m1"></script>
+  <script src="js/budil-gpt-chat.js?v=20261112chat1"></script>
   <script src="js/budil-gpt-conversation.js?v=20261106d"></script>
   <script src="js/budil-gpt-booking.js?v=20261107google1"></script>
   <script src="js/invoice-structured-entrypoint.js?v=20261106a"></script>
@@ -4288,6 +4298,7 @@
   <script src="js/budil-gpt-bank-reconcile.js?v=20261106a"></script>
   <script src="experiments/budil-gpt-phase1/fixture-core.js?v=20261106a"></script>
   <script src="js/budil-gpt-offline-ui.js?v=20261112workdate1"></script>
+  <script src="js/budil-gpt-chat-ui.js?v=20261112chat1"></script>
   <script src="js/budil-cloud-restore-ui.js?v=20261106restore1"></script>
 </body>
 </html>

@@ -1,0 +1,66 @@
+name: Budil real GPT chat isolated acceptance
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  real-gpt-unit:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Node syntax and safe model gateway round 1
+        run: |
+          node --check js/budil-gpt-chat.js
+          node --check js/budil-gpt-chat-ui.js
+          node --check js/budil-cloud.js
+          node scripts/verify-budil-gpt-chat.mjs
+      - name: Independent regression round 2
+        run: |
+          node scripts/verify-budil-gpt-chat.mjs
+          node scripts/verify-budil-gpt-local-commands.mjs
+          node scripts/verify-budil-gpt-readonly.mjs
+          node scripts/verify-budil-gpt-local-source.mjs
+  real-gpt-browser:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Real chat UI via mocked provider, Chrome 390px and 320px
+        run: node scripts/verify-budil-gpt-chat-browser.mjs
+      - name: Independent browser rerun
+        run: node scripts/verify-budil-gpt-chat-browser.mjs
+  edge-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Server typecheck only - never deploy
+        run: deno check supabase/functions/budil-gpt-chat/index.ts
