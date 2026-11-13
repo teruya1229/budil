@@ -52,3 +52,15 @@
  .budil-gpt-actions .budil-gpt-btn{flex:1 1 130px}
  .budil-gpt-dialog h2{font-size:1.2rem}
 }
+
+/* GPT auth shares BudilCloud's existing per-tab session. Never persist passwords. */
+.budil-gpt-chat-auth{border:1px solid #8cbae4;background:#eff7ff;border-radius:12px;margin:15px 0 12px;padding:13px;overflow-wrap:anywhere}
+.budil-gpt-chat-auth h3{font-size:1rem;margin:0 0 7px}
+.budil-gpt-chat-auth p{font-size:.88rem;margin:6px 0 10px}
+.budil-gpt-chat-auth-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0}
+.budil-gpt-chat-auth-fields label{min-width:0;font-weight:650;font-size:.88rem}
+.budil-gpt-chat-auth-fields input{display:block;width:100%;min-width:0;box-sizing:border-box;margin-top:5px;padding:10px;border:1px solid #93abc5;border-radius:8px;background:#fff;color:#111827;font:inherit;font-size:1rem}
+.budil-gpt-chat-auth-fields input:focus-visible{outline:2px solid #2563eb;outline-offset:1px}
+.budil-gpt-chat-auth #budil-gpt-chat-auth-status{font-size:.88rem;overflow-wrap:anywhere}
+.budil-gpt-chat-consent-guide{font-weight:500;color:#184c7a;background:#f1f7ff;padding:10px;border-radius:9px}
+@media(max-width:600px){.budil-gpt-chat-auth-fields{grid-template-columns:minmax(0,1fr)}.budil-gpt-chat-auth #budil-gpt-chat-login{width:100%;min-height:44px}}

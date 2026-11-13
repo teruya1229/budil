@@ -31,6 +31,7 @@ const allowed=new Set([
   "docs/budil-local-invoice-lifecycle.md",
   "experiments/budil-gpt-phase1/fixture-core.js",
   "calendar-read-test.html",
+  "css/budil-gpt-offline.css",
   "index.html",
   "js/budil-cloud-restore-ui.js",
   "js/budil-cloud-restore.js",
@@ -99,6 +100,7 @@ for(const id of [
  'budil-gpt-consent','budil-gpt-remote-consent','budil-gpt-readiness',
  'budil-gpt-interpret','budil-gpt-public-consent','budil-gpt-public-read',
  'budil-gpt-candidates','budil-gpt-pdf',
+ 'budil-gpt-chat-auth','budil-gpt-chat-email','budil-gpt-chat-password','budil-gpt-chat-login',
  'budil-gpt-booking','budil-gpt-invoice','budil-gpt-bank',
  'cloud-restore-section','cloud-restore-saved'
 ]) {
