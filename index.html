@@ -4111,10 +4111,31 @@
       <label class="budil-gpt-label" for="budil-gpt-input">やってほしいこと</label>
       <textarea id="budil-gpt-input" class="budil-gpt-input" maxlength="220" rows="3" placeholder="例：田中さんの作業履歴を見せて／比嘉さんの現場環境を教えて"></textarea>
       <p class="budil-gpt-disclaimer">入力例：田中太郎さんを探して ／ 金曜日の午前10時、空いてる？ ／ 金曜日の10時に田中さんのエアコン洗浄2台を予約して。18,000円で見積書も作って ／ 田中さんの予約を土曜日に変更して</p>
+
+      <section id="budil-gpt-chat-auth" class="budil-gpt-chat-auth" aria-labelledby="budil-gpt-chat-auth-heading" hidden>
+        <h3 id="budil-gpt-chat-auth-heading">GPTを使う前にBudilへログイン</h3>
+        <p>GPTの認証にはBudilアカウントを使います。ログインはこのタブだけで有効です。ログインしただけでは顧客データの送信・保存・復元は行いません。</p>
+        <div class="budil-gpt-chat-auth-fields">
+          <label for="budil-gpt-chat-email">メールアドレス
+            <input id="budil-gpt-chat-email" type="email" autocomplete="username" placeholder="Budil登録済みメール">
+          </label>
+          <label for="budil-gpt-chat-password">パスワード
+            <input id="budil-gpt-chat-password" type="password" autocomplete="current-password" placeholder="Budilのパスワード">
+          </label>
+        </div>
+        <button type="button" id="budil-gpt-chat-login" class="budil-gpt-btn">BudilにログインしてGPTを使う</button>
+        <p id="budil-gpt-chat-auth-status" role="status" aria-live="polite"></p>
+      </section>
+      <p class="budil-gpt-chat-consent-guide">GPT会話の送信時は次の<strong>①②の両方</strong>にチェックを入れてください。別の解析・集計用チェックは不要です。</p>
       <label class="budil-gpt-check">
         <input type="checkbox" id="budil-gpt-consent">
-        <span>この1回の操作で、端末内のBudil業務データを読み取ることを許可する。空き確認のときだけ、Google予定の時刻情報も読取専用で照合することを許可する（予定の書込み・予約保存はしません）</span>
+        <span>① この1回の操作で、端末内のBudil業務データを読み取ることを許可する。空き確認のときだけ、Google予定の時刻情報も読取専用で照合することを許可する（予定の書込み・予約保存はしません）</span>
       </label>
+      <label class="budil-gpt-check">
+        <input type="checkbox" id="budil-gpt-chat-consent">
+        <span>② GPT会話に使う今回の文章を、顧客名を伏せた上で外部AIに送信することを許可する（API利用料金が発生する場合あり）。端末の顧客記録・請求情報は送信しません。</span>
+      </label>
+
       <label class="budil-gpt-check">
         <input type="checkbox" id="budil-gpt-remote-consent">
         <span>今回の見積指示から顧客名を除いた作業名・台数・金額・税区分を外部GPTに送信することを許可する（API利用料金が発生する場合あり）</span>
@@ -4123,11 +4144,7 @@
         <input type="checkbox" id="budil-gpt-public-consent">
         <span>今回の氏名・住所・電話を含まない集計質問を外部GPTへ送信する（料金が発生する場合あり）。顧客データ本体は送信しません。</span>
       </label>
-      <label class="budil-gpt-check">
-        <input type="checkbox" id="budil-gpt-chat-consent">
-        <span>GPT会話に使う今回の文章を、顧客名を伏せた上で外部AIに送信することを許可する（API利用料金が発生する場合あり）。端末の顧客記録・請求情報は送信しません。</span>
-      </label>
-      <div class="budil-gpt-actions">
+<div class="budil-gpt-actions">
         <button type="button" id="budil-gpt-chat-send" class="budil-gpt-btn">GPTに相談・業務を確認</button>
         <button type="button" id="budil-gpt-chat-readiness" class="budil-gpt-btn budil-gpt-btn-secondary">GPT会話の利用状態を確認（無料）</button>
         <button type="button" id="budil-gpt-run" class="budil-gpt-btn budil-gpt-btn-secondary">従来の定型操作</button>
