@@ -149,10 +149,10 @@ try{
   assert.equal(await ev('window.__dateNetwork'),0,'no network after mocked proposal');
   await ev("BudilCloud.getGptChatReadiness=async function(){return {ok:true,ready:false,enabled:false}};document.getElementById('budil-gpt-chat-readiness').click()");
   for(let i=0;i<20;i++){
-    if(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('有効化されていません')"))break;
+    if(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('サーバー設定は未準備')"))break;
     await sleep(100);
   }
-  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('有効化されていません')"),true);
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('サーバー設定は未準備')"),true);
 
   // Real screenshot regression: "today's schedule" must answer immediately
   // with the local result; it must not repeat an unfounded GPT clarification.
