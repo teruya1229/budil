@@ -82,6 +82,36 @@ try{
   assert.equal(await ev("document.getElementById('budil-gpt-status').textContent.includes('空き確定ではありません')"),true);
   console.log('PASS '+width+'px: consent, two fictional appointments, no Google/extra reads, no overflow, unknown availability');
 
+  // Real regression: a fresh tab has no BudilCloud session, even when
+  // another Chrome tab is already authenticated. It must not send GPT data.
+  await ev("window.__qaSignedIn=false;window.__qaLoginCalls=0;BudilCloud.getAuthState=()=>({available:true,signedIn:window.__qaSignedIn});BudilCloud.login=async function(email,pwd){window.__qaLoginCalls++;if(email==='qa@example.invalid'&&pwd==='fixture-password'){window.__qaSignedIn=true;return {ok:true}}return {ok:false,message:'invalid_credentials'}};BudilCloud.getGptChatReadiness=async()=>({ok:true,ready:true})");
+  await ev("document.getElementById('budil-gpt-input').value='こんにちは';document.getElementById('budil-gpt-consent').checked=false;document.getElementById('budil-gpt-chat-consent').checked=false;document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-auth').hidden"),false,
+    'missing auth reveals login form in the GPT dialog');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('ログイン')"),true,
+    'auth error explains next action, never opaque not_signed_in');
+  assert.equal(await ev('window.__dateNetwork'),0,'unauthenticated request cannot reach provider');
+  await ev("document.getElementById('budil-gpt-chat-email').value='qa@example.invalid';document.getElementById('budil-gpt-chat-password').value='fixture-password';document.getElementById('budil-gpt-chat-login').click()");
+  for(let i=0;i<30;i++){
+   if(await ev("document.getElementById('budil-gpt-chat-auth').hidden"))break;
+   await sleep(100);
+  }
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-auth').hidden"),true,
+    'successful same-tab Budil login closes auth form');
+  assert.equal(await ev('window.__qaLoginCalls'),1,'exactly one login attempt');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-password').value"),'',
+    'no password retained after login');
+  for(let i=0;i<30;i++){
+   if(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('接続準備')"))break;
+   await sleep(100);
+  }
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('接続準備')"),true,
+    'readiness after login is automatically checked without a paid POST');
+  await ev("document.getElementById('budil-gpt-input').value='今日は何？';document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('①')"),true,
+    'missing consent after login shows both explicit required checks');
+  assert.equal(await ev('window.__dateNetwork'),0,'no paid network call from missing consent');
+
   // Real GPT path: mock ONLY the external provider response. Exercise the
   // actual Budil UI and actual local-read gateway, without API billing.
   await ev("window.__chatCalls=0;BudilCloud.sendGptChat=async function(msg,history,today){window.__chatCalls++;window.__sentChatMsg=msg;return {ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'11月11日の予定を確認しますね。どの作業内容や顧客に関連する予定をお知りになりたいですか？',action:'work.date',query:'',date:'2026-11-11',month:'',docType:'none',needs_confirmation:false}}");
@@ -141,6 +171,18 @@ try{
   assert.equal(await ev('window.document.documentElement.scrollWidth<=innerWidth+2'),true);
   await ev("document.getElementById('budil-gpt-chat-clear').click()");
   assert.equal(await ev("document.getElementById('budil-gpt-chat-history').textContent"),'');
+  // If refresh failed after previously signing in, expose the login form
+  // instead of the unhelpful low-level not_signed_in code.
+  await ev("BudilCloud.sendGptChat=async()=>({ok:false,code:'not_signed_in'});document.getElementById('budil-gpt-input').value='こんにちは';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-chat-consent').checked=true;document.getElementById('budil-gpt-chat-send').click()");
+  for(let i=0;i<30;i++){
+   if(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('認証が切れています')"))break;
+   await sleep(100);
+  }
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-auth').hidden"),false,
+    'expired session opens recovery login without requesting customer data');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('認証が切れています')"),true);
+  assert.equal(await ev('window.__dateNetwork'),0,'expired session cannot write or call external network');
+  console.log('PASS '+width+'px: same-tab login gate, consent ordering, expired session recovery');
   console.log('PASS '+width+'px: screenshot regression zero local results, no premature GPT question, Google unverified');
   console.log('PASS '+width+'px: real GPT plan/consent/local execution, fictional data, zero network');
 
