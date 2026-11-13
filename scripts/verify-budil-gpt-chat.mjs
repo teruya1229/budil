@@ -83,4 +83,14 @@ test('history bounded to last 8 turns',()=>{
 test('no direct network/storage access in privacy core',()=>{
  assert.ok(!/\bfetch\s*\(|\blocalStorage\s*\.|Storage\.(?:save|update|delete|set)/.test(code));
 });
+test('server real GPT pilot is limited to MI.BCS owner only',()=>{
+ const server=readFileSync('supabase/functions/budil-gpt-chat/index.ts','utf8');
+ assert.match(server,/\.select\("tenant_id,role"\)/);
+ assert.match(server,/\.select\("id,code"\)/);
+ assert.match(server,/const ownerPilot=tenant\.code==="mi-bcs"&&memberships\[0\]\.role==="owner"/);
+ assert.match(server,/ownerPilot&&Deno\.env\.get\("BUDIL_GPT_CHAT_ENABLED"\)!=="false"/);
+ assert.match(server,/if\(!enabled\)return bad\(503,"chat_disabled",origin\)/);
+ assert.match(server,/try_consume_tenant_operation_rate_limit/);
+ assert.match(server,/max_output_tokens:360,store:false/);
+});
 console.log('BUDIL_REAL_GPT_CHAT '+n+'/'+n+' PASS');
