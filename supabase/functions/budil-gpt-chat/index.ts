@@ -69,12 +69,17 @@ export default {async fetch(request:Request):Promise<Response>{
   if(authError||!ctx?.userClaims?.id)return bad(401,"unauthorized",origin);
   const userId=ctx.userClaims.id;
   const admin=ctx.supabaseAdmin as any;
-  const {data:memberships,error:membershipError}=await admin.from("tenant_memberships").select("tenant_id").eq("user_id",userId).eq("status","active").limit(2);
+  const {data:memberships,error:membershipError}=await admin.from("tenant_memberships").select("tenant_id,role").eq("user_id",userId).eq("status","active").limit(2);
   if(membershipError)return bad(503,"membership_unavailable",origin);
   if(!Array.isArray(memberships)||memberships.length!==1)return bad(403,"active_membership_required",origin);
-  const {data:tenant,error:tenantError}=await admin.from("tenants").select("id").eq("id",memberships[0].tenant_id).eq("status","active").maybeSingle();
+  const {data:tenant,error:tenantError}=await admin.from("tenants").select("id,code").eq("id",memberships[0].tenant_id).eq("status","active").maybeSingle();
   if(tenantError||!tenant?.id)return bad(403,"active_tenant_required",origin);
-  const enabled=Deno.env.get("BUDIL_GPT_CHAT_ENABLED")==="true";
+  // Owner-only pilot for the sole verified real Budil tenant. The other
+  // two active AI-bantou E2E tenants remain excluded, even if an
+  // environment-wide GPT flag was previously enabled.
+  // An explicit "false" remains an emergency kill switch.
+  const ownerPilot=tenant.code==="mi-bcs"&&memberships[0].role==="owner";
+  const enabled=ownerPilot&&Deno.env.get("BUDIL_GPT_CHAT_ENABLED")!=="false";
   const key=Deno.env.get("OPENAI_API_KEY");
   const model=Deno.env.get("BUDIL_GPT_MODEL")||"gpt-4.1-mini";
   const supported=["gpt-4.1-mini","gpt-5-mini"].includes(model);
