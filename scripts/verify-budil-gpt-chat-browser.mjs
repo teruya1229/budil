@@ -112,6 +112,8 @@ try{
     'missing consent after login shows both explicit required checks');
   assert.equal(await ev('window.__dateNetwork'),0,'no paid network call from missing consent');
 
+  // Never call live Google or paid GPT in this disposable browser fixture.
+  await ev("window.__googleCalls=0;BudilCloud.fetchScheduleBlocks=async function(date,end){window.__googleCalls++;window.__lastGoogleDates=[date,end];return {ok:false,code:'fixture_google_unavailable'}}");
   // Real GPT path: mock ONLY the external provider response. Exercise the
   // actual Budil UI and actual local-read gateway, without API billing.
   await ev("window.__chatCalls=0;BudilCloud.sendGptChat=async function(msg,history,today){window.__chatCalls++;window.__sentChatMsg=msg;return {ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'11月11日の予定を確認しますね。どの作業内容や顧客に関連する予定をお知りになりたいですか？',action:'work.date',query:'',date:'2026-11-11',month:'',docType:'none',needs_confirmation:false}}");
@@ -129,6 +131,8 @@ try{
   assert.ok(chatText.includes('この端末に登録された作業予定は2件です'),'verified count is presented as the answer');
   assert.ok(!chatText.includes('どの作業内容や顧客'),'pre-read model follow-up must not override a successful local read');
   assert.equal(await ev('window.__chatCalls'),1,'exactly one mocked GPT call');
+  assert.equal(await ev('window.__googleCalls'),1,'exactly one consented Google read attempt for work.date');
+  assert.equal(await ev("window.__lastGoogleDates.join(',')"),'2026-11-11,2026-11-11','server reads selected date only');
   assert.equal(await ev('window.__dateNetwork'),0,'mocked GPT and local read cause no external requests');
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true);
   // A second natural-language turn must retain sanitized context. The model
@@ -147,6 +151,26 @@ try{
     'the safe local-read context remains available to the next turn');
   assert.ok((await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('予約・帳票・顧客データは変更していません'));
   assert.equal(await ev('window.__dateNetwork'),0,'no network after mocked proposal');
+  assert.equal(await ev('window.__googleCalls'),1,'calendar is not queried for a proposal');
+
+  // Real chat UI must combine the LOCAL work orders and authenticated Google
+  // busy windows without sending private event titles to the GPT provider.
+  await ev("BudilCloud.fetchScheduleBlocks=async function(date,end){window.__googleCalls++;return {ok:true,readOnly:true,calendarWritePerformed:false,events:[{start:'2026-11-11T09:00:00+09:00',end:'2026-11-11T10:00:00+09:00',summary:'private_fixture_title'},{start:'2026-11-11T09:30:00+09:00',end:'2026-11-11T11:30:00+09:00'}]}};BudilCloud.sendGptChat=async function(){window.__chatCalls++;return {ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'予定を確認します。',action:'work.date',query:'',date:'2026-11-11',month:'',docType:'none',needs_confirmation:false}};document.getElementById('budil-gpt-input').value='11/11の予定を教えて';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-chat-consent').checked=true;document.getElementById('budil-gpt-chat-send').click()");
+  for(let i=0;i<80;i++){
+   if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('忙しい時間枠は1枠')"))break;
+   await sleep(100);
+  }
+  const mergedHistory=await ev("document.getElementById('budil-gpt-chat-history').textContent");
+  assert.ok(mergedHistory.includes('架空一郎')&&mergedHistory.includes('架空二郎'),'local work records retained');
+  assert.ok(mergedHistory.includes('09:00〜11:30')&&mergedHistory.includes('忙しい時間枠は1枠'),'overlapping Google windows merged in real UI');
+  assert.ok(!mergedHistory.includes('private_fixture_title'),'Google private title not rendered');
+  assert.ok(mergedHistory.includes('空き確定ではありません'),'never claim unverified availability');
+  assert.equal(await ev('window.__googleCalls'),2,'one Google read for each work-date consent');
+  assert.equal(await ev('window.__dateNetwork'),0,'all provider and Google fixture responses intercepted');
+  assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true,'no Google busy UI mobile overflow');
+  console.log('PASS '+width+'px: real chat UI combines work orders with private-safe Google busy windows');
+  await ev("BudilCloud.fetchScheduleBlocks=async function(){window.__googleCalls++;return {ok:false,code:'fixture_google_unavailable'}}");
+
   await ev("BudilCloud.getGptChatReadiness=async function(){return {ok:true,ready:false,enabled:false}};document.getElementById('budil-gpt-chat-readiness').click()");
   for(let i=0;i<20;i++){
     if(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('サーバー設定は未準備')"))break;
