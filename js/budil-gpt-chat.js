@@ -102,12 +102,58 @@ const BudilGptChat=(()=>{
     }
     return {ok:true,action,reply:response.reply,request:{action,query,limit:10}};
   }
+  /**
+   * Summarize only start/end windows from an authenticated, read-only Google
+   * calendar result. Never expose event titles, locations, IDs or customer data.
+   * Google all-day end dates are exclusive, and a zero count is NOT a free-day
+   * guarantee (other calendars and unsynced work orders may exist).
+   */
+  function summarizeCalendarRead(response,date){
+    if(!validDate(date)||!response||response.ok!==true||
+       response.readOnly!==true||response.calendarWritePerformed!==false||
+       !Array.isArray(response.events)||response.events.length>1000)
+      return deny('CALENDAR_READ_UNVERIFIED');
+    const dayStart=Date.parse(date+'T00:00:00+09:00');
+    const dayEnd=dayStart+86400000;
+    const asMs=value=>{
+      if(typeof value!=='string'||value.length>45)return NaN;
+      if(validDate(value))return Date.parse(value+'T00:00:00+09:00');
+      if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(value)||
+         !validDate(value.slice(0,10)))return NaN;
+      return Date.parse(value);
+    };
+    const intervals=[];
+    for(const event of response.events){
+      if(!event||typeof event!=='object'||Array.isArray(event)||
+         typeof event.start!=='string'||typeof event.end!=='string')
+        return deny('CALENDAR_READ_INVALID');
+      const start=asMs(event.start),end=asMs(event.end);
+      if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)
+        return deny('CALENDAR_READ_INVALID');
+      if(start<dayEnd&&end>dayStart)
+        intervals.push({start:Math.max(start,dayStart),end:Math.min(end,dayEnd)});
+    }
+    intervals.sort((a,b)=>a.start-b.start||a.end-b.end);
+    const merged=[];
+    for(const item of intervals){
+      const last=merged[merged.length-1];
+      if(last&&item.start<=last.end)last.end=Math.max(last.end,item.end);
+      else merged.push({start:item.start,end:item.end});
+    }
+    const fmt=ms=>ms===dayEnd?'24:00':new Date(ms+9*3600000).toISOString().slice(11,16);
+    const windows=Object.freeze(merged.slice(0,12).map(item=>
+      Object.freeze({start:fmt(item.start),end:fmt(item.end)})));
+    return Object.freeze({ok:true,date,source:'active_google_calendar_binding',
+      busyEventCount:response.events.length,busySlotCount:merged.length,
+      windows,hasMore:merged.length>windows.length,confirmedFree:false,
+      customerDataSent:false,writePerformed:false});
+  }
   function safeHistory(history){
     if(!Array.isArray(history))return[];
     return history.filter(x=>x&&['user','assistant'].includes(x.role)&&
       typeof x.content==='string'&&x.content.length<=550)
       .slice(-8).map(x=>({role:x.role,content:x.content}));
   }
-  return Object.freeze({prepare,verify,safeHistory,validDate,actions:allowed});
+  return Object.freeze({prepare,verify,safeHistory,validDate,summarizeCalendarRead,actions:allowed});
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports={BudilGptChat};
