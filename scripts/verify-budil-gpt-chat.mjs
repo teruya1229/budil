@@ -93,4 +93,78 @@ test('server real GPT pilot is limited to MI.BCS owner only',()=>{
  assert.match(server,/try_consume_tenant_operation_rate_limit/);
  assert.match(server,/max_output_tokens:360,store:false/);
 });
+// Google read-only windows are verified locally, never sent to GPT.
+const busy=(events,date='2026-11-13')=>G.summarizeCalendarRead({
+ ok:true,readOnly:true,calendarWritePerformed:false,events},date);
+test('Google time windows are calendar-bound and do not confirm free time',()=>{
+ const r=busy([{start:'2026-11-13T09:00:00+09:00',end:'2026-11-13T11:30:00+09:00'}]);
+ assert.equal(r.ok,true);assert.equal(r.busySlotCount,1);
+ assert.equal(r.windows[0].start,'09:00');assert.equal(r.windows[0].end,'11:30');
+ assert.equal(r.confirmedFree,false);assert.equal(r.writePerformed,false);
+});
+test('overlapping and adjacent calendar events merge without duplicate busy ranges',()=>{
+ const r=busy([{start:'2026-11-13T09:00:00+09:00',end:'2026-11-13T10:00:00+09:00'},
+ {start:'2026-11-13T09:30:00+09:00',end:'2026-11-13T11:00:00+09:00'},
+ {start:'2026-11-13T11:00:00+09:00',end:'2026-11-13T12:00:00+09:00'}]);
+ assert.equal(r.busyEventCount,3);assert.equal(r.busySlotCount,1);
+ assert.equal(r.windows[0].start,'09:00');assert.equal(r.windows[0].end,'12:00');
+});
+test('empty calendar result never proves a free day',()=>{
+ const r=busy([]);
+ assert.equal(r.ok,true);assert.equal(r.busySlotCount,0);assert.equal(r.confirmedFree,false);
+});
+test('all-day Google events use exclusive end and show 00:00 to 24:00',()=>{
+ const r=busy([{start:'2026-11-13',end:'2026-11-14'}]);
+ assert.equal(r.ok,true);assert.equal(r.windows[0].start,'00:00');
+ assert.equal(r.windows[0].end,'24:00');
+});
+test('Google midnight-spanning events are clipped to requested JST date',()=>{
+ const r=busy([{start:'2026-11-12T23:00:00+09:00',end:'2026-11-13T01:30:00+09:00'}]);
+ assert.equal(r.ok,true);assert.equal(r.windows[0].start,'00:00');
+ assert.equal(r.windows[0].end,'01:30');
+});
+test('Google UTC timestamps display JST',()=>{
+ const r=busy([{start:'2026-11-13T00:30:00Z',end:'2026-11-13T02:00:00Z'}]);
+ assert.equal(r.ok,true);assert.equal(r.windows[0].start,'09:30');
+ assert.equal(r.windows[0].end,'11:00');
+});
+test('out-of-day Google events cannot inflate selected date',()=>{
+ const r=busy([{start:'2026-11-12T08:00:00+09:00',end:'2026-11-12T09:00:00+09:00'}]);
+ assert.equal(r.ok,true);assert.equal(r.busySlotCount,0);
+});
+test('invalid and inverted event boundaries fail closed',()=>{
+ for(const input of [
+ {start:'2026-11-13T14:00:00+09:00',end:'2026-11-13T12:00:00+09:00'},
+ {start:'not-time',end:'2026-11-13T12:00:00+09:00'},
+ {start:'2026-11-13T10:00:00+09:00',end:'invalid'},
+ {start:'2026-02-30',end:'2026-03-01'}
+ ])assert.equal(busy([input]).ok,false);
+});
+test('failed, unsigned and write-capable responses are never trusted',()=>{
+ for(const b of [{ok:false,readOnly:true,calendarWritePerformed:false,events:[]},
+ {ok:true,readOnly:false,calendarWritePerformed:false,events:[]},
+ {ok:true,readOnly:true,calendarWritePerformed:true,events:[]},
+ {ok:true,readOnly:true,calendarWritePerformed:false,events:'bad'}])
+ assert.equal(G.summarizeCalendarRead(b,'2026-11-13').ok,false);
+});
+test('oversized Google responses fail closed',()=>{
+ assert.equal(busy(Array.from({length:1001},()=>({start:'2026-11-13',end:'2026-11-14'}))).ok,false);
+});
+test('Google event PII is never included in the safe summary',()=>{
+ const r=busy([{start:'2026-11-13T09:00:00+09:00',end:'2026-11-13T10:00:00+09:00',
+ summary:'架空顧客ABC',description:'電話090-1234-5678',location:'個人宅',calendarId:'private'}]);
+ assert.equal(r.ok,true);
+ for(const secret of ['架空顧客ABC','090-1234-5678','個人宅','private'])
+  assert.equal(JSON.stringify(r).includes(secret),false);
+});
+test('calendar slots show only 12 intervals and retain count',()=>{
+ const events=Array.from({length:24},(_,i)=>{
+   const hour=String(i).padStart(2,'0');
+   const end=String(i+1).padStart(2,'0');
+   return {start:'2026-11-13T'+hour+':00:00+09:00',end:'2026-11-13T'+hour+':30:00+09:00'};
+ });
+ const r=busy(events);assert.equal(r.ok,true);
+ assert.equal(r.busySlotCount,24);assert.equal(r.windows.length,12);
+ assert.equal(r.hasMore,true);
+});
 console.log('BUDIL_REAL_GPT_CHAT '+n+'/'+n+' PASS');
