@@ -84,7 +84,7 @@ try{
 
   // Real GPT path: mock ONLY the external provider response. Exercise the
   // actual Budil UI and actual local-read gateway, without API billing.
-  await ev("window.__chatCalls=0;BudilCloud.sendGptChat=async function(msg,history,today){window.__chatCalls++;window.__sentChatMsg=msg;return {ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'11月11日の端末内作業を確認します。',action:'work.date',query:'',date:'2026-11-11',month:'',docType:'none',needs_confirmation:false}}");
+  await ev("window.__chatCalls=0;BudilCloud.sendGptChat=async function(msg,history,today){window.__chatCalls++;window.__sentChatMsg=msg;return {ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'11月11日の予定を確認しますね。どの作業内容や顧客に関連する予定をお知りになりたいですか？',action:'work.date',query:'',date:'2026-11-11',month:'',docType:'none',needs_confirmation:false}}");
   await ev("document.getElementById('budil-gpt-input').value='11日の作業、どれくらいある？';document.getElementById('budil-gpt-chat-send').click()");
   assert.equal(await ev('window.__chatCalls'),0,'chat requires two consents');
   await ev("document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-chat-consent').checked=true;document.getElementById('budil-gpt-chat-send').click()");
@@ -96,12 +96,14 @@ try{
   assert.ok(chatText.includes('架空一郎')&&chatText.includes('架空二郎'),'GPT tool plan displays actual local fixture');
   assert.ok(!chatText.includes('別日'),'GPT tool results are date scoped');
   assert.ok(chatText.includes('未照合'),'Google calendar is not assumed free');
+  assert.ok(chatText.includes('この端末に登録された作業予定は2件です'),'verified count is presented as the answer');
+  assert.ok(!chatText.includes('どの作業内容や顧客'),'pre-read model follow-up must not override a successful local read');
   assert.equal(await ev('window.__chatCalls'),1,'exactly one mocked GPT call');
   assert.equal(await ev('window.__dateNetwork'),0,'mocked GPT and local read cause no external requests');
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true);
   // A second natural-language turn must retain sanitized context. The model
   // can propose a change, but it can never write it directly.
-  await ev("BudilCloud.sendGptChat=async function(msg,history,today){window.__chatCalls++;window.__historyLength=history.length;return {ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'予約変更案を確認してください。まだ保存しません。',action:'proposal',query:'',date:'',month:'',docType:'none',needs_confirmation:true}}");
+  await ev("BudilCloud.sendGptChat=async function(msg,history,today){window.__chatCalls++;window.__historyLength=history.length;window.__historyAssistant=history[1]?.content||'';return {ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'予約変更案を確認してください。まだ保存しません。',action:'proposal',query:'',date:'',month:'',docType:'none',needs_confirmation:true}}");
   await ev("document.getElementById('budil-gpt-input').value='じゃあその予定を変更したい';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-chat-consent').checked=true;document.getElementById('budil-gpt-chat-send').click()");
   for(let i=0;i<50;i++){
     if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('予約変更案を確認')"))break;
@@ -109,6 +111,10 @@ try{
   }
   assert.equal(await ev('window.__chatCalls'),2,'two actual chat interactions');
   assert.equal(await ev('window.__historyLength'),2,'conversation context is carried into turn two');
+  assert.equal(await ev("window.__historyAssistant.includes('どの作業内容や顧客')"),false,
+    'unfounded model question is excluded from subsequent GPT history');
+  assert.equal(await ev("window.__historyAssistant.includes('work.date')"),true,
+    'the safe local-read context remains available to the next turn');
   assert.ok((await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('予約・帳票・顧客データは変更していません'));
   assert.equal(await ev('window.__dateNetwork'),0,'no network after mocked proposal');
   await ev("BudilCloud.getGptChatReadiness=async function(){return {ok:true,ready:false,enabled:false}};document.getElementById('budil-gpt-chat-readiness').click()");
@@ -118,8 +124,24 @@ try{
   }
   assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('有効化されていません')"),true);
 
+  // Real screenshot regression: "today's schedule" must answer immediately
+  // with the local result; it must not repeat an unfounded GPT clarification.
+  // This fixture has no work orders for the requested date.
+  await ev("Storage.getWorkOrders=()=>[];BudilCloud.sendGptChat=async function(msg,history,today){return {ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'今日の予定を確認しますね。どの作業内容や顧客に関連する予定をお知りになりたいですか？',action:'work.date',query:'',date:today,month:'',docType:'none',needs_confirmation:false}};document.getElementById('budil-gpt-input').value='今日の予定教えて';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-chat-consent').checked=true;document.getElementById('budil-gpt-chat-send').click()");
+  for(let i=0;i<50;i++){
+   if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('作業予定は0件')"))break;
+   await sleep(100);
+  }
+  const todayText=await ev("document.getElementById('budil-gpt-chat-history').textContent");
+  assert.ok(todayText.includes('今日（')&&todayText.includes('作業予定は0件です'),
+   'today: actual zero-result from device with correct date');
+  assert.ok(todayText.includes('Googleカレンダーは未照合'),'today: no claim of full Google calendar coverage');
+  assert.ok(!todayText.includes('どの作業内容や顧客'),'today: remove pointless pre-read clarifying question');
+  assert.ok(!todayText.includes('今日は予定がありません'),'zero local records does not prove empty schedule');
+  assert.equal(await ev('window.document.documentElement.scrollWidth<=innerWidth+2'),true);
   await ev("document.getElementById('budil-gpt-chat-clear').click()");
   assert.equal(await ev("document.getElementById('budil-gpt-chat-history').textContent"),'');
+  console.log('PASS '+width+'px: screenshot regression zero local results, no premature GPT question, Google unverified');
   console.log('PASS '+width+'px: real GPT plan/consent/local execution, fictional data, zero network');
 
  }
