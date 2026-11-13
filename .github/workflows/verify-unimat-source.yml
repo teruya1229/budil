@@ -1,0 +1,27 @@
+name: Verify Unimat prime source in Budil
+on:
+  push:
+    branches:
+      - feat/unimat-prime-source-20261113
+  pull_request:
+    paths:
+      - 'js/revenue-brain.js'
+      - 'js/reception-brain.js'
+      - 'index.html'
+      - 'scripts/verify-unimat-source.mjs'
+      - '.github/workflows/verify-unimat-source.yml'
+permissions:
+  contents: read
+jobs:
+  unimat-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check js/revenue-brain.js
+      - run: node --check js/reception-brain.js
+      - run: node scripts/verify-unimat-source.mjs
+      - run: node scripts/verify-v4129-source-analysis-alignment.mjs
