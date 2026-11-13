@@ -538,6 +538,7 @@ const ReceptionBrain = {
     if (typeof RevenueBrain === 'undefined') return 'その他';
     const sources = RevenueBrain.SOURCES || [];
     if (sources.includes(s)) return s;
+    if (/ユニマット/.test(s)) return 'ユニマット';
     if (/LP|ランディング|ホームページ|Web|WEB|Google|広告/i.test(s)) return 'LP';
     if (/110|一一〇|百十/.test(s)) return '110番';
     if (/くらしのマーケット|くらし|ココナラ|おてがる/.test(s)) return 'くらしのマーケット';
