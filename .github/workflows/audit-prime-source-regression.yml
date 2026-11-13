@@ -1,0 +1,25 @@
+name: Audit prime contractor rate parity versus pre-Unimat Budil
+on:
+  push:
+    branches: [test/prime-source-regression-20261113]
+  pull_request:
+    paths:
+      - 'js/revenue-brain.js'
+      - 'scripts/verify-prime-source-regression-audit.mjs'
+permissions:
+  contents: read
+jobs:
+  rate-and-profit-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/verify-prime-source-regression-audit.mjs
+      - run: node scripts/verify-unimat-tax-ui.mjs
+      - run: node scripts/verify-unimat-source.mjs
+      - run: node scripts/verify-v4129-source-analysis-alignment.mjs
