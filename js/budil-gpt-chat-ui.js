@@ -148,8 +148,10 @@
     const local=gateway.query(verified.request,true);
     bubble('assistant',localAnswer(local,verified.action,today));
     if(local&&local.ok===true)renderLocal(local,verified.action);
-    historyReply='Budil端末内で'+verified.action+'を読取専用で確認しました。'+
-      (verified.request.date||'')+' 詳細な顧客・作業情報は外部GPTへ共有していません。';
+    historyReply=local&&local.ok===true?
+      'Budil端末内で'+verified.action+'の読取処理を行いました。'+
+      (verified.request.date||'')+' 詳細な顧客・作業情報は外部GPTへ共有していません。':
+      '端末内データの読取に失敗しました。詳細な顧客・作業情報は取得も外部共有もしていません。';
     note(local&&local.ok===true?
       'GPTの操作案に基づいて端末内データを確認しました。Googleカレンダーなど未連携の情報は含みません。':
       '端末内データの読取に失敗しました。情報がないと断定していません。',!(local&&local.ok===true));
