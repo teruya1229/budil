@@ -1,0 +1,23 @@
+/* ユニマット税抜発注額の入力補助。既存フォーム以外へは影響しない。 */
+.unimat-tax-entry {
+  margin-top: 0.55rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid currentColor;
+  border-radius: 0.5rem;
+}
+.unimat-tax-entry[hidden] { display: none !important; }
+.unimat-tax-entry label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+}
+.unimat-tax-entry input[type="number"] {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.unimat-tax-entry small {
+  display: block;
+  margin-top: 0.35rem;
+}
