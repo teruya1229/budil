@@ -169,6 +169,19 @@ try{
   assert.equal(await ev('window.__dateNetwork'),0,'all provider and Google fixture responses intercepted');
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true,'no Google busy UI mobile overflow');
   console.log('PASS '+width+'px: real chat UI combines work orders with private-safe Google busy windows');
+  // If Budil local storage fails, do NOT say that both sources were checked
+  // just because Google returned a valid busy window.
+  await ev("document.getElementById('budil-gpt-chat-clear').click();Storage.getWorkOrders=()=>{throw new Error('FAKE_LOCAL_READ_FAILURE')};BudilCloud.fetchScheduleBlocks=async()=>({ok:true,readOnly:true,calendarWritePerformed:false,events:[{start:'2026-11-11T09:00:00+09:00',end:'2026-11-11T10:00:00+09:00'}]});BudilCloud.sendGptChat=async()=>({ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'確認します',action:'work.date',query:'',date:'2026-11-11',month:'',docType:'none',needs_confirmation:false});document.getElementById('budil-gpt-input').value='11/11の予定';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-chat-consent').checked=true;document.getElementById('budil-gpt-chat-send').click()");
+  for(let i=0;i<60;i++){
+   if(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('Budil端末内データは取得できませんでした')"))break;
+   await sleep(100);
+  }
+  const partialHistory=await ev("document.getElementById('budil-gpt-chat-history').textContent");
+  assert.ok(partialHistory.includes('端末内データを読み取れませんでした')&&partialHistory.includes('忙しい時間枠は1枠'),
+    'local failure and Google success must both be displayed accurately');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('Budil端末内データは取得できませんでした')"),true,
+    'partial success cannot claim both sources checked');
+  assert.equal(await ev('window.__dateNetwork'),0,'partial success never calls live services in fixture');
   await ev("BudilCloud.fetchScheduleBlocks=async function(){window.__googleCalls++;return {ok:false,code:'fixture_google_unavailable'}}");
 
   await ev("BudilCloud.getGptChatReadiness=async function(){return {ok:true,ready:false,enabled:false}};document.getElementById('budil-gpt-chat-readiness').click()");
