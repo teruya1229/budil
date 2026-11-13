@@ -1,0 +1,19 @@
+name: Verify Unimat tax-inclusive accounting in Budil
+on:
+  push:
+    branches: [fix/unimat-taxexclusive-to-inclusive-20261113]
+permissions:
+  contents: read
+jobs:
+  tax-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check js/unimat-tax-ui.js
+      - run: node scripts/verify-unimat-tax-ui.mjs
+      - run: node scripts/verify-unimat-source.mjs
+      - run: node scripts/verify-v4129-source-analysis-alignment.mjs
