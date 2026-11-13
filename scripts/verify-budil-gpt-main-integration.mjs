@@ -14,6 +14,7 @@ const diff=spawnSync('git',['diff','--name-only',base,'HEAD'],{encoding:'utf8'})
 assert.equal(diff.status,0,'git_diff_unavailable (checkout must fetch history)');
 const paths=diff.stdout.trim().split('\n').filter(Boolean);
 const allowed=new Set([
+  ".github/workflows/audit-prime-source-regression.yml",
   ".github/workflows/budil-gpt-real-chat.yml",
   ".github/workflows/budil-local-busy-read.yml",
   ".github/workflows/budil-gpt-workdate-multiround.yml",
@@ -48,6 +49,7 @@ const allowed=new Set([
   "js/budil-gpt-public-read.js",
   "js/budil-gpt-readonly.js",
   "scripts/audit-budil-original-19.mjs",
+  "scripts/verify-prime-source-regression-audit.mjs",
   "scripts/verify-budil-ai-p0-browser.mjs",
   "scripts/verify-budil-ai-release-browser.mjs",
   "scripts/verify-budil-cloud-restore-browser.mjs",
