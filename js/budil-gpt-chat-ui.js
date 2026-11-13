@@ -31,6 +31,21 @@
   if(historyBox.scrollTo)historyBox.scrollTo({top:historyBox.scrollHeight,behavior:'smooth'});
   return div;
  }
+ // GPT selects a read-only tool, but has never seen its result.
+ // Never display the model's pre-read question as a final answer.
+ function localAnswer(result,action,today){
+  if(!result||result.ok!==true)
+   return 'Budilの端末内データを読み取れませんでした。情報が0件とは判断できません。';
+  if(action==='work.date'){
+   const v=result.view||{};
+   const date=typeof v.date==='string'?v.date:'指定日';
+   const label=date===today?'今日（'+date+'）':date;
+   const count=Number.isInteger(v.count)&&v.count>=0?String(v.count)+'件':'件数未確認';
+   const calendar=v.googleCalendarChecked===true?'':' Googleカレンダーは未照合のため、予定全体を確認できたわけではありません。';
+   return label+'の、この端末に登録された作業予定は'+count+'です。'+calendar;
+  }
+  return 'Budil内の依頼された情報を確認しました。結果を下に表示します。';
+ }
  function renderLocal(result,action){
   const div=node('div',undefined,'budil-gpt-chat-local');
   if(!result||result.ok!==true){
@@ -126,16 +141,25 @@
    if(!verified.ok)return note('GPTの操作案を安全に確認できませんでした（'+verified.code+'）。データは変更していません。',true);
    aliasMap=merged;
    bubble('user',raw.trim());
-   bubble('assistant',verified.reply||'確認しました。');
-   sanitizedHistory.push({role:'user',content:prepared.message},
-                         {role:'assistant',content:verified.reply||'確認しました。'});
-   sanitizedHistory=Chat.safeHistory(sanitizedHistory);
+   let historyReply=verified.reply||'確認しました。';
    if(verified.request){
     const gateway=Source.make({storage:Data,readonly:ReadOnly,
-      customerResolver:Resolver,paymentBrain:Payment,profitBrain:Profit});
-    renderLocal(gateway.query(verified.request,true),verified.action);
-    note('GPTが意図を解釈し、Budilの端末内データを読取専用で確認しました。顧客情報はGPTに送っていません。');
-   }else if(verified.proposal){
+      customerResolver:Resolver,paymentBrain,profitBrain:Profit});
+    const local=gateway.query(verified.request,true);
+    bubble('assistant',localAnswer(local,verified.action,today));
+    if(local&&local.ok===true)renderLocal(local,verified.action);
+    historyReply='Budil端末内で'+verified.action+'を読取専用で確認しました。'+
+      (verified.request.date||'')+' 詳細な顧客・作業情報は外部GPTへ共有していません。';
+    note(local&&local.ok===true?
+      'GPTの操作案に基づいて端末内データを確認しました。Googleカレンダーなど未連携の情報は含みません。':
+      '端末内データの読取に失敗しました。情報がないと断定していません。',!(local&&local.ok===true));
+   }else{
+    bubble('assistant',historyReply);
+   }
+   sanitizedHistory.push({role:'user',content:prepared.message},
+                         {role:'assistant',content:historyReply});
+   sanitizedHistory=Chat.safeHistory(sanitizedHistory);
+   if(verified.proposal){
     const div=node('p','これは操作案です。予約・帳票・顧客データは変更していません。正式な確認・承認画面が必要です。');
     historyBox.append(div);note('変更操作は未実行です。');
    }else note('GPTとの会話を表示しました。業務データの変更は行っていません。');
