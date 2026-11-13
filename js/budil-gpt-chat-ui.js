@@ -262,13 +262,27 @@
     const message=node('p','対象日 '+date+' の時間枠を確認中です。');
     panel.append(message);historyBox.append(panel);
     try{
-     const response=typeof Cloud.fetchScheduleBlocks==='function'?
+     let response=typeof Cloud.fetchScheduleBlocks==='function'?
       await Cloud.fetchScheduleBlocks(date,date):{ok:false,code:'calendar_read_unavailable'};
      if(token!==seq)return; // conversation reset or closed during the read
+     // The existing authorized PC worker works without the broken cloud
+     // service-account secret. It reads ONLY this day and returns busy times.
+     // Authorization failures never take this fallback path.
+     if(typeof Chat.shouldUseLocalCalendarFallback==='function'&&
+        Chat.shouldUseLocalCalendarFallback(response)&&
+        typeof Cloud.fetchLocalScheduleBlocks==='function'){
+      const pc=await Cloud.fetchLocalScheduleBlocks(date,date);
+      if(token!==seq)return;
+      response=pc&&pc.ok===true&&pc.readOnly===true&&
+        pc.calendarWritePerformed===false&&pc.source==='pc_local_calendar'?
+        pc:{ok:false,code:'pc_local_calendar_unavailable'};
+     }
      const summary=Chat.summarizeCalendarRead(response,date);
      if(summary.ok){
       googleState='ok';
-      message.textContent='連携済みGoogleカレンダーの忙しい時間枠は'+
+      const reader=summary.source==='pc_local_calendar'?
+       'PCローカル連携で取得したGoogleカレンダー':'連携済みGoogleカレンダー';
+      message.textContent=reader+'の忙しい時間枠は'+
        summary.busySlotCount+'枠です。予定の件数や空き確定ではありません。';
       for(const w of summary.windows)
        panel.append(node('p',w.start+'〜'+w.end+'（JST・予定詳細は非表示）'));
