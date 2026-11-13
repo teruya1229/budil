@@ -119,7 +119,7 @@
    const date=typeof v.date==='string'?v.date:'指定日';
    const label=date===today?'今日（'+date+'）':date;
    const count=Number.isInteger(v.count)&&v.count>=0?String(v.count)+'件':'件数未確認';
-   const calendar=v.googleCalendarChecked===true?'':' Googleカレンダーは未照合のため、予定全体を確認できたわけではありません。';
+   const calendar=' Googleカレンダーの照合結果は続けて表示します。照合できない場合は空き未確定です。';
    return label+'の、この端末に登録された作業予定は'+count+'です。'+calendar;
   }
   return 'Budil内の依頼された情報を確認しました。結果を下に表示します。';
@@ -135,7 +135,7 @@
    rows.push('対象日：'+v.date+'／端末内の作業予定 '+(v.count||0)+'件');
    for(const w of v.workOrders||[])rows.push(
     [w.scheduledDate,w.startTime||'',w.customerName||'',w.status||''].filter(Boolean).join(' ／ '));
-   rows.push('Google Calendarは未照合です。予定が0件でも空き確定ではありません。');
+   rows.push('Googleカレンダーの照合結果は別枠で表示します。空き確定ではありません。');
   }else if(action==='work.search'){
    rows.push('作業予定 '+(v.count||0)+'件');
    for(const w of v.workOrders||[])rows.push(
@@ -243,10 +243,47 @@
       (verified.request.date||'')+' 詳細な顧客・作業情報は外部GPTへ共有していません。':
       '端末内データの読取に失敗しました。詳細な顧客・作業情報は取得も外部共有もしていません。';
     note(local&&local.ok===true?
-      'GPTの操作案に基づいて端末内データを確認しました。Googleカレンダーなど未連携の情報は含みません。':
+      '端末内データを確認しました。Googleの時間枠は別枠で照合します。':
       '端末内データの読取に失敗しました。情報がないと断定していません。',!(local&&local.ok===true));
    }else{
     bubble('assistant',historyReply);
+   }
+   // The verified model chooses a read-only work date. Only then use the
+   // existing authenticated Google binding to read busy times, without
+   // sending event titles, locations or customer data to GPT.
+   let googleState=null;
+   if(verified.action==='work.date'&&verified.request&&
+      typeof Chat.summarizeCalendarRead==='function'){
+    const date=verified.request.date;
+    const panel=node('div',undefined,'budil-gpt-chat-local');
+    panel.append(node('strong','Googleカレンダー照合（連携済みのカレンダー・読取のみ）'));
+    const message=node('p','対象日 '+date+' の時間枠を確認中です。');
+    panel.append(message);historyBox.append(panel);
+    try{
+     const response=typeof Cloud.fetchScheduleBlocks==='function'?
+      await Cloud.fetchScheduleBlocks(date,date):{ok:false,code:'calendar_read_unavailable'};
+     if(token!==seq)return; // conversation reset or closed during the read
+     const summary=Chat.summarizeCalendarRead(response,date);
+     if(summary.ok){
+      googleState='ok';
+      message.textContent='連携済みGoogleカレンダーの忙しい時間枠は'+
+       summary.busySlotCount+'枠です。予定の件数や空き確定ではありません。';
+      for(const w of summary.windows)
+       panel.append(node('p',w.start+'〜'+w.end+'（JST・予定詳細は非表示）'));
+      if(summary.hasMore)panel.append(node('p','表示は先頭12枠。残りの時間枠があります。'));
+      panel.append(node('p','別カレンダー・未登録の予定は未照合です。予約可能とは判断しません。'));
+     }else{
+      googleState='unknown';
+      const raw=response&&typeof response.code==='string'?response.code:'';
+      const code=/^[a-z_]{2,45}$/i.test(raw)?raw:'unavailable';
+      message.textContent='Googleカレンダーは未照合です（'+code+
+        '）。端末内の予定が0件でも空き確定ではありません。';
+     }
+    }catch(_){
+     if(token!==seq)return;
+     googleState='unknown';
+     message.textContent='Googleカレンダーの読取に失敗しました。空き確定ではありません。';
+    }
    }
    sanitizedHistory.push({role:'user',content:prepared.message},
                          {role:'assistant',content:historyReply});
@@ -254,7 +291,11 @@
    if(verified.proposal){
     const div=node('p','これは操作案です。予約・帳票・顧客データは変更していません。正式な確認・承認画面が必要です。');
     historyBox.append(div);note('変更操作は未実行です。');
-   }else note('GPTとの会話を表示しました。業務データの変更は行っていません。');
+   }else if(googleState==='ok')
+    note('Budil端末の予定とGoogleの時間枠を確認しました。業務データの書込なし。');
+   else if(googleState==='unknown')
+    note('端末内の結果は表示しましたが、Googleの予定は未照合です。空き確定ではありません。',true);
+   else note('GPTとの会話を表示しました。業務データの変更は行っていません。');
    $('budil-gpt-input').value='';
   }catch(_){if(token===seq)note('GPTに接続できませんでした。データは変更していません。',true)}
   finally{busy=false;button.disabled=false;}
