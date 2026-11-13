@@ -7,6 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="css/style.css?v=4.13.20">
   <link rel="stylesheet" href="css/budil-gpt-offline.css?v=20261113auth1">
+  <link rel="stylesheet" href="css/unimat-tax-ui.css?v=20261113vat1">
 </head>
 <body>
   <div class="app">
@@ -1767,6 +1768,11 @@
               <div class="form-group">
                 <label for="work-order-amount">予定売上（円）</label>
                 <input type="number" id="work-order-amount" min="0" step="1" placeholder="15000">
+                <div id="unimat-work-order-wrap" class="unimat-tax-entry" hidden>
+                  <label for="unimat-work-order-net">ユニマット発注書の税抜金額（円）</label>
+                  <input id="unimat-work-order-net" type="number" min="0" step="1" inputmode="numeric" placeholder="例：12000">
+                  <small id="unimat-work-order-note" class="field-hint" role="status">税抜の発注額を入力すると、上の金額に税込10％を反映します。</small>
+                </div>
               </div>
             </div>
             <div class="form-group">
@@ -2221,6 +2227,11 @@
                 <div class="form-group">
                   <label for="revenue-amount">金額（円） *</label>
                   <input type="number" id="revenue-amount" min="0" step="1" required placeholder="8000">
+                  <div id="unimat-revenue-wrap" class="unimat-tax-entry" hidden>
+                    <label for="unimat-revenue-net">ユニマット発注書の税抜金額（円）</label>
+                    <input id="unimat-revenue-net" type="number" min="0" step="1" inputmode="numeric" placeholder="例：12000">
+                    <small id="unimat-revenue-note" class="field-hint" role="status">税抜の発注額を入力すると、上の金額に税込10％を反映します。</small>
+                  </div>
                 </div>
                 <div class="form-group">
                   <label for="revenue-gross-margin-rate">粗利率（%）</label>
@@ -3916,6 +3927,11 @@
           <div class="form-group">
             <label for="work-completion-amount">実績売上金額（円） *</label>
             <input type="number" id="work-completion-amount" min="0" step="1" required>
+            <div id="unimat-work-completion-wrap" class="unimat-tax-entry" hidden>
+              <label for="unimat-work-completion-net">ユニマット発注書の税抜金額（円）</label>
+              <input id="unimat-work-completion-net" type="number" min="0" step="1" inputmode="numeric" placeholder="例：12000">
+              <small id="unimat-work-completion-note" class="field-hint" role="status">税抜の発注額を入力すると、上の金額に税込10％を反映します。</small>
+            </div>
             <small class="field-hint" id="work-completion-estimate-hint"></small>
             <div id="work-completion-planned-expense-hint" class="work-completion-planned-expense-hint hidden"></div>
           </div>
@@ -4301,6 +4317,7 @@
   <script src="js/budil-cloud.js?v=20261112chat1"></script>
   <script src="js/budil-cloud-restore.js?v=20261106restore1"></script>
   <script src="js/app.js?v=4.13.20"></script>
+  <script src="js/unimat-tax-ui.js?v=20261113vat1"></script>
   <script src="js/customer-resolve-entrypoint.js?v=20261106a"></script>
   <script src="js/budil-gpt-readonly.js?v=20261112workdate1"></script>
   <script src="js/budil-gpt-local-source.js?v=20261112workdate1"></script>
