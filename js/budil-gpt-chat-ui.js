@@ -23,6 +23,84 @@
  const note=(message,error=false)=>{
   statusBox.textContent=message;statusBox.classList.toggle('budil-gpt-error',error);
  };
+ // A BudilCloud session is scoped to the CURRENT tab. Keep the existing
+ // authenticated gateway; never use localStorage or copy tokens across tabs.
+ const authPanel=$('budil-gpt-chat-auth'),authBtn=$('budil-gpt-chat-login'),
+   authEmail=$('budil-gpt-chat-email'),authPassword=$('budil-gpt-chat-password'),
+   authStatus=$('budil-gpt-chat-auth-status');
+ let authBusy=false;
+ function signedIn(){
+  try{
+   const Cloud=window.BudilCloud;
+   return !!(Cloud&&typeof Cloud.getAuthState==='function'&&Cloud.getAuthState().signedIn===true);
+  }catch(_){return false;}
+ }
+ function syncAuth(){
+  const ready=signedIn();
+  if(authPanel)authPanel.hidden=ready;
+  return ready;
+ }
+ function showLogin(message){
+  if(authPanel){
+   authPanel.hidden=false;
+   if(typeof authPanel.scrollIntoView==='function')
+    authPanel.scrollIntoView({block:'nearest'});
+  }
+  note(message||'このタブでBudilにログインしてからGPTを利用してください。ログインだけでは業務データを送信しません。',true);
+ }
+ async function freeReadiness(){
+  const Cloud=window.BudilCloud;
+  if(!Cloud||typeof Cloud.getGptChatReadiness!=='function')
+   return note('GPT会話の接続機能が読み込まれていません。',true);
+  if(!syncAuth())return showLogin();
+  const b=$('budil-gpt-chat-readiness');
+  if(b)b.disabled=true;
+  note('GPT会話の接続状態を確認中です。有料のGPT送信はしません。');
+  try{
+   const r=await Cloud.getGptChatReadiness();
+   if(!r||r.ok!==true){
+    if(r&&['not_signed_in','unauthorized'].includes(r.code))
+     return showLogin('Budilのログイン認証が必要です。このタブでログインしてください。');
+    return note('GPT接続状態を確認できません（'+(r&&r.code||'unavailable')+'）。',true);
+   }
+   note(r.ready?'GPTの認証・接続準備ができました。①②の同意を入れて質問を送信してください。':
+    'Budilにはログインできましたが、GPTのサーバー設定は未準備です。管理者による確認が必要です。',!r.ready);
+  }catch(_){note('GPT接続状態の確認に失敗しました。',true)}
+  finally{if(b)b.disabled=false;}
+ }
+ if(authBtn)authBtn.addEventListener('click',async()=>{
+  if(authBusy)return;
+  const Cloud=window.BudilCloud;
+  if(!Cloud||typeof Cloud.login!=='function')
+   return note('Budilログイン機能が読み込まれていません。',true);
+  const email=String(authEmail&&authEmail.value||'').trim();
+  const password=String(authPassword&&authPassword.value||'');
+  if(!email||!password){
+   if(authStatus)authStatus.textContent='Budil登録済みのメールアドレスとパスワードを入力してください。';
+   return;
+  }
+  authBusy=true;authBtn.disabled=true;
+  if(authStatus)authStatus.textContent='Budilにログイン中…';
+  let result;
+  try{result=await Cloud.login(email,password);}
+  catch(_){result={ok:false,message:'ログインの通信に失敗しました。'}}
+  finally{
+   if(authPassword)authPassword.value='';
+   authBusy=false;authBtn.disabled=false;
+  }
+  if(!result||result.ok!==true){
+   if(authStatus)authStatus.textContent=String(result&&result.message||'ログインに失敗しました。');
+   return note('Budilにログインできませんでした。メールアドレスとパスワードを確認してください。',true);
+  }
+  if(!syncAuth()){
+   if(authStatus)authStatus.textContent='ログイン状態を確認できませんでした。';
+   return showLogin('Budilのログイン状態が確認できません。');
+  }
+  if(authStatus)authStatus.textContent='';
+  if($('budil-gpt-input'))$('budil-gpt-input').focus();
+  await freeReadiness();
+ });
+ $('budil-gpt-open')?.addEventListener('click',()=>syncAuth());
  function bubble(role,message){
   const div=node('div',undefined,'budil-gpt-chat-bubble');
   div.append(node('strong',role==='user'?'あなた':'Budil GPT'));
@@ -114,10 +192,17 @@
   if(!Chat||!Source||!ReadOnly||!Data||!DateTool||
      !Cloud||typeof Cloud.sendGptChat!=='function')
     return note('GPT会話のモジュールが読み込まれていません。',true);
-  if($('budil-gpt-consent').checked!==true||
-     $('budil-gpt-chat-consent').checked!==true)
-    return note('端末内データ読取と、匿名化した文章のGPT送信の両方を許可してください。',true);
   const raw=$('budil-gpt-input').value;
+  if(!raw.trim())return note('まずGPTへの質問を入力してください。',true);
+  if(!signedIn())return showLogin();
+  if($('budil-gpt-consent').checked!==true||
+     $('budil-gpt-chat-consent').checked!==true){
+    note('GPT会話には①端末内データの読取と②匿名化した文章の外部送信、両方の同意が必要です。',true);
+    const missing=$('budil-gpt-consent').checked!==true?
+     $('budil-gpt-consent'):$('budil-gpt-chat-consent');
+    if(missing)missing.focus();
+    return;
+  }
   let leads;
   try{leads=Data.getLeads()}catch{return note('顧客情報の匿名化に必要な端末データを読み取れません。',true)}
   const prepared=Chat.prepare(raw,leads,aliasMap);
@@ -135,7 +220,12 @@
   try{
    const answer=await Cloud.sendGptChat(prepared.message,queryHistory,today);
    if(token!==seq)return;
-   if(!answer||answer.ok!==true)return note('GPT接続に失敗しました（'+(answer&&answer.code||'unavailable')+'）。データは変更していません。',true);
+   if(!answer||answer.ok!==true){
+    const code=answer&&answer.code;
+    if(code==='not_signed_in'||code==='unauthorized')
+     return showLogin('Budilの認証が切れています。このタブでログインし直してください。データは変更していません。');
+    return note('GPT接続に失敗しました（'+(code||'unavailable')+'）。データは変更していません。',true);
+   }
    const merged={...aliasMap,...prepared.aliases};
    const verified=Chat.verify(answer,merged);
    if(!verified.ok)return note('GPTの操作案を安全に確認できませんでした（'+verified.code+'）。データは変更していません。',true);
@@ -172,19 +262,7 @@
  button.addEventListener('click',send);
 
  const readyButton=$('budil-gpt-chat-readiness');
- if(readyButton)readyButton.addEventListener('click',async()=>{
-  const Cloud=window.BudilCloud;
-  if(!Cloud||typeof Cloud.getGptChatReadiness!=='function')
-    return note('GPT会話の接続機能が読み込まれていません。',true);
-  readyButton.disabled=true;note('GPT会話の接続状態を確認しています。AIへの有料リクエストは送りません。');
-  try{
-   const r=await Cloud.getGptChatReadiness();
-   if(!r||r.ok!==true)return note('GPTの接続確認に失敗しました（'+(r&&r.code||'unavailable')+'）。',true);
-   note(r.ready?'GPT会話の認証・設定は準備済みです。実際のGPT応答は送信して確認してください。':
-     'GPT会話はまだ有効化されていません。本番APIの有効化・課金設定は管理者承認後に行います。',!r.ready);
-  }catch(_){note('GPTの接続状態を確認できませんでした。',true)}
-  finally{readyButton.disabled=false;}
- });
+ if(readyButton)readyButton.addEventListener('click',freeReadiness);
 
  clear.addEventListener('click',()=>{
   seq++;sanitizedHistory=[];aliasMap=Object.create(null);
