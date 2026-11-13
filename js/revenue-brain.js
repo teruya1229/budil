@@ -7,7 +7,7 @@ const RevenueBrain = {
     '洗濯機クリーニング', 'レンジフード', 'キッチン', '浴室', '法人案件', 'その他'
   ],
   SOURCES: [
-    'LP', '直受け', '110番', 'くらしのマーケット', 'ヤマダ', 'コープ', 'その他'
+    'LP', '直受け', '110番', 'くらしのマーケット', 'ヤマダ', 'コープ', 'ユニマット', 'その他'
   ],
 
   DEFAULT_GROSS_MARGIN_RATES: {
@@ -16,7 +16,8 @@ const RevenueBrain = {
     '110番': 80,
     'くらしのマーケット': 80,
     'コープ': 80,
-    'ヤマダ': 60
+    'ヤマダ': 60,
+    'ユニマット': 100
   },
 
   normalizeRevenueSource(sourceText) {
@@ -28,6 +29,7 @@ const RevenueBrain = {
     if (s === 'くらしのマーケット') return 'market';
     if (s === 'コープ') return 'coop';
     if (s === 'ヤマダ') return 'yamada';
+    if (/ユニマット/.test(s)) return 'unimat';
     if (/直請|直受|自社|^line$|電話|既存客|自社line|airリザーブ|air/i.test(s)) return 'direct';
     if (/紹介直|手数料なし/.test(s)) return 'referralDirect';
     if (/^(紹介)$/.test(s)) return 'referralDirect';
@@ -46,7 +48,8 @@ const RevenueBrain = {
       referralDirect: 100,
       coop: 80,
       market: 80,
-      yamada: 60
+      yamada: 60,
+      unimat: 100
     };
     if (category === 'unknown') {
       return { rate: 0, reviewRequired: true, category: 'unknown' };
@@ -92,6 +95,7 @@ const RevenueBrain = {
     const s = String(source || '').trim();
     if (!s || s === '不明') return 'その他';
     if (this.SOURCES.includes(s)) return s;
+    if (/ユニマット/.test(s)) return 'ユニマット';
     if (/ヤマダ電機|ヤマダ|YAMADA/i.test(s)) return 'ヤマダ';
     if (/コープ|生協|\bcoop\b|COOP/i.test(s)) return 'コープ';
     if (/くらしのマーケット|くらし|ココナラ|おてがる/.test(s)) return 'くらしのマーケット';
