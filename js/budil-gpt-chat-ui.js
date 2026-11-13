@@ -144,7 +144,7 @@
    let historyReply=verified.reply||'確認しました。';
    if(verified.request){
     const gateway=Source.make({storage:Data,readonly:ReadOnly,
-      customerResolver:Resolver,paymentBrain,profitBrain:Profit});
+      customerResolver:Resolver,paymentBrain:Payment,profitBrain:Profit});
     const local=gateway.query(verified.request,true);
     bubble('assistant',localAnswer(local,verified.action,today));
     if(local&&local.ok===true)renderLocal(local,verified.action);
