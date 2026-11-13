@@ -232,10 +232,12 @@
    aliasMap=merged;
    bubble('user',raw.trim());
    let historyReply=verified.reply||'確認しました。';
+   let localReadState=null;
    if(verified.request){
     const gateway=Source.make({storage:Data,readonly:ReadOnly,
       customerResolver:Resolver,paymentBrain:Payment,profitBrain:Profit});
     const local=gateway.query(verified.request,true);
+    localReadState=local&&local.ok===true?'ok':'failed';
     bubble('assistant',localAnswer(local,verified.action,today));
     if(local&&local.ok===true)renderLocal(local,verified.action);
     historyReply=local&&local.ok===true?
@@ -291,7 +293,9 @@
    if(verified.proposal){
     const div=node('p','これは操作案です。予約・帳票・顧客データは変更していません。正式な確認・承認画面が必要です。');
     historyBox.append(div);note('変更操作は未実行です。');
-   }else if(googleState==='ok')
+   }else if(googleState==='ok'&&localReadState==='failed')
+    note('Googleの時間枠は取得できましたが、Budil端末内データは取得できませんでした。作業予定・空きの確定には使えません。',true);
+   else if(googleState==='ok')
     note('Budil端末の予定とGoogleの時間枠を確認しました。業務データの書込なし。');
    else if(googleState==='unknown')
     note('端末内の結果は表示しましたが、Googleの予定は未照合です。空き確定ではありません。',true);
