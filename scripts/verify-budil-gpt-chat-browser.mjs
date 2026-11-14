@@ -58,12 +58,18 @@ try{
  await cmd('Page.enable');await cmd('Runtime.enable');
  for(const width of [390,320]){
   await cmd('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:1,mobile:true});
-  await cmd('Page.navigate',{url:'http://127.0.0.1:'+server.address().port+'/index.html'});
+  await cmd('Page.navigate',{url:process.env.BUDIL_GPT_LIVE_VERIFY_URL ||
+    'http://127.0.0.1:'+server.address().port+'/index.html'});
   for(let i=0;i<160;i++){
    if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-open')"))break;
    await sleep(100);
   }
   assert.equal(await ev('document.readyState'),'complete');
+  if(process.env.BUDIL_GPT_LIVE_VERIFY_URL){
+    assert.equal(await ev("location.href.startsWith('https://teruya1229.github.io/budil/')"),true,'public URL loaded');
+    assert.equal(await ev("Array.from(document.scripts).some(s=>s.src.includes('budil-gpt-chat.js?v=20261113pcfallback1'))"),true,'PR30 Google helper live');
+    assert.equal(await ev("Array.from(document.scripts).some(s=>s.src.includes('budil-gpt-chat-ui.js?v=20261113pcfallback1'))"),true,'PR30 UI live');
+  }
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true);
   await ev("localStorage.setItem('budil_work_orders',JSON.stringify([{id:'fake-w1',customerName:'架空一郎',scheduledDate:'2026-11-11',startTime:'09:00',status:'confirmed'},{id:'fake-w2',customerName:'架空二郎',scheduledDate:'2026-11-11',status:'planned'},{id:'fake-w3',customerName:'別日',scheduledDate:'2026-11-12',status:'planned'}]));document.getElementById('budil-gpt-open').click()");
   await ev("window.__dateReads=0;window.__dateNetwork=0;window.__dateWrites=0;const oldWorkRead=Storage.getWorkOrders;Storage.getWorkOrders=function(){window.__dateReads++;return oldWorkRead.apply(this,arguments)};const oldFetch=window.fetch;window.fetch=function(){window.__dateNetwork++;return oldFetch.apply(this,arguments)}");
