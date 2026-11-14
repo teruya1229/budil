@@ -1,0 +1,50 @@
+name: Budil calendar staging safety regression
+on:
+  push:
+    branches: [feat/budil-calendar-write-rebase-safe-20261114]
+    paths:
+      - .github/workflows/budil-calendar-staging-safe.yml
+      - supabase/functions/budil-calendar-write/**
+      - experiments/budil-gcal-write-sandbox/**
+      - scripts/verify-budil-gcal-**
+      - js/budil-gpt-calendar-**
+permissions:
+  contents: read
+jobs:
+  isolated-write-contract:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and offline mocked server contracts only
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in supabase/functions/budil-calendar-write/*.mjs scripts/verify-budil-gcal-{write-auth,write-token,google-http,write-busy,server-integration,ledger,slots,credential-diagnostic,diagnostic-route,test-cleanup}.mjs; do node --check "$f"; done
+          node --check js/budil-gpt-calendar-preview.js
+          node --check js/budil-gpt-calendar-link.js
+          node experiments/budil-gcal-write-sandbox/verify.cjs
+          node experiments/budil-gcal-write-sandbox/verify-extra.cjs
+          node scripts/verify-budil-gcal-write-auth.mjs
+          node scripts/verify-budil-gcal-write-token.mjs
+          node scripts/verify-budil-gcal-google-http.mjs
+          node scripts/verify-budil-gcal-write-busy.mjs
+          node scripts/verify-budil-gcal-server-integration.mjs
+          node scripts/verify-budil-gcal-ledger.mjs
+          node scripts/verify-budil-gcal-slots.mjs
+          node scripts/verify-budil-gcal-credential-diagnostic.mjs
+          node scripts/verify-budil-gcal-diagnostic-route.mjs
+          node scripts/verify-budil-gcal-test-cleanup.mjs
+      - name: Verify production entrypoint hard off
+        shell: bash
+        run: |
+          node -e "const fs=require('fs'); const s=fs.readFileSync('supabase/functions/budil-calendar-write/index.ts','utf8'); if(!s.includes('writeEnabled:false,backend:null')) process.exit(1); console.log('STAGING_HARD_OFF_PASS')"
