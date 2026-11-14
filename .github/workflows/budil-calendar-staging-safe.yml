@@ -35,6 +35,7 @@ jobs:
           for f in supabase/functions/budil-calendar-write/*.mjs scripts/verify-budil-gcal-{write-auth,write-token,google-http,write-busy,server-integration,ledger,slots,credential-diagnostic,diagnostic-route,test-cleanup}.mjs; do node --check "$f"; done
           node --check js/budil-gpt-calendar-preview.js
           node --check js/budil-gpt-calendar-link.js
+          node --check supabase/functions/budil-calendar-write/snapshot-authority.mjs
           node experiments/budil-gcal-write-sandbox/verify.cjs
           node experiments/budil-gcal-write-sandbox/verify-extra.cjs
           node scripts/verify-budil-gcal-write-auth.mjs
@@ -47,6 +48,7 @@ jobs:
           node scripts/verify-budil-gcal-credential-diagnostic.mjs
           node scripts/verify-budil-gcal-diagnostic-route.mjs
           node scripts/verify-budil-gcal-test-cleanup.mjs
+          node scripts/verify-budil-gcal-snapshot-authority.mjs
       - name: WorkOrder metadata and safe browser preview checks
         shell: bash
         run: |
