@@ -36,7 +36,18 @@ const BudilGptCalendarPreview = (() => {
   function parse(raw,today){
     if(typeof raw!=='string'||raw.length>220||!raw.trim()||
       /[\x00-\x1f]/.test(raw)||!validDate(today))return fail('INPUT_INVALID');
-    const s=normalize(raw);
+    let s=normalize(raw);
+    // Explicit JST-relative phrases are resolved before the existing strict
+    // date parser. No assumptions about a customer or job duration.
+    const relativeDate=(days)=>{
+      const from=new Date(today+'T00:00:00Z');
+      if(!Number.isFinite(from.getTime()))return '';
+      from.setUTCDate(from.getUTCDate()+days);
+      const parts=from.toISOString().slice(0,10).split('-');
+      return parts[0]+'年'+Number(parts[1])+'月'+Number(parts[2])+'日';
+    };
+    s=s.replace(/(明後日|明日)(?:の)?(?=(?:午前|午後)?\\d{1,2}時)/gu,
+      (_match,day)=>relativeDate(day==='明後日'?2:1));
     const when='(?:(20\\d{2})年)?(\\d{1,2})月(\\d{1,2})日(午前|午後)?(\\d{1,2})時(?:([0-9]{1,2})分)?';
     let m=s.match(new RegExp('^'+when+'に(.+?)を予約して$','u'));
     if(m){

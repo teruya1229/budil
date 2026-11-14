@@ -56,6 +56,7 @@ jobs:
           node scripts/verify-budil-gcal-workorder-sync.mjs
           node scripts/verify-budil-gcal-local-link.mjs
           node scripts/verify-budil-gpt-booking.mjs
+          node scripts/verify-budil-gcal-relative-date.mjs
           node scripts/verify-budil-gcal-compact-browser.mjs
       - name: Verify production entrypoint hard off
         shell: bash

@@ -246,6 +246,13 @@ try{
   assert.equal(await ev("Storage.getWorkOrders().find(w=>w.id==='fictional-sync-1').scheduledDate"),'2099-11-26');
   console.log('BUDIL_CALENDAR_WORKORDER_STORAGE_CHROME PASS');
 
+  // 320px smartphone: no unintended horizontal scrolling in compact flow.
+  await cmd('Emulation.setDeviceMetricsOverride',{width:320,height:720,deviceScaleFactor:1,mobile:true});
+  assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true,
+    '320px compact booking no horizontal overflow');
+  console.log('BUDIL_COMPACT_CALENDAR_CHROME_320 PASS');
+  await cmd('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+
   console.log('BUDIL_COMPACT_CALENDAR_CHROME_390 PASS');
 
   console.log('BUDIL_BOOKING_CHROME_390_WINDOWS PASS');
