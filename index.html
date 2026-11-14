@@ -4209,6 +4209,26 @@
         <div id="budil-gpt-booking-orders" class="budil-gpt-actions"></div>
         <button type="button" id="budil-gpt-booking-save" class="budil-gpt-btn" hidden>確認した予約を端末に保存</button>
       </div>
+      <div id="budil-gpt-calendar-sandbox" hidden>
+        <hr class="budil-gpt-divider">
+        <h3>予約・日時変更の確認（開発中）</h3>
+        <p class="budil-gpt-disclaimer">日付と内容を確認し、顧客または変更対象を必ず選択してください。この機能ではGoogle予定もBudil作業予定も保存しません。</p>
+        <p id="budil-gpt-calendar-request" class="budil-gpt-muted"></p>
+        <div id="budil-gpt-calendar-customer-row">
+          <label class="budil-gpt-label" for="budil-gpt-calendar-name">顧客の氏名（登録済み顧客を検索）</label>
+          <input id="budil-gpt-calendar-name" class="budil-gpt-input" maxlength="40" autocomplete="off">
+          <button type="button" id="budil-gpt-calendar-find" class="budil-gpt-btn budil-gpt-btn-secondary">顧客候補を表示</button>
+        </div>
+        <div id="budil-gpt-calendar-candidates" class="budil-gpt-actions"></div>
+        <label class="budil-gpt-label" for="budil-gpt-calendar-end">終了時刻（推測せず指定してください）</label>
+        <input type="time" id="budil-gpt-calendar-end" class="budil-gpt-input">
+        <label class="budil-gpt-check">
+          <input type="checkbox" id="budil-gpt-calendar-google-consent">
+          <span>この1回の確認でGoogleカレンダーの時間重複も読取専用で照会する（予定書込なし）</span>
+        </label>
+        <button type="button" id="budil-gpt-calendar-preview-run" class="budil-gpt-btn">予約内容と空き状況を確認</button>
+        <div id="budil-gpt-calendar-result" class="budil-gpt-result" role="status" aria-live="polite"></div>
+      </div>
       <div id="budil-gpt-google-read" hidden>
         <hr class="budil-gpt-divider">
         <h3>Googleカレンダーの空き確認（読取専用）</h3>
@@ -4327,11 +4347,12 @@
   <script src="js/budil-gpt-chat.js?v=20261113pcfallback1"></script>
   <script src="js/budil-gpt-conversation.js?v=20261106d"></script>
   <script src="js/budil-gpt-booking.js?v=20261107google1"></script>
+  <script src="js/budil-gpt-calendar-preview.js?v=20261114stage1"></script>
   <script src="js/invoice-structured-entrypoint.js?v=20261106a"></script>
   <script src="js/budil-gpt-invoice-lifecycle.js?v=20261107issue1"></script>
   <script src="js/budil-gpt-bank-reconcile.js?v=20261106a"></script>
   <script src="experiments/budil-gpt-phase1/fixture-core.js?v=20261106a"></script>
-  <script src="js/budil-gpt-offline-ui.js?v=20261113naturaldate1"></script>
+  <script src="js/budil-gpt-offline-ui.js?v=20261114stage1"></script>
   <script src="js/budil-gpt-chat-ui.js?v=20261113pcfallback1"></script>
   <script src="js/budil-cloud-restore-ui.js?v=20261106restore1"></script>
 </body>

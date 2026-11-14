@@ -73,7 +73,7 @@ try{
   await ev("localStorage.setItem('budil_leads',JSON.stringify([{id:'f1',name:'田中太郎',area:'南城市'},{id:'f2',name:'田中花子',area:'八重瀬町'}]));localStorage.setItem('budil_work_orders','[]')");
   await ev("document.getElementById('budil-gpt-open').click()");
   await ev("window.__reads=0;const old=Storage.getWorkOrders;Storage.getWorkOrders=function(){window.__reads++;return old.apply(this,arguments)}");
-  await ev("window.__googleCalls=0;BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,events:[{id:'private-1',summary:'fictional private client',location:'private address',start:'2026-11-08T08:30:00+09:00',end:'2026-11-08T09:15:00+09:00'}]}};document.getElementById('budil-gpt-input').value='2026年11月8日の9時は空いてる？';document.getElementById('budil-gpt-run').click()");
+  await ev("window.__googleCalls=0;BudilCloud.fetchScheduleBlocks=async()=>({ok:false,code:'secret_invalid'});BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,readOnly:true,calendarWritePerformed:false,customerRecordsSent:false,events:[{id:'private-1',summary:'fictional private client',location:'private address',start:'2026-11-08T08:30:00+09:00',end:'2026-11-08T09:15:00+09:00'}]}};document.getElementById('budil-gpt-input').value='2026年11月8日の9時は空いてる？';document.getElementById('budil-gpt-run').click()");
   assert.equal(await ev('window.__reads'),0,'consent before local read');
   assert.equal(await ev('window.__googleCalls'),0,'no Google request without consent');
   assert.equal(await ev("document.getElementById('budil-gpt-consent').parentElement.textContent.includes('Google予定の時刻情報も読取専用')"),true);
@@ -98,7 +98,7 @@ try{
   }
   assert.equal(await ev("document.getElementById('budil-gpt-google-status').textContent.includes('空き確定にはしません')"),true,'connection failure is not availability');
   assert.equal(await ev('Storage.getWorkOrders().length'),0);
-  await ev("document.getElementById('budil-gpt-clear').click();BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,events:[{start:'2099-11-06T09:30:00+09:00',end:'2099-11-06T10:15:00+09:00'}]}}");
+  await ev("document.getElementById('budil-gpt-clear').click();BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,readOnly:true,calendarWritePerformed:false,customerRecordsSent:false,events:[{start:'2099-11-06T09:30:00+09:00',end:'2099-11-06T10:15:00+09:00'}]}}");
   assert.equal(await ev("document.getElementById('budil-gpt-google-check').hidden"),false,'booking Google check remains available');
   assert.equal(await ev("document.getElementById('budil-gpt-google-consent-row').hidden"),false,'booking Google consent remains available');
 
@@ -127,7 +127,7 @@ try{
   await ev("document.getElementById('budil-gpt-booking-save').click()");
   assert.equal(await ev('Storage.getWorkOrders().length'),0,'Google conflict blocks local tentative save');
   assert.equal(await ev("document.getElementById('budil-gpt-status').textContent.includes('GOOGLE_CALENDAR_CONFLICT')"),true);
-  await ev("BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,events:[]}};document.getElementById('budil-gpt-google-consent').checked=true;document.getElementById('budil-gpt-google-check').click()");
+  await ev("BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,readOnly:true,calendarWritePerformed:false,customerRecordsSent:false,events:[]}};document.getElementById('budil-gpt-google-consent').checked=true;document.getElementById('budil-gpt-google-check').click()");
   for(let i=0;i<50;i++){
     if(await ev("document.getElementById('budil-gpt-google-status').textContent.includes('見つかりませんでした')"))break;
     await sleep(100);
