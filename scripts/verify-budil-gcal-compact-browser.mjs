@@ -257,6 +257,24 @@ try{
   assert.equal(await ev('window.__googleCalls'),localBeforeCloud,'unauthorized does not downgrade to PC fallback');
   assert.equal(await ev("document.getElementById('budil-gpt-calendar-result').textContent.includes('未確認')"),true,'unknown remains fail-closed');
 
+
+  // Owner-style natural language from the actual Budil UI, not just a
+  // standalone date parser. This is a preview only and requires consent.
+  await ev("document.getElementById('budil-gpt-clear').click();document.getElementById('budil-gpt-input').value='明日の10時に田中太郎さんのエアコンクリーニングを予約して';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-calendar-sandbox').hidden"),false,
+    'natural tomorrow booking reaches compact preview');
+  assert.equal(await ev("document.getElementById('budil-gpt-calendar-request').textContent.includes('エアコンクリーニング')"),true,
+    'tomorrow service visible');
+  const todayRelative=await ev("Commands.todayTokyo()");
+  const nextDay=new Date(Date.parse(todayRelative+'T00:00:00Z')+86400000).toISOString().slice(0,10);
+  assert.equal(await ev("document.getElementById('budil-gpt-calendar-request').textContent").then(x=>x.includes(nextDay)),true,
+    'tomorrow uses real JST date');
+  assert.equal(await ev("document.getElementById('budil-gpt-calendar-result').textContent.includes('登録')"),false,
+    'no event is created automatically');
+  assert.equal(await ev('Storage.getWorkOrders().length'),beforeCompact,
+    'tomorrow preview cannot write work order');
+  console.log('BUDIL_RELATIVE_BOOKING_CHROME_390 PASS');
+
   // Real Storage serialization roundtrip in disposable Chrome.
   const syncFixture="Storage.addWorkOrder({id:'fictional-sync-1',customerName:'Fictional Sync',serviceText:'Fictional service',scheduledDate:'2099-11-25',startTime:'10:00',endTime:'11:00',status:'confirmed',calendarAdded:false})";
   await ev(syncFixture);
