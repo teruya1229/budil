@@ -8,6 +8,9 @@ on:
       - experiments/budil-gcal-write-sandbox/**
       - scripts/verify-budil-gcal-**
       - js/budil-gpt-calendar-**
+      - index.html
+      - js/budil-gpt-offline-ui.js
+      - js/work-order-brain.js
 permissions:
   contents: read
 jobs:
@@ -44,6 +47,16 @@ jobs:
           node scripts/verify-budil-gcal-credential-diagnostic.mjs
           node scripts/verify-budil-gcal-diagnostic-route.mjs
           node scripts/verify-budil-gcal-test-cleanup.mjs
+      - name: WorkOrder metadata and safe browser preview checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check js/budil-gpt-offline-ui.js
+          node --check js/work-order-brain.js
+          node scripts/verify-budil-gcal-workorder-sync.mjs
+          node scripts/verify-budil-gcal-local-link.mjs
+          node scripts/verify-budil-gpt-booking.mjs
+          node scripts/verify-budil-gcal-compact-browser.mjs
       - name: Verify production entrypoint hard off
         shell: bash
         run: |

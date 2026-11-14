@@ -60,6 +60,14 @@ const WorkOrderBrain = {
       actualRevenueId: String(item.actualRevenueId || '').trim(),
       memo: String(item.memo || '').trim(),
       calendarAdded: item.calendarAdded === true,
+      // Keep Google event identity only when supplied by a verified server response.
+      calendarEventId: String(item.calendarEventId || '').trim().slice(0, 1024),
+      calendarEtag: String(item.calendarEtag || '').trim().slice(0, 300),
+      calendarTargetId: String(item.calendarTargetId || '').trim().slice(0, 254),
+      calendarEventSource: ['transaction', 'imported'].includes(item.calendarEventSource)
+        ? item.calendarEventSource : '',
+      calendarSyncStatus: ['unsynced', 'pending', 'indeterminate', 'verified'].includes(item.calendarSyncStatus)
+        ? item.calendarSyncStatus : 'unsynced',
       completedAt: String(item.completedAt || '').trim(),
       createdAt: item.createdAt || now,
       updatedAt: item.updatedAt || now,
