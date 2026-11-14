@@ -108,6 +108,14 @@ const BudilGptChat=(()=>{
    * Google all-day end dates are exclusive, and a zero count is NOT a free-day
    * guarantee (other calendars and unsynced work orders may exist).
    */
+  // The desktop's existing local Google READ worker may be used only when
+  // the authenticated cloud Google service credential failed. Never bypass a
+  // failed Budil user session, owner authorization or forbidden operation.
+  function shouldUseLocalCalendarFallback(response){
+    return !!(response&&response.ok===false&&
+      ['secret_invalid','secret_not_configured','token_exchange_failed']
+        .includes(response.code));
+  }
   function summarizeCalendarRead(response,date){
     if(!validDate(date)||!response||response.ok!==true||
        response.readOnly!==true||response.calendarWritePerformed!==false||
@@ -143,7 +151,8 @@ const BudilGptChat=(()=>{
     const fmt=ms=>ms===dayEnd?'24:00':new Date(ms+9*3600000).toISOString().slice(11,16);
     const windows=Object.freeze(merged.slice(0,12).map(item=>
       Object.freeze({start:fmt(item.start),end:fmt(item.end)})));
-    return Object.freeze({ok:true,date,source:'active_google_calendar_binding',
+    return Object.freeze({ok:true,date,source:response.source==='pc_local_calendar'?
+      'pc_local_calendar':'active_google_calendar_binding',
       busyEventCount:response.events.length,busySlotCount:merged.length,
       windows,hasMore:merged.length>windows.length,confirmedFree:false,
       customerDataSent:false,writePerformed:false});
@@ -154,6 +163,7 @@ const BudilGptChat=(()=>{
       typeof x.content==='string'&&x.content.length<=550)
       .slice(-8).map(x=>({role:x.role,content:x.content}));
   }
-  return Object.freeze({prepare,verify,safeHistory,validDate,summarizeCalendarRead,actions:allowed});
+  return Object.freeze({prepare,verify,safeHistory,validDate,summarizeCalendarRead,
+    shouldUseLocalCalendarFallback,actions:allowed});
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports={BudilGptChat};

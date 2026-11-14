@@ -169,6 +169,33 @@ try{
   assert.equal(await ev('window.__dateNetwork'),0,'all provider and Google fixture responses intercepted');
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true,'no Google busy UI mobile overflow');
   console.log('PASS '+width+'px: real chat UI combines work orders with private-safe Google busy windows');
+
+  // Actual root cause from real owner session: cloud schedule_blocks_list
+  // returns secret_invalid, but existing PC-local READ works.
+  await ev("document.getElementById('budil-gpt-chat-clear').click();window.__pcCalls=0;BudilCloud.fetchScheduleBlocks=async()=>({ok:false,code:'secret_invalid'});BudilCloud.fetchLocalScheduleBlocks=async(date,end)=>{window.__pcCalls++;return {ok:true,readOnly:true,calendarWritePerformed:false,source:'pc_local_calendar',events:[{start:'2026-11-11T09:00:00+09:00',end:'2026-11-11T10:30:00+09:00',summary:'秘密の予定名'}]}};document.getElementById('budil-gpt-input').value='11/11の予定';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-chat-consent').checked=true;document.getElementById('budil-gpt-chat-send').click()");
+  for(let i=0;i<75;i++){
+    if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('PCローカル連携で取得')"))break;
+    await sleep(100);
+  }
+  const pcHistory=await ev("document.getElementById('budil-gpt-chat-history').textContent");
+  assert.ok(pcHistory.includes('PCローカル連携で取得したGoogleカレンダー'),'real UI clearly labels PC fallback');
+  assert.ok(pcHistory.includes('09:00〜10:30')&&pcHistory.includes('架空一郎'),
+    'local-only Google time window and Budil work orders combined');
+  assert.ok(!pcHistory.includes('秘密の予定名'),'Google private event summary never rendered');
+  assert.equal(await ev('window.__pcCalls'),1,'one and only one fallback read');
+  assert.equal(await ev('window.__dateNetwork'),0,'no real external requests on cloud-failure fixture');
+
+  // User auth failures MUST NOT trigger a PC-local fallback.
+  await ev("document.getElementById('budil-gpt-chat-clear').click();BudilCloud.fetchScheduleBlocks=async()=>({ok:false,code:'unauthorized'});document.getElementById('budil-gpt-input').value='11/11の予定';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-chat-consent').checked=true;document.getElementById('budil-gpt-chat-send').click()");
+  for(let i=0;i<75;i++){
+    if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('Googleカレンダーは未照合')"))break;
+    await sleep(100);
+  }
+  assert.equal(await ev('window.__pcCalls'),1,'auth failure never bypasses to local worker');
+  assert.ok((await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('空き確定ではありません'),
+    'denied Google read never claims availability');
+  console.log('PASS '+width+'px: real UI fallback for secret_invalid and strict auth-denied no-fallback');
+
   // If Budil local storage fails, do NOT say that both sources were checked
   // just because Google returned a valid busy window.
   await ev("document.getElementById('budil-gpt-chat-clear').click();Storage.getWorkOrders=()=>{throw new Error('FAKE_LOCAL_READ_FAILURE')};BudilCloud.fetchScheduleBlocks=async()=>({ok:true,readOnly:true,calendarWritePerformed:false,events:[{start:'2026-11-11T09:00:00+09:00',end:'2026-11-11T10:00:00+09:00'}]});BudilCloud.sendGptChat=async()=>({ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'確認します',action:'work.date',query:'',date:'2026-11-11',month:'',docType:'none',needs_confirmation:false});document.getElementById('budil-gpt-input').value='11/11の予定';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-chat-consent').checked=true;document.getElementById('budil-gpt-chat-send').click()");

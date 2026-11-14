@@ -167,4 +167,31 @@ test('calendar slots show only 12 intervals and retain count',()=>{
  assert.equal(r.busySlotCount,24);assert.equal(r.windows.length,12);
  assert.equal(r.hasMore,true);
 });
+test('PC-local fallback allowed only on cloud service credential failure',()=>{
+ for(const code of ['secret_invalid','secret_not_configured','token_exchange_failed'])
+   assert.equal(G.shouldUseLocalCalendarFallback({ok:false,code}),true,code);
+});
+test('login, owner denial, network or unrelated failures cannot bypass to PC worker',()=>{
+ for(const code of ['not_signed_in','unauthorized','forbidden','calendar_binding_denied',
+   'tenant_not_found','network_error','fixture_google_unavailable'])
+   assert.equal(G.shouldUseLocalCalendarFallback({ok:false,code}),false,code);
+ assert.equal(G.shouldUseLocalCalendarFallback({ok:true,code:'secret_invalid'}),false);
+ assert.equal(G.shouldUseLocalCalendarFallback(null),false);
+});
+test('PC Google busy read retains source and does not include private event data',()=>{
+ const response={ok:true,readOnly:true,calendarWritePerformed:false,source:'pc_local_calendar',
+   events:[{start:'2026-11-13T09:00:00+09:00',end:'2026-11-13T10:30:00+09:00',
+            summary:'架空氏名',location:'非公開現場住所'}]};
+ const v=G.summarizeCalendarRead(response,'2026-11-13');
+ assert.equal(v.ok,true);assert.equal(v.source,'pc_local_calendar');
+ assert.equal(v.windows[0].start,'09:00');assert.equal(v.windows[0].end,'10:30');
+ assert.equal(v.writePerformed,false);assert.equal(v.confirmedFree,false);
+ assert.equal(JSON.stringify(v).includes('架空氏名'),false);
+ assert.equal(JSON.stringify(v).includes('非公開現場住所'),false);
+});
+test('PC invalid payload cannot be used as calendar evidence',()=>{
+ const invalid=G.summarizeCalendarRead({ok:true,readOnly:true,
+   calendarWritePerformed:true,source:'pc_local_calendar',events:[]},'2026-11-13');
+ assert.equal(invalid.ok,false);
+});
 console.log('BUDIL_REAL_GPT_CHAT '+n+'/'+n+' PASS');
