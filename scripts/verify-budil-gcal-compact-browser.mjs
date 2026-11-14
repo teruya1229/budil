@@ -97,7 +97,7 @@ try{
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true,'diagnostic button fits 390px');
 
   await ev('window.__reads=0'); // Reset the existing no-consent local-read counter after the isolated diagnostic checks.
-  await ev("window.__googleCalls=0;BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,events:[{id:'private-1',summary:'fictional private client',location:'private address',start:'2026-11-08T08:30:00+09:00',end:'2026-11-08T09:15:00+09:00'}]}};document.getElementById('budil-gpt-input').value='2026年11月8日の9時は空いてる？';document.getElementById('budil-gpt-run').click()");
+  await ev("window.__googleCalls=0;window.__cloudCalls=0;BudilCloud.fetchScheduleBlocks=async()=>{window.__cloudCalls++;return {ok:false,code:'secret_invalid'}};BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,readOnly:true,calendarWritePerformed:false,customerRecordsSent:false,events:[{id:'private-1',summary:'fictional private client',location:'private address',start:'2026-11-08T08:30:00+09:00',end:'2026-11-08T09:15:00+09:00'}]}};document.getElementById('budil-gpt-input').value='2026年11月8日の9時は空いてる？';document.getElementById('budil-gpt-run').click()");
   assert.equal(await ev('window.__reads'),0,'consent before local read');
   assert.equal(await ev('window.__googleCalls'),0,'no Google request without consent');
   assert.equal(await ev("document.getElementById('budil-gpt-consent').parentElement.textContent.includes('Google予定の時刻情報も読取専用')"),true);
@@ -122,7 +122,7 @@ try{
   }
   assert.equal(await ev("document.getElementById('budil-gpt-google-status').textContent.includes('空き確定にはしません')"),true,'connection failure is not availability');
   assert.equal(await ev('Storage.getWorkOrders().length'),0);
-  await ev("document.getElementById('budil-gpt-clear').click();BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,events:[{start:'2099-11-06T09:30:00+09:00',end:'2099-11-06T10:15:00+09:00'}]}}");
+  await ev("document.getElementById('budil-gpt-clear').click();BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,readOnly:true,calendarWritePerformed:false,customerRecordsSent:false,events:[{start:'2099-11-06T09:30:00+09:00',end:'2099-11-06T10:15:00+09:00'}]}}");
   assert.equal(await ev("document.getElementById('budil-gpt-google-check').hidden"),false,'booking Google check remains available');
   assert.equal(await ev("document.getElementById('budil-gpt-google-consent-row').hidden"),false,'booking Google consent remains available');
 
@@ -151,7 +151,7 @@ try{
   await ev("document.getElementById('budil-gpt-booking-save').click()");
   assert.equal(await ev('Storage.getWorkOrders().length'),0,'Google conflict blocks local tentative save');
   assert.equal(await ev("document.getElementById('budil-gpt-status').textContent.includes('GOOGLE_CALENDAR_CONFLICT')"),true);
-  await ev("BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,events:[]}};document.getElementById('budil-gpt-google-consent').checked=true;document.getElementById('budil-gpt-google-check').click()");
+  await ev("BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,readOnly:true,calendarWritePerformed:false,customerRecordsSent:false,events:[]}};document.getElementById('budil-gpt-google-consent').checked=true;document.getElementById('budil-gpt-google-check').click()");
   for(let i=0;i<50;i++){
     if(await ev("document.getElementById('budil-gpt-google-status').textContent.includes('見つかりませんでした')"))break;
     await sleep(100);
@@ -213,7 +213,7 @@ try{
   assert.equal(await ev("document.getElementById('budil-gpt-calendar-result').textContent.includes('Google予定：未確認')"),true,'Google not verified without consent');
   assert.equal(await ev('Storage.getWorkOrders().length'),beforeCompact,'no local write on preview');
   const beforeGoogle=await ev('window.__googleCalls');
-  await ev("BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,events:[]}};document.getElementById('budil-gpt-calendar-google-consent').checked=true;document.getElementById('budil-gpt-calendar-preview-run').click()");
+  await ev("BudilCloud.fetchLocalScheduleBlocks=async()=>{window.__googleCalls++;return {ok:true,readOnly:true,calendarWritePerformed:false,customerRecordsSent:false,events:[]}};document.getElementById('budil-gpt-calendar-google-consent').checked=true;document.getElementById('budil-gpt-calendar-preview-run').click()");
   for(let i=0;i<50;i++){if(await ev("document.getElementById('budil-gpt-calendar-result').textContent.includes('Google予定の重複なし')"))break;await sleep(100);}
   assert.equal(await ev('window.__googleCalls'),beforeGoogle+1,'one compact confirmation is one Google read');
   assert.equal(await ev("document.getElementById('budil-gpt-calendar-result').textContent.includes('Google予定の重複なし')"),true);
@@ -234,6 +234,28 @@ try{
   assert.equal(await ev('Storage.getWorkOrders().length'),beforeCompact);
   assert.equal(await ev('window.__googleCalls'),beforeGoogle+1,'local conflict blocks Google read');
   assert.equal(await ev("document.documentElement.scrollWidth<=innerWidth+2"),true,'390px compact booking no horizontal overflow');
+
+  // Cloud-first smartphone path succeeds without touching localhost fallback.
+  const localBeforeCloud=await ev('window.__googleCalls');
+  const cloudBefore=await ev('window.__cloudCalls');
+  await ev("document.getElementById('budil-gpt-clear').click();BudilCloud.fetchScheduleBlocks=async()=>{window.__cloudCalls++;return {ok:true,readOnly:true,calendarWritePerformed:false,customerRecordsSent:false,events:[]}};document.getElementById('budil-gpt-input').value='2099年11月27日10時にエアコンクリーニングを予約して';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click();document.getElementById('budil-gpt-calendar-name').value='田中';document.getElementById('budil-gpt-calendar-find').click();document.querySelector('#budil-gpt-calendar-candidates button').click();document.getElementById('budil-gpt-calendar-end').value='11:00';document.getElementById('budil-gpt-calendar-google-consent').checked=true;document.getElementById('budil-gpt-calendar-preview-run').click()");
+  for(let i=0;i<35;i++){
+    if(await ev("document.getElementById('budil-gpt-calendar-result').textContent.includes('Googleクラウド')"))break;
+    await sleep(100);
+  }
+  assert.equal(await ev("document.getElementById('budil-gpt-calendar-result').textContent.includes('Googleクラウド')"),true,'cloud source visible');
+  assert.equal(await ev('window.__googleCalls'),localBeforeCloud,'cloud success must not touch PC localhost');
+  assert.equal(await ev('window.__cloudCalls'),cloudBefore+1,'one cloud read only');
+  assert.equal(await ev('Storage.getWorkOrders().length'),beforeCompact,'cloud preview cannot save');
+
+  // Credentials/authorization failure MUST NOT trigger localhost fallback.
+  await ev("document.getElementById('budil-gpt-clear').click();BudilCloud.fetchScheduleBlocks=async()=>{window.__cloudCalls++;return {ok:false,code:'unauthorized'}};document.getElementById('budil-gpt-input').value='2099年11月28日10時にエアコンクリーニングを予約して';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-run').click();document.getElementById('budil-gpt-calendar-name').value='田中';document.getElementById('budil-gpt-calendar-find').click();document.querySelector('#budil-gpt-calendar-candidates button').click();document.getElementById('budil-gpt-calendar-end').value='11:00';document.getElementById('budil-gpt-calendar-google-consent').checked=true;document.getElementById('budil-gpt-calendar-preview-run').click()");
+  for(let i=0;i<35;i++){
+    if(await ev("document.getElementById('budil-gpt-google-status').textContent.includes('unauthorized')"))break;
+    await sleep(100);
+  }
+  assert.equal(await ev('window.__googleCalls'),localBeforeCloud,'unauthorized does not downgrade to PC fallback');
+  assert.equal(await ev("document.getElementById('budil-gpt-calendar-result').textContent.includes('未確認')"),true,'unknown remains fail-closed');
 
   // Real Storage serialization roundtrip in disposable Chrome.
   const syncFixture="Storage.addWorkOrder({id:'fictional-sync-1',customerName:'Fictional Sync',serviceText:'Fictional service',scheduledDate:'2099-11-25',startTime:'10:00',endTime:'11:00',status:'confirmed',calendarAdded:false})";

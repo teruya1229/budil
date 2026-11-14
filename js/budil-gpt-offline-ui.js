@@ -528,7 +528,7 @@
     if(!availabilityConsent&&$('budil-gpt-google-consent').checked!==true)
       return status('Googleカレンダー読取の同意欄にチェックしてください。',true);
     const cloud=window.BudilCloud;
-    if(!cloud||typeof cloud.fetchLocalScheduleBlocks!=='function'){
+    if(!cloud||typeof cloud.fetchScheduleBlocks!=='function'){
       const message='Googleカレンダーの安全な読取処理が利用できません。空き確定ではありません。';
       if(availabilityConsent)$('budil-gpt-google-status').textContent=message;
       return status(message,true);
@@ -541,18 +541,36 @@
     if(availabilityConsent)$('budil-gpt-run').disabled=true;
     $('budil-gpt-google-status').textContent='接続済みカレンダーの時間重複を確認中です。';
     try{
-      const loaded=await cloud.fetchLocalScheduleBlocks(target.date,target.date);
+      // Prefer the now-restored cloud SA read. PC fallback is permitted only
+      // for known cloud credential failures, never on auth/permission errors.
+      let loaded=await cloud.fetchScheduleBlocks(target.date,target.date);
+      let readSource='cloud';
+      if(!loaded?.ok &&
+         ['secret_invalid','secret_not_configured','token_exchange_failed']
+           .includes(String(loaded?.code||'')) &&
+         typeof cloud.fetchLocalScheduleBlocks==='function'){
+        loaded=await cloud.fetchLocalScheduleBlocks(target.date,target.date);
+        readSource='pc_local';
+      }
       if(seq!==googleReadSeq||!googleReadTarget||
          JSON.stringify(googleReadTarget)!==key)return;
       if(!loaded||!loaded.ok){
         const code=String(loaded&&loaded.code||'unavailable');
         const guidance=code==='local_calendar_unavailable'
-          ? 'PCのカレンダー連携が起動しているか、Chromeでこのサイトの「ローカルネットワーク／ループバックへのアクセス」が許可されているか確認してください。'
+          ? 'PCのカレンダー連携が起動しているか確認してください。'
           : code==='local_calendar_timeout'
-            ? 'PCのカレンダー連携が応答しません。接続状態を確認してください。'
-            : 'PCのカレンダー連携を確認してください。';
+            ? 'PCのカレンダー連携が応答しません。'
+            : code==='not_signed_in'||code==='unauthorized'||code==='AUTH_REQUIRED'
+              ? 'Budilのクラウドログインを確認してください。'
+              : 'Googleクラウド読取の接続状態を確認してください。';
         const message='Googleの読取を確認できません（'+code+'）。'+guidance+
           'Googleの空き確定にはしません。';
+        if(availabilityConsent)status(message,true);
+        return $('budil-gpt-google-status').textContent=message;
+      }
+      if(loaded.readOnly!==true || loaded.calendarWritePerformed!==false ||
+         loaded.customerRecordsSent!==false){
+        const message='Google読取の安全条件を確認できません。空きとは判断しません。';
         if(availabilityConsent)status(message,true);
         return $('budil-gpt-google-status').textContent=message;
       }
@@ -563,7 +581,7 @@
         if(availabilityConsent)status(message,true);
         return $('budil-gpt-google-status').textContent=message;
       }
-      googleReadResult={key,...review,checkedAtMs:Date.now()};
+      googleReadResult={key,...review,checkedAtMs:Date.now(),readSource};
       if(availabilityConsent)status(review.hasConflict?'Google予定に重なる時刻が見つかりました。空きではありません。':'Google予定に重なる時刻は照会時点で見つかりませんでした。端末内予定の結果も確認してください。');
       $('budil-gpt-google-status').textContent=review.hasConflict
         ? 'Googleカレンダーに重なる予定が'+review.overlapCount+
@@ -678,6 +696,7 @@
     if(g){
       line(g.hasConflict?'Google予定と重複：'+g.overlapCount+'件（予約禁止）':
         'Google予定の重複なし（照会時点のみ・予約確定ではありません）');
+      line('照会元：'+(g.readSource==='cloud'?'Googleクラウド':'PCローカル連携'));
     }else{
       line('Google予定：未確認または照会失敗。空きと判断できません。');
     }
