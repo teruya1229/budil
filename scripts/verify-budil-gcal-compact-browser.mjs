@@ -265,7 +265,7 @@ try{
     'natural tomorrow booking reaches compact preview');
   assert.equal(await ev("document.getElementById('budil-gpt-calendar-request').textContent.includes('エアコンクリーニング')"),true,
     'tomorrow service visible');
-  const todayRelative=await ev("Commands.todayTokyo()");
+  const todayRelative=await ev("new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())");
   const nextDay=new Date(Date.parse(todayRelative+'T00:00:00Z')+86400000).toISOString().slice(0,10);
   assert.equal(await ev("document.getElementById('budil-gpt-calendar-request').textContent").then(x=>x.includes(nextDay)),true,
     'tomorrow uses real JST date');

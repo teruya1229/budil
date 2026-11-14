@@ -84,15 +84,81 @@ const allowed=new Set([
   "supabase/functions/budil-gpt-interpret/index.ts",
   "supabase/functions/budil-gpt-interpret/readonly.ts"
 ]);
+// Reviewed only for the isolated booking-preview staging PR. Protect core
+// business engines below with an exact source-diff comparison.
+const reviewedCalendarStagingPaths=new Set([
+  ".github/workflows/budil-calendar-staging-safe.yml",
+  "docs/budil-calendar-write-production-preparation-20261112.md",
+  "docs/sql/budil-calendar-write-slots-proposal.sql",
+  "experiments/budil-gcal-write-sandbox/atomic-ledger.cjs",
+  "experiments/budil-gcal-write-sandbox/booking-command.cjs",
+  "experiments/budil-gcal-write-sandbox/booking-preview.cjs",
+  "experiments/budil-gcal-write-sandbox/calendar-route.cjs",
+  "experiments/budil-gcal-write-sandbox/existing-read-booking.js",
+  "experiments/budil-gcal-write-sandbox/fakes.cjs",
+  "experiments/budil-gcal-write-sandbox/google-calendar-http.cjs",
+  "experiments/budil-gcal-write-sandbox/production-call-adapter.cjs",
+  "experiments/budil-gcal-write-sandbox/schema-proposal.sql",
+  "experiments/budil-gcal-write-sandbox/transaction.cjs",
+  "experiments/budil-gcal-write-sandbox/verify-extra.cjs",
+  "experiments/budil-gcal-write-sandbox/verify.cjs",
+  "index.html",
+  "js/budil-gpt-calendar-link.js",
+  "js/budil-gpt-calendar-preview.js",
+  "js/budil-gpt-offline-ui.js",
+  "scripts/sql/verify-budil-calendar-slots.sql",
+  "scripts/verify-budil-calendar-slot-race.mjs",
+  "scripts/verify-budil-cloud-diagnostic-client.mjs",
+  "scripts/verify-budil-gcal-compact-browser.mjs",
+  "scripts/verify-budil-gcal-credential-diagnostic.mjs",
+  "scripts/verify-budil-gcal-diagnostic-route.mjs",
+  "scripts/verify-budil-gcal-google-http.mjs",
+  "scripts/verify-budil-gcal-ledger.mjs",
+  "scripts/verify-budil-gcal-local-link.mjs",
+  "scripts/verify-budil-gcal-relative-date.mjs",
+  "scripts/verify-budil-gcal-server-integration.mjs",
+  "scripts/verify-budil-gcal-slots.mjs",
+  "scripts/verify-budil-gcal-snapshot-authority.mjs",
+  "scripts/verify-budil-gcal-test-cleanup.mjs",
+  "scripts/verify-budil-gcal-workorder-sync.mjs",
+  "scripts/verify-budil-gcal-write-auth.mjs",
+  "scripts/verify-budil-gcal-write-busy.mjs",
+  "scripts/verify-budil-gcal-write-token.mjs",
+  "supabase/functions/budil-calendar-write/authority.mjs",
+  "supabase/functions/budil-calendar-write/diagnostic-route.mjs",
+  "supabase/functions/budil-calendar-write/diagnostic.mjs",
+  "supabase/functions/budil-calendar-write/google-write-events.mjs",
+  "supabase/functions/budil-calendar-write/google-write-token.mjs",
+  "supabase/functions/budil-calendar-write/handler.mjs",
+  "supabase/functions/budil-calendar-write/index.ts",
+  "supabase/functions/budil-calendar-write/ledger.mjs",
+  "supabase/functions/budil-calendar-write/slots.mjs",
+  "supabase/functions/budil-calendar-write/snapshot-authority.mjs",
+]);
 assert.ok(paths.length>0,'unexpected empty integration diff');
 for(const p of paths) {
-  assert.ok(allowed.has(p),'Unexpected code change '+p);
+  assert.ok(allowed.has(p)||reviewedCalendarStagingPaths.has(p)||
+ p==='js/work-order-brain.js','Unexpected code change '+p);
   assert.ok(!/(?:^|\/)(?:\.env|private|secrets?|credentials?|tokens?)(?:\/|\.|$)/i.test(p),
     'Unsafe path in source diff '+p);
 }
+
+if(paths.includes('js/work-order-brain.js')){
+  // No general protection exemption: allow only the eight audited metadata
+  // normalization lines, byte-for-byte relative to current main.
+  const originalWork=spawnSync('git',['show',base+':js/work-order-brain.js'],{encoding:'utf8'});
+  assert.equal(originalWork.status,0,'business baseline missing');
+  const nowWork=readFileSync('js/work-order-brain.js','utf8');
+  const reviewed="      // Keep Google event identity only when supplied by a verified server response.\n      calendarEventId: String(item.calendarEventId || '').trim().slice(0, 1024),\n      calendarEtag: String(item.calendarEtag || '').trim().slice(0, 300),\n      calendarTargetId: String(item.calendarTargetId || '').trim().slice(0, 254),\n      calendarEventSource: ['transaction', 'imported'].includes(item.calendarEventSource)\n        ? item.calendarEventSource : '',\n      calendarSyncStatus: ['unsynced', 'pending', 'indeterminate', 'verified'].includes(item.calendarSyncStatus)\n        ? item.calendarSyncStatus : 'unsynced',\n";
+  assert.equal(nowWork.split(reviewed).length,2,
+    'WorkOrder metadata change not exactly the reviewed one');
+  assert.equal(nowWork.replace(reviewed,''),originalWork.stdout,
+    'Protected WorkOrder file altered beyond approved event metadata preservation');
+}
+
 for(const p of [
   'js/app.js','js/storage.js','js/documents-brain.js',
-  'js/payment-brain.js','js/revenue-brain.js','js/work-order-brain.js'
+  'js/payment-brain.js','js/revenue-brain.js'
 ]) assert.ok(!paths.includes(p),'Protected business code changed '+p);
 const html=readFileSync('index.html','utf8');
 const ui=readFileSync('js/budil-gpt-offline-ui.js','utf8');

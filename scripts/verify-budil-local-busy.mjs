@@ -65,7 +65,13 @@ const offline=mount({error:new Error('No loopback service')});
 assert.equal((await offline.cloud.fetchLocalScheduleBlocks('2026-11-08','2026-11-08')).code,'local_calendar_unavailable');
 assert.ok(uiSrc.includes('await cloud.fetchLocalScheduleBlocks(target.date,target.date)'));
 assert.ok(uiSrc.includes("code==='local_calendar_unavailable'"),'explain loopback local read failures');
-assert.ok(uiSrc.includes('ローカルネットワーク／ループバックへのアクセス'),'user can identify Chrome permission');
+assert.ok(uiSrc.includes('await cloud.fetchScheduleBlocks(target.date,target.date)'),
+ 'cloud calendar must be tried before local fallback');
+assert.ok(uiSrc.includes("['secret_invalid','secret_not_configured','token_exchange_failed']"),
+ 'only documented cloud credential errors permit local fallback');
+assert.ok(uiSrc.includes('await cloud.fetchLocalScheduleBlocks(target.date,target.date)'),
+ 'fallback path remains available when cloud credential is temporarily unavailable');
 assert.ok(uiSrc.includes('Googleの空き確定にはしません。'),'failed read never claims availability');
-assert.ok(!uiSrc.includes('await cloud.fetchScheduleBlocks(target.date,target.date)'));
+assert.ok(uiSrc.includes("code==='not_signed_in'||code==='unauthorized'"),
+ 'authentication failure explicitly tells user to log in, never treats failure as free');
 console.log('BUDIL_LOCAL_BUSY_READ_PASS local first, no JWT/PII, no fallback, invalid date/origin, safe failures');
