@@ -310,11 +310,20 @@
   if(!legacy||!consent||legacy.disabled)return false;
   // User already accepted this exact device-local read consent for GPT.
   consent.checked=true;
-  legacy.click();
+  try{legacy.click();}finally{consent.checked=false;}
   const originalStatus=String($('budil-gpt-status')?.textContent||'');
   const details=document.querySelector('.budil-gpt-legacy-tools');
   if(details)details.open=true;
+  const panels={予約:['budil-gpt-booking'],見積:['budil-gpt-candidates','budil-gpt-draft'],
+    顧客:['budil-gpt-customer-create'],請求:['budil-gpt-invoice'],入金:['budil-gpt-bank']};
+  const panelReady=(panels[kind]||[]).some(id=>$(id)&&$(id).hidden===false);
+  const stopped=/確認中です|見つかりません|準備できません|できません|停止しました|まだ対応していない/u.test(originalStatus);
   bubble('user',raw);
+  if(!panelReady||stopped){
+   bubble('assistant','端末内の'+kind+'準備を完了できませんでした。'+originalStatus+'　データは変更していません。');
+   note('端末内の'+kind+'準備は未完了です。入力を確認してください。',true);
+   return true;
+  }
   bubble('assistant',kind+'の端末内確認画面を開きました。'+originalStatus+'　承認前に業務データを保存・発行しません。');
   sanitizedHistory.push({role:'user',content:kind+'確認'},
     {role:'assistant',content:kind+'の提案'});
