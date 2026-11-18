@@ -282,6 +282,41 @@
    }
   }
  }
+ // Fast local-first path: strict booking/quote grammar prepares the existing
+ // Budil review screen. It sends NO customer data or prompt to a provider and
+ // never presses an actual save/issue/confirm button.
+ function legacyPreviewType(raw,today){
+  const Booking=typeof BudilGptBooking!=='undefined'?BudilGptBooking:null;
+  const Anon=typeof BudilGptAnonymize!=='undefined'?BudilGptAnonymize:null;
+  try{
+   const booking=Booking&&Booking.parse(raw,today);
+   if(booking&&booking.ok&&['booking','reschedule'].includes(booking.action))return '予約';
+   const command=DateTool&&Anon&&DateTool.parse(raw,{today,anonymizer:Anon});
+   if(command&&command.ok&&command.action==='quote.draft')return '見積';
+  }catch(_){/* unsupported instructions go to the normal GPT planning path */}
+  return '';
+ }
+ function startSafeLocalPreview(raw,today){
+  const kind=legacyPreviewType(raw,today);
+  if(!kind)return false;
+  const legacy=$('budil-gpt-run'),consent=$('budil-gpt-consent');
+  if(!legacy||!consent||legacy.disabled)return false;
+  // User already accepted this exact device-local read consent for GPT.
+  consent.checked=true;
+  legacy.click();
+  const originalStatus=String($('budil-gpt-status')?.textContent||'');
+  const details=document.querySelector('.budil-gpt-legacy-tools');
+  if(details)details.open=true;
+  bubble('user',raw);
+  bubble('assistant',kind+'の端末内確認画面を開きました。'+originalStatus+'　承認前に業務データを保存・発行しません。');
+  sanitizedHistory.push({role:'user',content:kind+'確認'},
+    {role:'assistant',content:kind+'の提案'});
+  sanitizedHistory=Chat.safeHistory(sanitizedHistory);
+  persistSafeHistory();
+  $('budil-gpt-input').value='';
+  note('端末内の'+kind+'確認画面へ進みました。顧客候補・金額・日時を確認してから承認してください。');
+  return true;
+ }
  async function send(){
   if(busy)return;
   const Cloud=window.BudilCloud;
@@ -292,6 +327,8 @@
   if(!raw.trim())return note('まずGPTへの質問を入力してください。',true);
   if(!syncAuth())return showLogin();
   if(!ensureChatConsent())return;
+  const localToday=DateTool.todayTokyo();
+  if(startSafeLocalPreview(raw,localToday))return;
   let leads;
   try{leads=Data.getLeads()}catch{return note('顧客情報の匿名化に必要な端末データを読み取れません。',true)}
   const prepared=Chat.prepare(raw,leads,aliasMap);
