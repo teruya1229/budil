@@ -345,6 +345,11 @@ try{
   assert.equal(await ev("window.__previewProviderCalls"),0,'no paid GPT call for supported local grammar');
   assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('端末内の予約確認画面')"),true);
   console.log('PASS '+width+'px: strict booking prompts directly stage local review, zero GPT cost, zero writes');
+  // An unfinished booking must not be silently discarded or called completed.
+  await ev("document.getElementById('budil-gpt-input').value='2030年12月20日の午前11時に架空一郎さんのエアコン洗浄2台を予約して。税込18,000円で見積書も作って';document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('準備は未完了')"),true,
+    'conflicting second booking must not be reported as a new successful preview');
+  assert.equal(await ev("window.__previewProviderCalls"),0,'failed local preview does not leak raw customer data to GPT');
   // Bank matching opens an existing import preview, not a payment write.
   await ev("document.getElementById('budil-gpt-clear').click();document.getElementById('budil-gpt-input').value='銀行明細と請求書を照合して';document.getElementById('budil-gpt-chat-send').click()");
   assert.equal(await ev("document.getElementById('budil-gpt-bank').hidden"),false,
