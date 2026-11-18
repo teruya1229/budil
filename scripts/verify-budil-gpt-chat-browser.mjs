@@ -384,6 +384,38 @@ try{
   assert.equal(await ev("window.__previewProviderCalls"),0,'price revision does not incur paid provider calls');
   console.log('PASS '+width+'px: continuous natural-language amount revision, no automatic approval');
 
+  // The calendar preview is a real browser integration using fictional local data.
+  // It must never invoke the paid GPT provider or a work-order / Google WRITE.
+  await ev("document.getElementById('budil-gpt-clear').click();document.getElementById('budil-gpt-chat-clear').click();window.__calWrites=0;window.__calReads=0;Storage.getLeads=()=>[{id:'fake-preview-lead',name:'架空一郎',municipality:'南城市'}];Storage.getWorkOrders=()=>[];Storage.addWorkOrder=Storage.updateWorkOrder=()=>{window.__calWrites++;throw Error('WRITE_FORBIDDEN')};window.__calTomorrow=(()=>{let d=new Date(BudilGptLocalCommands.todayTokyo()+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+1);return d.toISOString().slice(0,10)})();BudilCloud.fetchScheduleBlocks=async(a,b)=>{window.__calReads++;if(a!==window.__calTomorrow||b!==a)throw Error('WRONG_DAY');return {ok:true,readOnly:true,calendarWritePerformed:false,events:[{start:a+'T08:30:00+09:00',end:a+'T09:00:00+09:00'}]}}");
+  await ev("document.getElementById('budil-gpt-input').value='明日の10時に架空一郎さんのエアコン洗浄を予約して';document.getElementById('budil-gpt-chat-send').click()");
+  assert.ok((await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('予約の仮確認'));
+  assert.equal(await ev("document.querySelectorAll('#budil-gpt-chat-history button').length"),1,'owner must select exact customer');
+  await ev("document.querySelector('#budil-gpt-chat-history button').click();document.getElementById('budil-gpt-input').value='11:00まで';document.getElementById('budil-gpt-chat-send').click()");
+  assert.ok((await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('Googleは未照合'),'not claim Google availability');
+  assert.equal(await ev("window.__calWrites"),0);
+  assert.equal(await ev("window.__calReads"),0,'Google read must require separate click');
+  assert.equal(await ev("window.__previewProviderCalls"),0,'local preview must not use GPT API');
+  await ev("Array.from(document.querySelectorAll('#budil-gpt-chat-history button')).find(b=>b.textContent.includes('Googleの予定を照合')).click()");
+  for(let i=0;i<40;i++){if(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('Google読取成功')"))break;await sleep(100);}
+  assert.equal(await ev("window.__calReads"),1,'one date-only authorized Google read');
+  assert.equal(await ev("window.__calWrites"),0);
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('予約確定ではありません')"),true);
+  console.log('PASS '+width+'px: tomorrow booking + exact lead + optional Google busy read, no writes');
+
+  await ev("document.getElementById('budil-gpt-chat-clear').click();Storage.getWorkOrders=()=>[{id:'fake-conflict',customerName:'別の架空顧客',serviceText:'清掃',scheduledDate:window.__calTomorrow,startTime:'10:30',endTime:'11:30',status:'confirmed'}];document.getElementById('budil-gpt-input').value='明日10時に架空一郎さんのエアコン洗浄を予約して';document.getElementById('budil-gpt-chat-send').click()");
+  await ev("document.querySelector('#budil-gpt-chat-history button').click();document.getElementById('budil-gpt-input').value='11:00';document.getElementById('budil-gpt-chat-send').click()");
+  assert.ok((await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('LOCAL_CONFLICT'),'local overlap must block');
+  assert.equal(await ev("window.__calWrites"),0);
+
+  await ev("document.getElementById('budil-gpt-chat-clear').click();Storage.getWorkOrders=()=>[{id:'fake-existing-w1',customerName:'架空一郎',serviceText:'清掃',scheduledDate:window.__calTomorrow,startTime:'09:00',endTime:'10:00',status:'tentative'}];document.getElementById('budil-gpt-input').value='架空一郎さんの予約を明後日11時に変更して';document.getElementById('budil-gpt-chat-send').click()");
+  assert.ok((await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('対象を本人が1件選択'));
+  await ev("document.querySelector('#budil-gpt-chat-history button').click();document.getElementById('budil-gpt-input').value='12:00';document.getElementById('budil-gpt-chat-send').click()");
+  assert.ok((await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('端末内の予定に重複は見つかりません'));
+  assert.equal(await ev("window.__calWrites"),0,'date change remains preview-only');
+  assert.equal(await ev("window.__previewProviderCalls"),0,'work order details never sent to model');
+  console.log('PASS '+width+'px: conflict fail-closed and exact WorkOrder reschedule preview');
+
+
 
 
   console.log('PASS '+width+'px: safe reload recovery, reset and signed-out privacy');
