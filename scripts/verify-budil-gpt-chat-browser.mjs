@@ -92,7 +92,7 @@ try{
 
   // Real regression: a fresh tab has no BudilCloud session, even when
   // another Chrome tab is already authenticated. It must not send GPT data.
-  await ev("window.__qaSignedIn=false;window.__qaLoginCalls=0;BudilCloud.getAuthState=()=>({available:true,signedIn:window.__qaSignedIn});BudilCloud.login=async function(email,pwd){window.__qaLoginCalls++;if(email==='qa@example.invalid'&&pwd==='fixture-password'){window.__qaSignedIn=true;return {ok:true}}return {ok:false,message:'invalid_credentials'}};BudilCloud.getGptChatReadiness=async()=>({ok:true,ready:true})");
+  await ev("window.__qaSignedIn=false;window.__qaSessionScope='staging:00000000-0000-0000-0000-000000000001';BudilCloud.getGptSessionScope=()=>window.__qaSignedIn?window.__qaSessionScope:'';window.__qaLoginCalls=0;BudilCloud.getAuthState=()=>({available:true,signedIn:window.__qaSignedIn});BudilCloud.login=async function(email,pwd){window.__qaLoginCalls++;if(email==='qa@example.invalid'&&pwd==='fixture-password'){window.__qaSignedIn=true;return {ok:true}}return {ok:false,message:'invalid_credentials'}};BudilCloud.getGptChatReadiness=async()=>({ok:true,ready:true})");
   await ev("document.getElementById('budil-gpt-input').value='こんにちは';document.getElementById('budil-gpt-consent').checked=false;document.getElementById('budil-gpt-chat-consent').checked=false;document.getElementById('budil-gpt-chat-send').click()");
   assert.equal(await ev("document.getElementById('budil-gpt-chat-auth').hidden"),false,
     'missing auth reveals login form in the GPT dialog');
@@ -143,6 +143,10 @@ try{
   assert.equal(await ev("window.__lastGoogleDates.join(',')"),'2026-11-11,2026-11-11','server reads selected date only');
   assert.equal(await ev('window.__dateNetwork'),0,'mocked GPT and local read cause no external requests');
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true);
+  await ev("document.getElementById('budil-gpt-input').value='新里一郎の予約を確認して';document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev('window.__chatCalls'),1,'unknown personal name must be blocked before provider');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('外部AIへ送信しません')"),true,
+    'privacy guard must explain no external send');
   // A second natural-language turn must retain sanitized context. The model
   // can propose a change, but it can never write it directly.
   await ev("BudilCloud.sendGptChat=async function(msg,history,today){window.__chatCalls++;window.__historyLength=history.length;window.__historyAssistant=history[1]?.content||'';return {ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'予約変更案を確認してください。まだ保存しません。',action:'proposal',query:'',date:'',month:'',docType:'none',needs_confirmation:true}}");
@@ -291,9 +295,9 @@ try{
    if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('再読込のあとも')"))break;
    await sleep(100);
   }
-  assert.ok((await ev("sessionStorage.getItem('budil-gpt.safe-history.v1')||''")).includes('会話復元を試したい'),
+  assert.ok((await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')||''")).includes('会話復元を試したい'),
    'safe anonymized chat persisted in current-tab sessionStorage');
-  await ev("localStorage.setItem('budil-cloud.auth.v1.session',JSON.stringify({access_token:'fixture-not-a-real-token',refresh_token:'fixture-not-a-real-refresh',expires_at:Math.floor(Date.now()/1000)+1800,env:'staging'}));location.reload()");
+  await ev("(()=>{const sub='00000000-0000-0000-0000-000000000001';const jwt='fixture.'+btoa(JSON.stringify({sub})).replace(/=/g,'')+'.signature';localStorage.setItem('budil-cloud.auth.v1.session',JSON.stringify({access_token:jwt,refresh_token:'fixture-not-a-real-refresh',expires_at:Math.floor(Date.now()/1000)+1800,env:'staging'}));location.reload()})()");
   for(let i=0;i<160;i++){
    if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-chat-history')"))break;
    await sleep(100);
@@ -302,17 +306,23 @@ try{
    'safe conversation restored after page reload with the same signed-in session');
   assert.ok(!(await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('架空一郎'),
    'raw customer records never restored into the GPT transcript');
+  // Same-tab login to a different account immediately invalidates the old transcript.
+  await ev("(()=>{const sub='00000000-0000-0000-0000-000000000002';const jwt='fixture.'+btoa(JSON.stringify({sub})).replace(/=/g,'')+'.signature';localStorage.setItem('budil-cloud.auth.v1.session',JSON.stringify({access_token:jwt,refresh_token:'fixture-not-a-real-refresh',expires_at:Math.floor(Date.now()/1000)+1800,env:'staging'}));window.dispatchEvent(new Event('budil-cloud-auth-changed'))})()");
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-history').textContent"),'',
+    'account switch must remove old user transcript');
+  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')"),null,
+    'account switch must remove cached user A history');
   await ev("document.getElementById('budil-gpt-chat-clear').click()");
-  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v1')"),null,
+  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')"),null,
    'explicit reset deletes the only saved conversation cache');
-  await ev("sessionStorage.setItem('budil-gpt.safe-history.v1',JSON.stringify({savedAt:Date.now(),history:[{role:'user',content:'ログアウト前の内緒の会話'}]}));localStorage.removeItem('budil-cloud.auth.v1.session');location.reload()");
+  await ev("sessionStorage.setItem('budil-gpt.safe-history.v2',JSON.stringify({scope:'staging:00000000-0000-0000-0000-000000000002',savedAt:Date.now(),history:[{role:'user',content:'ログアウト前の内緒の会話'}]}));localStorage.removeItem('budil-cloud.auth.v1.session');location.reload()");
   for(let i=0;i<160;i++){
    if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-chat-history')"))break;
    await sleep(100);
   }
   assert.equal(await ev("document.getElementById('budil-gpt-chat-history').textContent"),'',
    'signed-out reload must not reveal prior account chat');
-  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v1')"),null,
+  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')"),null,
    'signed-out reload destroys any stale cached chat');
   console.log('PASS '+width+'px: safe reload recovery, reset and signed-out privacy');
   console.log('PASS '+width+'px: same-tab login gate, consent ordering, expired session recovery');
