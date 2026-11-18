@@ -117,7 +117,7 @@ const BudilGptCalendarChatPreview=(()=>{
   finishIfReady();
  }
  function showChoices(scope){
-  const p=pending,intent=p.intent;
+  const p=pending,intent=p.intent,selectionVersion=version;
   const Store=typeof Storage!=='undefined'?Storage:null;
   if(intent.action==='booking'){
    if(!intent.customerName){say('新規予約には登録済み顧客の氏名が必要です。氏名を含めて再入力してください。');reset();return;}
@@ -133,7 +133,7 @@ const BudilGptCalendarChatPreview=(()=>{
     const b=node('button',String(c.displayName)+'（'+String(c.municipality||'地域未登録')+'）',
      'budil-gpt-btn budil-gpt-btn-secondary');
     b.type='button';b.addEventListener('click',()=>{
-     if(!pending||pending.scope!==scope)return;
+     if(!pending||pending!==p||version!==selectionVersion||pending.scope!==scope)return;
      for(const x of box.querySelectorAll('button'))x.disabled=true;
      chooseCustomer(c,scope);
     });box.append(b);
