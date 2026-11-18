@@ -1,5 +1,13 @@
 # Budil handoff
 
+## 2026-11-18 GPT常駐100点化：最新引継ぎ（開発中／本番未反映）
+
+- **本番** main `d411ec6`、Pages公開・GPT Edge `budil-gpt-chat` v5 ACTIVE/JWT true。PR #33の422安全復帰と匿名化会話再読込は前回承認により本番反映済み。下の「v4／未反映」記載は当時の古い作業履歴
+- **新規** Draft PR [#34](https://github.com/teruya1229/budil/pull/34) ブランチ `fix/budil-gpt-privacy-identity-and-workflow-20261118`。未登録氏名の送信拒否（ブラウザ＋サーバー）、ログアウト／別アカウント会話キャッシュ隔離、自然文から既存ローカル予約・見積・金額修正・請求・入金照合画面への最短導線を実装。全ケース架空データで試験、本番書込なし
+- **安全な次の作業** PR#34最終HEADの9系列CIを全件読み戻し → 具体差分への本番公開・安全強化承認 → main merge / Pages deploy / Edge v6をJWT維持でdeploy → 本番コードread-back → 既存Browser番頭による本人認証済み実会話検品。特に現在本番のv5は未登録氏名の追加拒否を未搭載で、個人情報入力を避ける必要あり
+- **完成に残る本質的gap** Cloud `budil_snapshots` は0件、Google WRITE slotsは0件（本日実SQL）。PR #31はDraft/HARD OFF。既存実顧客localStorageを無断送信/復元せず、本人同意に基づく安全な顧客正本同期とGoogle専用権限、イベントID更新＋再読取、本番Windows/iPhone受入が必要。CI成功だけで100点認定不可
+
+
 最終更新: 2026-11-18
 
 ## GPT常駐・本番422と会話再読込の継続対応（開発中）
