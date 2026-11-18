@@ -140,13 +140,13 @@ test('normal business questions remain available to natural GPT chat',()=>{
 });
 test('server and browser use the exact same fail-closed outbound vocabulary',()=>{
  const server=readFileSync('supabase/functions/budil-gpt-chat/index.ts','utf8');
- const re=/APPROVED_OUTBOUND_TERMS=Object\\.freeze\\((\\[[^\\n]*\\])\\);/;
+ const re=/APPROVED_OUTBOUND_TERMS=Object\.freeze\((\[[^\n]*\])\);/;
  const clientList=JSON.parse(code.match(re)?.[1]||'null');
  const serverList=JSON.parse(server.match(re)?.[1]||'null');
  assert.ok(clientList.length>300);
  assert.deepEqual(clientList,serverList);
- assert.match(server,/if\\(!approvedOutbound\\(msg\\)\\|\\|history\\.some/);
- assert.match(server,/return bad\\(400,"unapproved_text",origin\\)/);
+ assert.match(server,/if\(!approvedOutbound\(msg\)\|\|history\.some/);
+ assert.match(server,/return bad\(400,"unapproved_text",origin\)/);
 });
 
 // Google read-only windows are verified locally, never sent to GPT.
