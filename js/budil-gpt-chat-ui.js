@@ -15,6 +15,8 @@
  const DateTool=typeof BudilGptLocalCommands!=='undefined'?BudilGptLocalCommands:null;
  let sanitizedHistory=[],aliasMap=Object.create(null),busy=false,seq=0;
  const CHAT_CONSENT_KEY='budil-gpt.chat-consent.v1';
+ const CHAT_HISTORY_KEY='budil-gpt.safe-history.v1';
+ const CHAT_HISTORY_TTL_MS=24*60*60*1000;
  let chatConsentAccepted=false;
  function readChatConsent(){
   try{return localStorage.getItem(CHAT_CONSENT_KEY)==='accepted';}
@@ -67,6 +69,7 @@
  }
  function syncAuth(){
   const ready=signedIn();
+  if(!ready)forgetSafeHistory();
   if(authPanel)authPanel.hidden=ready;
   return ready;
  }
@@ -138,6 +141,41 @@
   historyBox.append(div);
   if(historyBox.scrollTo)historyBox.scrollTo({top:historyBox.scrollHeight,behavior:'smooth'});
   return div;
+ }
+ // Only the anonymized provider history survives a page reload in this tab.
+ // Original customer names, aliasMap, local records and Google event data NEVER
+ // enter this cache. A new tab or a logged-out page cannot recover the record.
+ function forgetSafeHistory(){
+  try{sessionStorage.removeItem(CHAT_HISTORY_KEY);}catch(_){/* storage unavailable */}
+  sanitizedHistory=[];aliasMap=Object.create(null);
+  historyBox.replaceChildren();
+ }
+ function persistSafeHistory(){
+  if(!signedIn()||!Chat||typeof Chat.safeHistory!=='function')return;
+  const history=Chat.safeHistory(sanitizedHistory);
+  if(!history.length)return;
+  try{sessionStorage.setItem(CHAT_HISTORY_KEY,
+   JSON.stringify({savedAt:Date.now(),history}));}
+  catch(_){/* private mode: this tab still works in memory */}
+ }
+ function restoreSafeHistory(){
+  if(!signedIn()){forgetSafeHistory();return;}
+  let saved;
+  try{
+   const raw=sessionStorage.getItem(CHAT_HISTORY_KEY);
+   if(!raw)return;
+   saved=JSON.parse(raw);
+   if(!saved||!Number.isFinite(saved.savedAt)||
+      Date.now()-saved.savedAt>CHAT_HISTORY_TTL_MS||
+      saved.savedAt>Date.now()||
+      !Array.isArray(saved.history)||saved.history.length>8)throw Error('invalid');
+   const history=Chat&&Chat.safeHistory(saved.history);
+   if(!history||history.length!==saved.history.length||history.some((h,i)=>
+      h.role!==saved.history[i].role||h.content!==saved.history[i].content))throw Error('invalid');
+   sanitizedHistory=history;
+   for(const h of history)bubble(h.role,h.content);
+   if(history.length)note('匿名化済みの前回会話を復元しました。顧客名・作業明細・Google予定は再照合してください。');
+  }catch(_){forgetSafeHistory();}
  }
  // GPT selects a read-only tool, but has never seen its result.
  // Never display the model's pre-read question as a final answer.
@@ -325,6 +363,7 @@
    sanitizedHistory.push({role:'user',content:prepared.message},
                          {role:'assistant',content:historyReply});
    sanitizedHistory=Chat.safeHistory(sanitizedHistory);
+   persistSafeHistory();
    if(verified.proposal){
     const div=node('p','これは操作案です。予約・帳票・顧客データは変更していません。正式な確認・承認画面が必要です。');
     historyBox.append(div);note('変更操作は未実行です。');
@@ -348,13 +387,13 @@
   }
  });
  syncChatConsent();
+ restoreSafeHistory();
 
  const readyButton=$('budil-gpt-chat-readiness');
  if(readyButton)readyButton.addEventListener('click',freeReadiness);
 
  clear.addEventListener('click',()=>{
-  seq++;sanitizedHistory=[];aliasMap=Object.create(null);
-  historyBox.replaceChildren();
+  seq++;forgetSafeHistory();
   note('会話をリセットしました。GPT利用同意とログイン状態は維持しています。');
  });
  $('budil-gpt-close')?.addEventListener('click',()=>{ /* closing the panel keeps GPT conversation context */ });
