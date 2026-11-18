@@ -358,6 +358,25 @@ try{
   assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('端末内の入金確認画面')"),true);
   console.log('PASS '+width+'px: bank import preview opens locally, no paid model or automatic write');
 
+  // A natural quote in the same GPT input stages the existing draft; it must
+  // ask the owner to choose the exact customer before it creates any PDF.
+  await ev("document.getElementById('budil-gpt-clear').click();document.getElementById('budil-gpt-input').value='架空一郎さんのエアコン洗浄2台を税込18000円で見積して';document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-candidates').hidden"),false,
+    'natural quote command stages the known customer selection');
+  assert.equal(await ev("document.getElementById('budil-gpt-candidate-list').querySelectorAll('button').length"),1,
+    'one explicit exact-ID candidate is shown');
+  assert.equal(await ev("document.getElementById('budil-gpt-draft').hidden"),true,
+    'quote is not created before the owner selects a customer');
+  await ev("document.getElementById('budil-gpt-candidate-list').querySelector('button').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-draft').hidden"),false,
+    'owner selection creates a local quote draft');
+  assert.equal(await ev("document.getElementById('budil-gpt-draft-preview').textContent.includes('18,000')"),true,
+    'existing Budil quote calculator produced the requested amount');
+  assert.equal(await ev("window.__previewProviderCalls"),0,'quote drafting never transmits customer name to paid model');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('端末内の見積確認画面')"),true);
+  console.log('PASS '+width+'px: natural quote to exact-customer draft, local-only, zero provider cost');
+
+
   console.log('PASS '+width+'px: safe reload recovery, reset and signed-out privacy');
   console.log('PASS '+width+'px: same-tab login gate, consent ordering, expired session recovery');
   console.log('PASS '+width+'px: screenshot regression zero local results, no premature GPT question, Google unverified');
