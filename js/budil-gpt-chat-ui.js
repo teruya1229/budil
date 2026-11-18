@@ -13,9 +13,10 @@
  const Payment=typeof PaymentBrain!=='undefined'?PaymentBrain:null;
  const Profit=typeof ProfitBrain!=='undefined'?ProfitBrain:null;
  const DateTool=typeof BudilGptLocalCommands!=='undefined'?BudilGptLocalCommands:null;
- let sanitizedHistory=[],aliasMap=Object.create(null),busy=false,seq=0;
+ let sanitizedHistory=[],aliasMap=Object.create(null),busy=false,seq=0,activeScope='';
  const CHAT_CONSENT_KEY='budil-gpt.chat-consent.v1';
- const CHAT_HISTORY_KEY='budil-gpt.safe-history.v1';
+ const CHAT_HISTORY_KEY='budil-gpt.safe-history.v2';
+ const LEGACY_HISTORY_KEY='budil-gpt.safe-history.v1';
  const CHAT_HISTORY_TTL_MS=24*60*60*1000;
  let chatConsentAccepted=false;
  function readChatConsent(){
@@ -67,9 +68,21 @@
    return !!(Cloud&&typeof Cloud.getAuthState==='function'&&Cloud.getAuthState().signedIn===true);
   }catch(_){return false;}
  }
+ function currentScope(){
+  try{
+   const Cloud=window.BudilCloud;
+   return signedIn()&&Cloud&&typeof Cloud.getGptSessionScope==='function'?
+     String(Cloud.getGptSessionScope()||''):'';
+  }catch(_){return '';}
+ }
+ function syncAccountScope(){
+  const scope=currentScope();
+  if(!scope||(activeScope&&activeScope!==scope))forgetSafeHistory();
+  activeScope=scope;
+  return scope;
+ }
  function syncAuth(){
-  const ready=signedIn();
-  if(!ready)forgetSafeHistory();
+  const ready=Boolean(syncAccountScope());
   if(authPanel)authPanel.hidden=ready;
   return ready;
  }
@@ -146,26 +159,31 @@
  // Original customer names, aliasMap, local records and Google event data NEVER
  // enter this cache. A new tab or a logged-out page cannot recover the record.
  function forgetSafeHistory(){
-  try{sessionStorage.removeItem(CHAT_HISTORY_KEY);}catch(_){/* storage unavailable */}
+  try{
+   sessionStorage.removeItem(CHAT_HISTORY_KEY);
+   sessionStorage.removeItem(LEGACY_HISTORY_KEY);
+  }catch(_){/* storage unavailable */}
   sanitizedHistory=[];aliasMap=Object.create(null);
   historyBox.replaceChildren();
  }
  function persistSafeHistory(){
-  if(!signedIn()||!Chat||typeof Chat.safeHistory!=='function')return;
+  const scope=syncAccountScope();
+  if(!scope||!Chat||typeof Chat.safeHistory!=='function')return;
   const history=Chat.safeHistory(sanitizedHistory);
   if(!history.length)return;
   try{sessionStorage.setItem(CHAT_HISTORY_KEY,
-   JSON.stringify({savedAt:Date.now(),history}));}
+   JSON.stringify({savedAt:Date.now(),scope,history}));}
   catch(_){/* private mode: this tab still works in memory */}
  }
  function restoreSafeHistory(){
-  if(!signedIn()){forgetSafeHistory();return;}
+  const scope=syncAccountScope();
+  if(!scope)return;
   let saved;
   try{
    const raw=sessionStorage.getItem(CHAT_HISTORY_KEY);
    if(!raw)return;
    saved=JSON.parse(raw);
-   if(!saved||!Number.isFinite(saved.savedAt)||
+   if(!saved||saved.scope!==scope||!Number.isFinite(saved.savedAt)||
       Date.now()-saved.savedAt>CHAT_HISTORY_TTL_MS||
       saved.savedAt>Date.now()||
       !Array.isArray(saved.history)||saved.history.length>8)throw Error('invalid');
@@ -272,12 +290,16 @@
     return note('GPT会話のモジュールが読み込まれていません。',true);
   const raw=$('budil-gpt-input').value;
   if(!raw.trim())return note('まずGPTへの質問を入力してください。',true);
-  if(!signedIn())return showLogin();
+  if(!syncAuth())return showLogin();
   if(!ensureChatConsent())return;
   let leads;
   try{leads=Data.getLeads()}catch{return note('顧客情報の匿名化に必要な端末データを読み取れません。',true)}
   const prepared=Chat.prepare(raw,leads,aliasMap);
-  if(!prepared.ok)return note('この文章は外部送信できません（'+prepared.code+'）。住所・電話等を除き、1件ずつ入力してください。',true);
+  if(!prepared.ok){
+   if(prepared.code==='UNAPPROVED_TEXT')
+    return note('個別の氏名・会社名・住所や未確認の語句が含まれる可能性があるため、外部AIへ送信しません。顧客はBudilの登録名で指定し、個人情報を含む現場メモは入力しないでください。',true);
+   return note('この文章は外部送信できません（'+prepared.code+'）。住所・電話等を除き、1件ずつ入力してください。',true);
+  }
   for(const [k,v] of Object.entries(prepared.aliases)){
    if(aliasMap[k]&&aliasMap[k]!==v)return note('別の顧客を同じ呼称で参照しないため、会話をリセットしてください。',true);
   }
@@ -397,7 +419,12 @@
   }
  });
  syncChatConsent();
+ try{sessionStorage.removeItem(LEGACY_HISTORY_KEY);}catch(_){/* old unscoped cache removed */}
  restoreSafeHistory();
+ window.addEventListener('budil-cloud-auth-changed',syncAuth);
+ window.addEventListener('storage',event=>{
+  if(event.key==='budil-cloud.auth.v1.session')syncAuth();
+ });
 
  const readyButton=$('budil-gpt-chat-readiness');
  if(readyButton)readyButton.addEventListener('click',freeReadiness);
