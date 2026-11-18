@@ -91,6 +91,27 @@
     try {
       legacySessionStorageRef().removeItem(SESSION_KEY);
     } catch (_e) { /* ignore */ }
+    notifyAuthChanged();
+  }
+
+  // Cache identity only: the JWT subject is not an authorization decision.
+  function getGptSessionScope() {
+    var session=readSession();
+    if(!session||session.env!==resolveEnvironment())return '';
+    try {
+      var parts=String(session.access_token).split('.');
+      if(parts.length!==3)return '';
+      var base64=parts[1].replace(/-/g,'+').replace(/_/g,'/');
+      var payload=JSON.parse(global.atob(base64.padEnd(Math.ceil(base64.length/4)*4,'=')));
+      var subject=String(payload&&payload.sub||'');
+      if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(subject))return '';
+      return session.env+':'+subject.toLowerCase();
+    }catch(_e){return ''}
+  }
+  function notifyAuthChanged(){
+    try{if(typeof global.dispatchEvent==='function'&&typeof global.Event==='function')
+      global.dispatchEvent(new global.Event('budil-cloud-auth-changed'));}
+    catch(_e){/* no credentials in events */}
   }
 
   function readSession() {
@@ -155,6 +176,7 @@
     } else {
       try { legacySessionStorageRef().removeItem(SESSION_KEY); } catch (_e3) { /* ignore */ }
     }
+    notifyAuthChanged();
   }
 
   function isExpired(session, skewSeconds) {
@@ -847,6 +869,7 @@
     whenReady: whenReady,
     isSessionReady: isSessionReady,
     getAuthState: getAuthState,
+    getGptSessionScope: getGptSessionScope,
     login: login,
     logout: logout,
     backupNow: backupNow,

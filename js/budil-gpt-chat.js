@@ -5,6 +5,25 @@ const BudilGptChat=(()=>{
     'customer.timeline','document.period','document.search','receivables.summary',
     'profit.summary','proposal']);
   const deny=code=>({ok:false,code});
+  // Fail closed: only known business vocabulary and local aliases leave the device.
+  // Unknown names, company names, addresses, and free-text notes are never forwarded.
+  const APPROVED_OUTBOUND_TERMS=Object.freeze(["ありがとうございます","ハウスクリーニング","かしこまりました","Google","ありがとうね","お願いします","クリーニング","してください","スケジュール","どうなってる","Budil","ありがとう","カレンダー","くださいね","こんにちは","こんばんは","してほしい","すみません","できますか","どれくらい","パソコン用","埋まってる","教わりたい","空いている","LINE","あさって","いします","エアコン","おしえて","おつかれ","おねがい","おはよう","ください","クラウド","サーバー","だったら","チャット","できない","できます","できれば","でしたら","どうして","ドラム式","について","のちほど","パソコン","パターン","ましたら","よろしく","リセット","ローカル","作業内容","作業履歴","使いたい","割り引き","取り付け","取り消し","完全分解","対応可能","日時指定","現場情報","現場環境","申し込み","登録して","登録済み","知ってる","知りたい","確かめて","空いてる","見積もり","試したい","読み取り","間違って","BFC","GPT","PDF","あした","いくら","いてる","エラー","お客様","お願い","くらい","シート","したい","してる","しない","じゃあ","スマホ","タイプ","データ","できた","できる","でした","テスト","どうも","どちら","どんな","なんで","ほしい","ました","やって","ライン","リスト","わかる","一昨日","下さい","乾燥機","予定日","今すぐ","今まで","今年度","今日中","作って","元請け","入れて","出して","分かる","午前中","午後中","取引先","土曜日","変えて","大丈夫","室外機","家庭用","担当者","探して","換気扇","支払い","教えて","日曜日","明後日","昨年度","時間帯","時間枠","月曜日","木曜日","未入金","本当に","業務用","欲しい","正しい","水曜日","洗濯機","消費税","火曜日","直して","確認中","納品書","行ける","見せて","見たい","見積書","調べて","請求書","送って","金曜日","間違い","非対応","領収書","AI","PC","あの","ある","あれ","いつ","いて","いる","えて","かな","かも","から","こと","この","これ","さま","さん","した","して","せて","その","それ","だけ","って","です","でも","どう","どこ","どの","どれ","ない","なぜ","なに","なら","ねぇ","ねえ","ほど","ます","まだ","まで","メモ","もう","もの","やる","より","一回","一度","一覧","不明","不要","不足","中止","予定","予約","二回","二度","交換","今年","今度","今後","今日","今月","今週","以前","以降","件数","会社","会話","何人","何件","何円","何分","何台","何日","何時","作成","作業","保存","修正","修理","値段","先日","先月","先生","先週","入力","入金","全件","全体","全部","内容","内訳","冷房","出力","分解","利益","削除","前回","前後","割引","午前","午後","印刷","原価","原因","厨房","去年","収益","取付","取消","台所","台数","合計","名前","品目","問題","回答","土曜","型番","売上","変更","夕方","安全","完了","室内","家電","対応","少し","履歴","工事","平日","年月","年次","建物","建築","当日","後日","御中","復元","必要","担当","掃除","提案","撤去","支払","教え","数量","料金","新規","施工","日付","日時","日曜","日程","明日","昨日","時刻","時間","暖房","曜日","更新","書込","最初","最後","月曜","月次","期間","木曜","本日","来年","来月","来週","案件","検品","検索","検証","業務","業者","概要","機種","次回","毎年","毎日","毎月","毎週","氏名","水曜","洗浄","活動","浴室","清掃","火曜","照会","照明","状態","現場","理由","環境","申請","申込","発行","登録","相談","確定","確認","祝日","移動","税別","税抜","税込","種類","空き","空調","粗利","納期","終了","経費","結果","継続","縦型","翌日","表示","見積","訂正","計算","記録","訪問","設置","試験","詳細","認証","説明","読取","調査","請求","費用","質問","返信","追加","送信","通常","連絡","過去","違う","部屋","配線","重複","金曜","金額","開始","集計","電気","顧客","、","！","？","。","い","お","か","が","さ","だ","で","と","に","ね","の","は","へ","も","や","よ","を","ん","一","七","万","三","九","二","五","人","件","何","個","先","八","六","円","分","前","十","千","台","四","夜","年","床","後","日","昼","時","月","朝","本","様","次","氏","百","秒","空","窓","願"]);
+  function approvedHiraganaRuns(value){
+    const safeMulti=APPROVED_OUTBOUND_TERMS.filter(x=>/^[ぁ-ん]{2,}$/u.test(x));
+    for(const run of value.match(/[ぁ-ん]{2,}/gu)||[]){
+      let rest=run;
+      for(const word of safeMulti)rest=rest.split(word).join('');
+      if(rest && !/^[のはがをにでともへやか]$/u.test(rest))return false;
+    }
+    return true;
+  }
+  function approvedOutbound(value){
+    if(typeof value!=='string'||!value.trim()||value.length>550)return false;
+    let remainder=value.replace(/顧客[A-H](?:さん|様)?/gu,'');
+    for(const word of APPROVED_OUTBOUND_TERMS)remainder=remainder.split(word).join('');
+    remainder=remainder.replace(/[0-9０-９\s.,、。!?！？:：\-‐‑–〜～\/／()（）「」『』【】\[\]{}［］・→+＋%％¥￥]/gu,'');
+    return remainder.length===0 && approvedHiraganaRuns(value);
+  }
   function validDate(value){
     if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
     const d=new Date(value+'T00:00:00Z');
@@ -59,6 +78,7 @@ const BudilGptChat=(()=>{
       return deny('SENSITIVE_INPUT');
     if(/(?:https?:\/\/|www\.|@|(?:\d{2,4}-){2}\d{3,4})/i.test(message))
       return deny('SENSITIVE_INPUT');
+    if(!approvedOutbound(message))return deny('UNAPPROVED_TEXT');
     return {ok:true,message,aliases};
   }
   function verify(response,aliases){
@@ -163,7 +183,7 @@ const BudilGptChat=(()=>{
       typeof x.content==='string'&&x.content.length<=550)
       .slice(-8).map(x=>({role:x.role,content:x.content}));
   }
-  return Object.freeze({prepare,verify,safeHistory,validDate,summarizeCalendarRead,
+  return Object.freeze({prepare,verify,safeHistory,validDate,summarizeCalendarRead,approvedOutbound,
     shouldUseLocalCalendarFallback,actions:allowed});
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports={BudilGptChat};

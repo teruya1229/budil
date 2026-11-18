@@ -113,6 +113,42 @@ test('schema mismatch safely clarifies without repeat billing or business execut
  assert.ok(server.includes('max_output_tokens:360,store:false'),'no extra provider requests or budget increase');
  assert.equal((server.match(/await fetch\("https:\/\/api\.openai\.com\/v1\/responses"/g)||[]).length,1);
 });
+
+test('unregistered Japanese and kana-only names must never reach the GPT provider',()=>{
+ const risky=['新里一郎の予定を教えて','さやかの予約を確認して','ののかの予定を教えて',
+  'サトウの見積書を探して','山田花子の売上は？','佐々木商会の入金を確認して'];
+ for(const text of risky){
+  const result=G.prepare(text,[]);
+  assert.equal(result.ok,false,text);
+  assert.equal(result.code,'UNAPPROVED_TEXT',text);
+ }
+});
+test('registered customers are converted to stable local-only aliases',()=>{
+ const result=G.prepare('田中太郎さんの作業履歴を教えて',leads);
+ assert.equal(result.ok,true);
+ assert.equal(result.aliases['顧客A'],'田中太郎');
+ assert.equal(result.message.includes('田中太郎'),false);
+});
+test('normal business questions remain available to natural GPT chat',()=>{
+ for(const text of ['今日の予定教えて','来週の月曜の作業って何件ある？',
+  '11日の作業、どれくらいある？','金曜日の午前10時、空いてる？',
+  '今月の未入金合計は？','じゃあその予定を変更したい',
+  '会話復元を試したい','こんにちは']){
+  const result=G.prepare(text,[]);
+  assert.equal(result.ok,true,text+': '+result.code);
+ }
+});
+test('server and browser use the exact same fail-closed outbound vocabulary',()=>{
+ const server=readFileSync('supabase/functions/budil-gpt-chat/index.ts','utf8');
+ const re=/APPROVED_OUTBOUND_TERMS=Object\.freeze\((\[[^\n]*\])\);/;
+ const clientList=JSON.parse(code.match(re)?.[1]||'null');
+ const serverList=JSON.parse(server.match(re)?.[1]||'null');
+ assert.ok(clientList.length>300);
+ assert.deepEqual(clientList,serverList);
+ assert.match(server,/if\(!approvedOutbound\(msg\)\|\|history\.some/);
+ assert.match(server,/return bad\(400,"unapproved_text",origin\)/);
+});
+
 // Google read-only windows are verified locally, never sent to GPT.
 const busy=(events,date='2026-11-13')=>G.summarizeCalendarRead({
  ok:true,readOnly:true,calendarWritePerformed:false,events},date);

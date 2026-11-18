@@ -13,9 +13,10 @@
  const Payment=typeof PaymentBrain!=='undefined'?PaymentBrain:null;
  const Profit=typeof ProfitBrain!=='undefined'?ProfitBrain:null;
  const DateTool=typeof BudilGptLocalCommands!=='undefined'?BudilGptLocalCommands:null;
- let sanitizedHistory=[],aliasMap=Object.create(null),busy=false,seq=0;
+ let sanitizedHistory=[],aliasMap=Object.create(null),busy=false,seq=0,activeScope='';
  const CHAT_CONSENT_KEY='budil-gpt.chat-consent.v1';
- const CHAT_HISTORY_KEY='budil-gpt.safe-history.v1';
+ const CHAT_HISTORY_KEY='budil-gpt.safe-history.v2';
+ const LEGACY_HISTORY_KEY='budil-gpt.safe-history.v1';
  const CHAT_HISTORY_TTL_MS=24*60*60*1000;
  let chatConsentAccepted=false;
  function readChatConsent(){
@@ -67,9 +68,21 @@
    return !!(Cloud&&typeof Cloud.getAuthState==='function'&&Cloud.getAuthState().signedIn===true);
   }catch(_){return false;}
  }
+ function currentScope(){
+  try{
+   const Cloud=window.BudilCloud;
+   return signedIn()&&Cloud&&typeof Cloud.getGptSessionScope==='function'?
+     String(Cloud.getGptSessionScope()||''):'';
+  }catch(_){return '';}
+ }
+ function syncAccountScope(){
+  const scope=currentScope();
+  if(!scope||(activeScope&&activeScope!==scope))forgetSafeHistory();
+  activeScope=scope;
+  return scope;
+ }
  function syncAuth(){
-  const ready=signedIn();
-  if(!ready)forgetSafeHistory();
+  const ready=Boolean(syncAccountScope());
   if(authPanel)authPanel.hidden=ready;
   return ready;
  }
@@ -146,26 +159,31 @@
  // Original customer names, aliasMap, local records and Google event data NEVER
  // enter this cache. A new tab or a logged-out page cannot recover the record.
  function forgetSafeHistory(){
-  try{sessionStorage.removeItem(CHAT_HISTORY_KEY);}catch(_){/* storage unavailable */}
+  try{
+   sessionStorage.removeItem(CHAT_HISTORY_KEY);
+   sessionStorage.removeItem(LEGACY_HISTORY_KEY);
+  }catch(_){/* storage unavailable */}
   sanitizedHistory=[];aliasMap=Object.create(null);
   historyBox.replaceChildren();
  }
  function persistSafeHistory(){
-  if(!signedIn()||!Chat||typeof Chat.safeHistory!=='function')return;
+  const scope=syncAccountScope();
+  if(!scope||!Chat||typeof Chat.safeHistory!=='function')return;
   const history=Chat.safeHistory(sanitizedHistory);
   if(!history.length)return;
   try{sessionStorage.setItem(CHAT_HISTORY_KEY,
-   JSON.stringify({savedAt:Date.now(),history}));}
+   JSON.stringify({savedAt:Date.now(),scope,history}));}
   catch(_){/* private mode: this tab still works in memory */}
  }
  function restoreSafeHistory(){
-  if(!signedIn()){forgetSafeHistory();return;}
+  const scope=syncAccountScope();
+  if(!scope)return;
   let saved;
   try{
    const raw=sessionStorage.getItem(CHAT_HISTORY_KEY);
    if(!raw)return;
    saved=JSON.parse(raw);
-   if(!saved||!Number.isFinite(saved.savedAt)||
+   if(!saved||saved.scope!==scope||!Number.isFinite(saved.savedAt)||
       Date.now()-saved.savedAt>CHAT_HISTORY_TTL_MS||
       saved.savedAt>Date.now()||
       !Array.isArray(saved.history)||saved.history.length>8)throw Error('invalid');
@@ -264,6 +282,60 @@
    }
   }
  }
+ // Fast local-first path: strict booking/quote grammar prepares the existing
+ // Budil review screen. It sends NO customer data or prompt to a provider and
+ // never presses an actual save/issue/confirm button.
+ function legacyPreviewType(raw,today){
+  const Booking=typeof BudilGptBooking!=='undefined'?BudilGptBooking:null;
+  const Anon=typeof BudilGptAnonymize!=='undefined'?BudilGptAnonymize:null;
+  try{
+   const booking=Booking&&Booking.parse(raw,today);
+   if(booking&&booking.ok&&['booking','reschedule'].includes(booking.action))return '予約';
+   const QuoteCore=window.BudilGptFixtureCore;
+   if($('budil-gpt-draft')?.hidden===false&&QuoteCore&&typeof QuoteCore.parseCorrection==='function'&&
+      QuoteCore.parseCorrection(raw)?.ok===true)return '見積修正';
+   const command=DateTool&&Anon&&DateTool.parse(raw,{today,anonymizer:Anon});
+   if(command&&command.ok&&command.action==='quote.draft')return '見積';
+   if(command&&command.ok&&command.action==='customer.create.preview')return '顧客';
+   // Existing legacy UI only opens the payment or invoice preparation panel.
+   // CSV matching, invoice issue and completion have separate owner checks.
+   if(/^銀行明細と請求書を照合して[。！!]?$/u.test(raw))return '入金';
+   if(/^(?:請求書の下書き|保存済み請求書)を確定して[。！!]?$/u.test(raw))return '請求';
+   if(/^その見積を請求書にして[。！!]?$/u.test(raw))return '請求';
+   if(/^.+?の作業を完了にして請求書を作って[。！!]?$/u.test(raw))return '請求';
+  }catch(_){/* unsupported instructions go to the normal GPT planning path */}
+  return '';
+ }
+ function startSafeLocalPreview(raw,today){
+  const kind=legacyPreviewType(raw,today);
+  if(!kind)return false;
+  const legacy=$('budil-gpt-run'),consent=$('budil-gpt-consent');
+  if(!legacy||!consent||legacy.disabled)return false;
+  // User already accepted this exact device-local read consent for GPT.
+  consent.checked=true;
+  try{legacy.click();}finally{consent.checked=false;}
+  const originalStatus=String($('budil-gpt-status')?.textContent||'');
+  const details=document.querySelector('.budil-gpt-legacy-tools');
+  if(details)details.open=true;
+  const panels={予約:['budil-gpt-booking'],見積:['budil-gpt-candidates','budil-gpt-draft'],見積修正:['budil-gpt-draft'],
+    顧客:['budil-gpt-customer-create'],請求:['budil-gpt-invoice'],入金:['budil-gpt-bank']};
+  const panelReady=(panels[kind]||[]).some(id=>$(id)&&$(id).hidden===false);
+  const stopped=/確認中です|見つかりません|準備できません|できません|停止しました|まだ対応していない/u.test(originalStatus);
+  bubble('user',raw);
+  if(!panelReady||stopped){
+   bubble('assistant','端末内の'+kind+'準備を完了できませんでした。'+originalStatus+'　データは変更していません。');
+   note('端末内の'+kind+'準備は未完了です。入力を確認してください。',true);
+   return true;
+  }
+  bubble('assistant',kind+'の端末内確認画面を開きました。'+originalStatus+'　承認前に業務データを保存・発行しません。');
+  sanitizedHistory.push({role:'user',content:kind+'確認'},
+    {role:'assistant',content:kind+'の提案'});
+  sanitizedHistory=Chat.safeHistory(sanitizedHistory);
+  persistSafeHistory();
+  $('budil-gpt-input').value='';
+  note('端末内の'+kind+'確認画面へ進みました。顧客候補・金額・日時を確認してから承認してください。');
+  return true;
+ }
  async function send(){
   if(busy)return;
   const Cloud=window.BudilCloud;
@@ -272,12 +344,18 @@
     return note('GPT会話のモジュールが読み込まれていません。',true);
   const raw=$('budil-gpt-input').value;
   if(!raw.trim())return note('まずGPTへの質問を入力してください。',true);
-  if(!signedIn())return showLogin();
+  if(!syncAuth())return showLogin();
   if(!ensureChatConsent())return;
+  const localToday=DateTool.todayTokyo();
+  if(startSafeLocalPreview(raw,localToday))return;
   let leads;
   try{leads=Data.getLeads()}catch{return note('顧客情報の匿名化に必要な端末データを読み取れません。',true)}
   const prepared=Chat.prepare(raw,leads,aliasMap);
-  if(!prepared.ok)return note('この文章は外部送信できません（'+prepared.code+'）。住所・電話等を除き、1件ずつ入力してください。',true);
+  if(!prepared.ok){
+   if(prepared.code==='UNAPPROVED_TEXT')
+    return note('個別の氏名・会社名・住所や未確認の語句が含まれる可能性があるため、外部AIへ送信しません。顧客はBudilの登録名で指定し、個人情報を含む現場メモは入力しないでください。',true);
+   return note('この文章は外部送信できません（'+prepared.code+'）。住所・電話等を除き、1件ずつ入力してください。',true);
+  }
   for(const [k,v] of Object.entries(prepared.aliases)){
    if(aliasMap[k]&&aliasMap[k]!==v)return note('別の顧客を同じ呼称で参照しないため、会話をリセットしてください。',true);
   }
@@ -397,7 +475,12 @@
   }
  });
  syncChatConsent();
+ try{sessionStorage.removeItem(LEGACY_HISTORY_KEY);}catch(_){/* old unscoped cache removed */}
  restoreSafeHistory();
+ window.addEventListener('budil-cloud-auth-changed',syncAuth);
+ window.addEventListener('storage',event=>{
+  if(event.key==='budil-cloud.auth.v1.session')syncAuth();
+ });
 
  const readyButton=$('budil-gpt-chat-readiness');
  if(readyButton)readyButton.addEventListener('click',freeReadiness);

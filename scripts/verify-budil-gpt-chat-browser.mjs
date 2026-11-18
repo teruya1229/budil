@@ -59,6 +59,7 @@ try{
  for(const width of [390,320]){
   await cmd('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:1,mobile:true});
   await cmd('Page.navigate',{url:'http://127.0.0.1:'+server.address().port+'/index.html'});
+  await sleep(150);
   for(let i=0;i<160;i++){
    if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-open')"))break;
    await sleep(100);
@@ -68,6 +69,7 @@ try{
   // Consent is intentionally persistent. Clear it BEFORE a reload so each
   // viewport independently verifies the first-time experience.
   await ev("localStorage.removeItem('budil-gpt.chat-consent.v1');location.reload()");
+  await sleep(200);
   for(let i=0;i<160;i++){
    if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-open')"))break;
    await sleep(100);
@@ -92,7 +94,7 @@ try{
 
   // Real regression: a fresh tab has no BudilCloud session, even when
   // another Chrome tab is already authenticated. It must not send GPT data.
-  await ev("window.__qaSignedIn=false;window.__qaLoginCalls=0;BudilCloud.getAuthState=()=>({available:true,signedIn:window.__qaSignedIn});BudilCloud.login=async function(email,pwd){window.__qaLoginCalls++;if(email==='qa@example.invalid'&&pwd==='fixture-password'){window.__qaSignedIn=true;return {ok:true}}return {ok:false,message:'invalid_credentials'}};BudilCloud.getGptChatReadiness=async()=>({ok:true,ready:true})");
+  await ev("window.__qaSignedIn=false;window.__qaSessionScope='staging:00000000-0000-0000-0000-000000000001';BudilCloud.getGptSessionScope=()=>window.__qaSignedIn?window.__qaSessionScope:'';window.__qaLoginCalls=0;BudilCloud.getAuthState=()=>({available:true,signedIn:window.__qaSignedIn});BudilCloud.login=async function(email,pwd){window.__qaLoginCalls++;if(email==='qa@example.invalid'&&pwd==='fixture-password'){window.__qaSignedIn=true;return {ok:true}}return {ok:false,message:'invalid_credentials'}};BudilCloud.getGptChatReadiness=async()=>({ok:true,ready:true})");
   await ev("document.getElementById('budil-gpt-input').value='こんにちは';document.getElementById('budil-gpt-consent').checked=false;document.getElementById('budil-gpt-chat-consent').checked=false;document.getElementById('budil-gpt-chat-send').click()");
   assert.equal(await ev("document.getElementById('budil-gpt-chat-auth').hidden"),false,
     'missing auth reveals login form in the GPT dialog');
@@ -143,6 +145,10 @@ try{
   assert.equal(await ev("window.__lastGoogleDates.join(',')"),'2026-11-11,2026-11-11','server reads selected date only');
   assert.equal(await ev('window.__dateNetwork'),0,'mocked GPT and local read cause no external requests');
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true);
+  await ev("document.getElementById('budil-gpt-input').value='新里一郎の予約を確認して';document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev('window.__chatCalls'),1,'unknown personal name must be blocked before provider');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('外部AIへ送信しません')"),true,
+    'privacy guard must explain no external send');
   // A second natural-language turn must retain sanitized context. The model
   // can propose a change, but it can never write it directly.
   await ev("BudilCloud.sendGptChat=async function(msg,history,today){window.__chatCalls++;window.__historyLength=history.length;window.__historyAssistant=history[1]?.content||'';return {ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'予約変更案を確認してください。まだ保存しません。',action:'proposal',query:'',date:'',month:'',docType:'none',needs_confirmation:true}}");
@@ -291,9 +297,10 @@ try{
    if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('再読込のあとも')"))break;
    await sleep(100);
   }
-  assert.ok((await ev("sessionStorage.getItem('budil-gpt.safe-history.v1')||''")).includes('会話復元を試したい'),
+  assert.ok((await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')||''")).includes('会話復元を試したい'),
    'safe anonymized chat persisted in current-tab sessionStorage');
-  await ev("localStorage.setItem('budil-cloud.auth.v1.session',JSON.stringify({access_token:'fixture-not-a-real-token',refresh_token:'fixture-not-a-real-refresh',expires_at:Math.floor(Date.now()/1000)+1800,env:'staging'}));location.reload()");
+  await ev("(()=>{const sub='00000000-0000-0000-0000-000000000001';const jwt='fixture.'+btoa(JSON.stringify({sub})).replace(/=/g,'')+'.signature';localStorage.setItem('budil-cloud.auth.v1.session',JSON.stringify({access_token:jwt,refresh_token:'fixture-not-a-real-refresh',expires_at:Math.floor(Date.now()/1000)+1800,env:'staging'}));location.reload()})()");
+  await sleep(200);
   for(let i=0;i<160;i++){
    if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-chat-history')"))break;
    await sleep(100);
@@ -302,18 +309,83 @@ try{
    'safe conversation restored after page reload with the same signed-in session');
   assert.ok(!(await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('架空一郎'),
    'raw customer records never restored into the GPT transcript');
+  // Same-tab login to a different account immediately invalidates the old transcript.
+  await ev("(()=>{const sub='00000000-0000-0000-0000-000000000002';const jwt='fixture.'+btoa(JSON.stringify({sub})).replace(/=/g,'')+'.signature';localStorage.setItem('budil-cloud.auth.v1.session',JSON.stringify({access_token:jwt,refresh_token:'fixture-not-a-real-refresh',expires_at:Math.floor(Date.now()/1000)+1800,env:'staging'}));window.dispatchEvent(new Event('budil-cloud-auth-changed'))})()");
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-history').textContent"),'',
+    'account switch must remove old user transcript');
+  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')"),null,
+    'account switch must remove cached user A history');
   await ev("document.getElementById('budil-gpt-chat-clear').click()");
-  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v1')"),null,
+  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')"),null,
    'explicit reset deletes the only saved conversation cache');
-  await ev("sessionStorage.setItem('budil-gpt.safe-history.v1',JSON.stringify({savedAt:Date.now(),history:[{role:'user',content:'ログアウト前の内緒の会話'}]}));localStorage.removeItem('budil-cloud.auth.v1.session');location.reload()");
+  await ev("sessionStorage.setItem('budil-gpt.safe-history.v2',JSON.stringify({scope:'staging:00000000-0000-0000-0000-000000000002',savedAt:Date.now(),history:[{role:'user',content:'ログアウト前の内緒の会話'}]}));localStorage.removeItem('budil-cloud.auth.v1.session');location.reload()");
+  await sleep(200);
   for(let i=0;i<160;i++){
    if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-chat-history')"))break;
    await sleep(100);
   }
   assert.equal(await ev("document.getElementById('budil-gpt-chat-history').textContent"),'',
    'signed-out reload must not reveal prior account chat');
-  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v1')"),null,
+  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')"),null,
    'signed-out reload destroys any stale cached chat');
+  // Unified one-click local booking preparation: no paid GPT call and no
+  // WorkOrder write; the user still selects customer/tax/end time and approves.
+  await ev("window.__qaSignedIn=true;window.__qaSessionScope='staging:00000000-0000-0000-0000-000000000001';BudilCloud.getAuthState=()=>({available:true,signedIn:true});BudilCloud.getGptSessionScope=()=>window.__qaSessionScope;window.__previewProviderCalls=0;BudilCloud.sendGptChat=async()=>{window.__previewProviderCalls++;throw Error('GPT_PROVIDER_MUST_NOT_BE_CALLED')};Storage.getLeads=()=>[{id:'fake-preview-lead',name:'架空一郎'}];Storage.getWorkOrders=()=>[];Storage.addWorkOrder=()=>{throw Error('UNAPPROVED_WRITE')};document.getElementById('budil-gpt-clear').click()");
+  await ev("document.getElementById('budil-gpt-input').value='2030年12月20日の午前10時に架空一郎さんのエアコン洗浄2台を予約して。税込18,000円で見積書も作って';document.getElementById('budil-gpt-chat-send').click()");
+  for(let i=0;i<40;i++){
+   if(await ev("document.getElementById('budil-gpt-booking').hidden===false"))break;
+   await sleep(100);
+  }
+  assert.equal(await ev("document.getElementById('budil-gpt-booking').hidden"),false,
+    'known local booking grammar stages existing booking review');
+  assert.equal(await ev("document.getElementById('budil-gpt-booking-fields').hidden"),false,
+    'requires tax/end-time verification before a customer-specific quote');
+  assert.equal(await ev("document.getElementById('budil-gpt-booking-save').hidden"),true,
+    'no local booking write without explicit owner approval');
+  assert.equal(await ev("window.__previewProviderCalls"),0,'no paid GPT call for supported local grammar');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('端末内の予約確認画面')"),true);
+  console.log('PASS '+width+'px: strict booking prompts directly stage local review, zero GPT cost, zero writes');
+  // An unfinished booking must not be silently discarded or called completed.
+  await ev("document.getElementById('budil-gpt-input').value='2030年12月20日の午前11時に架空一郎さんのエアコン洗浄2台を予約して。税込18,000円で見積書も作って';document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('準備は未完了')"),true,
+    'conflicting second booking must not be reported as a new successful preview');
+  assert.equal(await ev("window.__previewProviderCalls"),0,'failed local preview does not leak raw customer data to GPT');
+  // Bank matching opens an existing import preview, not a payment write.
+  await ev("document.getElementById('budil-gpt-clear').click();document.getElementById('budil-gpt-input').value='銀行明細と請求書を照合して';document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-bank').hidden"),false,
+    'bank reconciliation opens the existing CSV preview in one conversation turn');
+  assert.equal(await ev("window.__previewProviderCalls"),0,'bank preview does not spend GPT tokens');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('端末内の入金確認画面')"),true);
+  console.log('PASS '+width+'px: bank import preview opens locally, no paid model or automatic write');
+
+  // A natural quote in the same GPT input stages the existing draft; it must
+  // ask the owner to choose the exact customer before it creates any PDF.
+  await ev("document.getElementById('budil-gpt-clear').click();document.getElementById('budil-gpt-input').value='架空一郎さんのエアコン洗浄2台を税込18000円で見積して';document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-candidates').hidden"),false,
+    'natural quote command stages the known customer selection');
+  assert.equal(await ev("document.getElementById('budil-gpt-candidate-list').querySelectorAll('button').length"),1,
+    'one explicit exact-ID candidate is shown');
+  assert.equal(await ev("document.getElementById('budil-gpt-draft').hidden"),true,
+    'quote is not created before the owner selects a customer');
+  await ev("document.getElementById('budil-gpt-candidate-list').querySelector('button').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-draft').hidden"),false,
+    'owner selection creates a local quote draft');
+  assert.equal(await ev("document.getElementById('budil-gpt-draft-preview').textContent.includes('18,000')"),true,
+    'existing Budil quote calculator produced the requested amount');
+  assert.equal(await ev("window.__previewProviderCalls"),0,'quote drafting never transmits customer name to paid model');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('端末内の見積確認画面')"),true);
+  console.log('PASS '+width+'px: natural quote to exact-customer draft, local-only, zero provider cost');
+
+  await ev("document.getElementById('budil-gpt-input').value='金額を税込20,000円に変更';document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-draft-preview').textContent.includes('20,000')"),true,
+    'natural follow-up revises the same local draft instead of creating a new quote');
+  assert.equal(await ev("document.getElementById('budil-gpt-draft').hidden"),false,
+    'owner approval remains required after quote revision');
+  assert.equal(await ev("window.__previewProviderCalls"),0,'price revision does not incur paid provider calls');
+  console.log('PASS '+width+'px: continuous natural-language amount revision, no automatic approval');
+
+
+
   console.log('PASS '+width+'px: safe reload recovery, reset and signed-out privacy');
   console.log('PASS '+width+'px: same-tab login gate, consent ordering, expired session recovery');
   console.log('PASS '+width+'px: screenshot regression zero local results, no premature GPT question, Google unverified');
