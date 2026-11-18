@@ -293,6 +293,13 @@
    if(booking&&booking.ok&&['booking','reschedule'].includes(booking.action))return '予約';
    const command=DateTool&&Anon&&DateTool.parse(raw,{today,anonymizer:Anon});
    if(command&&command.ok&&command.action==='quote.draft')return '見積';
+   if(command&&command.ok&&command.action==='customer.create.preview')return '顧客';
+   // Existing legacy UI only opens the payment or invoice preparation panel.
+   // CSV matching, invoice issue and completion have separate owner checks.
+   if(/^銀行明細と請求書を照合して[。！!]?$/u.test(raw))return '入金';
+   if(/^(?:請求書の下書き|保存済み請求書)を確定して[。！!]?$/u.test(raw))return '請求';
+   if(/^その見積を請求書にして[。！!]?$/u.test(raw))return '請求';
+   if(/^.+?の作業を完了にして請求書を作って[。！!]?$/u.test(raw))return '請求';
   }catch(_){/* unsupported instructions go to the normal GPT planning path */}
   return '';
  }
