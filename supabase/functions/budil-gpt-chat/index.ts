@@ -56,6 +56,20 @@ function validateOutput(v:unknown){
  if(action!=="proposal"&&v.needs_confirmation===true)return null;
  return {reply:v.reply,action,query,date,month,docType,needs_confirmation:v.needs_confirmation};
 }
+/**
+ * The provider's strict JSON schema cannot express all cross-field business
+ * invariants. If the model violates one, do NOT run a tool, approve a write,
+ * or bill a second provider request: ask the owner to clarify safely.
+ */
+function safeModelClarification(v:unknown):string{
+ const action=isObj(v)&&typeof v.action==="string"?v.action:"";
+ if(action==="work.date")return "予定を確認する日付が確定できませんでした。何月何日の予定か教えてください。";
+ if(action==="document.period")return "帳票の対象年月と、見積書・請求書のどちらかを教えてください。まだ取得していません。";
+ if(["work.search","customer.search","customer.timeline","document.search"].includes(action))
+  return "検索する顧客・作業・帳票の条件をもう少し具体的に教えてください。まだ取得していません。";
+ if(action==="proposal")return "登録・変更・送信・確定は行っていません。実施したい内容を確認させてください。";
+ return "内容を安全に判定できませんでした。日付や対象をもう少し具体的に入力してください。データは変更していません。";
+}
 export default {async fetch(request:Request):Promise<Response>{
  const origin=request.headers.get("Origin");
  if(origin&&!ORIGINS.has(origin))return bad(403,"origin_not_allowed",null);
@@ -142,6 +156,8 @@ export default {async fetch(request:Request):Promise<Response>{
    "document.periodはYYYY-MMとestimateまたはinvoiceを設定する。",
    "Action none は通常の自由な会話と質問に使う。回答不能な場合は理由を具体的に。",
    "出力は厳格なJSONスキーマに一致させ、操作の承認は絶対に捏造しない。",
+   "needs_confirmation=trueはaction=proposalの場合だけ。それ以外は必ずfalse。操作に必要な情報が欠けるときはaction=noneで追加質問する。",
+   "work.dateは実在するYYYY-MM-DDの日付を指定する。検索アクションはqueryを空にしない。document.periodは有効なYYYY-MMとestimateかinvoiceが必須。",
    "現在の日本時間の日付: "+today
   ].join("\n");
   const messages=[...history,{role:"user" as const,content:msg}];
@@ -160,7 +176,12 @@ export default {async fetch(request:Request):Promise<Response>{
   if(!content||content.length>2500)return bad(502,"provider_output_invalid",origin);
   let parsed:unknown;try{parsed=JSON.parse(content)}catch{return bad(502,"model_json_invalid",origin)}
   const result=validateOutput(parsed);
-  if(!result)return bad(422,"model_schema_invalid",origin);
+  if(!result){
+   return reply(200,{ok:true,phase:"chat_plan_only",reply:safeModelClarification(parsed),
+    action:"none",query:"",date:"",month:"",docType:"none",
+    needs_confirmation:false,can_execute:false,persisted:false,
+    customer_records_sent:false,clarification_required:true},origin);
+  }
   return reply(200,{ok:true,phase:"chat_plan_only",...result,can_execute:false,persisted:false,customer_records_sent:false},origin);
  }catch{return bad(503,"dependency_unavailable",origin)}
 }};

@@ -245,6 +245,28 @@ try{
   assert.ok(!todayText.includes('どの作業内容や顧客'),'today: remove pointless pre-read clarifying question');
   assert.ok(!todayText.includes('今日は予定がありません'),'zero local records does not prove empty schedule');
   assert.equal(await ev('window.document.documentElement.scrollWidth<=innerWidth+2'),true);
+  // The regular GPT surface must show the same customer type, site
+  // environment and activity notes as Budil's existing offline tool.
+  // No customer details are fetched until the exact-ID candidate is clicked.
+  await ev("document.getElementById('budil-gpt-chat-clear').click();Storage.getLeads=()=>[{id:'fixture-c1',name:'架空一郎',customerTypeMajor:'A',customerTypeMinor:'F',customerMemo:'現場の天井が高い。駐車は裏口',activityLogs:[{date:'2026-11-10',title:'連絡',memo:'養生を準備'}]},{id:'fixture-c2',name:'架空二郎',customerMemo:'他人だけのメモ'}];Storage.getWorkOrders=()=>[{id:'fixture-w1',leadId:'fixture-c1',scheduledDate:'2026-11-11',serviceText:'現場点検',memo:'室外機はベランダ'},{id:'fixture-w2',leadId:'fixture-c2',scheduledDate:'2026-11-10',serviceText:'他のお客様の施工',memo:'他人の専用メモ'}];BudilCloud.sendGptChat=async()=>({ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'顧客候補を確認します',action:'customer.timeline',query:'顧客A',date:'',month:'',docType:'none',needs_confirmation:false});document.getElementById('budil-gpt-input').value='架空一郎さんの作業履歴を教えて';document.getElementById('budil-gpt-chat-send').click()");
+  for(let i=0;i<60;i++){
+   if(await ev("!!document.querySelector('#budil-gpt-chat-history button')"))break;
+   await sleep(100);
+  }
+  assert.ok(await ev("!!document.querySelector('#budil-gpt-chat-history button')"),
+   'exact-ID customer selection must be offered by GPT local read tool');
+  assert.ok(!(await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('現場の天井が高い'),
+   'private site memo must be hidden before exact-customer selection');
+  await ev("document.querySelector('#budil-gpt-chat-history button').click()");
+  const customerDetail=await ev("document.getElementById('budil-gpt-chat-history').textContent");
+  assert.ok(customerDetail.includes('お客様タイプ：A：安心重視型 / F：確認安心型'),
+   'customer type is rendered after exact lead selection');
+  assert.ok(customerDetail.includes('現場の天井が高い')&&customerDetail.includes('室外機はベランダ')&&customerDetail.includes('養生を準備'),
+   'site environment, linked work note and activity log display locally');
+  assert.ok(!customerDetail.includes('他人だけのメモ')&&!customerDetail.includes('他人の専用メモ'),
+   'unlinked other customer notes remain hidden');
+  assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true,
+   'no overflow after private local note display');
   await ev("document.getElementById('budil-gpt-close').click()");
   assert.notEqual(await ev("document.getElementById('budil-gpt-chat-history').textContent"),'',
     'closing the GPT panel does not erase conversation history');
@@ -261,6 +283,38 @@ try{
     'expired session opens recovery login without requesting customer data');
   assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('認証が切れています')"),true);
   assert.equal(await ev('window.__dateNetwork'),0,'expired session cannot write or call external network');
+  // Page reload restores ONLY anonymized conversation, not private local
+  // work records, aliasMap, or Google event details. All credentials below
+  // are fake values in the disposable localhost test profile.
+  await ev("window.__qaSignedIn=true;BudilCloud.sendGptChat=async()=>({ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'再読込のあとも会話を続けます。',action:'none',query:'',date:'',month:'',docType:'none',needs_confirmation:false});document.getElementById('budil-gpt-input').value='会話復元を試したい';document.getElementById('budil-gpt-chat-send').click()");
+  for(let i=0;i<40;i++){
+   if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('再読込のあとも')"))break;
+   await sleep(100);
+  }
+  assert.ok((await ev("sessionStorage.getItem('budil-gpt.safe-history.v1')||''")).includes('会話復元を試したい'),
+   'safe anonymized chat persisted in current-tab sessionStorage');
+  await ev("localStorage.setItem('budil-cloud.auth.v1.session',JSON.stringify({access_token:'fixture-not-a-real-token',refresh_token:'fixture-not-a-real-refresh',expires_at:Math.floor(Date.now()/1000)+1800,env:'staging'}));location.reload()");
+  for(let i=0;i<160;i++){
+   if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-chat-history')"))break;
+   await sleep(100);
+  }
+  assert.ok((await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('会話復元を試したい'),
+   'safe conversation restored after page reload with the same signed-in session');
+  assert.ok(!(await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('架空一郎'),
+   'raw customer records never restored into the GPT transcript');
+  await ev("document.getElementById('budil-gpt-chat-clear').click()");
+  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v1')"),null,
+   'explicit reset deletes the only saved conversation cache');
+  await ev("sessionStorage.setItem('budil-gpt.safe-history.v1',JSON.stringify({savedAt:Date.now(),history:[{role:'user',content:'ログアウト前の内緒の会話'}]}));localStorage.removeItem('budil-cloud.auth.v1.session');location.reload()");
+  for(let i=0;i<160;i++){
+   if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-chat-history')"))break;
+   await sleep(100);
+  }
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-history').textContent"),'',
+   'signed-out reload must not reveal prior account chat');
+  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v1')"),null,
+   'signed-out reload destroys any stale cached chat');
+  console.log('PASS '+width+'px: safe reload recovery, reset and signed-out privacy');
   console.log('PASS '+width+'px: same-tab login gate, consent ordering, expired session recovery');
   console.log('PASS '+width+'px: screenshot regression zero local results, no premature GPT question, Google unverified');
   console.log('PASS '+width+'px: real GPT plan/consent/local execution, fictional data, zero network');

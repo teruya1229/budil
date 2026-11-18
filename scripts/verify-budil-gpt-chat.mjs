@@ -93,6 +93,26 @@ test('server real GPT pilot is limited to MI.BCS owner only',()=>{
  assert.match(server,/try_consume_tenant_operation_rate_limit/);
  assert.match(server,/max_output_tokens:360,store:false/);
 });
+test('schema mismatch safely clarifies without repeat billing or business execution',()=>{
+ const server=readFileSync('supabase/functions/budil-gpt-chat/index.ts','utf8');
+ const start=server.indexOf('function safeModelClarification(v:unknown):string{');
+ const end=server.indexOf('\nexport default {',start);
+ assert.ok(start>=0&&end>start,'safe clarification function must exist');
+ const js=server.slice(start,end).replace('v:unknown):string','v)');
+ const clarify=runInNewContext(js+';safeModelClarification',{isObj:v=>v!==null&&typeof v==='object'&&!Array.isArray(v)});
+ assert.ok(clarify({action:'work.date',date:''}).includes('日付'));
+ assert.ok(clarify({action:'document.period',month:''}).includes('年月'));
+ assert.ok(clarify({action:'customer.search',query:''}).includes('条件'));
+ assert.ok(clarify({action:'proposal',needs_confirmation:false}).includes('行っていません'));
+ assert.ok(clarify(null).includes('変更していません'));
+ assert.ok(server.includes('if(!result){'));
+ assert.ok(server.includes('reply(200,{ok:true,phase:"chat_plan_only",reply:safeModelClarification(parsed)'));
+ assert.ok(server.includes('needs_confirmation:false,can_execute:false,persisted:false,'));
+ assert.ok(server.includes('customer_records_sent:false,clarification_required:true'));
+ assert.ok(!server.includes('if(!result)return bad(422'));
+ assert.ok(server.includes('max_output_tokens:360,store:false'),'no extra provider requests or budget increase');
+ assert.equal((server.match(/await fetch\("https:\/\/api\.openai\.com\/v1\/responses"/g)||[]).length,1);
+});
 // Google read-only windows are verified locally, never sent to GPT.
 const busy=(events,date='2026-11-13')=>G.summarizeCalendarRead({
  ok:true,readOnly:true,calendarWritePerformed:false,events},date);
