@@ -402,6 +402,21 @@ try{
   assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('予約確定ではありません')"),true);
   console.log('PASS '+width+'px: tomorrow booking + exact lead + optional Google busy read, no writes');
 
+  // Google busy time must block optimistic availability, and a failed
+  // calendar read must remain UNKNOWN rather than being treated as free.
+  await sleep(120);
+  await ev("BudilCloud.fetchScheduleBlocks=async(a,b)=>{window.__calReads++;return {ok:true,readOnly:true,calendarWritePerformed:false,events:[{start:a+'T10:30:00+09:00',end:a+'T11:30:00+09:00'}]}};Array.from(document.querySelectorAll('#budil-gpt-chat-history button')).find(b=>b.textContent.includes('Googleの予定を照合')).click()");
+  for(let i=0;i<40;i++){if(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('Google予定に重複')"))break;await sleep(100);}
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('Google予定に重複')"),true);
+  assert.equal(await ev("window.__calWrites"),0);
+  await sleep(120);
+  await ev("BudilCloud.fetchScheduleBlocks=async()=>({ok:false,code:'fixture_unavailable'});Array.from(document.querySelectorAll('#budil-gpt-chat-history button')).find(b=>b.textContent.includes('Googleの予定を照合')).click()");
+  for(let i=0;i<40;i++){if(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('Google未照合')"))break;await sleep(100);}
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('予約確定ではありません')"),true);
+  assert.equal(await ev("window.__calWrites"),0);
+  console.log('PASS '+width+'px: Google conflict and unavailable both fail closed');
+
+
   await ev("document.getElementById('budil-gpt-chat-clear').click();Storage.getWorkOrders=()=>[{id:'fake-conflict',customerName:'別の架空顧客',serviceText:'清掃',scheduledDate:window.__calTomorrow,startTime:'10:30',endTime:'11:30',status:'confirmed'}];document.getElementById('budil-gpt-input').value='明日10時に架空一郎さんのエアコン洗浄を予約して';document.getElementById('budil-gpt-chat-send').click()");
   await ev("document.querySelector('#budil-gpt-chat-history button').click();document.getElementById('budil-gpt-input').value='11:00';document.getElementById('budil-gpt-chat-send').click()");
   assert.ok((await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('LOCAL_CONFLICT'),'local overlap must block');
@@ -414,6 +429,15 @@ try{
   assert.equal(await ev("window.__calWrites"),0,'date change remains preview-only');
   assert.equal(await ev("window.__previewProviderCalls"),0,'work order details never sent to model');
   console.log('PASS '+width+'px: conflict fail-closed and exact WorkOrder reschedule preview');
+
+  // Invalid customer name may be shown only as a local rejection. GPT and
+  // Google calls must remain at their prior counts, with no business write.
+  await ev("document.getElementById('budil-gpt-chat-clear').click();Storage.getWorkOrders=()=>[];document.getElementById('budil-gpt-input').value='明日の10時に未登録花子さんのエアコン洗浄を予約して';document.getElementById('budil-gpt-chat-send').click()");
+  assert.ok((await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('顧客が見つかりません'));
+  assert.equal(await ev("window.__previewProviderCalls"),0);
+  assert.equal(await ev("window.__calWrites"),0);
+  console.log('PASS '+width+'px: unknown customer not inferred, no GPT send');
+
 
 
 
