@@ -155,7 +155,7 @@ const BudilGptCalendarChatPreview=(()=>{
    const b=node('button',String(w.customerName||'名称なし')+' / '+w.scheduledDate+
     ' '+String(w.startTime||'時間未設定')+' / ID '+w.id,'budil-gpt-btn budil-gpt-btn-secondary');
    b.type='button';b.addEventListener('click',()=>{
-    if(!pending||pending.scope!==scope)return;
+    if(!pending||pending!==p||version!==selectionVersion||pending.scope!==scope)return;
     for(const x of box.querySelectorAll('button'))x.disabled=true;
     chooseOrder(w,scope);
    });box.append(b);
