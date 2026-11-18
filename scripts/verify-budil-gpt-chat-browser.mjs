@@ -341,6 +341,14 @@ try{
   assert.equal(await ev("window.__previewProviderCalls"),0,'no paid GPT call for supported local grammar');
   assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('端末内の予約確認画面')"),true);
   console.log('PASS '+width+'px: strict booking prompts directly stage local review, zero GPT cost, zero writes');
+  // Bank matching opens an existing import preview, not a payment write.
+  await ev("document.getElementById('budil-gpt-clear').click();document.getElementById('budil-gpt-input').value='銀行明細と請求書を照合して';document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-bank').hidden"),false,
+    'bank reconciliation opens the existing CSV preview in one conversation turn');
+  assert.equal(await ev("window.__previewProviderCalls"),0,'bank preview does not spend GPT tokens');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('端末内の入金確認画面')"),true);
+  console.log('PASS '+width+'px: bank import preview opens locally, no paid model or automatic write');
+
   console.log('PASS '+width+'px: safe reload recovery, reset and signed-out privacy');
   console.log('PASS '+width+'px: same-tab login gate, consent ordering, expired session recovery');
   console.log('PASS '+width+'px: screenshot regression zero local results, no premature GPT question, Google unverified');
