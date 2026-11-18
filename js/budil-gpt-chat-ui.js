@@ -291,6 +291,9 @@
   try{
    const booking=Booking&&Booking.parse(raw,today);
    if(booking&&booking.ok&&['booking','reschedule'].includes(booking.action))return '予約';
+   const QuoteCore=window.BudilGptFixtureCore;
+   if($('budil-gpt-draft')?.hidden===false&&QuoteCore&&typeof QuoteCore.parseCorrection==='function'&&
+      QuoteCore.parseCorrection(raw)?.ok===true)return '見積修正';
    const command=DateTool&&Anon&&DateTool.parse(raw,{today,anonymizer:Anon});
    if(command&&command.ok&&command.action==='quote.draft')return '見積';
    if(command&&command.ok&&command.action==='customer.create.preview')return '顧客';
@@ -314,7 +317,7 @@
   const originalStatus=String($('budil-gpt-status')?.textContent||'');
   const details=document.querySelector('.budil-gpt-legacy-tools');
   if(details)details.open=true;
-  const panels={予約:['budil-gpt-booking'],見積:['budil-gpt-candidates','budil-gpt-draft'],
+  const panels={予約:['budil-gpt-booking'],見積:['budil-gpt-candidates','budil-gpt-draft'],見積修正:['budil-gpt-draft'],
     顧客:['budil-gpt-customer-create'],請求:['budil-gpt-invoice'],入金:['budil-gpt-bank']};
   const panelReady=(panels[kind]||[]).some(id=>$(id)&&$(id).hidden===false);
   const stopped=/確認中です|見つかりません|準備できません|できません|停止しました|まだ対応していない/u.test(originalStatus);
