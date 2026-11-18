@@ -65,7 +65,15 @@ try{
   }
   assert.equal(await ev('document.readyState'),'complete');
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true);
-  await ev("localStorage.removeItem('budil-gpt.chat-consent.v1');localStorage.setItem('budil_work_orders',JSON.stringify([{id:'fake-w1',customerName:'架空一郎',scheduledDate:'2026-11-11',startTime:'09:00',status:'confirmed'},{id:'fake-w2',customerName:'架空二郎',scheduledDate:'2026-11-11',status:'planned'},{id:'fake-w3',customerName:'別日',scheduledDate:'2026-11-12',status:'planned'}]));document.getElementById('budil-gpt-open').click()");
+  // Consent is intentionally persistent. Clear it BEFORE a reload so each
+  // viewport independently verifies the first-time experience.
+  await ev("localStorage.removeItem('budil-gpt.chat-consent.v1');location.reload()");
+  for(let i=0;i<160;i++){
+   if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-open')"))break;
+   await sleep(100);
+  }
+  assert.equal(await ev('document.readyState'),'complete');
+  await ev("localStorage.setItem('budil_work_orders',JSON.stringify([{id:'fake-w1',customerName:'架空一郎',scheduledDate:'2026-11-11',startTime:'09:00',status:'confirmed'},{id:'fake-w2',customerName:'架空二郎',scheduledDate:'2026-11-11',status:'planned'},{id:'fake-w3',customerName:'別日',scheduledDate:'2026-11-12',status:'planned'}]));document.getElementById('budil-gpt-open').click()");
   await ev("window.__dateReads=0;window.__dateNetwork=0;window.__dateWrites=0;const oldWorkRead=Storage.getWorkOrders;Storage.getWorkOrders=function(){window.__dateReads++;return oldWorkRead.apply(this,arguments)};const oldFetch=window.fetch;window.fetch=function(){window.__dateNetwork++;return oldFetch.apply(this,arguments)}");
   await ev("document.getElementById('budil-gpt-input').value='2026-11-11の予定教えて';document.getElementById('budil-gpt-run').click()");
   assert.equal(await ev('window.__dateReads'),0,'consent gate before local reads');
