@@ -1,5 +1,14 @@
 # Budil status
 
+## 2026-11-18 GPT常駐100点化：PR #34（開発・本番未反映）
+
+- **本番正本**: main `d411ec660740a5d09ba4957bc767ad4495992779`、GitHub Pagesデプロイ済み、Supabase `budil-gpt-chat` v5 ACTIVE/JWT=true。前段PR #33は本番反映済みであり、旧節の「開発ブランチ／本番未反映」はPR #33当時の履歴として読むこと
+- **開発PR**: [#34](https://github.com/teruya1229/budil/pull/34) DRAFT。未登録の漢字・かな顧客名や不明文言は端末＋Edgeの同一許可語彙で外部GPT送信前に拒否。顧客ID正本は端末のまま。セッションのJWT subjectを*キャッシュ分離ヒント*として使い、会話v2キャッシュをユーザーごとに分離。ログアウト／別アカウント切替時に破棄（JWT subjectを権限判定には使わない）
+- **既存機能の再利用**: GPTの同じ入力欄から厳格な予約・日時変更・見積・金額訂正・顧客登録プレビュー・請求・銀行明細照合の端末内画面へ一回の送信で接続。対応文はGPT APIを呼ばず、保存・発行・入金確定・Google予定WRITEを自動実行しない。顧客候補はexact IDの本人選択を要求。未完の予約などで後続が拒否されたときは「準備完了」と表示しない
+- **CI検証**: 最新HEAD単位の9系列、Deno check、Windows/Linuxの単体2回・Chrome 390/320px 2回、架空顧客/見積修正/予約衝突/銀行プレビューで確認。過去のCI成功は最新HEADに流用しない
+- **本番前の残り**: PR #34はmain未マージ、PagesとEdge未更新。実GPT v5/v6 POST・本人ログインPC/iPhoneの業務完走未確認。2026-11-18のSupabase実DB読取で`budil_snapshots=0`、`budil_calendar_write_slots=0`。PR #31 Google WRITEはDraft/HARD OFF。顧客クラウド移送・Google予定登録/変更・本番重要安全設定は詳細承認なしに実行しない。CIだけで100点や完成とは呼ばない
+
+
 ## GPT常駐・実機422回復＋安全な会話復元（2026-11-18 開発ブランチ／本番未反映）
 
 - 実通信ログで budil-gpt-chat v4 の POST 200 と POST 422（model_schema_invalid）を確認。422はGPT出力のアクション/日付/確認フラグなどがサーバーの追加条件に不一致の場合に発生
