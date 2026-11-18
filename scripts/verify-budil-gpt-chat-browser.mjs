@@ -438,6 +438,21 @@ try{
   assert.equal(await ev("window.__calWrites"),0);
   console.log('PASS '+width+'px: unknown customer not inferred, no GPT send');
 
+  // A candidate button from the preceding draft must never select a lead
+  // inside a NEW draft in the same account. No implicit cross-draft selection.
+  await ev("document.getElementById('budil-gpt-chat-clear').click();Storage.getLeads=()=>[{id:'fake-lead-one',name:'架空一郎'},{id:'fake-lead-two',name:'架空二郎'}];document.getElementById('budil-gpt-input').value='明日の9時に架空一郎さんのエアコン洗浄を予約して';document.getElementById('budil-gpt-chat-send').click()");
+  await ev("window.__staleCalendarButton=document.querySelector('#budil-gpt-chat-history button');document.getElementById('budil-gpt-input').value='明日の11時に架空二郎さんのエアコン洗浄を予約して';document.getElementById('budil-gpt-chat-send').click()");
+  await ev("window.__staleCalendarButton.click();document.getElementById('budil-gpt-input').value='12:00';document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('顧客または変更対象を選択')"),true,
+    'stale button cannot implicitly select another draft customer');
+  await ev("Array.from(document.querySelectorAll('#budil-gpt-chat-history button')).filter(b=>b.textContent.includes('架空二郎')).at(-1).click()");
+  assert.ok((await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('Googleは未照合'),
+    'only new selected customer can complete second preview');
+  assert.equal(await ev("window.__calWrites"),0);
+  assert.equal(await ev("window.__previewProviderCalls"),0);
+  console.log('PASS '+width+'px: old customer buttons cannot corrupt new booking preview');
+
+
 
 
 
