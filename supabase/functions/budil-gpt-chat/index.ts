@@ -143,6 +143,10 @@ export default {async fetch(request:Request):Promise<Response>{
    if(/[一-龯々]{2,10}(?:さん|様)/u.test(withoutAliases))
      return bad(400,"unmasked_customer_rejected",origin);
   }
+  // Client screening is never trusted. Reject unknown names or notes before
+  // consuming the tenant's paid GPT budget.
+  if(!approvedOutbound(msg)||history.some(h=>h.role==="user"&&!approvedOutbound(h.content)))
+   return bad(400,"unapproved_text",origin);
   const minute=new Date();minute.setUTCSeconds(0,0);
   const {data:count,error:rateError}=await admin.rpc("try_consume_tenant_operation_rate_limit",{
    p_tenant_id:tenant.id,p_user_id:userId,p_operation:"budil.gpt.chat.v1",
