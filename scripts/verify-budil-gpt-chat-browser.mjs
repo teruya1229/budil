@@ -261,6 +261,38 @@ try{
     'expired session opens recovery login without requesting customer data');
   assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('認証が切れています')"),true);
   assert.equal(await ev('window.__dateNetwork'),0,'expired session cannot write or call external network');
+  // Page reload restores ONLY anonymized conversation, not private local
+  // work records, aliasMap, or Google event details. All credentials below
+  // are fake values in the disposable localhost test profile.
+  await ev("window.__qaSignedIn=true;BudilCloud.sendGptChat=async()=>({ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'再読込のあとも会話を続けます。',action:'none',query:'',date:'',month:'',docType:'none',needs_confirmation:false});document.getElementById('budil-gpt-input').value='会話復元を試したい';document.getElementById('budil-gpt-chat-send').click()");
+  for(let i=0;i<40;i++){
+   if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('再読込のあとも')"))break;
+   await sleep(100);
+  }
+  assert.ok((await ev("sessionStorage.getItem('budil-gpt.safe-history.v1')||''")).includes('会話復元を試したい'),
+   'safe anonymized chat persisted in current-tab sessionStorage');
+  await ev("localStorage.setItem('budil-cloud.auth.v1.session',JSON.stringify({access_token:'fixture-not-a-real-token',refresh_token:'fixture-not-a-real-refresh',expires_at:Math.floor(Date.now()/1000)+1800,env:'staging'}));location.reload()");
+  for(let i=0;i<160;i++){
+   if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-chat-history')"))break;
+   await sleep(100);
+  }
+  assert.ok((await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('会話復元を試したい'),
+   'safe conversation restored after page reload with the same signed-in session');
+  assert.ok(!(await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('架空一郎'),
+   'raw customer records never restored into the GPT transcript');
+  await ev("document.getElementById('budil-gpt-chat-clear').click()");
+  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v1')"),null,
+   'explicit reset deletes the only saved conversation cache');
+  await ev("sessionStorage.setItem('budil-gpt.safe-history.v1',JSON.stringify({savedAt:Date.now(),history:[{role:'user',content:'ログアウト前の内緒の会話'}]}));localStorage.removeItem('budil-cloud.auth.v1.session');location.reload()");
+  for(let i=0;i<160;i++){
+   if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-chat-history')"))break;
+   await sleep(100);
+  }
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-history').textContent"),'',
+   'signed-out reload must not reveal prior account chat');
+  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v1')"),null,
+   'signed-out reload destroys any stale cached chat');
+  console.log('PASS '+width+'px: safe reload recovery, reset and signed-out privacy');
   console.log('PASS '+width+'px: same-tab login gate, consent ordering, expired session recovery');
   console.log('PASS '+width+'px: screenshot regression zero local results, no premature GPT question, Google unverified');
   console.log('PASS '+width+'px: real GPT plan/consent/local execution, fictional data, zero network');
