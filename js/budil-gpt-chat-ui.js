@@ -243,9 +243,19 @@
      else {
       const d=detail.view;
       card.append(node('strong',String(d.customerName||'選択した顧客')+'の作業・連絡履歴'));
+      const typeLabels={A:'安心重視型',B:'仕上がり重視型',C:'効率重視型',
+        D:'防御型合理モード',E:'監査型',F:'確認安心型'};
+      const typeLabel=v=>v?(typeLabels[v]?v+'：'+typeLabels[v]:String(v)):'';
+      const customerTypes=[typeLabel(d.customerTypeMajor),typeLabel(d.customerTypeMinor)]
+        .filter(Boolean).join(' / ');
+      card.append(node('p','お客様タイプ：'+(customerTypes||'未登録')));
+      card.append(node('p','現場環境・対応メモ：'+String(d.customerMemo||'未登録')));
       card.append(node('p','紐付け作業：'+String(d.linkedWorkCount||0)+'件'));
+      card.append(node('p','紐付け売上：'+String(d.linkedRevenueCount||0)+'件'));
+      // Every field remains on the already authenticated Budil browser.
+      // Exact lead ID was chosen by the user; notes never enter GPT history.
       for(const h of d.records||[])
-       card.append(node('p',[h.date,h.kind,h.label,h.status].filter(Boolean).join(' ／ ')));
+       card.append(node('p',[h.date,h.kind,h.label,h.status,h.note].filter(Boolean).join(' ／ ')));
       card.append(node('p','氏名だけで未紐付け記録を推測していません。GPTへの顧客データ送信なし。'));
      }
      historyBox.append(card);
