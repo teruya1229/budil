@@ -7,6 +7,7 @@
 - main SHA 645ee8e（PR #32）、GPT Edge Function budil-gpt-chat v4 ACTIVE
 - 2026-11-18 Supabase function_edge_logs：GET 200、POST 200とPOST 422の両方を確認。v4サーバーの422はモデル出力の実行条件不一致（model_schema_invalid）。GPT接続成功だけで完成としない
 - 開発ブランチ fix/budil-gpt-live-422-resume-20261118 に安全な確認質問フォールバック（追加API呼出し・WRITEなし）と、同一タブ再読込時の匿名化済み会話復元を実装。既存個人データは保存/再送信しない。明示リセット/サインアウト時破棄
+- 追加した会話画面UI修正：既存read-onlyアダプターにあるcustomerTypeMajor/Minor、customerMemo、exact-ID紐づき作業・活動メモを、候補を本人選択した後だけ表示。本文はlocalのみ・モデル送信なし。顧客タイプ/環境の会話利用が未反映だった具体的不整合に対応
 - 本番Supabase再デプロイ、mainマージ、実Google予約書込、実ユーザーの操作は未実施。CIと実機検品後に別途承認と反映が必要
 
 
