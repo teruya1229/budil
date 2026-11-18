@@ -32,6 +32,10 @@ const allowed=new Set([
   "docs/budil-local-invoice-lifecycle.md",
   "experiments/budil-gpt-phase1/fixture-core.js",
   "calendar-read-test.html",
+  // Project source-of-truth documents required for approved behavior changes.
+  "status.md",
+  "handoff.md",
+  "decision-log.md",
   "css/budil-gpt-offline.css",
   "index.html",
   "js/budil-cloud-restore-ui.js",

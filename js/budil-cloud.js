@@ -76,19 +76,42 @@
     return !!getConfig();
   }
 
-  function sessionStorageRef() {
+  function persistentStorageRef() {
+    return global.localStorage;
+  }
+
+  function legacySessionStorageRef() {
     return global.sessionStorage;
   }
 
   function clearSessionOnly() {
     try {
-      sessionStorageRef().removeItem(SESSION_KEY);
+      persistentStorageRef().removeItem(SESSION_KEY);
+    } catch (_e) { /* ignore */ }
+    try {
+      legacySessionStorageRef().removeItem(SESSION_KEY);
     } catch (_e) { /* ignore */ }
   }
 
   function readSession() {
     try {
-      var raw = sessionStorageRef().getItem(SESSION_KEY);
+      var raw = null;
+      try {
+        raw = persistentStorageRef().getItem(SESSION_KEY);
+      } catch (_e) { /* ignore */ }
+
+      // v4.13.20以前のタブ限定sessionStorageが残っている場合は、
+      // 一度だけlocalStorageへ移して次のタブ・次回起動でも使えるようにする。
+      if (!raw) {
+        try {
+          raw = legacySessionStorageRef().getItem(SESSION_KEY);
+          if (raw) {
+            try { persistentStorageRef().setItem(SESSION_KEY, raw); } catch (_e2) { /* fallback below */ }
+            try { legacySessionStorageRef().removeItem(SESSION_KEY); } catch (_e3) { /* ignore */ }
+          }
+        } catch (_e) { /* ignore */ }
+      }
+
       if (!raw) return null;
       var parsed = JSON.parse(raw);
       if (!parsed || !parsed.access_token || !parsed.refresh_token) {
@@ -118,9 +141,20 @@
       clearSessionOnly();
       return;
     }
+
+    var serialized = JSON.stringify(payload);
+    var stored = false;
     try {
-      sessionStorageRef().setItem(SESSION_KEY, JSON.stringify(payload));
-    } catch (_e) { /* ignore */ }
+      persistentStorageRef().setItem(SESSION_KEY, serialized);
+      stored = true;
+    } catch (_e) { /* fallback to current-tab storage */ }
+
+    // localStorageが利用できない環境でもログイン自体を壊さない。
+    if (!stored) {
+      try { legacySessionStorageRef().setItem(SESSION_KEY, serialized); } catch (_e2) { /* ignore */ }
+    } else {
+      try { legacySessionStorageRef().removeItem(SESSION_KEY); } catch (_e3) { /* ignore */ }
+    }
   }
 
   function isExpired(session, skewSeconds) {

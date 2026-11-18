@@ -65,6 +65,14 @@ try{
   }
   assert.equal(await ev('document.readyState'),'complete');
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true);
+  // Consent is intentionally persistent. Clear it BEFORE a reload so each
+  // viewport independently verifies the first-time experience.
+  await ev("localStorage.removeItem('budil-gpt.chat-consent.v1');location.reload()");
+  for(let i=0;i<160;i++){
+   if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-open')"))break;
+   await sleep(100);
+  }
+  assert.equal(await ev('document.readyState'),'complete');
   await ev("localStorage.setItem('budil_work_orders',JSON.stringify([{id:'fake-w1',customerName:'架空一郎',scheduledDate:'2026-11-11',startTime:'09:00',status:'confirmed'},{id:'fake-w2',customerName:'架空二郎',scheduledDate:'2026-11-11',status:'planned'},{id:'fake-w3',customerName:'別日',scheduledDate:'2026-11-12',status:'planned'}]));document.getElementById('budil-gpt-open').click()");
   await ev("window.__dateReads=0;window.__dateNetwork=0;window.__dateWrites=0;const oldWorkRead=Storage.getWorkOrders;Storage.getWorkOrders=function(){window.__dateReads++;return oldWorkRead.apply(this,arguments)};const oldFetch=window.fetch;window.fetch=function(){window.__dateNetwork++;return oldFetch.apply(this,arguments)}");
   await ev("document.getElementById('budil-gpt-input').value='2026-11-11の予定教えて';document.getElementById('budil-gpt-run').click()");
@@ -138,13 +146,17 @@ try{
   // A second natural-language turn must retain sanitized context. The model
   // can propose a change, but it can never write it directly.
   await ev("BudilCloud.sendGptChat=async function(msg,history,today){window.__chatCalls++;window.__historyLength=history.length;window.__historyAssistant=history[1]?.content||'';return {ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'予約変更案を確認してください。まだ保存しません。',action:'proposal',query:'',date:'',month:'',docType:'none',needs_confirmation:true}}");
-  await ev("document.getElementById('budil-gpt-input').value='じゃあその予定を変更したい';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-chat-consent').checked=true;document.getElementById('budil-gpt-chat-send').click()");
+  await ev("document.getElementById('budil-gpt-input').value='じゃあその予定を変更したい';document.getElementById('budil-gpt-chat-consent').checked=false;document.getElementById('budil-gpt-chat-send').click()");
   for(let i=0;i<50;i++){
     if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('予約変更案を確認')"))break;
     await sleep(100);
   }
   assert.equal(await ev('window.__chatCalls'),2,'two actual chat interactions');
   assert.equal(await ev('window.__historyLength'),2,'conversation context is carried into turn two');
+  assert.equal(await ev("localStorage.getItem('budil-gpt.chat-consent.v1')"),'accepted',
+    'first consent is persisted for normal later GPT turns');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-consent-panel').hidden"),true,
+    'consent panel stays out of the way after first acceptance');
   assert.equal(await ev("window.__historyAssistant.includes('どの作業内容や顧客')"),false,
     'unfounded model question is excluded from subsequent GPT history');
   assert.equal(await ev("window.__historyAssistant.includes('work.date')"),true,
@@ -233,7 +245,10 @@ try{
   assert.ok(!todayText.includes('どの作業内容や顧客'),'today: remove pointless pre-read clarifying question');
   assert.ok(!todayText.includes('今日は予定がありません'),'zero local records does not prove empty schedule');
   assert.equal(await ev('window.document.documentElement.scrollWidth<=innerWidth+2'),true);
-  await ev("document.getElementById('budil-gpt-chat-clear').click()");
+  await ev("document.getElementById('budil-gpt-close').click()");
+  assert.notEqual(await ev("document.getElementById('budil-gpt-chat-history').textContent"),'',
+    'closing the GPT panel does not erase conversation history');
+  await ev("document.getElementById('budil-gpt-open').click();document.getElementById('budil-gpt-chat-clear').click()");
   assert.equal(await ev("document.getElementById('budil-gpt-chat-history').textContent"),'');
   // If refresh failed after previously signing in, expose the login form
   // instead of the unhelpful low-level not_signed_in code.

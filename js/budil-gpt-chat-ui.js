@@ -14,6 +14,36 @@
  const Profit=typeof ProfitBrain!=='undefined'?ProfitBrain:null;
  const DateTool=typeof BudilGptLocalCommands!=='undefined'?BudilGptLocalCommands:null;
  let sanitizedHistory=[],aliasMap=Object.create(null),busy=false,seq=0;
+ const CHAT_CONSENT_KEY='budil-gpt.chat-consent.v1';
+ let chatConsentAccepted=false;
+ function readChatConsent(){
+  try{return localStorage.getItem(CHAT_CONSENT_KEY)==='accepted';}
+  catch(_){return false;}
+ }
+ function persistChatConsent(){
+  chatConsentAccepted=true;
+  try{localStorage.setItem(CHAT_CONSENT_KEY,'accepted');}catch(_){/* current page still stays accepted */}
+ }
+ function syncChatConsent(){
+  chatConsentAccepted=chatConsentAccepted||readChatConsent();
+  const panel=$('budil-gpt-chat-consent-panel');
+  if(panel)panel.hidden=chatConsentAccepted;
+  const box=$('budil-gpt-chat-consent');
+  if(box&&chatConsentAccepted)box.checked=true;
+  return chatConsentAccepted;
+ }
+ function ensureChatConsent(){
+  if(syncChatConsent())return true;
+  const box=$('budil-gpt-chat-consent');
+  if(box&&box.checked===true){
+   persistChatConsent();
+   syncChatConsent();
+   return true;
+  }
+  note('初回だけ①の同意が必要です。一度同意すれば、この端末では通常のGPT会話ごとに再チェックしません。',true);
+  if(box)box.focus();
+  return false;
+ }
  const node=(tag,content,className)=>{
   const el=document.createElement(tag);
   if(content!==undefined)el.textContent=String(content);
@@ -23,8 +53,8 @@
  const note=(message,error=false)=>{
   statusBox.textContent=message;statusBox.classList.toggle('budil-gpt-error',error);
  };
- // A BudilCloud session is scoped to the CURRENT tab. Keep the existing
- // authenticated gateway; never use localStorage or copy tokens across tabs.
+ // BudilCloud keeps the authenticated Supabase session for this browser so
+ // normal GPT conversation does not require a fresh login in every tab.
  const authPanel=$('budil-gpt-chat-auth'),authBtn=$('budil-gpt-chat-login'),
    authEmail=$('budil-gpt-chat-email'),authPassword=$('budil-gpt-chat-password'),
    authStatus=$('budil-gpt-chat-auth-status');
@@ -46,7 +76,7 @@
    if(typeof authPanel.scrollIntoView==='function')
     authPanel.scrollIntoView({block:'nearest'});
   }
-  note(message||'このタブでBudilにログインしてからGPTを利用してください。ログインだけでは業務データを送信しません。',true);
+  note(message||'Budilに一度ログインすると、ログアウトまたは認証失効まで通常はそのままGPTを利用できます。',true);
  }
  async function freeReadiness(){
   const Cloud=window.BudilCloud;
@@ -63,7 +93,7 @@
      return showLogin('Budilのログイン認証が必要です。このタブでログインしてください。');
     return note('GPT接続状態を確認できません（'+(r&&r.code||'unavailable')+'）。',true);
    }
-   note(r.ready?'GPTの認証・接続準備ができました。①②の同意を入れて質問を送信してください。':
+   note(r.ready?(syncChatConsent()?'GPTを利用できます。そのまま会話してください。':'GPTの接続準備ができました。初回だけ①に同意して送信してください。'):
     'Budilにはログインできましたが、GPTのサーバー設定は未準備です。管理者による確認が必要です。',!r.ready);
   }catch(_){note('GPT接続状態の確認に失敗しました。',true)}
   finally{if(b)b.disabled=false;}
@@ -100,7 +130,7 @@
   if($('budil-gpt-input'))$('budil-gpt-input').focus();
   await freeReadiness();
  });
- $('budil-gpt-open')?.addEventListener('click',()=>syncAuth());
+ $('budil-gpt-open')?.addEventListener('click',()=>{syncAuth();syncChatConsent();});
  function bubble(role,message){
   const div=node('div',undefined,'budil-gpt-chat-bubble');
   div.append(node('strong',role==='user'?'あなた':'Budil GPT'));
@@ -195,14 +225,7 @@
   const raw=$('budil-gpt-input').value;
   if(!raw.trim())return note('まずGPTへの質問を入力してください。',true);
   if(!signedIn())return showLogin();
-  if($('budil-gpt-consent').checked!==true||
-     $('budil-gpt-chat-consent').checked!==true){
-    note('GPT会話には①端末内データの読取と②匿名化した文章の外部送信、両方の同意が必要です。',true);
-    const missing=$('budil-gpt-consent').checked!==true?
-     $('budil-gpt-consent'):$('budil-gpt-chat-consent');
-    if(missing)missing.focus();
-    return;
-  }
+  if(!ensureChatConsent())return;
   let leads;
   try{leads=Data.getLeads()}catch{return note('顧客情報の匿名化に必要な端末データを読み取れません。',true)}
   const prepared=Chat.prepare(raw,leads,aliasMap);
@@ -214,8 +237,6 @@
   const queryHistory=Chat.safeHistory(sanitizedHistory);
   const token=++seq;
   busy=true;button.disabled=true;
-  $('budil-gpt-consent').checked=false;
-  $('budil-gpt-chat-consent').checked=false;
   note('GPTが内容を理解し、適切なBudil操作を検討しています。');
   try{
    const answer=await Cloud.sendGptChat(prepared.message,queryHistory,today);
@@ -319,17 +340,22 @@
   finally{busy=false;button.disabled=false;}
  }
  button.addEventListener('click',send);
+ const chatInput=$('budil-gpt-input');
+ if(chatInput)chatInput.addEventListener('keydown',event=>{
+  if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){
+   event.preventDefault();
+   send();
+  }
+ });
+ syncChatConsent();
 
  const readyButton=$('budil-gpt-chat-readiness');
  if(readyButton)readyButton.addEventListener('click',freeReadiness);
 
  clear.addEventListener('click',()=>{
   seq++;sanitizedHistory=[];aliasMap=Object.create(null);
-  historyBox.replaceChildren();$('budil-gpt-chat-consent').checked=false;
-  note('会話をリセットしました。保存済み業務データは変更していません。');
+  historyBox.replaceChildren();
+  note('会話をリセットしました。GPT利用同意とログイン状態は維持しています。');
  });
- $('budil-gpt-close')?.addEventListener('click',()=>{
-  seq++;sanitizedHistory=[];aliasMap=Object.create(null);
-  historyBox.replaceChildren();$('budil-gpt-chat-consent').checked=false;
- });
+ $('budil-gpt-close')?.addEventListener('click',()=>{ /* closing the panel keeps GPT conversation context */ });
 })();

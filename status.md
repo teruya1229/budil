@@ -1,4 +1,13 @@
-﻿# Budil status
+# Budil status
+
+## v4.13.20 hotfix：Budil GPTを連続会話UXへ変更（2026-11-18）
+
+- GPT会話は初回同意をこのブラウザに保存し、通常の送信ごとのチェックを廃止
+- Budilログインはブラウザ内で維持し、タブ変更・再読込のたびの再ログインを減らす。パスワードは保存しない
+- GPT画面を閉じても会話履歴を保持。明示的な「GPT会話をリセット」でのみ会話を消す
+- Enter送信 / Shift+Enter改行。従来の定型・診断ツールは折りたたみに退避
+- 予約・送信・売上確定・削除など既存の重要WRITE承認は変更しない
+- 主要PR CI（real GPT chat / 20自然文 / P0 / cloud restore / calendar / secure readiness / release candidate）で回帰確認
 
 ## v4.13.20 Googleカレンダー1ボタン連携を Chrome 152 Local Network Access に対応
 
