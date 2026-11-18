@@ -376,6 +376,15 @@ try{
   assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('端末内の見積確認画面')"),true);
   console.log('PASS '+width+'px: natural quote to exact-customer draft, local-only, zero provider cost');
 
+  await ev("document.getElementById('budil-gpt-input').value='金額を税込20,000円に変更';document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-draft-preview').textContent.includes('20,000')"),true,
+    'natural follow-up revises the same local draft instead of creating a new quote');
+  assert.equal(await ev("document.getElementById('budil-gpt-draft').hidden"),false,
+    'owner approval remains required after quote revision');
+  assert.equal(await ev("window.__previewProviderCalls"),0,'price revision does not incur paid provider calls');
+  console.log('PASS '+width+'px: continuous natural-language amount revision, no automatic approval');
+
+
 
   console.log('PASS '+width+'px: safe reload recovery, reset and signed-out privacy');
   console.log('PASS '+width+'px: same-tab login gate, consent ordering, expired session recovery');
