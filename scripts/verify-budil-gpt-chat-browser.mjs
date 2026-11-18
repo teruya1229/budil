@@ -324,6 +324,23 @@ try{
    'signed-out reload must not reveal prior account chat');
   assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')"),null,
    'signed-out reload destroys any stale cached chat');
+  // Unified one-click local booking preparation: no paid GPT call and no
+  // WorkOrder write; the user still selects customer/tax/end time and approves.
+  await ev("window.__qaSignedIn=true;window.__qaSessionScope='staging:00000000-0000-0000-0000-000000000001';BudilCloud.getAuthState=()=>({available:true,signedIn:true});BudilCloud.getGptSessionScope=()=>window.__qaSessionScope;window.__previewProviderCalls=0;BudilCloud.sendGptChat=async()=>{window.__previewProviderCalls++;throw Error('GPT_PROVIDER_MUST_NOT_BE_CALLED')};Storage.getLeads=()=>[{id:'fake-preview-lead',name:'架空一郎'}];Storage.getWorkOrders=()=>[];Storage.addWorkOrder=()=>{throw Error('UNAPPROVED_WRITE')};document.getElementById('budil-gpt-clear').click()");
+  await ev("document.getElementById('budil-gpt-input').value='2030年12月20日の午前10時に架空一郎さんのエアコン洗浄2台を予約して。税込18,000円で見積書も作って';document.getElementById('budil-gpt-chat-send').click()");
+  for(let i=0;i<40;i++){
+   if(await ev("document.getElementById('budil-gpt-booking').hidden===false"))break;
+   await sleep(100);
+  }
+  assert.equal(await ev("document.getElementById('budil-gpt-booking').hidden"),false,
+    'known local booking grammar stages existing booking review');
+  assert.equal(await ev("document.getElementById('budil-gpt-booking-fields').hidden"),false,
+    'requires tax/end-time verification before a customer-specific quote');
+  assert.equal(await ev("document.getElementById('budil-gpt-booking-save').hidden"),true,
+    'no local booking write without explicit owner approval');
+  assert.equal(await ev("window.__previewProviderCalls"),0,'no paid GPT call for supported local grammar');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('端末内の予約確認画面')"),true);
+  console.log('PASS '+width+'px: strict booking prompts directly stage local review, zero GPT cost, zero writes');
   console.log('PASS '+width+'px: safe reload recovery, reset and signed-out privacy');
   console.log('PASS '+width+'px: same-tab login gate, consent ordering, expired session recovery');
   console.log('PASS '+width+'px: screenshot regression zero local results, no premature GPT question, Google unverified');
