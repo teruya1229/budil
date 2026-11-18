@@ -1,5 +1,14 @@
 # Budil handoff
 
+## GPT常駐・最新開発引継ぎ（2026-11-18 PR #35）
+
+- **CURRENT**: GitHub main `d88ff3c` / Pages本番、GPT Edge v6 ACTIVE/JWT true。PR#35 `feat/budil-gpt-google-preview-live-guard-20261118` はDraft・本番未反映
+- **GOAL**: 本人がスマホで話し、顧客・日付・作業・金額を端末内で選択確認 → Budil／Google予定へ承認後だけ反映 → 同じGoogle Event IDで変更／GET検証までの完走
+- **CURRENT EVIDENCE**: PR#35はPR#31のread-only pureパーサを最小移植。自然文の新規予約と日時変更を、登録済み顧客/既存WorkOrderの明示選択・終了時刻・端末内重複検査・別クリックGoogle busy照会へつなげた。追加のGPT API請求・WorkOrder書込・Google書込は0。Windows/Linux Chrome390/320pxと相対日付テストを含む最終CI9系列成功
+- **MATERIAL GAP**: 本番のGoogle書込みbindingはdisabled、`budil-calendar-write` v5はHARD OFF。DBの`budil_snapshots`も`budil_calendar_write_slots`も0。Browser番頭エンジンREADYだがこのチャットのcaller origin未認証、GPT v6実本人POSTはログで未確認。既存ローカルバックアップも2026-09-12生成のSTALEで現行正本として使えない
+- **NEXT ACTION**: 本番環境・資格情報・安全設定を無断変更しない。PR#35のコードレビューとmain/Pagesへの明示許可後に公開read-backを確認。現在のチャットoriginを正式認証して本人ログインGPTの実POSTをBrowser番頭で検品。Google WRITEを有効化する前にはowner承認、専用write用credential、サーバー正本、atomic ledger、GoogleイベントGET再読取・同一ID更新、明示テスト予約をすべて満たす
+
+
 ## 2026-11-18 GPT常駐100点化：最新引継ぎ（開発中／本番未反映）
 
 - **本番** main `d411ec6`、Pages公開・GPT Edge `budil-gpt-chat` v5 ACTIVE/JWT true。PR #33の422安全復帰と匿名化会話再読込は前回承認により本番反映済み。下の「v4／未反映」記載は当時の古い作業履歴
