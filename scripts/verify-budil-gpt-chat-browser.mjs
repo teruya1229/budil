@@ -59,6 +59,7 @@ try{
  for(const width of [390,320]){
   await cmd('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:1,mobile:true});
   await cmd('Page.navigate',{url:'http://127.0.0.1:'+server.address().port+'/index.html'});
+  await sleep(150);
   for(let i=0;i<160;i++){
    if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-open')"))break;
    await sleep(100);
@@ -68,6 +69,7 @@ try{
   // Consent is intentionally persistent. Clear it BEFORE a reload so each
   // viewport independently verifies the first-time experience.
   await ev("localStorage.removeItem('budil-gpt.chat-consent.v1');location.reload()");
+  await sleep(200);
   for(let i=0;i<160;i++){
    if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-open')"))break;
    await sleep(100);
@@ -298,6 +300,7 @@ try{
   assert.ok((await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')||''")).includes('会話復元を試したい'),
    'safe anonymized chat persisted in current-tab sessionStorage');
   await ev("(()=>{const sub='00000000-0000-0000-0000-000000000001';const jwt='fixture.'+btoa(JSON.stringify({sub})).replace(/=/g,'')+'.signature';localStorage.setItem('budil-cloud.auth.v1.session',JSON.stringify({access_token:jwt,refresh_token:'fixture-not-a-real-refresh',expires_at:Math.floor(Date.now()/1000)+1800,env:'staging'}));location.reload()})()");
+  await sleep(200);
   for(let i=0;i<160;i++){
    if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-chat-history')"))break;
    await sleep(100);
@@ -316,6 +319,7 @@ try{
   assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')"),null,
    'explicit reset deletes the only saved conversation cache');
   await ev("sessionStorage.setItem('budil-gpt.safe-history.v2',JSON.stringify({scope:'staging:00000000-0000-0000-0000-000000000002',savedAt:Date.now(),history:[{role:'user',content:'ログアウト前の内緒の会話'}]}));localStorage.removeItem('budil-cloud.auth.v1.session');location.reload()");
+  await sleep(200);
   for(let i=0;i<160;i++){
    if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-chat-history')"))break;
    await sleep(100);
