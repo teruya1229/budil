@@ -348,9 +348,9 @@
   if(!syncAuth())return showLogin();
   if(!ensureChatConsent())return;
   const localToday=DateTool.todayTokyo();
-  if(startSafeLocalPreview(raw,localToday))return;
   if(typeof BudilGptCalendarChatPreview!=='undefined'&&
      BudilGptCalendarChatPreview.tryHandle(raw,{today:localToday,scope:currentScope()}))return;
+  if(startSafeLocalPreview(raw,localToday))return;
   let leads;
   try{leads=Data.getLeads()}catch{return note('顧客情報の匿名化に必要な端末データを読み取れません。',true)}
   const prepared=Chat.prepare(raw,leads,aliasMap);
