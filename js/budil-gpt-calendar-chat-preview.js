@@ -140,6 +140,7 @@ const BudilGptCalendarChatPreview=(()=>{
    }
    return;
   }
+  if(!intent.customerName){say('日時変更には顧客名を指定してください。対象となる予定を推測して一覧にしません。');reset();return;}
   let matches;
   try{
    matches=freshOrders().filter(w=>w&&String(w.id||'')&&
