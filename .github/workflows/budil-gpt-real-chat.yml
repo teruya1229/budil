@@ -24,8 +24,11 @@ jobs:
         run: |
           node --check js/budil-gpt-chat.js
           node --check js/budil-gpt-chat-ui.js
+          node --check js/budil-gpt-calendar-preview.js
+          node --check js/budil-gpt-calendar-chat-preview.js
           node --check js/budil-cloud.js
           node scripts/verify-budil-gpt-chat.mjs
+          node scripts/verify-budil-gcal-relative-date.mjs
       - name: Independent regression round 2
         run: |
           node scripts/verify-budil-gpt-chat.mjs

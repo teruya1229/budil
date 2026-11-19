@@ -159,6 +159,7 @@
  // Original customer names, aliasMap, local records and Google event data NEVER
  // enter this cache. A new tab or a logged-out page cannot recover the record.
  function forgetSafeHistory(){
+  if(typeof BudilGptCalendarChatPreview!=='undefined')BudilGptCalendarChatPreview.reset();
   try{
    sessionStorage.removeItem(CHAT_HISTORY_KEY);
    sessionStorage.removeItem(LEGACY_HISTORY_KEY);
@@ -347,6 +348,8 @@
   if(!syncAuth())return showLogin();
   if(!ensureChatConsent())return;
   const localToday=DateTool.todayTokyo();
+  if(typeof BudilGptCalendarChatPreview!=='undefined'&&
+     BudilGptCalendarChatPreview.tryHandle(raw,{today:localToday,scope:currentScope()}))return;
   if(startSafeLocalPreview(raw,localToday))return;
   let leads;
   try{leads=Data.getLeads()}catch{return note('顧客情報の匿名化に必要な端末データを読み取れません。',true)}

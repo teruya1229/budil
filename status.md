@@ -1,5 +1,26 @@
 # Budil status
 
+## 2026-11-19 本番実機検品：GPT通信・Google予定読取（公開版v6）
+
+- **実機経路**: Browser番頭の既存Windows Runner `bc-bantou-dev` + 承認済みACCOUNT_MAP + 共有Chrome CDP。Budil本番URLの一致タブ1件、v6 JavaScript / GPT画面の存在を本人のログイン済みChromeで実測。顧客レコード・Cookie・パスワード・JWT・Google予定本文はログ出力していない
+- **GPT GET readiness**: [run 44429044955](https://github.com/teruya1229/browser-bantou/actions/runs/44429044955) SUCCESS。`ok=true,ready=true,enabled=true,keyConfigured=true,modelSupported=true,externalRequestSent=false`
+- **GPT POST 実送信**: [run 44429218641](https://github.com/teruya1229/browser-bantou/actions/runs/44429218641) SUCCESS。架空/顧客情報なしの固定挨拶「こんにちは」1回だけを本人ログインのBudilCloudから送信。`ok=true`, 応答本文あり、`phase=chat_plan_only`, `action=none`, `persisted=false`, `customerRecordsSent=false`, `canExecute=false`。回答本文の内容はログに出していない
+- **Google実読取**: [run 44429381754](https://github.com/teruya1229/browser-bantou/actions/runs/44429381754) SUCCESS。既存 `schedule_blocks_list` 操作で2026-11-19のbusy枠をGoogleクラウド側から実取得（該当イベントあり）。`ok=true,readOnly=true,calendarWritePerformed=false,customerRecordsSent=false`。日時・タイトル・場所等のイベント詳細は非出力。PCローカルフォールバックは必要なく未使用
+- **GPT本番UI隔離実機**: [run 44429845407](https://github.com/teruya1229/browser-bantou/actions/runs/44429845407) SUCCESS（検証ジョブ実行）。本番共有Chromeの元タブを保存し、一時バックグラウンドBudilタブを作成、DOM/認証済み/GPTボタン等は正常。ただし一時タブで初回GPT送信同意が未承認だったため、送信・有料POST・同意設定変更なしで停止。検証用タブは正常に閉じ、元のBudilタブを保持。**UI連続会話/再読込の本番PASSではない**
+- **残る検品**: GPT画面の送信ボタンクリック→会話描画/再読込の本人実機UI、PR#35の新規予約・日時変更プレビューの本番公開・実機、Google予約確定/同一イベントID変更/再読取、iPhone。ChatGPT内蔵Browser接続のcaller-originは依然未認証だが、Browser番頭独立Windows経路で実通信を確認できた。PR#35はDraft/本番未反映。100点完成判定は禁止
+
+
+## GPT常駐・予約プレビュー導線の検品（2026-11-18 PR #35、開発版）
+
+- 本番正本: main `d88ff3c31a6e58cf4befcc757e92abbfbfa8dfbd`、GPT Edge `budil-gpt-chat` v6 ACTIVE/JWT=true。PR #35 はDraftで本番未反映
+- 旧PR #31を全体マージせず、PR#31の独立端末内予約パーサ `js/budil-gpt-calendar-preview.js` を再利用し、`js/budil-gpt-calendar-chat-preview.js` でGPT会話欄と接続
+- 「明日○時に予約」「○○さんの予約を明後日○時に変更」→ユーザーによる登録済み顧客IDまたはWorkOrder ID選択→終了時刻指定→Budil端末内重複チェック。Googleのbusy読取は別の本人クリックだけ。重複・読取失敗はfail-closedで、予約済み・空き確定を宣言しない
+- 履歴/アカウント切替・ログアウト・会話リセット時には進行中のプレビューを破棄。無断Google events POST/PATCH・Budil WorkOrder保存・GPTへの顧客個人情報送信はなし
+- 最終差分の独立CIは9系列すべてSUCCESS。Windows/LinuxのChrome390/320pxでは、通常の予約、顧客ID選択、重複阻止、日時変更対象選択、Google busy読取OK/重複/失敗、未登録顧客阻止、書込み0件を架空データで検証
+- 本番DB照会: `budil_snapshots=0`、`budil_calendar_write_slots=0`。Google read binding ACTIVE、`calendar_event_write` binding DISABLED、Edge `budil-calendar-write` v5は`writeEnabled:false,backend:null`。これらは変更しない
+- Browser番頭の稼働はREADY、ただし現在のChatGPTチャットoriginは未認証・共有Chrome候補2件。本人アカウントのGPT v6 POST・iPhone動作・Googleイベントの実登録/再読取/変更は未検証。継続して100点と称しない
+
+
 ## 2026-11-18 GPT常駐100点化：PR #34（開発・本番未反映）
 
 - **本番正本**: main `d411ec660740a5d09ba4957bc767ad4495992779`、GitHub Pagesデプロイ済み、Supabase `budil-gpt-chat` v5 ACTIVE/JWT=true。前段PR #33は本番反映済みであり、旧節の「開発ブランチ／本番未反映」はPR #33当時の履歴として読むこと
