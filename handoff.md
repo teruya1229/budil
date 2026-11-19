@@ -4,6 +4,7 @@
 
 - **GOAL**: GPT常駐を本人のPC/スマホで安全に実用完走。現時点で本番v6のGPT API実接続とGoogle busy実読取まで実測済み
 - **本番Windows実機の証拠**: 既存共有ChromeのBudilログイン済みタブ1件、ACCOUNT_MAPに登録あり。GPT readiness GET [44429044955](https://github.com/teruya1229/browser-bantou/actions/runs/44429044955) PASS。顧客情報を含まない挨拶1回だけのGPT POST [44429218641](https://github.com/teruya1229/browser-bantou/actions/runs/44429218641) PASS（返答あり、plan-only、保存/顧客送信なし）。Googleカレンダー2026-11-19のbusy GET相当操作 [44429381754](https://github.com/teruya1229/browser-bantou/actions/runs/44429381754) PASS（予定あり、readonly、Google write=false）。本文・個人情報・認証情報はログ非出力
+- **実機UIの初回同意境界**: 本人環境で専用の一時Budilタブを作成し、ログイン済み・UI読込・GPT入力/送信ボタンを確認（[run44429845407](https://github.com/teruya1229/browser-bantou/actions/runs/44429845407)）。検証タブの初回外部送信同意が未承認のため、同意を自動付与せずモデル送信前に停止。元タブは完全保持。GPT画面内の返答表示/リロード復元・スマホ受入は未検証
 - **MATERIAL GAP**: GPT画面内での送信・連続会話・再読込のPC/iPhone実機操作は未確認。PR#35の予約/変更プレビューはDraftで本番未反映。本番のGoogle書込みbindingはdisabled、`budil-calendar-write`はHARD OFF、`budil_snapshots=0`、`budil_calendar_write_slots=0`（最後のDB実測2026-11-18）。旧「実GPT POST未確認」「Google実読取未確認」は上記実測により解消。ただしGoogleの書込許可とは別
 - **NEXT ACTION**: PR#35の安全性を最終確認して本番公開の明示承認を得た後にPages readbackと本人実UIを検品。Google WRITEを許可するにはクラウド正本/専用権限/atomic idempotency/Googleイベント再読取と本人承認を別途整備。Browser番頭の内蔵ChatGPT接続caller-originは未認証のまま（WindowsのBrowser番頭経路で実機検品可能）。認証をバイパスしない
 
