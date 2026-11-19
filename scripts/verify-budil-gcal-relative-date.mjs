@@ -30,4 +30,28 @@ check('explicit full date unchanged','2026年11月20日10時に田中さんの�
 check('past exact date rejected','2026年11月13日10時に田中さんの清掃を予約して','2026-11-14',{ok:false,code:'PAST_DATE'});
 check('unrelated request does not save','予定をすべて変更して','2026-11-14',{ok:false,code:'UNSUPPORTED_COMMAND'});
 check('no customer or service inference','明日の10時に予約して','2026-11-14',{ok:false,code:'UNSUPPORTED_COMMAND'});
+
+const {BudilGptBooking}=require('../js/budil-gpt-booking.js');
+const surname=mod.parse('明日の10時に田中さんのエアコン洗浄を予約して','2026-11-19');
+assert.equal(surname.ok,true);
+const selected={id:'fictional-id-2',name:'田中次郎',explicitlySelected:true};
+const review=mod.review(surname,{orders:[],selectedCustomer:selected,
+  endTime:'11:00',now:new Date('2026-11-19T01:00:00Z'),bookingBrain:BudilGptBooking});
+assert.equal(review.ok,true,'surname prefix with manually selected exact ID is allowed');
+assert.equal(review.customerId,'fictional-id-2');
+assert.equal(review.customerName,'田中次郎');
+assert.equal(review.googleWritePerformed,false);
+assert.equal(review.workOrderSaved,false);
+assert.equal(review.canSave,false);
+passed++;
+const unrelated=mod.review(surname,{orders:[],selectedCustomer:{id:'fictional-id-3',
+  name:'山田太郎',explicitlySelected:true},endTime:'11:00',
+  now:new Date('2026-11-19T01:00:00Z'),bookingBrain:BudilGptBooking});
+assert.equal(unrelated.code,'CUSTOMER_MISMATCH','unrelated manual customer cannot pass');
+passed++;
+const noChoice=mod.review(surname,{orders:[],selectedCustomer:{id:'fictional-id-2',
+  name:'田中次郎',explicitlySelected:false},endTime:'11:00',
+  now:new Date('2026-11-19T01:00:00Z'),bookingBrain:BudilGptBooking});
+assert.equal(noChoice.code,'CUSTOMER_SELECTION_REQUIRED','no automatic surname selection');
+passed++;
 console.log('BUDIL_GCAL_RELATIVE_DATE PASS',passed,'FAIL 0');
