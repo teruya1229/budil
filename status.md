@@ -1,5 +1,14 @@
 # Budil status
 
+## 2026-11-19 本番実機検品：GPT通信・Google予定読取（公開版v6）
+
+- **実機経路**: Browser番頭の既存Windows Runner `bc-bantou-dev` + 承認済みACCOUNT_MAP + 共有Chrome CDP。Budil本番URLの一致タブ1件、v6 JavaScript / GPT画面の存在を本人のログイン済みChromeで実測。顧客レコード・Cookie・パスワード・JWT・Google予定本文はログ出力していない
+- **GPT GET readiness**: [run 44429044955](https://github.com/teruya1229/browser-bantou/actions/runs/44429044955) SUCCESS。`ok=true,ready=true,enabled=true,keyConfigured=true,modelSupported=true,externalRequestSent=false`
+- **GPT POST 実送信**: [run 44429218641](https://github.com/teruya1229/browser-bantou/actions/runs/44429218641) SUCCESS。架空/顧客情報なしの固定挨拶「こんにちは」1回だけを本人ログインのBudilCloudから送信。`ok=true`, 応答本文あり、`phase=chat_plan_only`, `action=none`, `persisted=false`, `customerRecordsSent=false`, `canExecute=false`。回答本文の内容はログに出していない
+- **Google実読取**: [run 44429381754](https://github.com/teruya1229/browser-bantou/actions/runs/44429381754) SUCCESS。既存 `schedule_blocks_list` 操作で2026-11-19のbusy枠をGoogleクラウド側から実取得（該当イベントあり）。`ok=true,readOnly=true,calendarWritePerformed=false,customerRecordsSent=false`。日時・タイトル・場所等のイベント詳細は非出力。PCローカルフォールバックは必要なく未使用
+- **残る検品**: GPT画面の送信ボタンクリック→会話描画/再読込の本人実機UI、PR#35の新規予約・日時変更プレビューの本番公開・実機、Google予約確定/同一イベントID変更/再読取、iPhone。ChatGPT内蔵Browser接続のcaller-originは依然未認証だが、Browser番頭独立Windows経路で実通信を確認できた。PR#35はDraft/本番未反映。100点完成判定は禁止
+
+
 ## GPT常駐・予約プレビュー導線の検品（2026-11-18 PR #35、開発版）
 
 - 本番正本: main `d88ff3c31a6e58cf4befcc757e92abbfbfa8dfbd`、GPT Edge `budil-gpt-chat` v6 ACTIVE/JWT=true。PR #35 はDraftで本番未反映
