@@ -5,6 +5,7 @@ const BudilGptCalendarChatPreview=(()=>{
  const $=id=>document.getElementById(id);
  const get=name=>typeof window!=='undefined'?window[name]:null;
  const panel=()=>$('budil-gpt-chat-history');
+ const clearComposer=()=>{const input=$('budil-gpt-input');if(input)input.value='';};
  const result=(message,error=false)=>{
   const status=$('budil-gpt-chat-status');
   if(status){status.textContent=message;status.classList.toggle('budil-gpt-error',error);}
@@ -125,11 +126,37 @@ const BudilGptCalendarChatPreview=(()=>{
    let leads,match;
    try{leads=Store?.getLeads?.();match=Array.isArray(leads)&&Resolver?.resolve?.({name:intent.customerName,limit:10},{leads});}
    catch(_){result('顧客候補を読み取れません。',true);reset();return;}
-   if(!match?.ok||!Array.isArray(match.candidates)||!match.candidates.length){
-    say('該当する登録済み顧客が見つかりません。顧客登録を先に確認してください。');reset();return;
+   if(!Array.isArray(leads)||!Resolver){
+    say('登録済み顧客を読み取れません。端末内データを確認してください。');reset();return;
    }
-   const box=say('登録済み顧客の候補を本人が1件選択してください。複数候補を自動確定しません。');
-   for(const c of match.candidates){
+   let candidates=match?.ok&&Array.isArray(match.candidates)?match.candidates:[];
+   // The canonical resolver intentionally requires an EXACT full name.
+   // Only this unsaved preview may present Japanese surname-prefix matches.
+   // Never auto-pick, even if just one; the exact customer ID is mandatory.
+   if(!candidates.length&&match?.status==='not_found'&&
+      /^[一-龯々]{2,6}$/u.test(intent.customerName)){
+    const norm=Resolver.normalizeName(intent.customerName),seen=new Set();
+    const found=[];
+    for(const lead of leads){
+     const id=Resolver.leadCustomerId(lead);
+     const display=Resolver.leadDisplayName(lead);
+     if(!id||seen.has(id)||!Resolver.normalizeName(display).startsWith(norm))continue;
+     seen.add(id);
+     found.push(Resolver.toCandidate(lead,'surname_preview'));
+     if(found.length>10)break;
+    }
+    if(found.length>10){
+     say('同じ姓の登録顧客が10件を超えるため候補を表示しません。フルネームを指定してください。');
+     reset();return;
+    }
+    candidates=found;
+   }
+   if(!candidates.length){
+    say('登録名と完全一致する顧客が見つかりません。姓だけの場合は候補10件以内に限り表示します。フルネームを確認してください。');
+    reset();return;
+   }
+   const box=say('登録済み顧客の候補を本人が1件選択してください。同姓でも自動確定しません。');
+   for(const c of candidates){
     const b=node('button',String(c.displayName)+'（'+String(c.municipality||'地域未登録')+'）',
      'budil-gpt-btn budil-gpt-btn-secondary');
     b.type='button';b.addEventListener('click',()=>{
@@ -166,12 +193,13 @@ const BudilGptCalendarChatPreview=(()=>{
   const text=String(raw||'').trim();
   if(pending){
    if(/^(?:キャンセル|中止|プレビュー中止)[。！!]?$/u.test(text)){
-    reset();say('予約・日時変更の仮確認を中止しました。保存やGoogle書込みはしていません。');
+    reset();clearComposer();say('予約・日時変更の仮確認を中止しました。保存やGoogle書込みはしていません。');
     result('仮確認を中止しました。');return true;
    }
    const end=parseEnd(text);
    if(end){
     pending.endTime=end;
+    clearComposer();
     say('終了時刻：'+end+'。');
     finishIfReady();
     if(!(pending.selectedCustomer||pending.selectedOrder))
@@ -190,7 +218,7 @@ const BudilGptCalendarChatPreview=(()=>{
   say('入力：'+text);
   displayPlan();showChoices(scope);
   if(pending)result('顧客・予定を選択し、終了時刻を入力してください。登録・変更は行っていません。');
-  $('budil-gpt-input').value='';
+  clearComposer();
   return true;
  }
  return Object.freeze({tryHandle,reset,parseEnd});
