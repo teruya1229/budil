@@ -6,6 +6,7 @@
 - **GPT GET readiness**: [run 44429044955](https://github.com/teruya1229/browser-bantou/actions/runs/44429044955) SUCCESS。`ok=true,ready=true,enabled=true,keyConfigured=true,modelSupported=true,externalRequestSent=false`
 - **GPT POST 実送信**: [run 44429218641](https://github.com/teruya1229/browser-bantou/actions/runs/44429218641) SUCCESS。架空/顧客情報なしの固定挨拶「こんにちは」1回だけを本人ログインのBudilCloudから送信。`ok=true`, 応答本文あり、`phase=chat_plan_only`, `action=none`, `persisted=false`, `customerRecordsSent=false`, `canExecute=false`。回答本文の内容はログに出していない
 - **Google実読取**: [run 44429381754](https://github.com/teruya1229/browser-bantou/actions/runs/44429381754) SUCCESS。既存 `schedule_blocks_list` 操作で2026-11-19のbusy枠をGoogleクラウド側から実取得（該当イベントあり）。`ok=true,readOnly=true,calendarWritePerformed=false,customerRecordsSent=false`。日時・タイトル・場所等のイベント詳細は非出力。PCローカルフォールバックは必要なく未使用
+- **GPT本番UI隔離実機**: [run 44429845407](https://github.com/teruya1229/browser-bantou/actions/runs/44429845407) SUCCESS（検証ジョブ実行）。本番共有Chromeの元タブを保存し、一時バックグラウンドBudilタブを作成、DOM/認証済み/GPTボタン等は正常。ただし一時タブで初回GPT送信同意が未承認だったため、送信・有料POST・同意設定変更なしで停止。検証用タブは正常に閉じ、元のBudilタブを保持。**UI連続会話/再読込の本番PASSではない**
 - **残る検品**: GPT画面の送信ボタンクリック→会話描画/再読込の本人実機UI、PR#35の新規予約・日時変更プレビューの本番公開・実機、Google予約確定/同一イベントID変更/再読取、iPhone。ChatGPT内蔵Browser接続のcaller-originは依然未認証だが、Browser番頭独立Windows経路で実通信を確認できた。PR#35はDraft/本番未反映。100点完成判定は禁止
 
 
