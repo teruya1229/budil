@@ -85,7 +85,11 @@ const BudilGptCalendarPreview = (() => {
       if(!selectedCustomer||!selectedCustomer.explicitlySelected||
         !selectedCustomer.id||!selectedCustomer.name)return fail('CUSTOMER_SELECTION_REQUIRED');
       customerId=String(selectedCustomer.id);customerName=String(selectedCustomer.name);
-      if(intent.customerName&&intent.customerName!==customerName)return fail('CUSTOMER_MISMATCH');
+      // A surname-only request is valid only after an exact customer-ID
+      // selection in the local UI. Never infer/auto-select a person.
+      if(intent.customerName&&intent.customerName!==customerName&&
+        !(/^[一-龯々]{2,6}$/u.test(intent.customerName)&&
+          customerName.startsWith(intent.customerName)))return fail('CUSTOMER_MISMATCH');
       serviceText=intent.serviceText;
     }else if(intent.action==='reschedule'){
       const target=selectedOrder&&orders.find(w=>String(w&&w.id||'')===String(selectedOrder.id));
