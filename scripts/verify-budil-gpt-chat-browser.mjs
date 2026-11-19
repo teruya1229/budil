@@ -452,6 +452,33 @@ try{
   assert.equal(await ev("window.__previewProviderCalls"),0);
   console.log('PASS '+width+'px: old customer buttons cannot corrupt new booking preview');
 
+  // The canonical customer resolver is exact-only. The preview is allowed to
+  // show surname-prefix candidates, but MUST NOT choose a person itself.
+  await ev("document.getElementById('budil-gpt-chat-clear').click();Storage.getLeads=()=>[{id:'fake-lead-one',name:'架空一郎'},{id:'fake-lead-two',name:'架空二郎'},{id:'fake-unrelated',name:'比嘉三郎'}];Storage.getWorkOrders=()=>[];document.getElementById('budil-gpt-input').value='明日の10時に架空さんのエアコン洗浄を予約して';document.getElementById('budil-gpt-chat-send').click()");
+  const siblingCandidates=await ev("Array.from(document.querySelectorAll('#budil-gpt-chat-history button')).map(b=>b.textContent)");
+  assert.equal(siblingCandidates.length,2,'two same-surname candidates, neither auto-selected');
+  assert.ok(siblingCandidates.some(x=>x.includes('架空一郎')));
+  assert.ok(siblingCandidates.some(x=>x.includes('架空二郎')));
+  assert.ok(siblingCandidates.every(x=>!x.includes('比嘉三郎')),'unrelated people not suggested');
+  assert.equal(await ev("window.__calWrites"),0);
+  await ev("Array.from(document.querySelectorAll('#budil-gpt-chat-history button')).find(b=>b.textContent.includes('架空二郎')).click();document.getElementById('budil-gpt-input').value='11:00まで';document.getElementById('budil-gpt-chat-send').click()");
+  assert.ok((await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('架空二郎 / エアコン洗浄'),'manually chosen specific customer goes into preview');
+  assert.equal(await ev("document.getElementById('budil-gpt-input').value"),'','consumed end time clears composer');
+  assert.equal(await ev("window.__calWrites"),0);
+  assert.equal(await ev("window.__previewProviderCalls"),0);
+  await ev("document.getElementById('budil-gpt-input').value='中止';document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev("document.getElementById('budil-gpt-input').value"),'','cancel clears composer');
+  console.log('PASS '+width+'px: surname customer choice is explicit, end-time and cancel clear composer');
+
+  // A missing surname must not accidentally match unrelated people.
+  await ev("document.getElementById('budil-gpt-input').value='明日10時に未登録さんのエアコン洗浄を予約して';document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev("document.querySelectorAll('#budil-gpt-chat-history button').length"),2,
+    'no new selectable candidates are added for an unknown surname');
+  assert.ok((await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('フルネームを確認してください'));
+  assert.equal(await ev("window.__previewProviderCalls"),0,'unknown surname is not sent externally');
+  console.log('PASS '+width+'px: unknown surname remains unselected without a model call');
+
+
 
 
 
