@@ -470,9 +470,12 @@ try{
   assert.equal(await ev("document.getElementById('budil-gpt-input').value"),'','cancel clears composer');
   console.log('PASS '+width+'px: surname customer choice is explicit, end-time and cancel clear composer');
 
-  // A missing surname must not accidentally match unrelated people.
+  // A missing surname must not add ANY candidate buttons. The existing
+  // successful preview also contains a Google-read button; count that in
+  // both snapshots instead of falsely calling it a third customer.
+  const buttonsBeforeUnknown=await ev("document.querySelectorAll('#budil-gpt-chat-history button').length");
   await ev("document.getElementById('budil-gpt-input').value='明日10時に未登録さんのエアコン洗浄を予約して';document.getElementById('budil-gpt-chat-send').click()");
-  assert.equal(await ev("document.querySelectorAll('#budil-gpt-chat-history button').length"),2,
+  assert.equal(await ev("document.querySelectorAll('#budil-gpt-chat-history button').length"),buttonsBeforeUnknown,
     'no new selectable candidates are added for an unknown surname');
   assert.ok((await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('フルネームを確認してください'));
   assert.equal(await ev("window.__previewProviderCalls"),0,'unknown surname is not sent externally');
