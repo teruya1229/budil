@@ -299,6 +299,8 @@ try{
   }
   assert.ok((await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')||''")).includes('会話復元を試したい'),
    'safe anonymized chat persisted in current-tab sessionStorage');
+  // Fixture-only: fake session accepted without touching the deleted staging API.
+  const fixtureAuthScript=await cmd('Page.addScriptToEvaluateOnNewDocument',{source:"(function(){\n  Object.defineProperty(window,'BudilCloud',{\n    configurable:true,\n    set(value){\n      delete window.BudilCloud;\n      window.BudilCloud=value;\n      const originalGetState=value.getAuthState;\n      value.getAuthState=function(){\n        try{\n          const raw=JSON.parse(localStorage.getItem('budil-cloud.auth.v1.session')||'null');\n          if(raw&&raw.env==='staging'&&String(raw.access_token||'').startsWith('fixture.'))\n            return {available:true,signedIn:true,ready:true};\n        }catch(_){}\n        return originalGetState();\n      };\n    }\n  });\n})();"});
   await ev("(()=>{const sub='00000000-0000-0000-0000-000000000001';const jwt='fixture.'+btoa(JSON.stringify({sub})).replace(/=/g,'')+'.signature';localStorage.setItem('budil-cloud.auth.v1.session',JSON.stringify({access_token:jwt,refresh_token:'fixture-not-a-real-refresh',expires_at:Math.floor(Date.now()/1000)+1800,env:'staging'}));location.reload()})()");
   await sleep(200);
   for(let i=0;i<160;i++){
@@ -356,6 +358,7 @@ try{
    'signed-out reload must not reveal prior account chat');
   assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')"),null,
    'signed-out reload destroys any stale cached chat');
+  await cmd('Page.removeScriptToEvaluateOnNewDocument',{identifier:fixtureAuthScript.identifier});
   // Unified one-click local booking preparation: no paid GPT call and no
   // WorkOrder write; the user still selects customer/tax/end time and approves.
   await ev("window.__qaSignedIn=true;window.__qaSessionScope='staging:00000000-0000-0000-0000-000000000001';BudilCloud.getAuthState=()=>({available:true,signedIn:true});BudilCloud.getGptSessionScope=()=>window.__qaSessionScope;window.__previewProviderCalls=0;BudilCloud.sendGptChat=async()=>{window.__previewProviderCalls++;throw Error('GPT_PROVIDER_MUST_NOT_BE_CALLED')};Storage.getLeads=()=>[{id:'fake-preview-lead',name:'架空一郎'}];Storage.getWorkOrders=()=>[];Storage.addWorkOrder=()=>{throw Error('UNAPPROVED_WRITE')};document.getElementById('budil-gpt-clear').click()");
