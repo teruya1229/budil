@@ -30,10 +30,12 @@
       url: 'https://xvrrlwlgoxbrkhlfyznx.supabase.co',
       publishableKey: 'sb_publishable_dkTnfxy8pA8qcuJeVcrf1w_8ieMQEw1'
     },
+    // Dedicated staging project was deleted. Localhost MUST NOT silently
+    // connect to production or to the unrelated remaining Supabase project.
     staging: {
-      label: '検証用（staging）',
-      url: 'https://kocfoitzxrxjprxfcljy.supabase.co',
-      publishableKey: 'sb_publishable_vrZwynp3GoFA_cGxYUJWXQ_YK3_vFB-'
+      label: '検証用（未構成・認証無効）',
+      url: '',
+      publishableKey: ''
     }
   };
 
