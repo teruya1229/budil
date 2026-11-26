@@ -125,6 +125,14 @@ test('normal business questions remain available to natural GPT chat',()=>{
   assert.equal(result.ok,true,text+': '+result.code);
  }
 });
+test('end-to-end Cloud gateway also accepts input longer than 550 characters',()=>{
+ const cloud=readFileSync('js/budil-cloud.js','utf8');
+ assert.match(cloud,/message\.length>4000\|\|/);
+ assert.equal(cloud.includes('message.length>550'),false);
+ const long='架空の作業メモ'.repeat(90);
+ assert.ok(long.length>550);
+ assert.equal(G.prepare(long,[]).ok,true);
+});
 test('browser and Edge allow owner data while retaining authentication and write boundaries',()=>{
  const server=readFileSync('supabase/functions/budil-gpt-chat/index.ts','utf8');
  assert.equal(code.includes('APPROVED_OUTBOUND_TERMS'),false);
