@@ -5,8 +5,11 @@ const BudilGptInvoiceDraft = (() => {
  const fail=(code,detail='')=>({ok:false,code,detail});
  const norm=s=>String(s||'').replace(/[\s　]+/gu,'').replace(/(?:様|御中)$/u,'');
  const yen=s=>String(s||'').replace(/[,，\s￥¥円]/gu,'');
- const date=s=>/^\d{4}-\d{2}-\d{2}$/u.test(String(s||''))&&
-   new Date(s+'T00:00:00Z').toISOString().slice(0,10)===s;
+ const date=s=>{
+  if(!/^\d{4}-\d{2}-\d{2}$/u.test(String(s||'')))return false;
+  const d=new Date(s+'T00:00:00Z');
+  return Number.isFinite(d.getTime())&&d.toISOString().slice(0,10)===s;
+ };
  const evidence=(line,term)=>norm(line).includes(norm(term));
  const hasMoney=(line,amount)=> {
    const tokens=String(line||'').replace(/[,，](?=\d{3}\b)/gu,'').match(/\d+/gu)||[];
