@@ -3,7 +3,7 @@ const BudilGptChat=(()=>{
   'use strict';
   const allowed=Object.freeze(['none','work.date','work.search','customer.search',
     'customer.timeline','document.period','document.search','receivables.summary',
-    'profit.summary','proposal']);
+    'profit.summary','proposal','invoice.preview']);
   const deny=code=>({ok:false,code});
   // Owner-typed text is processed after fresh, account-scoped AI consent.
   // Local customer records are never appended to a provider prompt.
@@ -37,6 +37,20 @@ const BudilGptChat=(()=>{
        !['none','estimate','invoice'].includes(response.docType)||
        typeof response.needs_confirmation!=='boolean')
       return deny('INVALID_CHAT_RESPONSE');
+    if(action==='invoice.preview'){
+      if(!response.needs_confirmation||!Array.isArray(response.invoiceRows)||
+         response.invoiceRows.length<1||response.invoiceRows.length>12)return deny('INVOICE_ROWS_INVALID');
+      for(const row of response.invoiceRows){
+       if(!row||typeof row!=='object'||Array.isArray(row)||
+          typeof row.customerName!=='string'||typeof row.description!=='string'||
+          typeof row.workDate!=='string'||!Number.isSafeInteger(row.quantity)||
+          !Number.isSafeInteger(row.unitPriceIncl)||!Number.isSafeInteger(row.statedTotalIncl)||
+          !['included','excluded','unknown'].includes(row.taxMode))
+         return deny('INVOICE_ROWS_INVALID');
+      }
+      return {ok:true,action,reply:response.reply,request:null,proposal:true,
+        invoiceRows:response.invoiceRows};
+    }
     if(action==='proposal'){
       if(!response.needs_confirmation)return deny('APPROVAL_REQUIRED');
       return {ok:true,action,reply:response.reply,request:null,proposal:true};
