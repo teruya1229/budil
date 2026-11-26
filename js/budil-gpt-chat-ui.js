@@ -16,8 +16,8 @@
  let sanitizedHistory=[],aliasMap=Object.create(null),busy=false,seq=0,activeScope='';
  // Consent is per authenticated account, not per browser or across users.
  // Do not migrate the old browser-wide v1 preference as consent for other users.
- const CHAT_CONSENT_PREFIX='budil-gpt.chat-consent.v2.';
- const CHAT_HISTORY_KEY='budil-gpt.safe-history.v2';
+ const CHAT_CONSENT_PREFIX='budil-gpt.chat-consent.v3.';
+ const CHAT_HISTORY_KEY='budil-gpt.safe-history.v3';
  const LEGACY_HISTORY_KEY='budil-gpt.safe-history.v1';
  const CHAT_HISTORY_TTL_MS=24*60*60*1000;
  let chatConsentAccepted=false,consentScope='';
@@ -177,7 +177,7 @@
   if(historyBox.scrollTo)historyBox.scrollTo({top:historyBox.scrollHeight,behavior:'smooth'});
   return div;
  }
- // Only the anonymized provider history survives a page reload in this tab.
+ // Only the account-bound typed conversation survives a page reload in this tab.
  // Original customer names, aliasMap, local records and Google event data NEVER
  // enter this cache. A new tab or a logged-out page cannot recover the record.
  function forgetSafeHistory(){
@@ -185,6 +185,7 @@
   try{
    sessionStorage.removeItem(CHAT_HISTORY_KEY);
    sessionStorage.removeItem(LEGACY_HISTORY_KEY);
+   sessionStorage.removeItem('budil-gpt.safe-history.v2');
   }catch(_){/* storage unavailable */}
   sanitizedHistory=[];aliasMap=Object.create(null);
   historyBox.replaceChildren();
@@ -375,13 +376,12 @@
   if(typeof BudilGptCalendarChatPreview!=='undefined'&&
      BudilGptCalendarChatPreview.tryHandle(raw,{today:localToday,scope:currentScope()}))return;
   if(startSafeLocalPreview(raw,localToday))return;
-  let leads;
-  try{leads=Data.getLeads()}catch{return note('顧客情報の匿名化に必要な端末データを読み取れません。',true)}
-  const prepared=Chat.prepare(raw,leads,aliasMap);
+  // Free chat uses only text the owner entered; it does not upload the leads table.
+  const prepared=Chat.prepare(raw,[],aliasMap);
   if(!prepared.ok){
-   if(prepared.code==='UNAPPROVED_TEXT')
-    return note('個別の氏名・会社名・住所や未確認の語句が含まれる可能性があるため、外部AIへ送信しません。顧客はBudilの登録名で指定し、個人情報を含む現場メモは入力しないでください。',true);
-   return note('この文章は外部送信できません（'+prepared.code+'）。住所・電話等を除き、1件ずつ入力してください。',true);
+   if(prepared.code==='SECRET_INPUT')
+    return note('APIキーやパスワードなどの認証情報は送信できません。値を除いてください。',true);
+   return note('入力内容の長さ・形式を確認してください（'+prepared.code+'）。',true);
   }
   for(const [k,v] of Object.entries(prepared.aliases)){
    if(aliasMap[k]&&aliasMap[k]!==v)return note('別の顧客を同じ呼称で参照しないため、会話をリセットしてください。',true);
@@ -401,7 +401,8 @@
     return note('GPT接続に失敗しました（'+(code||'unavailable')+'）。データは変更していません。',true);
    }
    const merged={...aliasMap,...prepared.aliases};
-   const verified=Chat.verify(answer,merged);
+   const verified=Chat.verify(answer,merged,
+    [...queryHistory.filter(h=>h.role==='user').map(h=>h.content),prepared.message].join('\n'));
    if(!verified.ok)return note('GPTの操作案を安全に確認できませんでした（'+verified.code+'）。データは変更していません。',true);
    aliasMap=merged;
    bubble('user',raw.trim());
@@ -510,7 +511,7 @@
   }
  });
  syncChatConsent();
- try{sessionStorage.removeItem(LEGACY_HISTORY_KEY);}catch(_){/* old unscoped cache removed */}
+ try{sessionStorage.removeItem(LEGACY_HISTORY_KEY);sessionStorage.removeItem('budil-gpt.safe-history.v2');}catch(_){/* old caches removed */}
  restoreSafeHistory();
  window.addEventListener('budil-cloud-auth-changed',syncAuth);
  window.addEventListener('storage',event=>{
