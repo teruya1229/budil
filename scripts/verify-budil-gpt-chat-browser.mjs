@@ -184,8 +184,13 @@ try{
   await ev("window.__invoiceBlocks=[...document.querySelectorAll('#budil-gpt-chat-history .budil-gpt-item')].slice(-2);for(const b of window.__invoiceBlocks){const dates=b.querySelectorAll('input[type=date]');dates[0].value='2026-11-26';dates[1].value='2026-12-31';b.querySelector('button').click()}");
   assert.equal(await ev("window.__fakeInvoiceSaves"),0,'tax preview cannot write');
   assert.equal(await ev("window.__invoiceBlocks.every(b=>b.textContent.includes('税込'))"),true);
-  await ev("for(const b of window.__invoiceBlocks){b.querySelector('input[type=checkbox]').checked=true;[...b.querySelectorAll('button')].find(x=>x.textContent.includes('下書きを端末に保存')).click()}");
-  assert.equal(await ev("window.__fakeInvoiceSaves"),2,'only two owner-confirmed local draft writes');
+  await ev("window.__invoiceBlocks[0].querySelector('input[type=checkbox]').checked=true;[...window.__invoiceBlocks[0].querySelectorAll('button')].find(x=>x.textContent.includes('下書きを端末に保存')).click()");
+  assert.equal(await ev("window.__fakeInvoiceSaves"),1,'first customer saved only after explicit click');
+  await ev("window.__invoiceBlocks[1].querySelector('input[type=checkbox]').checked=true;[...window.__invoiceBlocks[1].querySelectorAll('button')].find(x=>x.textContent.includes('下書きを端末に保存')).click()");
+  assert.equal(await ev("window.__fakeInvoiceSaves"),1,'second stale preview must be refused after first save');
+  assert.equal(await ev("window.__invoiceBlocks[1].textContent.includes('再計算が必要')"),true);
+  await ev("window.__invoiceBlocks[1].querySelector('button').click();window.__invoiceBlocks[1].querySelector('input[type=checkbox]').checked=true;[...window.__invoiceBlocks[1].querySelectorAll('button')].find(x=>x.textContent.includes('下書きを端末に保存')).click()");
+  assert.equal(await ev("window.__fakeInvoiceSaves"),2,'two separate owner-confirmed saves after revalidation');
   assert.equal(await ev("window.__fakeInvoiceDocs.length"),2);
   assert.equal(await ev("window.__fakeInvoiceDocs.every(x=>x.status==='draft')"),true,'never issue invoices automatically');
   assert.equal(await ev("window.__fakeInvoiceDocs[0].total"),12320);
