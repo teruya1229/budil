@@ -565,7 +565,7 @@
     });
   }
   function sendGptChat(message,history,today){
-    if(typeof message!=='string'||!message.trim()||message.length>550||
+    if(typeof message!=='string'||!message.trim()||message.length>4000||
        !Array.isArray(history)||history.length>8||
        typeof today!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(today))
       return Promise.resolve({ok:false,code:'chat_input_invalid'});
