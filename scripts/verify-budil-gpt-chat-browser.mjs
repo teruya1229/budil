@@ -322,8 +322,12 @@ try{
     'account switch must remove old user transcript');
   assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')"),null,
     'account switch must remove cached user A history');
-  assert.equal(await ev("document.getElementById('budil-gpt-chat-consent-panel').hidden"),false,
-    'B must accept its own first-time consent');
+  const bScopeState=await ev("({scope:BudilCloud.getGptSessionScope(),auth:BudilCloud.getAuthState().signedIn, aFlag:localStorage.getItem('budil-gpt.chat-consent.v2.staging:00000000-0000-0000-0000-000000000001'),bFlag:localStorage.getItem('budil-gpt.chat-consent.v2.staging:00000000-0000-0000-0000-000000000002'),hidden:document.getElementById('budil-gpt-chat-consent-panel').hidden,checked:document.getElementById('budil-gpt-chat-consent').checked})");
+  assert.equal(bScopeState.scope,'staging:00000000-0000-0000-0000-000000000002',
+    'fixture must switch authenticated identity: '+JSON.stringify(bScopeState));
+  assert.equal(bScopeState.bFlag,null,'new account B must have no previous consent: '+JSON.stringify(bScopeState));
+  assert.equal(bScopeState.hidden,false,
+    'B must accept its own first-time consent: '+JSON.stringify(bScopeState));
   assert.equal(await ev("document.getElementById('budil-gpt-chat-consent').checked"),false,
     'B does not inherit A or legacy browser consent');
   assert.equal(await ev("document.getElementById('budil-gpt-chat-send').disabled"),false,
