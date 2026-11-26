@@ -1,5 +1,16 @@
 # Budil status
 
+## 2026-11-26｜GPT安全監査・限定修正（PR #37／開発ブランチのみ）
+ 
+- **本番main不変更**：`093d9299f66a877bb0fcf74f3e66e6331471f0f1` が最新の本番正本。修正は `fix/budil-safety-audit-20261126` のPR #37（Draft）に隔離。本番公開・DB/Edge WRITEなし
+- **GPTアカウント別同意**：`budil-gpt.chat-consent.v2.<env:sub>` として認証スコープ別に保存。従来のブラウザ共通v1同意は自動移行しない。別アカウントで初回のみ本人再同意、同一アカウントの通常会話では再確認不要
+- **非同期応答の隔離**：アカウント切替／ログアウト／会話リセット時に旧GPT/Google応答を無効化し、旧処理の終了が新しい会話の送信ロックを解除しない
+- **Google READプレビュー**：終了時刻を変更・新しいプレビューを作ると古い照合ボタンを無効化。古い通信結果・finallyが現在のレビュー状態を変更しない。Google WRITEはHARD OFFのまま
+- **開発staging**：削除済みSupabase接続先を無効化し、localhostの本番環境への代替接続なし。隔離Chromeのテスト専用偽JWTは本番コードに含めない
+- **回帰検証**：架空データのChrome 390/320px、Ubuntu/Windows二重実行、既存GPT/P0/クラウド復元/カレンダー/帳票関連CIを最終HEADで再確認する。本人PC/iPhone実機は未検証、100点完成宣言はしない
+- **影響境界**：売上・経費・請求・顧客・作業予定の本体保存処理を変更しない。重要WRITEの本人確認を維持。PRレビュー後のmainマージ／Pages公開は本人の別承認を要する
+
+
 ## 2026-11-19 本番実機検品：GPT通信・Google予定読取（公開版v6）
 
 - **実機経路**: Browser番頭の既存Windows Runner `bc-bantou-dev` + 承認済みACCOUNT_MAP + 共有Chrome CDP。Budil本番URLの一致タブ1件、v6 JavaScript / GPT画面の存在を本人のログイン済みChromeで実測。顧客レコード・Cookie・パスワード・JWT・Google予定本文はログ出力していない
