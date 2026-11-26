@@ -4,7 +4,7 @@ const BudilGptInvoiceDraft = (() => {
  'use strict';
  const fail=(code,detail='')=>({ok:false,code,detail});
  const norm=s=>String(s||'').replace(/[\s　]+/gu,'').replace(/(?:様|御中)$/u,'');
- const yen=s=>String(s||'').replace(/[,，\s￥¥円]/gu,'');
+ const displayName=c=>String(c&&(c.customerName||c.companyName||c.name||c.company||c.contact)||'').trim();
  const date=s=>{
   if(!/^\d{4}-\d{2}-\d{2}$/u.test(String(s||'')))return false;
   const d=new Date(s+'T00:00:00Z');
@@ -39,7 +39,7 @@ const BudilGptInvoiceDraft = (() => {
    // Net->gross conversions are never guessed. A gross value must be visible in the typed line.
    if(row.taxMode==='unknown')return fail('TAX_BASIS_UNCLEAR',String(i+1));
    if(workDate&&!date(workDate))return fail('WORK_DATE_INVALID',String(i+1));
-   const hits=leads.filter(c=>c&&norm(c.name||c.company||c.customerName||c.companyName||c.contact)===norm(customer));
+   const hits=leads.filter(c=>c&&norm(displayName(c))===norm(customer));
    if(hits.length!==1||!hits[0].id){
     notFound.push({customerName:customer,row:i+1,reason:hits.length>1?'CUSTOMER_AMBIGUOUS':'CUSTOMER_NOT_FOUND'});
     continue;
@@ -58,7 +58,7 @@ const BudilGptInvoiceDraft = (() => {
   const docs=deps.storage.getDocuments();
   const customers=deps.storage.getLeads();
   const exact=customers.filter(c=>c&&String(c.id)===String(group.customerId)&&
-    norm(c.name||c.company||c.customerName||c.companyName||c.contact)===norm(group.customerName));
+    norm(displayName(c))===norm(group.customerName));
   if(exact.length!==1)return fail('CUSTOMER_CHANGED');
   const key='gpt-draft:'+deps.entry.hashCanonical({
    customerId:group.customerId,items:group.items,invoiceDate:fields.invoiceDate,dueDate:fields.dueDate
@@ -67,7 +67,8 @@ const BudilGptInvoiceDraft = (() => {
    return fail('DUPLICATE_DRAFT');
   const input={
    customerId:String(group.customerId),invoiceDate:fields.invoiceDate,dueDate:fields.dueDate,
-   items:group.items.map(({description,quantity,unitPrice})=>({description,quantity,unitPrice})),
+   items:group.items.map(({description,quantity,unitPrice,workDate})=>({
+    description:(workDate?workDate.replace(/-/gu,'/')+' ':'')+description,quantity,unitPrice})),
    expectedTotal:group.items.reduce((sum,x)=>sum+x.amount,0),idempotencyKey:key
   };
   const preview=deps.entry.prepare(input,{customers,documents:docs});
