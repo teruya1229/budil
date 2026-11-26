@@ -63,7 +63,8 @@ const BudilGptInvoiceDraft = (() => {
   const key='gpt-draft:'+deps.entry.hashCanonical({
    customerId:group.customerId,items:group.items,invoiceDate:fields.invoiceDate,dueDate:fields.dueDate
   });
-  if(docs.some(d=>d.structuredIdempotencyKey===key))return fail('DUPLICATE_DRAFT');
+  if(docs.some(d=>d.structuredIdempotencyKey===key||d.localLifecycleKey===key))
+   return fail('DUPLICATE_DRAFT');
   const input={
    customerId:String(group.customerId),invoiceDate:fields.invoiceDate,dueDate:fields.dueDate,
    items:group.items.map(({description,quantity,unitPrice})=>({description,quantity,unitPrice})),
@@ -85,7 +86,8 @@ const BudilGptInvoiceDraft = (() => {
   const currentCustomer=storage.getLeads().find(c=>c&&String(c.id)===staged.input.customerId);
   if(!currentCustomer||JSON.stringify(currentCustomer)!==staged.customerSnapshot)
    return fail('CUSTOMER_CHANGED');
-  if(currentDocs.some(d=>d.structuredIdempotencyKey===staged.input.idempotencyKey))
+  if(currentDocs.some(d=>d.structuredIdempotencyKey===staged.input.idempotencyKey||
+    d.localLifecycleKey===staged.input.idempotencyKey))
    return fail('DUPLICATE_DRAFT');
   const input={...staged.input,expiresAt:staged.preview.expiresAt,number:staged.preview.preview.number};
   const validated=entry.validateAndNormalize(input,{customers:storage.getLeads(),documents:currentDocs});
@@ -100,9 +102,13 @@ const BudilGptInvoiceDraft = (() => {
     targetKey:storage.KEYS.DOCUMENTS,data:currentDocs,beforeCount:currentDocs.length});
    if(!backup||!backup.id)return fail('BACKUP_FAILED');
   }catch(_){return fail('BACKUP_FAILED');}
-  const doc=documents.normalizeDocument({...validated.draft,id:'doc-'+storage.generateId(),
+  const normalizedDraft=documents.normalizeDocument({...validated.draft,id:'doc-'+storage.generateId(),
     status:'draft',paidAmount:0,paymentStatus:'pending',
-    unpaidAmount:validated.total,structuredIdempotencyKey:staged.input.idempotencyKey});
+    unpaidAmount:validated.total});
+  // normalizeDocument intentionally drops custom fields; attach the durable
+  // duplicate guard AFTER canonical normalization, before the one local save.
+  const doc={...normalizedDraft,structuredIdempotencyKey:staged.input.idempotencyKey,
+    localLifecycleKey:staged.input.idempotencyKey};
   if(doc.status!=='draft'||doc.total!==validated.total||!doc.id)return fail('DRAFT_VALIDATION_FAILED');
   try{storage.saveDocuments([...currentDocs,doc]);}
   catch(_){return fail('SAVE_FAILED');}
