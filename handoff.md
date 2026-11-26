@@ -1,5 +1,16 @@
 # Budil handoff
 
+## 2026-11-26｜PR #37 GPTアカウント安全改善（main未反映）
+
+- GOAL：Budil GPTで通常の連続会話UXを維持しながら、別アカウントへの同意・応答混入と古いGoogle予定照合操作を防ぐ
+- CURRENT：main=`093d9299f66a877bb0fcf74f3e66e6331471f0f1`、開発ブランチ=`fix/budil-safety-audit-20261126`、Draft PR #37
+- CHANGE：GPT同意をJWT subject（ローカルのキャッシュ分離ヒント）のscope別に保存、旧v1同意は引き継がない。旧GPT応答／Google READ結果が切替後やプレビュー変更後に反映しないようrun識別子とreviewEpochで制御
+- CONFIG：削除済みstaging環境の接続を無効化。本番Supabase/GPT Edge/Google連携/業務データは変更なし
+- TEST：`scripts/verify-budil-gpt-chat-browser.mjs`に2アカウント同意・通信競合・古いGoogleボタン・再読込／明示リセットを追加。隔離Chromeの架空JWTのみ特別扱いし、本番アプリは変更しない
+- MATERIAL GAP：PR最終HEADで全CI・ソース差分を読み戻すこと。mainへのマージ／公開／本人認証済みPC・iPhone実機は今回未実施。Google WRITEはHARD OFF
+- NEXT ACTION：テスト全PASS→差分レビュー→本人へPR結果と未検証事項を報告。公開は別途承認後に実行
+
+
 ## 2026-11-19 GPT常駐の実測受入更新（旧「実POST未検証」を更新）
 
 - **GOAL**: GPT常駐を本人のPC/スマホで安全に実用完走。現時点で本番v6のGPT API実接続とGoogle busy実読取まで実測済み
