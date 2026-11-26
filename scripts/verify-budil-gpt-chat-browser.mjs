@@ -316,6 +316,8 @@ try{
   for(let i=0;i<50;i++){if(await ev("typeof window.__lateResolveA==='function'"))break;await sleep(50);}
   assert.equal(await ev("typeof window.__lateResolveA"),'function','A chat request must be pending');
   assert.equal(await ev("document.getElementById('budil-gpt-chat-send').disabled"),true);
+  const preSwitchB=await ev("({a:localStorage.getItem('budil-gpt.chat-consent.v2.staging:00000000-0000-0000-0000-000000000001'),b:localStorage.getItem('budil-gpt.chat-consent.v2.staging:00000000-0000-0000-0000-000000000002'),scope:BudilCloud.getGptSessionScope()})");
+  assert.equal(preSwitchB.b,null,'B consent must be absent BEFORE account switch: '+JSON.stringify(preSwitchB));
   // Same-tab login to a different account immediately invalidates the old transcript.
   await ev("(()=>{const sub='00000000-0000-0000-0000-000000000002';const jwt='fixture.'+btoa(JSON.stringify({sub})).replace(/=/g,'')+'.signature';localStorage.setItem('budil-cloud.auth.v1.session',JSON.stringify({access_token:jwt,refresh_token:'fixture-not-a-real-refresh',expires_at:Math.floor(Date.now()/1000)+1800,env:'staging'}));window.dispatchEvent(new Event('budil-cloud-auth-changed'))})()");
   assert.equal(await ev("document.getElementById('budil-gpt-chat-history').textContent"),'',
