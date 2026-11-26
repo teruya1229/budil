@@ -6,7 +6,7 @@
 import { createSupabaseContext } from "npm:@supabase/server@1.3.0";
 
 const ORIGINS=new Set(["https://teruya1229.github.io","http://localhost:5500","http://127.0.0.1:5500","http://localhost:8765","http://127.0.0.1:8765"]);
-const ACTIONS=["none","work.date","work.search","customer.search","customer.timeline","document.period","document.search","receivables.summary","profit.summary","proposal"] as const;
+const ACTIONS=["none","work.date","work.search","customer.search","customer.timeline","document.period","document.search","receivables.summary","profit.summary","proposal","invoice.preview"] as const;
 const MAX_BYTES=40000;
 function reply(status:number,data:Record<string,unknown>,origin:string|null){
   const h:Record<string,string>={"Content-Type":"application/json","Cache-Control":"no-store","Vary":"Origin"};
@@ -28,12 +28,17 @@ function approvedOutbound(value:unknown){
   !/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value)&&!SECRET_RE.test(value);
 }
 const SCHEMA={
- type:"object",additionalProperties:false,required:["reply","action","query","date","month","docType","needs_confirmation"],
+ type:"object",additionalProperties:false,required:["reply","action","query","date","month","docType","needs_confirmation","invoiceRows"],
  properties:{
   reply:{type:"string"},action:{type:"string",enum:ACTIONS},
   query:{type:"string"},date:{type:"string"},month:{type:"string"},
   docType:{type:"string",enum:["none","estimate","invoice"]},
-  needs_confirmation:{type:"boolean"}
+  needs_confirmation:{type:"boolean"},
+  invoiceRows:{type:"array",items:{type:"object",additionalProperties:false,
+    required:["customerName","description","workDate","quantity","unitPriceIncl","statedTotalIncl","taxMode"],
+    properties:{customerName:{type:"string"},description:{type:"string"},workDate:{type:"string"},
+      quantity:{type:"integer"},unitPriceIncl:{type:"integer"},statedTotalIncl:{type:"integer"},
+      taxMode:{type:"string",enum:["included","excluded","unknown"]}}}}
  }
 };
 function contentOf(json:unknown):string{
@@ -46,8 +51,18 @@ function contentOf(json:unknown):string{
  return output.join("");
 }
 function validateOutput(v:unknown){
- if(!isObj(v)||Object.keys(v).sort().join(",")!=="action,date,docType,month,needs_confirmation,query,reply")return null;
+ if(!isObj(v)||Object.keys(v).sort().join(",")!=="action,date,docType,invoiceRows,month,needs_confirmation,query,reply")return null;
  const action=v.action, date=v.date,month=v.month,query=v.query,docType=v.docType;
+ if(!Array.isArray(v.invoiceRows)||v.invoiceRows.length>12)return null;
+ for(const row of v.invoiceRows){
+  if(!isObj(row)||Object.keys(row).sort().join(",")!=="customerName,description,quantity,statedTotalIncl,taxMode,unitPriceIncl,workDate"||
+    typeof row.customerName!=="string"||row.customerName.length>60||
+    typeof row.description!=="string"||row.description.length>100||
+    typeof row.workDate!=="string"||row.workDate.length>10||
+    !Number.isSafeInteger(row.quantity)||!Number.isSafeInteger(row.unitPriceIncl)||
+    !Number.isSafeInteger(row.statedTotalIncl)||!["included","excluded","unknown"].includes(String(row.taxMode)))
+   return null;
+ }
  if(typeof action!=="string"||!ACTIONS.includes(action as typeof ACTIONS[number])||
     typeof v.reply!=="string"||v.reply.length>800||
     typeof query!=="string"||query.length>100||
@@ -59,9 +74,12 @@ function validateOutput(v:unknown){
  if(action==="work.date"&&!validDate(date))return null;
  if(action==="document.period"&&(!month||docType==="none"))return null;
  if(["work.search","customer.search","customer.timeline","document.search"].includes(action)&&!query)return null;
- if(action==="proposal"&&v.needs_confirmation!==true)return null;
- if(action!=="proposal"&&v.needs_confirmation===true)return null;
- return {reply:v.reply,action,query,date,month,docType,needs_confirmation:v.needs_confirmation};
+ if(["proposal","invoice.preview"].includes(action)&&v.needs_confirmation!==true)return null;
+ if(!["proposal","invoice.preview"].includes(action)&&v.needs_confirmation===true)return null;
+ if(action==="invoice.preview"&&v.invoiceRows.length===0)return null;
+ if(action!=="invoice.preview"&&v.invoiceRows.length!==0)return null;
+ return {reply:v.reply,action,query,date,month,docType,needs_confirmation:v.needs_confirmation,
+   invoiceRows:v.invoiceRows};
 }
 /**
  * The provider's strict JSON schema cannot express all cross-field business
@@ -153,6 +171,10 @@ export default {async fetch(request:Request):Promise<Response>{
    "予定日は現在日付を基準に判断する。ただし月日や年があいまいな場合は質問し、勝手に確定しない。",
    "登録、予約、変更、削除、請求確定など書込指示はaction=proposal,needs_confirmation=trueで安全な確認提案のみ。実行できないと明記する。",
    "顧客名や金額はユーザーが入力した内容だけを扱い、存在しない人物や金額を推測しない。",
+   "複数行で複数顧客の請求書作成を頼まれたらinvoice.previewを返す。invoiceRowsは1作業明細につき1件。顧客名・説明・日付・金額は入力の該当行で確認できたものだけをそのまま設定し、推測しない。",
+   "各invoiceRowsのunitPriceInclとstatedTotalInclは税込金額のみ。例: 税抜11200円・税込12320円の2数字なら12320円、数量1、両方が明示される場合taxMode=included。税区分が不明ならtaxMode=unknownとし、ブラウザでは保存不可。",
+   "請求日・支払期限・顧客IDはGPT側では確定しない。ブラウザが登録済み顧客を照合し、本人が確認画面で日付を指定する。複数の顧客を1枚にまとめない。",
+   "情報が不足してinvoiceRowsを構築できないときはaction=proposalまたはnoneで質問し、invoiceRows=[]。それ以外のactionでもinvoiceRows=[]。invoice.previewとproposalはneeds_confirmation=true。",
    "work.dateはYYYY-MM-DDの日付が確定している場合だけ。receivables.summaryとprofit.summaryはdateに当日日付を入れる。",
    "document.periodはYYYY-MMとestimateまたはinvoiceを設定する。",
    "Action none は通常の自由な会話と質問に使う。回答不能な場合は理由を具体的に。",
@@ -167,14 +189,14 @@ export default {async fetch(request:Request):Promise<Response>{
   try{
    response=await fetch("https://api.openai.com/v1/responses",{method:"POST",
     headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},
-    body:JSON.stringify({model,instructions,input:messages,max_output_tokens:700,store:false,
+    body:JSON.stringify({model,instructions,input:messages,max_output_tokens:1100,store:false,
      text:{format:{type:"json_schema",name:"budil_chat_v1",strict:true,schema:SCHEMA}}}),
     signal:controller.signal});
   }catch{return bad(503,"provider_unavailable",origin)}finally{clearTimeout(timer)}
   if(!response.ok)return bad(503,"provider_rejected",origin);
   let json:unknown;try{json=await response.json()}catch{return bad(502,"provider_invalid_json",origin)}
   const content=contentOf(json);
-  if(!content||content.length>2500)return bad(502,"provider_output_invalid",origin);
+  if(!content||content.length>6500)return bad(502,"provider_output_invalid",origin);
   let parsed:unknown;try{parsed=JSON.parse(content)}catch{return bad(502,"model_json_invalid",origin)}
   const result=validateOutput(parsed);
   if(!result){
