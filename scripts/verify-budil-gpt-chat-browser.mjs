@@ -68,7 +68,7 @@ try{
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true);
   // Consent is intentionally persistent. Clear it BEFORE a reload so each
   // viewport independently verifies the first-time experience.
-  await ev("localStorage.removeItem('budil-gpt.chat-consent.v1');location.reload()");
+  await ev("localStorage.removeItem('budil-gpt.chat-consent.v2.staging:00000000-0000-0000-0000-000000000001');localStorage.setItem('budil-gpt.chat-consent.v1','accepted');location.reload()");
   await sleep(200);
   for(let i=0;i<160;i++){
    if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-open')"))break;
@@ -118,8 +118,8 @@ try{
   assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('接続準備')"),true,
     'readiness after login is automatically checked without a paid POST');
   await ev("document.getElementById('budil-gpt-input').value='今日は何？';document.getElementById('budil-gpt-chat-send').click()");
-  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('①')"),true,
-    'missing consent after login shows both explicit required checks');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('初回のみ同意')"),true,
+    'legacy v1 global consent cannot bypass new account consent');
   assert.equal(await ev('window.__dateNetwork'),0,'no paid network call from missing consent');
 
   // Never call live Google or paid GPT in this disposable browser fixture.
@@ -128,8 +128,8 @@ try{
   // actual Budil UI and actual local-read gateway, without API billing.
   await ev("window.__chatCalls=0;BudilCloud.sendGptChat=async function(msg,history,today){window.__chatCalls++;window.__sentChatMsg=msg;return {ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'11月11日の予定を確認しますね。どの作業内容や顧客に関連する予定をお知りになりたいですか？',action:'work.date',query:'',date:'2026-11-11',month:'',docType:'none',needs_confirmation:false}}");
   await ev("document.getElementById('budil-gpt-input').value='11日の作業、どれくらいある？';document.getElementById('budil-gpt-chat-send').click()");
-  assert.equal(await ev('window.__chatCalls'),0,'chat requires two consents');
-  await ev("document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-chat-consent').checked=true;document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev('window.__chatCalls'),0,'first GPT request requires this account consent');
+  await ev("document.getElementById('budil-gpt-chat-consent').checked=true;document.getElementById('budil-gpt-chat-send').click()");
   for(let i=0;i<50;i++){
     if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('架空二郎')"))break;
     await sleep(100);
@@ -159,7 +159,7 @@ try{
   }
   assert.equal(await ev('window.__chatCalls'),2,'two actual chat interactions');
   assert.equal(await ev('window.__historyLength'),2,'conversation context is carried into turn two');
-  assert.equal(await ev("localStorage.getItem('budil-gpt.chat-consent.v1')"),'accepted',
+  assert.equal(await ev("localStorage.getItem('budil-gpt.chat-consent.v2.staging:00000000-0000-0000-0000-000000000001')"),'accepted',
     'first consent is persisted for normal later GPT turns');
   assert.equal(await ev("document.getElementById('budil-gpt-chat-consent-panel').hidden"),true,
     'consent panel stays out of the way after first acceptance');
@@ -309,12 +309,40 @@ try{
    'safe conversation restored after page reload with the same signed-in session');
   assert.ok(!(await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('架空一郎'),
    'raw customer records never restored into the GPT transcript');
+  // An in-flight A response must never be shown in B's conversation.
+  await ev("window.__lateResolveA=null;BudilCloud.sendGptChat=()=>new Promise(resolve=>{window.__lateResolveA=resolve});document.getElementById('budil-gpt-input').value='こんにちは';document.getElementById('budil-gpt-chat-send').click()");
+  for(let i=0;i<50;i++){if(await ev("typeof window.__lateResolveA==='function'"))break;await sleep(50);}
+  assert.equal(await ev("typeof window.__lateResolveA"),'function','A chat request must be pending');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-send').disabled"),true);
   // Same-tab login to a different account immediately invalidates the old transcript.
   await ev("(()=>{const sub='00000000-0000-0000-0000-000000000002';const jwt='fixture.'+btoa(JSON.stringify({sub})).replace(/=/g,'')+'.signature';localStorage.setItem('budil-cloud.auth.v1.session',JSON.stringify({access_token:jwt,refresh_token:'fixture-not-a-real-refresh',expires_at:Math.floor(Date.now()/1000)+1800,env:'staging'}));window.dispatchEvent(new Event('budil-cloud-auth-changed'))})()");
   assert.equal(await ev("document.getElementById('budil-gpt-chat-history').textContent"),'',
     'account switch must remove old user transcript');
   assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')"),null,
     'account switch must remove cached user A history');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-consent-panel').hidden"),false,
+    'B must accept its own first-time consent');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-consent').checked"),false,
+    'B does not inherit A or legacy browser consent');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-send').disabled"),false,
+    'switch releases the old in-flight lock');
+  await ev("window.__lateResolveB=null;BudilCloud.sendGptChat=()=>new Promise(resolve=>{window.__lateResolveB=resolve});document.getElementById('budil-gpt-input').value='こんにちは';document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev("window.__lateResolveB"),null,'no paid request without B consent');
+  await ev("document.getElementById('budil-gpt-chat-consent').checked=true;document.getElementById('budil-gpt-chat-send').click()");
+  for(let i=0;i<50;i++){if(await ev("typeof window.__lateResolveB==='function'"))break;await sleep(50);}
+  assert.equal(await ev("typeof window.__lateResolveB"),'function','B request must be pending');
+  await ev("window.__lateResolveA({ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'古いA専用の応答',action:'none',query:'',date:'',month:'',docType:'none',needs_confirmation:false})");
+  await sleep(120);
+  assert.ok(!(await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('古いA専用の応答'),
+    'A response must never enter B history');
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-send').disabled"),true,
+    'A late finally cannot release B request');
+  await ev("window.__lateResolveB({ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'新しいB専用の応答',action:'none',query:'',date:'',month:'',docType:'none',needs_confirmation:false})");
+  for(let i=0;i<50;i++){if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('新しいB専用の応答')"))break;await sleep(50);}
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('新しいB専用の応答')"),true);
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-send').disabled"),false);
+  assert.equal(await ev("localStorage.getItem('budil-gpt.chat-consent.v2.staging:00000000-0000-0000-0000-000000000002')"),'accepted',
+    'B consent is persisted separately');
   await ev("document.getElementById('budil-gpt-chat-clear').click()");
   assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')"),null,
    'explicit reset deletes the only saved conversation cache');
@@ -401,16 +429,34 @@ try{
   assert.equal(await ev("window.__calWrites"),0);
   assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('予約確定ではありません')"),true);
   console.log('PASS '+width+'px: tomorrow booking + exact lead + optional Google busy read, no writes');
+  // Revising a preview disables earlier Google-read buttons. Late reads cannot
+  // overwrite the updated review or re-enable the invalidated control.
+  await ev("window.__oldGoogleButton=Array.from(document.querySelectorAll('#budil-gpt-chat-history button')).find(b=>b.textContent.includes('Googleの予定を照合'));document.getElementById('budil-gpt-input').value='11:30まで';document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev("window.__oldGoogleButton.disabled"),true,'old preview Google button disabled');
+  await ev("window.__oldGoogleButton.click()");
+  assert.equal(await ev("window.__calReads"),1,'old disabled button cannot read again');
+  await ev("window.__deferredGoogle=null;BudilCloud.fetchScheduleBlocks=async()=>{window.__calReads++;return await new Promise(resolve=>{window.__deferredGoogle=resolve})};Array.from(document.querySelectorAll('#budil-gpt-chat-history button')).filter(b=>b.textContent.includes('Googleの予定を照合')).at(-1).click()");
+  for(let i=0;i<40;i++){if(await ev("typeof window.__deferredGoogle==='function'"))break;await sleep(50);}
+  assert.equal(await ev("typeof window.__deferredGoogle"),'function');
+  await ev("window.__pendingOldGoogleButton=Array.from(document.querySelectorAll('#budil-gpt-chat-history button')).filter(b=>b.textContent.includes('Googleの予定を照合')).at(-1);document.getElementById('budil-gpt-input').value='12:00まで';document.getElementById('budil-gpt-chat-send').click()");
+  assert.equal(await ev("window.__pendingOldGoogleButton.disabled"),true);
+  await ev("window.__deferredGoogle({ok:true,readOnly:true,calendarWritePerformed:false,events:[{start:window.__calTomorrow+'T10:30:00+09:00',end:window.__calTomorrow+'T11:30:00+09:00'}]})");
+  await sleep(120);
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('Google予定に重複')"),false,
+    'old Google response does not overwrite newer preview');
+  assert.equal(await ev("window.__pendingOldGoogleButton.disabled"),true,
+    'old Google finally never re-enables a stale button');
+  console.log('PASS '+width+'px: stale Google controls and responses are suppressed');
 
   // Google busy time must block optimistic availability, and a failed
   // calendar read must remain UNKNOWN rather than being treated as free.
   await sleep(120);
-  await ev("BudilCloud.fetchScheduleBlocks=async(a,b)=>{window.__calReads++;return {ok:true,readOnly:true,calendarWritePerformed:false,events:[{start:a+'T10:30:00+09:00',end:a+'T11:30:00+09:00'}]}};Array.from(document.querySelectorAll('#budil-gpt-chat-history button')).find(b=>b.textContent.includes('Googleの予定を照合')).click()");
+  await ev("BudilCloud.fetchScheduleBlocks=async(a,b)=>{window.__calReads++;return {ok:true,readOnly:true,calendarWritePerformed:false,events:[{start:a+'T10:30:00+09:00',end:a+'T11:30:00+09:00'}]}};Array.from(document.querySelectorAll('#budil-gpt-chat-history button')).filter(b=>b.textContent.includes('Googleの予定を照合')).at(-1).click()");
   for(let i=0;i<40;i++){if(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('Google予定に重複')"))break;await sleep(100);}
   assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('Google予定に重複')"),true);
   assert.equal(await ev("window.__calWrites"),0);
   await sleep(120);
-  await ev("BudilCloud.fetchScheduleBlocks=async()=>({ok:false,code:'fixture_unavailable'});Array.from(document.querySelectorAll('#budil-gpt-chat-history button')).find(b=>b.textContent.includes('Googleの予定を照合')).click()");
+  await ev("BudilCloud.fetchScheduleBlocks=async()=>({ok:false,code:'fixture_unavailable'});Array.from(document.querySelectorAll('#budil-gpt-chat-history button')).filter(b=>b.textContent.includes('Googleの予定を照合')).at(-1).click()");
   for(let i=0;i<40;i++){if(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('Google未照合')"))break;await sleep(100);}
   assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('予約確定ではありません')"),true);
   assert.equal(await ev("window.__calWrites"),0);
