@@ -4123,9 +4123,9 @@
         </div>
         <button type="button" id="budil-gpt-close" class="budil-gpt-btn budil-gpt-btn-secondary budil-gpt-close" aria-label="閉じる">×</button>
       </header>
-      <p class="budil-gpt-muted">Budilの中のGPTです。予定・顧客・見積履歴などを読取専用で確認できます。登録済み顧客名は外部送信前に伏せ、不明な固有名詞は送信せずお知らせします。対応する予約・見積の指示は端末内の確認画面に引き継ぎます。Google予定への登録・帳票発行・データ変更は自動実行せず、本人確認が必要です。</p>
+      <p class="budil-gpt-muted">Budilの中のGPTです。予定・顧客・見積履歴などを読取専用で確認できます。本人が入力した顧客名・請求明細も、初回同意後にGPTへ送信できます。端末内の顧客台帳は自動送信しません。対応する予約・見積の指示は端末内の確認画面に引き継ぎます。Google予定への登録・帳票発行・データ変更は自動実行せず、本人確認が必要です。</p>
       <label class="budil-gpt-label" for="budil-gpt-input">やってほしいこと</label>
-      <textarea id="budil-gpt-input" class="budil-gpt-input" maxlength="550" rows="3" placeholder="Budil GPTに話しかける…（Enterで送信／Shift+Enterで改行）"></textarea>
+      <textarea id="budil-gpt-input" class="budil-gpt-input" maxlength="4000" rows="3" placeholder="Budil GPTに話しかける…（Enterで送信／Shift+Enterで改行）"></textarea>
       <p class="budil-gpt-disclaimer">入力例：田中太郎さんを探して ／ 今日の予定教えて ／ 今月の未入金合計は？ ／ 金曜日の午前10時、空いてる？（予約・見積の確定操作はまだできません）</p>
 
       <section id="budil-gpt-chat-auth" class="budil-gpt-chat-auth" aria-labelledby="budil-gpt-chat-auth-heading" hidden>
@@ -4146,7 +4146,7 @@
         <p class="budil-gpt-chat-consent-guide"><strong>初回だけ</strong>確認してください。以後、この端末では通常のGPT会話ごとにチェックを求めません。</p>
         <label class="budil-gpt-check">
           <input type="checkbox" id="budil-gpt-chat-consent">
-          <span>Budil内の必要な業務データを読取専用で確認し、入力した文章は顧客名を伏せて外部AIへ送信することに同意する。氏名・住所・電話・端末内の顧客記録や請求情報そのものは外部AIへ送りません。</span>
+          <span>自分が入力した氏名・会社名・住所・電話・金額・請求明細を含む文章が外部AIに送信され、会話がこの端末のアカウント別一時履歴に保存されることに同意する。端末内の顧客台帳や保存済み請求書は自動送信されません。</span>
         </label>
       </div>
       <div class="budil-gpt-actions">
@@ -4332,7 +4332,7 @@
   <script src="js/budil-gpt-anonymize.js?v=20261106a"></script>
   <script src="js/budil-gpt-local-commands.js?v=20261113naturaldate1"></script>
   <script src="js/budil-gpt-public-read.js?v=20261106m1"></script>
-  <script src="js/budil-gpt-chat.js?v=20261118privacy1"></script>
+  <script src="js/budil-gpt-chat.js?v=20261126freetext1"></script>
   <script src="js/budil-gpt-conversation.js?v=20261106d"></script>
   <script src="js/budil-gpt-booking.js?v=20261107google1"></script>
    <script src="js/budil-gpt-calendar-preview.js?v=20261118calpreview1"></script>
@@ -4342,7 +4342,7 @@
   <script src="js/budil-gpt-bank-reconcile.js?v=20261106a"></script>
   <script src="experiments/budil-gpt-phase1/fixture-core.js?v=20261106a"></script>
   <script src="js/budil-gpt-offline-ui.js?v=20261113naturaldate1"></script>
-  <script src="js/budil-gpt-chat-ui.js?v=20261126audit1"></script>
+  <script src="js/budil-gpt-chat-ui.js?v=20261126freetext1"></script>
   <script src="js/budil-cloud-restore-ui.js?v=20261106restore1"></script>
 </body>
 </html>
