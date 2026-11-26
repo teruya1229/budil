@@ -112,6 +112,8 @@ test('explicit owner confirmation persists draft and rereads, not issued',()=>{
  assert.equal(out.issued,false);assert.equal(out.externalSendPerformed,false);
  assert.equal(docs.length,1);assert.equal(docs[0].status,'draft');
  assert.equal(docs[0].total,20020);assert.equal(backups.length,1);
+ assert.ok(docs[0].items.some(i=>String(i.name||i.description).includes('2026/11/02')),
+  'work date must remain visible in invoice line description');
  assert.equal(saveCalls,1);
 });
 test('stale prepare cannot overwrite changed documents or replay',()=>{
