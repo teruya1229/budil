@@ -13,6 +13,9 @@
  const Payment=typeof PaymentBrain!=='undefined'?PaymentBrain:null;
  const Profit=typeof ProfitBrain!=='undefined'?ProfitBrain:null;
  const DateTool=typeof BudilGptLocalCommands!=='undefined'?BudilGptLocalCommands:null;
+ const InvoiceDraft=typeof BudilGptInvoiceDraft!=='undefined'?BudilGptInvoiceDraft:null;
+ const InvoiceEntry=typeof InvoiceStructuredEntrypoint!=='undefined'?InvoiceStructuredEntrypoint:null;
+ const Documents=typeof DocumentsBrain!=='undefined'?DocumentsBrain:null;
  let sanitizedHistory=[],aliasMap=Object.create(null),busy=false,seq=0,activeScope='';
  // Consent is per authenticated account, not per browser or across users.
  // Do not migrate the old browser-wide v1 preference as consent for other users.
@@ -177,9 +180,91 @@
   if(historyBox.scrollTo)historyBox.scrollTo({top:historyBox.scrollHeight,behavior:'smooth'});
   return div;
  }
+
+ // GPT extracts rows; Budil alone validates amounts/customer IDs and calculates totals.
+ // No write occurs until the user checks a separate approval and clicks Save.
+ function renderInvoiceDraft(rows,ownerText,scope){
+  if(!InvoiceDraft||!InvoiceEntry||!Documents||!Data)return {ok:false,code:'INVOICE_MODULE_UNAVAILABLE'};
+  let plan;
+  try{plan=InvoiceDraft.plan(rows,ownerText,Data.getLeads());}
+  catch(_){return {ok:false,code:'CUSTOMER_READ_FAILED'};}
+  if(!plan.ok)return plan;
+  const panel=node('section',undefined,'budil-gpt-chat-local');
+  panel.append(node('strong','請求明細の確認（未保存・未発行）'));
+  panel.append(node('p','顧客ごとに別の請求書を準備します。モデルの金額はBudilで再計算します。'));
+  for(const unresolved of plan.notFound){
+   panel.append(node('p',unresolved.customerName+'：登録顧客が一意に確定しません（'+
+     unresolved.reason+'）。この顧客の請求書は保存しません。'));
+  }
+  for(const group of plan.groups){
+   const block=node('div',undefined,'budil-gpt-item');
+   block.append(node('strong',group.customerName+'（'+group.items.length+'明細）'));
+   for(const item of group.items){
+    block.append(node('p',[item.workDate||'作業日未入力',item.description,
+      '数量 '+item.quantity,'税込単価 '+item.unitPrice.toLocaleString('ja-JP')+'円',
+      '税込金額 '+item.amount.toLocaleString('ja-JP')+'円'].join(' ／ ')));
+   }
+   const issueLabel=node('label','請求日','budil-gpt-label');
+   const issue=document.createElement('input');issue.type='date';issue.value=DateTool.todayTokyo();
+   issue.className='budil-gpt-input';issueLabel.append(issue);
+   const dueLabel=node('label','支払期限（必須）','budil-gpt-label');
+   const due=document.createElement('input');due.type='date';due.className='budil-gpt-input';
+   dueLabel.append(due);
+   const previewBtn=node('button','税額を計算して確認','budil-gpt-btn budil-gpt-btn-secondary');
+   previewBtn.type='button';
+   const previewBox=node('div',undefined,'budil-gpt-chat-local');
+   const acceptLabel=node('label',undefined,'budil-gpt-check');
+   const check=document.createElement('input');check.type='checkbox';
+   acceptLabel.append(check,node('span','顧客・品目・数量・税込金額・請求日・支払期限を確認しました'));
+   const saveBtn=node('button','この顧客の請求下書きを端末に保存','budil-gpt-btn');
+   saveBtn.type='button';saveBtn.disabled=true;
+   const state=node('p','保存前です。顧客への送信や請求済みの確定は行いません。');
+   let staged=null;
+   const validSession=()=>scope===currentScope()&&block.isConnected;
+   const discard=()=>{staged=null;saveBtn.disabled=true;check.checked=false;previewBox.replaceChildren();};
+   issue.addEventListener('change',discard);due.addEventListener('change',discard);
+   previewBtn.addEventListener('click',()=>{
+    discard();
+    if(!validSession())return note('ログイン状態が変更されました。再入力してください。',true);
+    if(!issue.value||!due.value)return note('請求日と支払期限を入力してください。',true);
+    try{staged=InvoiceDraft.prepare(group,{invoiceDate:issue.value,dueDate:due.value},
+       {entry:InvoiceEntry,storage:Data,documents:Documents});}
+    catch(_){staged={ok:false,code:'PREVIEW_UNAVAILABLE'};}
+    if(!staged.ok)return note('下書き検証に失敗しました（'+(staged.code||'invalid')+'）。保存していません。',true);
+    const p=staged.preview.preview;
+    previewBox.append(node('p','請求番号 '+p.number+' ／ 税抜 '+p.subtotal.toLocaleString('ja-JP')+
+      '円 ／ 消費税 '+p.tax.toLocaleString('ja-JP')+'円 ／ 税込 '+
+      p.total.toLocaleString('ja-JP')+'円'));
+    saveBtn.disabled=false;
+    state.textContent='金額計算済み。本人チェック後に保存できます。';
+    note('金額と消費税をBudilで計算しました。内容を確認してください。');
+   });
+   saveBtn.addEventListener('click',()=>{
+    if(!validSession()||!staged||staged.ok!==true)return note('プレビューが無効です。再確認してください。',true);
+    if(!check.checked)return note('内容確認のチェックが必要です。',true);
+    if(issue.value!==staged.invoiceDate||due.value!==staged.dueDate)return note('日付が変わりました。再計算してください。',true);
+    saveBtn.disabled=true;
+    let result;
+    try{result=InvoiceDraft.save(staged,{entry:InvoiceEntry,storage:Data,documents:Documents,confirm:true});}
+    catch(_){result={ok:false,code:'SAVE_UNAVAILABLE'};}
+    if(!result.ok){
+     saveBtn.disabled=false;return note('保存しませんでした（'+(result.code||'unknown')+'）。',true);
+    }
+    state.textContent='下書き保存・再読取確認済み：'+result.customerName+
+      ' ／ '+result.total.toLocaleString('ja-JP')+'円。未発行・顧客未送信です。';
+    previewBtn.disabled=true;issue.disabled=true;due.disabled=true;check.disabled=true;
+    note('請求下書きを端末に保存し、読み戻しを確認しました。発行・送信はしていません。');
+   });
+   block.append(issueLabel,dueLabel,previewBtn,previewBox,acceptLabel,saveBtn,state);
+   panel.append(block);
+  }
+  historyBox.append(panel);
+  return {ok:true,groups:plan.groups.length,unresolved:plan.notFound.length};
+ }
+
  // Only the account-bound typed conversation survives a page reload in this tab.
- // Original customer names, aliasMap, local records and Google event data NEVER
- // enter this cache. A new tab or a logged-out page cannot recover the record.
+ // Owner-typed text (including names) is stored only in this account-scoped tab session.
+ // Local customer records, model invoice rows and Google event data are not cached.
  function forgetSafeHistory(){
   if(typeof BudilGptCalendarChatPreview!=='undefined')BudilGptCalendarChatPreview.reset();
   try{
@@ -216,7 +301,7 @@
       h.role!==saved.history[i].role||h.content!==saved.history[i].content))throw Error('invalid');
    sanitizedHistory=history;
    for(const h of history)bubble(h.role,h.content);
-   if(history.length)note('匿名化済みの前回会話を復元しました。顧客名・作業明細・Google予定は再照合してください。');
+   if(history.length)note('このアカウントの前回会話を復元しました。作業明細・Google予定は再照合してください。');
   }catch(_){forgetSafeHistory();}
  }
  // GPT selects a read-only tool, but has never seen its result.
@@ -480,7 +565,12 @@
                          {role:'assistant',content:historyReply});
    sanitizedHistory=Chat.safeHistory(sanitizedHistory);
    persistSafeHistory();
-   if(verified.proposal){
+   if(verified.action==='invoice.preview'){
+    const preview=renderInvoiceDraft(verified.invoiceRows,raw,sendScope);
+    note(preview.ok?'請求明細の確認画面を作成しました。保存前に顧客別の金額・税額を確認してください。':
+      '請求明細の検証に失敗しました（'+(preview.code||'invalid')+'）。保存・発行していません。',
+      !preview.ok);
+   }else if(verified.proposal){
     const div=node('p','これは操作案です。予約・帳票・顧客データは変更していません。正式な確認・承認画面が必要です。');
     historyBox.append(div);note('変更操作は未実行です。');
    }else if(googleState==='ok'&&localReadState==='failed')
