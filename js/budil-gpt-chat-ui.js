@@ -14,36 +14,50 @@
  const Profit=typeof ProfitBrain!=='undefined'?ProfitBrain:null;
  const DateTool=typeof BudilGptLocalCommands!=='undefined'?BudilGptLocalCommands:null;
  let sanitizedHistory=[],aliasMap=Object.create(null),busy=false,seq=0,activeScope='';
- const CHAT_CONSENT_KEY='budil-gpt.chat-consent.v1';
+ // Consent is per authenticated account, not per browser or across users.
+ // Do not migrate the old browser-wide v1 preference as consent for other users.
+ const CHAT_CONSENT_PREFIX='budil-gpt.chat-consent.v2.';
  const CHAT_HISTORY_KEY='budil-gpt.safe-history.v2';
  const LEGACY_HISTORY_KEY='budil-gpt.safe-history.v1';
  const CHAT_HISTORY_TTL_MS=24*60*60*1000;
- let chatConsentAccepted=false;
- function readChatConsent(){
-  try{return localStorage.getItem(CHAT_CONSENT_KEY)==='accepted';}
+ let chatConsentAccepted=false,consentScope='';
+ function consentKey(scope){
+  return /^(?:production|staging):[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(scope||'')?
+   CHAT_CONSENT_PREFIX+scope:'';
+ }
+ function readChatConsent(scope){
+  const key=consentKey(scope);
+  if(!key)return false;
+  try{return localStorage.getItem(key)==='accepted';}
   catch(_){return false;}
  }
- function persistChatConsent(){
+ function persistChatConsent(scope){
+  const key=consentKey(scope);
+  if(!key)return false;
   chatConsentAccepted=true;
-  try{localStorage.setItem(CHAT_CONSENT_KEY,'accepted');}catch(_){/* current page still stays accepted */}
+  consentScope=scope;
+  try{localStorage.setItem(key,'accepted');}catch(_){/* current session remains accepted */}
+  return true;
  }
  function syncChatConsent(){
-  chatConsentAccepted=chatConsentAccepted||readChatConsent();
+  const scope=currentScope();
+  const changed=consentScope!==scope;
+  if(changed){consentScope=scope;chatConsentAccepted=false;}
+  chatConsentAccepted=!!scope&&(chatConsentAccepted||readChatConsent(scope));
   const panel=$('budil-gpt-chat-consent-panel');
   if(panel)panel.hidden=chatConsentAccepted;
   const box=$('budil-gpt-chat-consent');
-  if(box&&chatConsentAccepted)box.checked=true;
+  if(box&&(changed||chatConsentAccepted))box.checked=chatConsentAccepted;
   return chatConsentAccepted;
  }
  function ensureChatConsent(){
   if(syncChatConsent())return true;
   const box=$('budil-gpt-chat-consent');
-  if(box&&box.checked===true){
-   persistChatConsent();
+  if(box&&box.checked===true&&persistChatConsent(currentScope())){
    syncChatConsent();
    return true;
   }
-  note('初回だけ①の同意が必要です。一度同意すれば、この端末では通常のGPT会話ごとに再チェックしません。',true);
+  note('このBudilアカウントでは初回のみ同意が必要です。以後は会話ごとに再チェックしません。',true);
   if(box)box.focus();
   return false;
  }
@@ -77,8 +91,16 @@
  }
  function syncAccountScope(){
   const scope=currentScope();
-  if(!scope||(activeScope&&activeScope!==scope))forgetSafeHistory();
+  if(activeScope&&activeScope!==scope){
+   // Cancel responses that began for the previous signed-in user.
+   seq++;busy=false;button.disabled=false;
+   forgetSafeHistory();
+   note('アカウント切替のため、前の会話と未完了の応答を破棄しました。');
+  }else if(!scope){
+   forgetSafeHistory();
+  }
   activeScope=scope;
+  syncChatConsent();
   return scope;
  }
  function syncAuth(){
@@ -347,6 +369,8 @@
   if(!raw.trim())return note('まずGPTへの質問を入力してください。',true);
   if(!syncAuth())return showLogin();
   if(!ensureChatConsent())return;
+  const sendScope=currentScope();
+  if(!sendScope)return showLogin();
   const localToday=DateTool.todayTokyo();
   if(typeof BudilGptCalendarChatPreview!=='undefined'&&
      BudilGptCalendarChatPreview.tryHandle(raw,{today:localToday,scope:currentScope()}))return;
@@ -369,7 +393,7 @@
   note('GPTが内容を理解し、適切なBudil操作を検討しています。');
   try{
    const answer=await Cloud.sendGptChat(prepared.message,queryHistory,today);
-   if(token!==seq)return;
+   if(token!==seq||currentScope()!==sendScope){syncAuth();return;}
    if(!answer||answer.ok!==true){
     const code=answer&&answer.code;
     if(code==='not_signed_in'||code==='unauthorized')
@@ -414,7 +438,7 @@
     try{
      let response=typeof Cloud.fetchScheduleBlocks==='function'?
       await Cloud.fetchScheduleBlocks(date,date):{ok:false,code:'calendar_read_unavailable'};
-     if(token!==seq)return; // conversation reset or closed during the read
+     if(token!==seq||currentScope()!==sendScope){syncAuth();return;} // reset or account switch
      // The existing authorized PC worker works without the broken cloud
      // service-account secret. It reads ONLY this day and returns busy times.
      // Authorization failures never take this fallback path.
@@ -422,7 +446,7 @@
         Chat.shouldUseLocalCalendarFallback(response)&&
         typeof Cloud.fetchLocalScheduleBlocks==='function'){
       const pc=await Cloud.fetchLocalScheduleBlocks(date,date);
-      if(token!==seq)return;
+      if(token!==seq||currentScope()!==sendScope){syncAuth();return;}
       response=pc&&pc.ok===true&&pc.readOnly===true&&
         pc.calendarWritePerformed===false&&pc.source==='pc_local_calendar'?
         pc:{ok:false,code:'pc_local_calendar_unavailable'};
@@ -446,7 +470,7 @@
         '）。端末内の予定が0件でも空き確定ではありません。';
      }
     }catch(_){
-     if(token!==seq)return;
+     if(token!==seq||currentScope()!==sendScope){syncAuth();return;}
      googleState='unknown';
      message.textContent='Googleカレンダーの読取に失敗しました。空き確定ではありません。';
     }
@@ -466,8 +490,16 @@
     note('端末内の結果は表示しましたが、Googleの予定は未照合です。空き確定ではありません。',true);
    else note('GPTとの会話を表示しました。業務データの変更は行っていません。');
    $('budil-gpt-input').value='';
-  }catch(_){if(token===seq)note('GPTに接続できませんでした。データは変更していません。',true)}
-  finally{busy=false;button.disabled=false;}
+  }catch(_){
+   if(token===seq&&currentScope()===sendScope)
+    note('GPTに接続できませんでした。データは変更していません。',true);
+  }finally{
+   // Late responses must never unlock the next user's in-flight request.
+   if(token===seq){
+    if(currentScope()!==sendScope)syncAuth();
+    else{busy=false;button.disabled=false;}
+   }
+  }
  }
  button.addEventListener('click',send);
  const chatInput=$('budil-gpt-input');
@@ -489,8 +521,8 @@
  if(readyButton)readyButton.addEventListener('click',freeReadiness);
 
  clear.addEventListener('click',()=>{
-  seq++;forgetSafeHistory();
-  note('会話をリセットしました。GPT利用同意とログイン状態は維持しています。');
+  seq++;busy=false;button.disabled=false;forgetSafeHistory();
+  note('会話をリセットしました。このアカウントのGPT同意とログイン状態は維持しています。');
  });
  $('budil-gpt-close')?.addEventListener('click',()=>{ /* closing the panel keeps GPT conversation context */ });
 })();
