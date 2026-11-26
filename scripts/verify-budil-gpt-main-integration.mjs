@@ -33,6 +33,7 @@ const allowed=new Set([
   "experiments/budil-gpt-phase1/fixture-core.js",
   "calendar-read-test.html",
   // Project source-of-truth documents required for approved behavior changes.
+  "README.md", // verified current architecture description, no runtime behavior
   "status.md",
   "handoff.md",
   "decision-log.md",

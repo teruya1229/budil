@@ -34,7 +34,10 @@ const BudilGptCalendarChatPreview=(()=>{
   const s=String(h).padStart(2,'0')+':'+String(minute).padStart(2,'0');
   return isValidTime(s)?s:'';
  }
- function reset(){version++;pending=null;}
+ function reset(){
+  if(pending?.googleButton)pending.googleButton.disabled=true;
+  version++;pending=null;
+ }
  function ensureScope(scope){
   if(!scope)return false;
   if(pending&&pending.scope!==scope){reset();return false;}
@@ -56,6 +59,11 @@ const BudilGptCalendarChatPreview=(()=>{
  }
  function finishIfReady(){
   const p=pending;if(!p||!p.endTime||!(p.selectedCustomer||p.selectedOrder))return;
+  // A changed end time or a new preview invalidates previous Google checks.
+  if(p.googleButton)p.googleButton.disabled=true;
+  p.googleButton=null;
+  p.reviewEpoch=(p.reviewEpoch||0)+1;
+  const reviewEpoch=p.reviewEpoch;
   const Preview=typeof BudilGptCalendarPreview!=='undefined'?BudilGptCalendarPreview:null;
   const Booking=typeof BudilGptBooking!=='undefined'?BudilGptBooking:null;
   if(!Preview||!Booking)return result('予約プレビュー機能を読み込めません。',true);
@@ -80,9 +88,12 @@ const BudilGptCalendarChatPreview=(()=>{
     ' / '+plan.customerName+' / '+plan.serviceText+'。端末内の予定に重複は見つかりません。ただしGoogleは未照合で、予約確定ではありません。');
    const google=node('button','Googleの予定を照合（読取のみ）','budil-gpt-btn budil-gpt-btn-secondary');
    google.type='button';card.append(google);
+   p.googleButton=google;
    google.addEventListener('click',async()=>{
-    if(!pending||pending!==p||!google.isConnected)return;
     const Cloud=get('BudilCloud'),Chat=typeof BudilGptChat!=='undefined'?BudilGptChat:null;
+    const liveScope=String(Cloud?.getGptSessionScope?.()||'');
+    if(!pending||pending!==p||p.reviewEpoch!==reviewEpoch||
+       pending.scope!==liveScope||!google.isConnected||google.disabled)return;
     google.disabled=true;
     const requestVersion=version;
     let response=null;
@@ -90,7 +101,8 @@ const BudilGptCalendarChatPreview=(()=>{
      response=Cloud?.fetchScheduleBlocks?await Cloud.fetchScheduleBlocks(plan.date,plan.date):null;
      if(Chat?.shouldUseLocalCalendarFallback?.(response)&&Cloud?.fetchLocalScheduleBlocks)
       response=await Cloud.fetchLocalScheduleBlocks(plan.date,plan.date);
-     if(requestVersion!==version||pending!==p||!google.isConnected)return;
+     if(requestVersion!==version||pending!==p||p.reviewEpoch!==reviewEpoch||
+        pending.scope!==String(Cloud?.getGptSessionScope?.()||'')||!google.isConnected)return;
      if(response?.ok!==true||response.readOnly!==true||
         response.calendarWritePerformed!==false||!Array.isArray(response.events))
       throw Error('READ_UNVERIFIED');
@@ -98,8 +110,16 @@ const BudilGptCalendarChatPreview=(()=>{
      if(!check.ok)throw Error('GOOGLE_UNVERIFIED');
      if(check.hasConflict){say('Googleに重なる予定が'+check.overlapCount+'件あります。予約作成・変更は停止してください。');result('Google予定に重複があります。保存しません。',true);}
      else {say('連携済みGoogleの対象時間帯に重複は見つかりませんでした。ただし他カレンダーや未登録予定は未照合です。予約の確定・Google登録は未実施です。');result('Google読取成功（重複0）。予約確定ではありません。');}
-    }catch(_){if(requestVersion===version&&pending===p){say('Google読取に失敗しました。空き確定ではありません。');result('Google未照合。予約確定ではありません。',true);}}
-    finally{google.disabled=false;}
+    }catch(_){
+     if(requestVersion===version&&pending===p&&p.reviewEpoch===reviewEpoch&&
+        pending.scope===String(Cloud?.getGptSessionScope?.()||'')){
+      say('Google読取に失敗しました。空き確定ではありません。');
+      result('Google未照合。予約確定ではありません。',true);
+     }
+    }finally{
+     if(requestVersion===version&&pending===p&&p.reviewEpoch===reviewEpoch&&
+        pending.scope===String(Cloud?.getGptSessionScope?.()||''))google.disabled=false;
+    }
    });
    result('端末内予約プレビュー成功。Google登録・WorkOrder保存は行っていません。');
   }catch(_){result('端末内予約プレビューを確認できません。業務データは変更していません。',true);}
@@ -214,7 +234,8 @@ const BudilGptCalendarChatPreview=(()=>{
   const Preview=typeof BudilGptCalendarPreview!=='undefined'?BudilGptCalendarPreview:null;
   const intent=Preview?.parse(text,today);
   if(!intent?.ok)return false;
-  pending={scope,intent,selectedCustomer:null,selectedOrder:null,endTime:'',orderSnapshot:''};
+  pending={scope,intent,selectedCustomer:null,selectedOrder:null,endTime:'',orderSnapshot:'',
+   reviewEpoch:0,googleButton:null};
   say('入力：'+text);
   displayPlan();showChoices(scope);
   if(pending)result('顧客・予定を選択し、終了時刻を入力してください。登録・変更は行っていません。');
