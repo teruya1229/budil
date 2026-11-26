@@ -84,7 +84,7 @@ test('server real GPT pilot is limited to MI.BCS owner only',()=>{
  assert.match(server,/ownerPilot&&Deno\.env\.get\("BUDIL_GPT_CHAT_ENABLED"\)!=="false"/);
  assert.match(server,/if\(!enabled\)return bad\(503,"chat_disabled",origin\)/);
  assert.match(server,/try_consume_tenant_operation_rate_limit/);
- assert.match(server,/max_output_tokens:700,store:false/);
+ assert.match(server,/max_output_tokens:1100,store:false/);
 });
 test('schema mismatch safely clarifies without repeat billing or business execution',()=>{
  const server=readFileSync('supabase/functions/budil-gpt-chat/index.ts','utf8');
@@ -103,7 +103,7 @@ test('schema mismatch safely clarifies without repeat billing or business execut
  assert.ok(server.includes('needs_confirmation:false,can_execute:false,persisted:false,'));
  assert.ok(server.includes('customer_records_sent:false,clarification_required:true'));
  assert.ok(!server.includes('if(!result)return bad(422'));
- assert.ok(server.includes('max_output_tokens:700,store:false'),'bounded single provider request');
+ assert.ok(server.includes('max_output_tokens:1100,store:false'),'bounded single provider request');
  assert.equal((server.match(/await fetch\("https:\/\/api\.openai\.com\/v1\/responses"/g)||[]).length,1);
 });
 
