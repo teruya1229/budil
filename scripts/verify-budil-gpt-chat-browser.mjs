@@ -68,7 +68,7 @@ try{
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true);
   // Consent is intentionally persistent. Clear it BEFORE a reload so each
   // viewport independently verifies the first-time experience.
-  await ev("localStorage.removeItem('budil-gpt.chat-consent.v2.staging:00000000-0000-0000-0000-000000000001');localStorage.removeItem('budil-gpt.chat-consent.v2.staging:00000000-0000-0000-0000-000000000002');localStorage.setItem('budil-gpt.chat-consent.v1','accepted');location.reload()");
+  await ev("localStorage.removeItem('budil-gpt.chat-consent.v3.staging:00000000-0000-0000-0000-000000000001');localStorage.removeItem('budil-gpt.chat-consent.v3.staging:00000000-0000-0000-0000-000000000002');localStorage.setItem('budil-gpt.chat-consent.v1','accepted');location.reload()");
   await sleep(200);
   for(let i=0;i<160;i++){
    if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-open')"))break;
@@ -145,10 +145,14 @@ try{
   assert.equal(await ev("window.__lastGoogleDates.join(',')"),'2026-11-11,2026-11-11','server reads selected date only');
   assert.equal(await ev('window.__dateNetwork'),0,'mocked GPT and local read cause no external requests');
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true);
-  await ev("document.getElementById('budil-gpt-input').value='新里一郎の予約を確認して';document.getElementById('budil-gpt-chat-send').click()");
-  assert.equal(await ev('window.__chatCalls'),1,'unknown personal name must be blocked before provider');
-  assert.equal(await ev("document.getElementById('budil-gpt-chat-status').textContent.includes('外部AIへ送信しません')"),true,
-    'privacy guard must explain no external send');
+  // Owner-typed names reach the mocked provider only after account-bound consent.
+  await ev("BudilCloud.sendGptChat=async function(msg){window.__chatCalls++;window.__sentChatMsg=msg;return {ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'入力した顧客名を確認しました',action:'none',query:'',date:'',month:'',docType:'none',needs_confirmation:false}};document.getElementById('budil-gpt-input').value='新里一郎の予約を確認して';document.getElementById('budil-gpt-chat-send').click()");
+  for(let i=0;i<50;i++){
+    if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('入力した顧客名を確認しました')"))break;
+    await sleep(100);
+  }
+  assert.equal(await ev('window.__chatCalls'),2,'typed customer name invokes GPT');
+  assert.equal(await ev("window.__sentChatMsg.includes('新里一郎')"),true,'raw typed name is available to the provider');
   // A second natural-language turn must retain sanitized context. The model
   // can propose a change, but it can never write it directly.
   await ev("BudilCloud.sendGptChat=async function(msg,history,today){window.__chatCalls++;window.__historyLength=history.length;window.__historyAssistant=history[1]?.content||'';return {ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'予約変更案を確認してください。まだ保存しません。',action:'proposal',query:'',date:'',month:'',docType:'none',needs_confirmation:true}}");
@@ -157,9 +161,9 @@ try{
     if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('予約変更案を確認')"))break;
     await sleep(100);
   }
-  assert.equal(await ev('window.__chatCalls'),2,'two actual chat interactions');
-  assert.equal(await ev('window.__historyLength'),2,'conversation context is carried into turn two');
-  assert.equal(await ev("localStorage.getItem('budil-gpt.chat-consent.v2.staging:00000000-0000-0000-0000-000000000001')"),'accepted',
+  assert.equal(await ev('window.__chatCalls'),3,'three turns including customer name');
+  assert.equal(await ev('window.__historyLength'),4,'two prior turns remain in conversation');
+  assert.equal(await ev("localStorage.getItem('budil-gpt.chat-consent.v3.staging:00000000-0000-0000-0000-000000000001')"),'accepted',
     'first consent is persisted for normal later GPT turns');
   assert.equal(await ev("document.getElementById('budil-gpt-chat-consent-panel').hidden"),true,
     'consent panel stays out of the way after first acceptance');
@@ -170,6 +174,31 @@ try{
   assert.ok((await ev("document.getElementById('budil-gpt-chat-history').textContent")).includes('予約・帳票・顧客データは変更していません'));
   assert.equal(await ev('window.__dateNetwork'),0,'no network after mocked proposal');
   assert.equal(await ev('window.__googleCalls'),1,'calendar is not queried for a proposal');
+
+  // End-to-end invoice draft handoff: true UI + canonical DocumentsBrain with
+  // fictional records, mocked GPT ONLY, no real storage or paid network.
+  await ev("window.__origInvFixture={getLeads:Storage.getLeads,getDocuments:Storage.getDocuments,saveDocuments:Storage.saveDocuments,createSafetyBackup:Storage.createSafetyBackup,generateId:Storage.generateId};window.__fakeInvoiceDocs=[];window.__fakeInvoiceSaves=0;Storage.getLeads=()=>[{id:'fake-i1',name:'架空花子'},{id:'fake-i2',name:'架空次郎'}];Storage.getDocuments=()=>structuredClone(window.__fakeInvoiceDocs);Storage.saveDocuments=docs=>{window.__fakeInvoiceSaves++;window.__fakeInvoiceDocs=structuredClone(docs)};Storage.createSafetyBackup=()=>({id:'fake-backup'});Storage.generateId=()=>String(window.__fakeInvoiceSaves+1);BudilCloud.sendGptChat=async()=>({ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'顧客別の下書きを確認してください',action:'invoice.preview',query:'',date:'',month:'',docType:'invoice',needs_confirmation:true,invoiceRows:[{customerName:'架空花子',description:'レンジフード清掃',workDate:'2026-11-02',quantity:1,unitPriceIncl:12320,statedTotalIncl:12320,taxMode:'included'},{customerName:'架空次郎',description:'換気扇清掃',workDate:'2026-11-16',quantity:1,unitPriceIncl:3520,statedTotalIncl:3520,taxMode:'included'}]});document.getElementById('budil-gpt-input').value=['架空花子 レンジフード清掃 2026/11/02 11200 12320','架空次郎 換気扇清掃 2026/11/16 3200 3520','請求書を作って'].join('\\n');document.getElementById('budil-gpt-chat-send').click()");
+  for(let i=0;i<60;i++){if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('請求明細の確認（未保存')"))break;await sleep(60);}
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('請求明細の確認（未保存')"),true);
+  assert.equal(await ev("window.__fakeInvoiceSaves"),0,'provider reply cannot save before review');
+  await ev("window.__invoiceBlocks=[...document.querySelectorAll('#budil-gpt-chat-history .budil-gpt-item')].slice(-2);for(const b of window.__invoiceBlocks){const dates=b.querySelectorAll('input[type=date]');dates[0].value='2026-11-26';dates[1].value='2026-12-31';b.querySelector('button').click()}");
+  assert.equal(await ev("window.__fakeInvoiceSaves"),0,'tax preview cannot write');
+  assert.equal(await ev("window.__invoiceBlocks.every(b=>b.textContent.includes('税込'))"),true);
+  await ev("window.__invoiceBlocks[0].querySelector('input[type=checkbox]').checked=true;[...window.__invoiceBlocks[0].querySelectorAll('button')].find(x=>x.textContent.includes('下書きを端末に保存')).click()");
+  assert.equal(await ev("window.__fakeInvoiceSaves"),1,'first customer saved only after explicit click');
+  await ev("window.__invoiceBlocks[1].querySelector('input[type=checkbox]').checked=true;[...window.__invoiceBlocks[1].querySelectorAll('button')].find(x=>x.textContent.includes('下書きを端末に保存')).click()");
+  assert.equal(await ev("window.__fakeInvoiceSaves"),1,'second stale preview must be refused after first save');
+  assert.equal(await ev("window.__invoiceBlocks[1].textContent.includes('再計算が必要')"),true);
+  await ev("window.__invoiceBlocks[1].querySelector('button').click();window.__invoiceBlocks[1].querySelector('input[type=checkbox]').checked=true;[...window.__invoiceBlocks[1].querySelectorAll('button')].find(x=>x.textContent.includes('下書きを端末に保存')).click()");
+  assert.equal(await ev("window.__fakeInvoiceSaves"),2,'two separate owner-confirmed saves after revalidation');
+  assert.equal(await ev("window.__fakeInvoiceDocs.length"),2);
+  assert.equal(await ev("window.__fakeInvoiceDocs.every(x=>x.status==='draft')"),true,'never issue invoices automatically');
+  assert.equal(await ev("window.__fakeInvoiceDocs[0].total"),12320);
+  assert.equal(await ev("window.__fakeInvoiceDocs[1].total"),3520);
+  assert.equal(await ev("window.__fakeInvoiceDocs[0].customerName!=='架空次郎'"),true,'no cross-customer leakage');
+  assert.equal(await ev("window.__dateNetwork"),0,'fixture uses no real model or network');
+  await ev("Object.assign(Storage,window.__origInvFixture);document.getElementById('budil-gpt-chat-clear').click()");
+  console.log('PASS '+width+'px: two-customer GPT invoice draft preview, owner confirmation, saved draft, zero real writes');
 
   // Real chat UI must combine the LOCAL work orders and authenticated Google
   // busy windows without sending private event titles to the GPT provider.
@@ -254,7 +283,7 @@ try{
   // The regular GPT surface must show the same customer type, site
   // environment and activity notes as Budil's existing offline tool.
   // No customer details are fetched until the exact-ID candidate is clicked.
-  await ev("document.getElementById('budil-gpt-chat-clear').click();Storage.getLeads=()=>[{id:'fixture-c1',name:'架空一郎',customerTypeMajor:'A',customerTypeMinor:'F',customerMemo:'現場の天井が高い。駐車は裏口',activityLogs:[{date:'2026-11-10',title:'連絡',memo:'養生を準備'}]},{id:'fixture-c2',name:'架空二郎',customerMemo:'他人だけのメモ'}];Storage.getWorkOrders=()=>[{id:'fixture-w1',leadId:'fixture-c1',scheduledDate:'2026-11-11',serviceText:'現場点検',memo:'室外機はベランダ'},{id:'fixture-w2',leadId:'fixture-c2',scheduledDate:'2026-11-10',serviceText:'他のお客様の施工',memo:'他人の専用メモ'}];BudilCloud.sendGptChat=async()=>({ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'顧客候補を確認します',action:'customer.timeline',query:'顧客A',date:'',month:'',docType:'none',needs_confirmation:false});document.getElementById('budil-gpt-input').value='架空一郎さんの作業履歴を教えて';document.getElementById('budil-gpt-chat-send').click()");
+  await ev("document.getElementById('budil-gpt-chat-clear').click();Storage.getLeads=()=>[{id:'fixture-c1',name:'架空一郎',customerTypeMajor:'A',customerTypeMinor:'F',customerMemo:'現場の天井が高い。駐車は裏口',activityLogs:[{date:'2026-11-10',title:'連絡',memo:'養生を準備'}]},{id:'fixture-c2',name:'架空二郎',customerMemo:'他人だけのメモ'}];Storage.getWorkOrders=()=>[{id:'fixture-w1',leadId:'fixture-c1',scheduledDate:'2026-11-11',serviceText:'現場点検',memo:'室外機はベランダ'},{id:'fixture-w2',leadId:'fixture-c2',scheduledDate:'2026-11-10',serviceText:'他のお客様の施工',memo:'他人の専用メモ'}];BudilCloud.sendGptChat=async()=>({ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'顧客候補を確認します',action:'customer.timeline',query:'架空一郎',date:'',month:'',docType:'none',needs_confirmation:false});document.getElementById('budil-gpt-input').value='架空一郎さんの作業履歴を教えて';document.getElementById('budil-gpt-chat-send').click()");
   for(let i=0;i<60;i++){
    if(await ev("!!document.querySelector('#budil-gpt-chat-history button')"))break;
    await sleep(100);
@@ -297,7 +326,7 @@ try{
    if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('再読込のあとも')"))break;
    await sleep(100);
   }
-  assert.ok((await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')||''")).includes('会話復元を試したい'),
+  assert.ok((await ev("sessionStorage.getItem('budil-gpt.safe-history.v3')||''")).includes('会話復元を試したい'),
    'safe anonymized chat persisted in current-tab sessionStorage');
   // Fixture-only: fake session accepted without touching the deleted staging API.
   const fixtureAuthScript=await cmd('Page.addScriptToEvaluateOnNewDocument',{source:"(function(){\n  Object.defineProperty(window,'BudilCloud',{\n    configurable:true,\n    set(value){\n      delete window.BudilCloud;\n      window.BudilCloud=value;\n      const originalGetState=value.getAuthState;\n      value.getAuthState=function(){\n        try{\n          const raw=JSON.parse(localStorage.getItem('budil-cloud.auth.v1.session')||'null');\n          if(raw&&raw.env==='staging'&&String(raw.access_token||'').startsWith('fixture.'))\n            return {available:true,signedIn:true,ready:true};\n        }catch(_){}\n        return originalGetState();\n      };\n    }\n  });\n})();"});
@@ -316,15 +345,15 @@ try{
   for(let i=0;i<50;i++){if(await ev("typeof window.__lateResolveA==='function'"))break;await sleep(50);}
   assert.equal(await ev("typeof window.__lateResolveA"),'function','A chat request must be pending');
   assert.equal(await ev("document.getElementById('budil-gpt-chat-send').disabled"),true);
-  const preSwitchB=await ev("({a:localStorage.getItem('budil-gpt.chat-consent.v2.staging:00000000-0000-0000-0000-000000000001'),b:localStorage.getItem('budil-gpt.chat-consent.v2.staging:00000000-0000-0000-0000-000000000002'),scope:BudilCloud.getGptSessionScope()})");
+  const preSwitchB=await ev("({a:localStorage.getItem('budil-gpt.chat-consent.v3.staging:00000000-0000-0000-0000-000000000001'),b:localStorage.getItem('budil-gpt.chat-consent.v3.staging:00000000-0000-0000-0000-000000000002'),scope:BudilCloud.getGptSessionScope()})");
   assert.equal(preSwitchB.b,null,'B consent must be absent BEFORE account switch: '+JSON.stringify(preSwitchB));
   // Same-tab login to a different account immediately invalidates the old transcript.
   await ev("(()=>{const sub='00000000-0000-0000-0000-000000000002';const jwt='fixture.'+btoa(JSON.stringify({sub})).replace(/=/g,'')+'.signature';localStorage.setItem('budil-cloud.auth.v1.session',JSON.stringify({access_token:jwt,refresh_token:'fixture-not-a-real-refresh',expires_at:Math.floor(Date.now()/1000)+1800,env:'staging'}));window.dispatchEvent(new Event('budil-cloud-auth-changed'))})()");
   assert.equal(await ev("document.getElementById('budil-gpt-chat-history').textContent"),'',
     'account switch must remove old user transcript');
-  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')"),null,
+  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v3')"),null,
     'account switch must remove cached user A history');
-  const bScopeState=await ev("({scope:BudilCloud.getGptSessionScope(),auth:BudilCloud.getAuthState().signedIn, aFlag:localStorage.getItem('budil-gpt.chat-consent.v2.staging:00000000-0000-0000-0000-000000000001'),bFlag:localStorage.getItem('budil-gpt.chat-consent.v2.staging:00000000-0000-0000-0000-000000000002'),hidden:document.getElementById('budil-gpt-chat-consent-panel').hidden,checked:document.getElementById('budil-gpt-chat-consent').checked})");
+  const bScopeState=await ev("({scope:BudilCloud.getGptSessionScope(),auth:BudilCloud.getAuthState().signedIn, aFlag:localStorage.getItem('budil-gpt.chat-consent.v3.staging:00000000-0000-0000-0000-000000000001'),bFlag:localStorage.getItem('budil-gpt.chat-consent.v3.staging:00000000-0000-0000-0000-000000000002'),hidden:document.getElementById('budil-gpt-chat-consent-panel').hidden,checked:document.getElementById('budil-gpt-chat-consent').checked})");
   assert.equal(bScopeState.scope,'staging:00000000-0000-0000-0000-000000000002',
     'fixture must switch authenticated identity: '+JSON.stringify(bScopeState));
   assert.equal(bScopeState.bFlag,null,'new account B must have no previous consent: '+JSON.stringify(bScopeState));
@@ -349,12 +378,12 @@ try{
   for(let i=0;i<50;i++){if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('新しいB専用の応答')"))break;await sleep(50);}
   assert.equal(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('新しいB専用の応答')"),true);
   assert.equal(await ev("document.getElementById('budil-gpt-chat-send').disabled"),false);
-  assert.equal(await ev("localStorage.getItem('budil-gpt.chat-consent.v2.staging:00000000-0000-0000-0000-000000000002')"),'accepted',
+  assert.equal(await ev("localStorage.getItem('budil-gpt.chat-consent.v3.staging:00000000-0000-0000-0000-000000000002')"),'accepted',
     'B consent is persisted separately');
   await ev("document.getElementById('budil-gpt-chat-clear').click()");
-  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')"),null,
+  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v3')"),null,
    'explicit reset deletes the only saved conversation cache');
-  await ev("sessionStorage.setItem('budil-gpt.safe-history.v2',JSON.stringify({scope:'staging:00000000-0000-0000-0000-000000000002',savedAt:Date.now(),history:[{role:'user',content:'ログアウト前の内緒の会話'}]}));localStorage.removeItem('budil-cloud.auth.v1.session');location.reload()");
+  await ev("sessionStorage.setItem('budil-gpt.safe-history.v3',JSON.stringify({scope:'staging:00000000-0000-0000-0000-000000000002',savedAt:Date.now(),history:[{role:'user',content:'ログアウト前の内緒の会話'}]}));localStorage.removeItem('budil-cloud.auth.v1.session');location.reload()");
   await sleep(200);
   for(let i=0;i<160;i++){
    if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-chat-history')"))break;
@@ -362,7 +391,7 @@ try{
   }
   assert.equal(await ev("document.getElementById('budil-gpt-chat-history').textContent"),'',
    'signed-out reload must not reveal prior account chat');
-  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v2')"),null,
+  assert.equal(await ev("sessionStorage.getItem('budil-gpt.safe-history.v3')"),null,
    'signed-out reload destroys any stale cached chat');
   await cmd('Page.removeScriptToEvaluateOnNewDocument',{identifier:fixtureAuthScript.identifier});
   // Unified one-click local booking preparation: no paid GPT call and no

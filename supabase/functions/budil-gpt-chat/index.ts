@@ -6,8 +6,8 @@
 import { createSupabaseContext } from "npm:@supabase/server@1.3.0";
 
 const ORIGINS=new Set(["https://teruya1229.github.io","http://localhost:5500","http://127.0.0.1:5500","http://localhost:8765","http://127.0.0.1:8765"]);
-const ACTIONS=["none","work.date","work.search","customer.search","customer.timeline","document.period","document.search","receivables.summary","profit.summary","proposal"] as const;
-const MAX_BYTES=6000;
+const ACTIONS=["none","work.date","work.search","customer.search","customer.timeline","document.period","document.search","receivables.summary","profit.summary","proposal","invoice.preview"] as const;
+const MAX_BYTES=40000;
 function reply(status:number,data:Record<string,unknown>,origin:string|null){
   const h:Record<string,string>={"Content-Type":"application/json","Cache-Control":"no-store","Vary":"Origin"};
   if(origin&&ORIGINS.has(origin)){h["Access-Control-Allow-Origin"]=origin;h["Access-Control-Allow-Headers"]="authorization,apikey,content-type,x-client-info";h["Access-Control-Allow-Methods"]="GET,POST,OPTIONS";}
@@ -16,35 +16,29 @@ function reply(status:number,data:Record<string,unknown>,origin:string|null){
 const bad=(status:number,code:string,origin:string|null)=>reply(status,{ok:false,code},origin);
 function isObj(v:unknown):v is Record<string,unknown>{return !!v&&typeof v==="object"&&!Array.isArray(v)}
 function validDate(v:string){if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return false;const d=new Date(v+"T00:00:00Z");return Number.isFinite(d.getTime())&&d.toISOString().slice(0,10)===v}
-function sanitizeText(v:unknown,max=500){
+function sanitizeText(v:unknown,max=4000){
   if(typeof v!=="string"||!v.trim()||v.length>max||/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(v))return "";
   return v.trim();
 }
-// Defense in depth: a forged browser request cannot bypass the outbound privacy gate.
-  const APPROVED_OUTBOUND_TERMS=Object.freeze(["ありがとうございます","ハウスクリーニング","かしこまりました","Google","ありがとうね","お願いします","クリーニング","してください","スケジュール","どうなってる","Budil","ありがとう","カレンダー","くださいね","こんにちは","こんばんは","してほしい","すみません","できますか","どれくらい","パソコン用","埋まってる","教わりたい","空いている","LINE","あさって","いします","エアコン","おしえて","おつかれ","おねがい","おはよう","ください","クラウド","サーバー","だったら","チャット","できない","できます","できれば","でしたら","どうして","ドラム式","について","のちほど","パソコン","パターン","ましたら","よろしく","リセット","ローカル","作業内容","作業履歴","使いたい","割り引き","取り付け","取り消し","完全分解","対応可能","日時指定","現場情報","現場環境","申し込み","登録して","登録済み","知ってる","知りたい","確かめて","空いてる","見積もり","試したい","読み取り","間違って","BFC","GPT","PDF","あした","いくら","いてる","エラー","お客様","お願い","くらい","シート","したい","してる","しない","じゃあ","スマホ","タイプ","データ","できた","できる","でした","テスト","どうも","どちら","どんな","なんで","ほしい","ました","やって","ライン","リスト","わかる","一昨日","下さい","乾燥機","予定日","今すぐ","今まで","今年度","今日中","作って","元請け","入れて","出して","分かる","午前中","午後中","取引先","土曜日","変えて","大丈夫","室外機","家庭用","担当者","探して","換気扇","支払い","教えて","日曜日","明後日","昨年度","時間帯","時間枠","月曜日","木曜日","未入金","本当に","業務用","欲しい","正しい","水曜日","洗濯機","消費税","火曜日","直して","確認中","納品書","行ける","見せて","見たい","見積書","調べて","請求書","送って","金曜日","間違い","非対応","領収書","AI","PC","あの","ある","あれ","いつ","いて","いる","えて","かな","かも","から","こと","この","これ","さま","さん","した","して","せて","その","それ","だけ","って","です","でも","どう","どこ","どの","どれ","ない","なぜ","なに","なら","ねぇ","ねえ","ほど","ます","まだ","まで","メモ","もう","もの","やる","より","一回","一度","一覧","不明","不要","不足","中止","予定","予約","二回","二度","交換","今年","今度","今後","今日","今月","今週","以前","以降","件数","会社","会話","何人","何件","何円","何分","何台","何日","何時","作成","作業","保存","修正","修理","値段","先日","先月","先生","先週","入力","入金","全件","全体","全部","内容","内訳","冷房","出力","分解","利益","削除","前回","前後","割引","午前","午後","印刷","原価","原因","厨房","去年","収益","取付","取消","台所","台数","合計","名前","品目","問題","回答","土曜","型番","売上","変更","夕方","安全","完了","室内","家電","対応","少し","履歴","工事","平日","年月","年次","建物","建築","当日","後日","御中","復元","必要","担当","掃除","提案","撤去","支払","教え","数量","料金","新規","施工","日付","日時","日曜","日程","明日","昨日","時刻","時間","暖房","曜日","更新","書込","最初","最後","月曜","月次","期間","木曜","本日","来年","来月","来週","案件","検品","検索","検証","業務","業者","概要","機種","次回","毎年","毎日","毎月","毎週","氏名","水曜","洗浄","活動","浴室","清掃","火曜","照会","照明","状態","現場","理由","環境","申請","申込","発行","登録","相談","確定","確認","祝日","移動","税別","税抜","税込","種類","空き","空調","粗利","納期","終了","経費","結果","継続","縦型","翌日","表示","見積","訂正","計算","記録","訪問","設置","試験","詳細","認証","説明","読取","調査","請求","費用","質問","返信","追加","送信","通常","連絡","過去","違う","部屋","配線","重複","金曜","金額","開始","集計","電気","顧客","、","！","？","。","い","お","か","が","さ","だ","で","と","に","ね","の","は","へ","も","や","よ","を","ん","一","七","万","三","九","二","五","人","件","何","個","先","八","六","円","分","前","十","千","台","四","夜","年","床","後","日","昼","時","月","朝","本","様","次","氏","百","秒","空","窓","願"]);
-  function approvedHiraganaRuns(value:string){
-    const safeMulti=APPROVED_OUTBOUND_TERMS.filter(x=>/^[ぁ-ん]{2,}$/u.test(x));
-    for(const run of value.match(/[ぁ-ん]{2,}/gu)||[]){
-      let rest=run;
-      for(const word of safeMulti)rest=rest.split(word).join('');
-      if(rest && !/^[のはがをにでともへやか]$/u.test(rest))return false;
-    }
-    return true;
-  }
-  function approvedOutbound(value:unknown){
-    if(typeof value!=='string'||!value.trim()||value.length>550)return false;
-    let remainder=value.replace(/顧客[A-H](?:さん|様)?/gu,'');
-    for(const word of APPROVED_OUTBOUND_TERMS)remainder=remainder.split(word).join('');
-    remainder=remainder.replace(/[0-9０-９\s.,、。!?！？:：\-‐‑–〜～\/／()（）「」『』【】\[\]{}［］・→+＋%％¥￥]/gu,'');
-    return remainder.length===0 && approvedHiraganaRuns(value);
-  }
+// Owner-entered names and invoice rows are accepted after per-account consent.
+// The server independently rejects credentials and enforces tenant access.
+const SECRET_RE=/\bsk-(?:proj-|svcacct-|admin-)[A-Za-z0-9_-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:APIキー|パスワード|秘密鍵|password|api[_ -]?key|private[_ -]?key)\s*[:=：]\s*\S{8,}/iu;
+function approvedOutbound(value:unknown){
+ return typeof value==="string"&&!!value.trim()&&value.length<=4000&&
+  !/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value)&&!SECRET_RE.test(value);
+}
 const SCHEMA={
- type:"object",additionalProperties:false,required:["reply","action","query","date","month","docType","needs_confirmation"],
+ type:"object",additionalProperties:false,required:["reply","action","query","date","month","docType","needs_confirmation","invoiceRows"],
  properties:{
   reply:{type:"string"},action:{type:"string",enum:ACTIONS},
   query:{type:"string"},date:{type:"string"},month:{type:"string"},
   docType:{type:"string",enum:["none","estimate","invoice"]},
-  needs_confirmation:{type:"boolean"}
+  needs_confirmation:{type:"boolean"},
+  invoiceRows:{type:"array",items:{type:"object",additionalProperties:false,
+    required:["customerName","description","workDate","quantity","unitPriceIncl","statedTotalIncl","taxMode"],
+    properties:{customerName:{type:"string"},description:{type:"string"},workDate:{type:"string"},
+      quantity:{type:"integer"},unitPriceIncl:{type:"integer"},statedTotalIncl:{type:"integer"},
+      taxMode:{type:"string",enum:["included","excluded","unknown"]}}}}
  }
 };
 function contentOf(json:unknown):string{
@@ -57,8 +51,18 @@ function contentOf(json:unknown):string{
  return output.join("");
 }
 function validateOutput(v:unknown){
- if(!isObj(v)||Object.keys(v).sort().join(",")!=="action,date,docType,month,needs_confirmation,query,reply")return null;
+ if(!isObj(v)||Object.keys(v).sort().join(",")!=="action,date,docType,invoiceRows,month,needs_confirmation,query,reply")return null;
  const action=v.action, date=v.date,month=v.month,query=v.query,docType=v.docType;
+ if(!Array.isArray(v.invoiceRows)||v.invoiceRows.length>12)return null;
+ for(const row of v.invoiceRows){
+  if(!isObj(row)||Object.keys(row).sort().join(",")!=="customerName,description,quantity,statedTotalIncl,taxMode,unitPriceIncl,workDate"||
+    typeof row.customerName!=="string"||row.customerName.length>60||
+    typeof row.description!=="string"||row.description.length>100||
+    typeof row.workDate!=="string"||row.workDate.length>10||
+    !Number.isSafeInteger(row.quantity)||!Number.isSafeInteger(row.unitPriceIncl)||
+    !Number.isSafeInteger(row.statedTotalIncl)||!["included","excluded","unknown"].includes(String(row.taxMode)))
+   return null;
+ }
  if(typeof action!=="string"||!ACTIONS.includes(action as typeof ACTIONS[number])||
     typeof v.reply!=="string"||v.reply.length>800||
     typeof query!=="string"||query.length>100||
@@ -70,9 +74,12 @@ function validateOutput(v:unknown){
  if(action==="work.date"&&!validDate(date))return null;
  if(action==="document.period"&&(!month||docType==="none"))return null;
  if(["work.search","customer.search","customer.timeline","document.search"].includes(action)&&!query)return null;
- if(action==="proposal"&&v.needs_confirmation!==true)return null;
- if(action!=="proposal"&&v.needs_confirmation===true)return null;
- return {reply:v.reply,action,query,date,month,docType,needs_confirmation:v.needs_confirmation};
+ if(["proposal","invoice.preview"].includes(action)&&v.needs_confirmation!==true)return null;
+ if(!["proposal","invoice.preview"].includes(action)&&v.needs_confirmation===true)return null;
+ if(action==="invoice.preview"&&v.invoiceRows.length===0)return null;
+ if(action!=="invoice.preview"&&v.invoiceRows.length!==0)return null;
+ return {reply:v.reply,action,query,date,month,docType,needs_confirmation:v.needs_confirmation,
+   invoiceRows:v.invoiceRows};
 }
 /**
  * The provider's strict JSON schema cannot express all cross-field business
@@ -124,29 +131,19 @@ export default {async fetch(request:Request):Promise<Response>{
   let payload:unknown;
   try{payload=JSON.parse(raw)}catch{return bad(400,"invalid_json",origin)}
   if(!isObj(payload)||Object.keys(payload).sort().join(",")!=="history,message,today")return bad(400,"invalid_request",origin);
-  const msg=sanitizeText(payload.message,550);
+  const msg=sanitizeText(payload.message,4000);
   const today=payload.today;
   if(!msg||typeof today!=="string"||!validDate(today))return bad(400,"input_invalid",origin);
   if(!Array.isArray(payload.history)||payload.history.length>8)return bad(400,"history_invalid",origin);
   const history:{role:"user"|"assistant";content:string}[]=[];
   for(const h of payload.history){
-   if(!isObj(h)||(h.role!=="user"&&h.role!=="assistant")||!sanitizeText(h.content,550))
+   if(!isObj(h)||(h.role!=="user"&&h.role!=="assistant")||!sanitizeText(h.content,4000))
      return bad(400,"history_invalid",origin);
    history.push({role:h.role,content:(h.content as string).trim()});
   }
-  // The browser must anonymize customer names. Reject high-risk raw tokens here too.
-  for(const item of [msg,...history.map(h=>h.content)]){
-   if(/[\w.+-]+@[\w.-]+\.[a-z]{2,}|(?:\+81|0)\d[\d\s-]{8,}|(?:住所|電話番号|口座番号|〒|パスワード|APIキー|秘密鍵|振込先)/iu.test(item))
-     return bad(400,"sensitive_input_rejected",origin);
-   // Block unmasked honorific names even when the browser privacy guard fails.
-   const withoutAliases=item.replace(/顧客[A-H](?:さん|様)?|お客様/g,"");
-   if(/[一-龯々]{2,10}(?:さん|様)/u.test(withoutAliases))
-     return bad(400,"unmasked_customer_rejected",origin);
-  }
-  // Client screening is never trusted. Reject unknown names or notes before
-  // consuming the tenant's paid GPT budget.
+  // Only owner-typed content is received. Stored customer records are not sent.
   if(!approvedOutbound(msg)||history.some(h=>h.role==="user"&&!approvedOutbound(h.content)))
-   return bad(400,"unapproved_text",origin);
+   return bad(400,"secret_input_rejected",origin);
   const minute=new Date();minute.setUTCSeconds(0,0);
   const {data:count,error:rateError}=await admin.rpc("try_consume_tenant_operation_rate_limit",{
    p_tenant_id:tenant.id,p_user_id:userId,p_operation:"budil.gpt.chat.v1",
@@ -173,7 +170,11 @@ export default {async fetch(request:Request):Promise<Response>{
    "端末の実データを見る権限はあなたにない。データを見たと主張しない。実行結果はブラウザが別途取得する。",
    "予定日は現在日付を基準に判断する。ただし月日や年があいまいな場合は質問し、勝手に確定しない。",
    "登録、予約、変更、削除、請求確定など書込指示はaction=proposal,needs_confirmation=trueで安全な確認提案のみ。実行できないと明記する。",
-   "顧客名のプレースホルダー（顧客A等）はそのままqueryに残す。個人名を推測しない。",
+   "顧客名や金額はユーザーが入力した内容だけを扱い、存在しない人物や金額を推測しない。",
+   "複数行で複数顧客の請求書作成を頼まれたらinvoice.previewを返す。invoiceRowsは1作業明細につき1件。顧客名・説明・日付・金額は入力の該当行で確認できたものだけをそのまま設定し、推測しない。",
+   "各invoiceRowsのunitPriceInclとstatedTotalInclは税込金額のみ。例: 税抜11200円・税込12320円の2数字なら12320円、数量1、両方が明示される場合taxMode=included。税区分が不明ならtaxMode=unknownとし、ブラウザでは保存不可。",
+   "請求日・支払期限・顧客IDはGPT側では確定しない。ブラウザが登録済み顧客を照合し、本人が確認画面で日付を指定する。複数の顧客を1枚にまとめない。",
+   "情報が不足してinvoiceRowsを構築できないときはaction=proposalまたはnoneで質問し、invoiceRows=[]。それ以外のactionでもinvoiceRows=[]。invoice.previewとproposalはneeds_confirmation=true。",
    "work.dateはYYYY-MM-DDの日付が確定している場合だけ。receivables.summaryとprofit.summaryはdateに当日日付を入れる。",
    "document.periodはYYYY-MMとestimateまたはinvoiceを設定する。",
    "Action none は通常の自由な会話と質問に使う。回答不能な場合は理由を具体的に。",
@@ -188,14 +189,14 @@ export default {async fetch(request:Request):Promise<Response>{
   try{
    response=await fetch("https://api.openai.com/v1/responses",{method:"POST",
     headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},
-    body:JSON.stringify({model,instructions,input:messages,max_output_tokens:360,store:false,
+    body:JSON.stringify({model,instructions,input:messages,max_output_tokens:1100,store:false,
      text:{format:{type:"json_schema",name:"budil_chat_v1",strict:true,schema:SCHEMA}}}),
     signal:controller.signal});
   }catch{return bad(503,"provider_unavailable",origin)}finally{clearTimeout(timer)}
   if(!response.ok)return bad(503,"provider_rejected",origin);
   let json:unknown;try{json=await response.json()}catch{return bad(502,"provider_invalid_json",origin)}
   const content=contentOf(json);
-  if(!content||content.length>2500)return bad(502,"provider_output_invalid",origin);
+  if(!content||content.length>6500)return bad(502,"provider_output_invalid",origin);
   let parsed:unknown;try{parsed=JSON.parse(content)}catch{return bad(502,"model_json_invalid",origin)}
   const result=validateOutput(parsed);
   if(!result){

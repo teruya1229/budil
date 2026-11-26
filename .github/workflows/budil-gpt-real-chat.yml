@@ -24,6 +24,8 @@ jobs:
         run: |
           node --check js/budil-gpt-chat.js
           node --check js/budil-gpt-chat-ui.js
+          node --check js/budil-gpt-invoice-draft.js
+          node scripts/verify-budil-gpt-invoice-ai.mjs
           node --check js/budil-gpt-calendar-preview.js
           node --check js/budil-gpt-calendar-chat-preview.js
           node --check js/budil-cloud.js

@@ -15,34 +15,25 @@ test('GPT allows naturally phrased schedule without fixed parser',()=>{
  const p=G.prepare('来週の月曜の作業って何件ある？',leads);
  assert.equal(p.ok,true);assert.equal(p.message,'来週の月曜の作業って何件ある？');
 });
-test('exact names are redacted before API',()=>{
+test('typed customer names reach GPT without uploading stored records',()=>{
  const p=G.prepare('田中太郎さんの作業履歴を教えて',leads);
- assert.equal(p.ok,true);assert.ok(!p.message.includes('田中太郎'));
- assert.equal(p.aliases['顧客A'],'田中太郎');
- const result=G.verify(model('customer.timeline',{query:'顧客A'}),p.aliases);
- assert.equal(result.ok,true);assert.equal(result.request.query,'田中太郎');
+ assert.equal(p.ok,true);assert.equal(p.message,'田中太郎さんの作業履歴を教えて');
+ assert.equal(Object.keys(p.aliases).length,0);
+ const v=G.verify(model('customer.timeline',{query:'田中太郎'}),p.aliases,p.message);
+ assert.equal(v.ok,true);assert.equal(v.request.query,'田中太郎');
+ assert.equal(G.prepare('こんにちは',leads).message,'こんにちは');
 });
-test('surname-only lookup is locally anonymized and candidate based',()=>{
- const p=G.prepare('田中さんの過去の作業を教えて',leads);
- assert.equal(p.ok,true);assert.ok(!p.message.includes('田中'));
- assert.equal(p.aliases['顧客A'],'田中');
- const plan=G.verify(model('customer.timeline',{query:'顧客A'}),p.aliases);
- assert.equal(plan.request.query,'田中');
+test('unknown names and multiline invoice rows are allowed',()=>{
+ const text=['架空鈴子 交換部品 2026/11/02 11200 12320',
+  '架空次郎 換気扇清掃 2026/11/16 3200 3520','請求作って'].join(String.fromCharCode(10));
+ const p=G.prepare(text,leads);assert.equal(p.ok,true);assert.equal(p.message,text);
+ assert.equal(G.prepare('新里一郎さんの予定を教えて',[]).ok,true);
 });
-test('customer aliases remain stable over conversational turns',()=>{
- const first=G.prepare('田中太郎さんの履歴を見せて',leads);
- const next=G.prepare('その田中太郎さんの予定も',leads,first.aliases);
- assert.equal(first.ok,true);assert.equal(next.ok,true);
- assert.equal(next.aliases['顧客A'],'田中太郎');
-});
-test('unknown honorific name is masked too',()=>{
- const p=G.prepare('新里一郎さんの予定を教えて',[]);
- assert.equal(p.ok,true);assert.ok(!p.message.includes('新里一郎'));
-});
-test('never send phone/email/address',()=>{
- for(const q of ['電話番号 090-1234-5678','mail a@b.co','住所は南城市','口座番号 12345678']){
-  assert.equal(G.prepare(q,leads).ok,false,q);
- }
+test('business contact details are allowed, but credential values blocked',()=>{
+ for(const s of ['電話番号 090-1234-5678','mail a@b.co','住所は南城市','口座番号 12345678'])
+  assert.equal(G.prepare(s,leads).ok,true,s);
+ for(const s of ['APIキー: sk-proj-123456789012345','パスワード: supersecretvalue'])
+  assert.equal(G.prepare(s,leads).code,'SECRET_INPUT');
 });
 test('date plan maps to validated read-only operation',()=>{
  const p=G.verify(model('work.date',{date:'2026-11-11'}),{});
@@ -54,9 +45,11 @@ test('model cannot execute an invoice change',()=>{
  assert.equal(p.ok,true);assert.equal(p.proposal,true);assert.equal(p.request,null);
 });
 test('unapproved writes fail closed',()=>assert.equal(G.verify(model('proposal'),{}).ok,false));
-test('missing alias cannot query a real customer',()=>{
- assert.equal(G.verify(model('customer.search',{query:'田中太郎'}),{}).ok,false);
- assert.equal(G.verify(model('customer.search',{query:'顧客A'}),{}).ok,false);
+test('a customer query must be grounded in owner-supplied text',()=>{
+ assert.equal(G.verify(model('customer.search',{query:'田中太郎'}),{},'別人を探して').ok,false);
+ const v=G.verify(model('customer.search',{query:'田中太郎'}),{},'田中太郎さんを探して');
+ assert.equal(v.ok,true);assert.equal(v.request.query,'田中太郎');
+ assert.equal(G.verify(model('customer.search',{query:'顧客A'}),{},'田中太郎さんを探して').ok,false);
 });
 test('document month and type strictly validated',()=>{
  assert.equal(G.verify(model('document.period',{month:'2026-11',docType:'invoice'}),{}).request.docType,'invoice');
@@ -91,7 +84,7 @@ test('server real GPT pilot is limited to MI.BCS owner only',()=>{
  assert.match(server,/ownerPilot&&Deno\.env\.get\("BUDIL_GPT_CHAT_ENABLED"\)!=="false"/);
  assert.match(server,/if\(!enabled\)return bad\(503,"chat_disabled",origin\)/);
  assert.match(server,/try_consume_tenant_operation_rate_limit/);
- assert.match(server,/max_output_tokens:360,store:false/);
+ assert.match(server,/max_output_tokens:1100,store:false/);
 });
 test('schema mismatch safely clarifies without repeat billing or business execution',()=>{
  const server=readFileSync('supabase/functions/budil-gpt-chat/index.ts','utf8');
@@ -110,24 +103,18 @@ test('schema mismatch safely clarifies without repeat billing or business execut
  assert.ok(server.includes('needs_confirmation:false,can_execute:false,persisted:false,'));
  assert.ok(server.includes('customer_records_sent:false,clarification_required:true'));
  assert.ok(!server.includes('if(!result)return bad(422'));
- assert.ok(server.includes('max_output_tokens:360,store:false'),'no extra provider requests or budget increase');
+ assert.ok(server.includes('max_output_tokens:1100,store:false'),'bounded single provider request');
  assert.equal((server.match(/await fetch\("https:\/\/api\.openai\.com\/v1\/responses"/g)||[]).length,1);
 });
 
-test('unregistered Japanese and kana-only names must never reach the GPT provider',()=>{
- const risky=['新里一郎の予定を教えて','さやかの予約を確認して','ののかの予定を教えて',
-  'サトウの見積書を探して','山田花子の売上は？','佐々木商会の入金を確認して'];
- for(const text of risky){
-  const result=G.prepare(text,[]);
-  assert.equal(result.ok,false,text);
-  assert.equal(result.code,'UNAPPROVED_TEXT',text);
+test('free-form Japanese and unregistered names pass without a whitelist',()=>{
+ for(const s of ['新里一郎の予定を教えて','さやかの予約を確認して',
+  'ののかの予定を教えて','サトウの見積書を探して',
+  '山田花子の売上は？','佐々木商会の入金を確認して','君は何が出来る？']){
+  const v=G.prepare(s,[]);
+  assert.equal(v.ok,true,s+': '+v.code);
+  assert.equal(v.message,s);
  }
-});
-test('registered customers are converted to stable local-only aliases',()=>{
- const result=G.prepare('田中太郎さんの作業履歴を教えて',leads);
- assert.equal(result.ok,true);
- assert.equal(result.aliases['顧客A'],'田中太郎');
- assert.equal(result.message.includes('田中太郎'),false);
 });
 test('normal business questions remain available to natural GPT chat',()=>{
  for(const text of ['今日の予定教えて','来週の月曜の作業って何件ある？',
@@ -138,15 +125,27 @@ test('normal business questions remain available to natural GPT chat',()=>{
   assert.equal(result.ok,true,text+': '+result.code);
  }
 });
-test('server and browser use the exact same fail-closed outbound vocabulary',()=>{
+test('end-to-end Cloud gateway also accepts input longer than 550 characters',()=>{
+ const cloud=readFileSync('js/budil-cloud.js','utf8');
+ assert.match(cloud,/message\.length>4000\|\|/);
+ assert.equal(cloud.includes('message.length>550'),false);
+ const long='架空の作業メモ'.repeat(90);
+ assert.ok(long.length>550);
+ assert.equal(G.prepare(long,[]).ok,true);
+});
+test('browser and Edge allow owner data while retaining authentication and write boundaries',()=>{
  const server=readFileSync('supabase/functions/budil-gpt-chat/index.ts','utf8');
- const re=/APPROVED_OUTBOUND_TERMS=Object\.freeze\((\[[^\n]*\])\);/;
- const clientList=JSON.parse(code.match(re)?.[1]||'null');
- const serverList=JSON.parse(server.match(re)?.[1]||'null');
- assert.ok(clientList.length>300);
- assert.deepEqual(clientList,serverList);
- assert.match(server,/if\(!approvedOutbound\(msg\)\|\|history\.some/);
- assert.match(server,/return bad\(400,"unapproved_text",origin\)/);
+ assert.equal(code.includes('APPROVED_OUTBOUND_TERMS'),false);
+ assert.equal(server.includes('APPROVED_OUTBOUND_TERMS'),false);
+ assert.match(server,/secret_input_rejected/);
+ assert.match(server,/const ownerPilot=/);
+ assert.match(server,/customer_records_sent:false/);
+ assert.match(server,/store:false/);
+ assert.equal(G.approvedOutbound('架空太郎さんの請求 2026/11/02 13200円'),true);
+ assert.equal(G.approvedOutbound('パスワード: secretpassword123'),false);
+ const html=readFileSync('index.html','utf8');
+ assert.match(html,/id="budil-gpt-input"[^>]*maxlength="4000"/);
+ assert.match(html,/入力した氏名・会社名・住所・電話・金額/);
 });
 
 // Google read-only windows are verified locally, never sent to GPT.
