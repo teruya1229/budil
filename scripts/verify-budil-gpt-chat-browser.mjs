@@ -175,6 +175,26 @@ try{
   assert.equal(await ev('window.__dateNetwork'),0,'no network after mocked proposal');
   assert.equal(await ev('window.__googleCalls'),1,'calendar is not queried for a proposal');
 
+  // End-to-end invoice draft handoff: true UI + canonical DocumentsBrain with
+  // fictional records, mocked GPT ONLY, no real storage or paid network.
+  await ev("window.__origInvFixture={getLeads:Storage.getLeads,getDocuments:Storage.getDocuments,saveDocuments:Storage.saveDocuments,createSafetyBackup:Storage.createSafetyBackup,generateId:Storage.generateId};window.__fakeInvoiceDocs=[];window.__fakeInvoiceSaves=0;Storage.getLeads=()=>[{id:'fake-i1',name:'架空花子'},{id:'fake-i2',name:'架空次郎'}];Storage.getDocuments=()=>structuredClone(window.__fakeInvoiceDocs);Storage.saveDocuments=docs=>{window.__fakeInvoiceSaves++;window.__fakeInvoiceDocs=structuredClone(docs)};Storage.createSafetyBackup=()=>({id:'fake-backup'});Storage.generateId=()=>String(window.__fakeInvoiceSaves+1);BudilCloud.sendGptChat=async()=>({ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'顧客別の下書きを確認してください',action:'invoice.preview',query:'',date:'',month:'',docType:'invoice',needs_confirmation:true,invoiceRows:[{customerName:'架空花子',description:'レンジフード清掃',workDate:'2026-11-02',quantity:1,unitPriceIncl:12320,statedTotalIncl:12320,taxMode:'included'},{customerName:'架空次郎',description:'換気扇清掃',workDate:'2026-11-16',quantity:1,unitPriceIncl:3520,statedTotalIncl:3520,taxMode:'included'}]});document.getElementById('budil-gpt-input').value=['架空花子 レンジフード清掃 2026/11/02 11200 12320','架空次郎 換気扇清掃 2026/11/16 3200 3520','請求書を作って'].join('\\n');document.getElementById('budil-gpt-chat-send').click()");
+  for(let i=0;i<60;i++){if(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('請求明細の確認（未保存')"))break;await sleep(60);}
+  assert.equal(await ev("document.getElementById('budil-gpt-chat-history').textContent.includes('請求明細の確認（未保存')"),true);
+  assert.equal(await ev("window.__fakeInvoiceSaves"),0,'provider reply cannot save before review');
+  await ev("window.__invoiceBlocks=[...document.querySelectorAll('#budil-gpt-chat-history .budil-gpt-item')].slice(-2);for(const b of window.__invoiceBlocks){const dates=b.querySelectorAll('input[type=date]');dates[0].value='2026-11-26';dates[1].value='2026-12-31';b.querySelector('button').click()}");
+  assert.equal(await ev("window.__fakeInvoiceSaves"),0,'tax preview cannot write');
+  assert.equal(await ev("window.__invoiceBlocks.every(b=>b.textContent.includes('税込'))"),true);
+  await ev("for(const b of window.__invoiceBlocks){b.querySelector('input[type=checkbox]').checked=true;[...b.querySelectorAll('button')].find(x=>x.textContent.includes('下書きを端末に保存')).click()}");
+  assert.equal(await ev("window.__fakeInvoiceSaves"),2,'only two owner-confirmed local draft writes');
+  assert.equal(await ev("window.__fakeInvoiceDocs.length"),2);
+  assert.equal(await ev("window.__fakeInvoiceDocs.every(x=>x.status==='draft')"),true,'never issue invoices automatically');
+  assert.equal(await ev("window.__fakeInvoiceDocs[0].total"),12320);
+  assert.equal(await ev("window.__fakeInvoiceDocs[1].total"),3520);
+  assert.equal(await ev("window.__fakeInvoiceDocs[0].customerName!=='架空次郎'"),true,'no cross-customer leakage');
+  assert.equal(await ev("window.__dateNetwork"),0,'fixture uses no real model or network');
+  await ev("Object.assign(Storage,window.__origInvFixture);document.getElementById('budil-gpt-chat-clear').click()");
+  console.log('PASS '+width+'px: two-customer GPT invoice draft preview, owner confirmation, saved draft, zero real writes');
+
   // Real chat UI must combine the LOCAL work orders and authenticated Google
   // busy windows without sending private event titles to the GPT provider.
   await ev("BudilCloud.fetchScheduleBlocks=async function(date,end){window.__googleCalls++;return {ok:true,readOnly:true,calendarWritePerformed:false,events:[{start:'2026-11-11T09:00:00+09:00',end:'2026-11-11T10:00:00+09:00',summary:'private_fixture_title'},{start:'2026-11-11T09:30:00+09:00',end:'2026-11-11T11:30:00+09:00'}]}};BudilCloud.sendGptChat=async function(){window.__chatCalls++;return {ok:true,phase:'chat_plan_only',can_execute:false,persisted:false,customer_records_sent:false,reply:'予定を確認します。',action:'work.date',query:'',date:'2026-11-11',month:'',docType:'none',needs_confirmation:false}};document.getElementById('budil-gpt-input').value='11/11の予定を教えて';document.getElementById('budil-gpt-consent').checked=true;document.getElementById('budil-gpt-chat-consent').checked=true;document.getElementById('budil-gpt-chat-send').click()");
