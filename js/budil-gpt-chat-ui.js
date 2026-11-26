@@ -248,6 +248,11 @@
     try{result=InvoiceDraft.save(staged,{entry:InvoiceEntry,storage:Data,documents:Documents,confirm:true});}
     catch(_){result={ok:false,code:'SAVE_UNAVAILABLE'};}
     if(!result.ok){
+     if(result.code==='DOCUMENTS_CHANGED'){
+      staged=null;check.checked=false;
+      state.textContent='別の請求を保存したため、プレビューの再計算が必要です。';
+      return note('他の請求書を保存したため、このプレビューは古くなりました。「税額を計算して確認」を再度押してください。',true);
+     }
      saveBtn.disabled=false;return note('保存しませんでした（'+(result.code||'unknown')+'）。',true);
     }
     state.textContent='下書き保存・再読取確認済み：'+result.customerName+
