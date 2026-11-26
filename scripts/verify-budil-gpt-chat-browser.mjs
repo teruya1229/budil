@@ -68,7 +68,7 @@ try{
   assert.equal(await ev('document.documentElement.scrollWidth<=innerWidth+2'),true);
   // Consent is intentionally persistent. Clear it BEFORE a reload so each
   // viewport independently verifies the first-time experience.
-  await ev("localStorage.removeItem('budil-gpt.chat-consent.v2.staging:00000000-0000-0000-0000-000000000001');localStorage.setItem('budil-gpt.chat-consent.v1','accepted');location.reload()");
+  await ev("localStorage.removeItem('budil-gpt.chat-consent.v2.staging:00000000-0000-0000-0000-000000000001');localStorage.removeItem('budil-gpt.chat-consent.v2.staging:00000000-0000-0000-0000-000000000002');localStorage.setItem('budil-gpt.chat-consent.v1','accepted');location.reload()");
   await sleep(200);
   for(let i=0;i<160;i++){
    if(await ev("document.readyState==='complete'&&!!document.getElementById('budil-gpt-open')"))break;
